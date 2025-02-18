@@ -1,0 +1,11 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "always"
+  },
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "files.autoSave": "onFocusChange",
+  "files.insertFinalNewline": true,
+  "editor.tabSize": 2,
+  "editor.trimAutoWhitespace": true
+}

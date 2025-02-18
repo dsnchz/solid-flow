@@ -1,0 +1,48 @@
+{
+  "name": "template-solidjs-library",
+  "version": "0.0.0",
+  "description": "Template for SolidJS library using tsup for bundling. Configured with Bun, NVM, TypeScript, ESLint, Prettier, Vitest, and GHA",
+  "type": "module",
+  "author": "Daniel Sanchez <dsanc89@icloud.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/thedanchez/template-solidjs-library#readme",
+  "bugs": {
+    "url": "https://github.com/thedanchez/template-solidjs-library/issues"
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "dev": "vite",
+    "format": "prettier . --check",
+    "format:fix": "prettier . --write",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "serve": "vite preview",
+    "start": "vite",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@solidjs/testing-library": "^0.8.10",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@types/bun": "^1.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.23.0",
+    "@typescript-eslint/parser": "^8.23.0",
+    "@vitest/coverage-istanbul": "^3.0.5",
+    "eslint": "^8.57.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-solid": "^0.14.5",
+    "jsdom": "^26.0.0",
+    "prettier": "^3.5.0",
+    "tsup": "^8.3.6",
+    "tsup-preset-solid": "^2.2.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vite-plugin-solid": "^2.11.1",
+    "vitest": "^3.0.5"
+  },
+  "peerDependencies": {
+    "solid-js": ">=1.8.0"
+  }
+}
