@@ -28,7 +28,10 @@
     "jsxImportSource": "solid-js",
 
     /* Types */
-    "types": ["vite/client", "bun-types", "@testing-library/jest-dom"]
+    "types": ["vite/client", "bun-types", "@testing-library/jest-dom"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "exclude": ["node_modules", "coverage", "dist"]
 }

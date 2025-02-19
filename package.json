@@ -1,14 +1,28 @@
 {
-  "name": "template-solidjs-library",
-  "version": "0.0.0",
-  "description": "Template for SolidJS library using tsup for bundling. Configured with Bun, NVM, TypeScript, ESLint, Prettier, Vitest, and GHA",
+  "name": "solid-flow",
+  "version": "0.1.0",
+  "description": "Solid Flow: an unofficial port of Svelte Flow for SolidJS -- a highly customizable Solid library for building node-based editors, workflow systems, diagrams and more.",
   "type": "module",
   "author": "Daniel Sanchez <dsanc89@icloud.com>",
   "license": "MIT",
-  "homepage": "https://github.com/thedanchez/template-solidjs-library#readme",
+  "homepage": "https://github.com/thedanchez/solid-flow#readme",
   "bugs": {
-    "url": "https://github.com/thedanchez/template-solidjs-library/issues"
+    "url": "https://github.com/thedanchez/solid-flow/issues"
   },
+  "keywords": [
+    "diagram",
+    "graph",
+    "node-based UI",
+    "solid",
+    "solidjs",
+    "solid-js",
+    "solid-flow",
+    "workflow",
+    "xyflow"
+  ],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
@@ -43,6 +57,10 @@
     "vitest": "^3.0.5"
   },
   "peerDependencies": {
+    "@xyflow/system": ">=0.0.51",
     "solid-js": ">=1.8.0"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1"
   }
 }
