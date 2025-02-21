@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-// @ts-expect-error 6133
+// @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
 import drag from "@/actions/drag";
 import { useFlowStore } from "@/components/contexts";
 import type { NodeComponentKey } from "@/data/types";

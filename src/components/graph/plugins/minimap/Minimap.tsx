@@ -6,14 +6,14 @@ import {
   type PanelPosition,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createMemo, For, JSX, type ParentComponent, Show } from "solid-js";
+import { createMemo, For, type JSX, type ParentComponent, Show } from "solid-js";
 
 import { Panel } from "@/components/container";
 import { useFlowStore } from "@/components/contexts";
 import type { Node } from "@/shared/types";
 
-// @ts-expect-error 6133
-import { interactive } from "./interactive";
+// @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
+import interactive from "./interactive";
 import MinimapNode from "./MinimapNode";
 
 export type GetMiniMapNodeAttribute = (node: Node) => string;

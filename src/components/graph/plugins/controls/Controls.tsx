@@ -1,14 +1,13 @@
-import clsx from "clsx";
-
 import type { PanelPosition } from "@xyflow/system";
+import clsx from "clsx";
+import { type JSX, mergeProps, type ParentComponent, Show } from "solid-js";
 
-import ControlButton from "./ControlButton";
-import { Plus, Minus, Fit, Lock, Unlock } from "./icons";
+import { Panel } from "@/components/container";
 import { useFlowStore } from "@/components/contexts";
 import type { FitViewOptions } from "@/shared/types";
-import type { JSX, ParentComponent } from "solid-js";
-import { Panel } from "@/components/container";
-import { mergeProps, Show } from "solid-js/web";
+
+import ControlButton from "./ControlButton";
+import { Fit, Lock, Minus, Plus, Unlock } from "./icons";
 
 type ControlsOrientation = "horizontal" | "vertical";
 

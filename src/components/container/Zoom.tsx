@@ -8,7 +8,7 @@ import {
 } from "@xyflow/system";
 import { type ParentComponent } from "solid-js";
 
-// @ts-expect-error 6133
+// @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
 import zoom from "@/actions/zoom";
 import { useFlowStore } from "@/components/contexts";
 

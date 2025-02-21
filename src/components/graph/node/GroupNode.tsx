@@ -1,4 +1,4 @@
-import { type Component, JSX } from "solid-js";
+import type { Component, JSX } from "solid-js";
 
 import type { NodeProps } from "@/shared/types";
 

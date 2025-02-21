@@ -1,4 +1,5 @@
-import { mergeProps, type Component } from "solid-js";
+import { type Component, mergeProps } from "solid-js";
+
 import type { BackgroundVariant } from "./types";
 
 type LinePatternProps = {

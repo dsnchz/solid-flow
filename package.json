@@ -29,8 +29,8 @@
     "dev": "vite",
     "format": "prettier . --check",
     "format:fix": "prettier . --write",
-    "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "serve": "vite preview",
     "start": "vite",
     "test": "vitest run",
@@ -44,14 +44,17 @@
     "@typescript-eslint/eslint-plugin": "^8.23.0",
     "@typescript-eslint/parser": "^8.23.0",
     "@vitest/coverage-istanbul": "^3.0.5",
-    "eslint": "^8.57.0",
+    "eslint": "^9.20.1",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-solid": "^0.14.5",
+    "globals": "^16.0.0",
+    "jiti": "^2.4.2",
     "jsdom": "^26.0.0",
     "prettier": "^3.5.0",
     "tsup": "^8.3.6",
     "tsup-preset-solid": "^2.2.0",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.23.0",
     "vite": "^6.1.0",
     "vite-plugin-solid": "^2.11.1",
     "vitest": "^3.0.5"
@@ -62,5 +65,17 @@
   },
   "dependencies": {
     "clsx": "^2.1.1"
-  }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "browser": {},
+  "exports": {
+    "solid": "./dist/index.jsx",
+    "import": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "typesVersions": {}
 }

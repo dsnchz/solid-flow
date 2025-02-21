@@ -2,7 +2,7 @@ import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
 import clsx from "clsx";
 import { type Component, Show } from "solid-js";
 
-// @ts-expect-error 6133
+// @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
 import drag from "@/actions/drag";
 import { useFlowStore } from "@/components/contexts";
 import Selection from "@/components/graph/selection/Selection";

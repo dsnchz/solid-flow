@@ -28,7 +28,7 @@ export default defineConfig((config) => {
 
   const tsupOptions = preset
     .generateTsupOptions(parsedOptions)
-    .map((tsupOption) => ({ name: "solid-js", ...tsupOption }));
+    .map((tsupOption) => ({ name: "solid-flow", minify: true, ...tsupOption }));
 
   return tsupOptions;
 });
