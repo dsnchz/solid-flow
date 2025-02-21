@@ -28,6 +28,7 @@ const viteConfig = defineViteConfig({
       "@/data": path.resolve(__dirname, "./src/data"),
       "@/hooks": path.resolve(__dirname, "./src/hooks"),
       "@/shared": path.resolve(__dirname, "./src/shared"),
+      "@/styles": path.resolve(__dirname, "./src/styles"),
     },
   },
 });

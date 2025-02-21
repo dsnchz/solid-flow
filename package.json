@@ -66,16 +66,30 @@
   "dependencies": {
     "clsx": "^2.1.1"
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index/index.js",
+  "module": "./dist/index/index.js",
+  "types": "./dist/index/index.d.ts",
   "browser": {},
   "exports": {
-    "solid": "./dist/index.jsx",
-    "import": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+    ".": {
+      "solid": "./dist/index/index.jsx",
+      "import": {
+        "types": "./dist/index/index.d.ts",
+        "default": "./dist/index/index.js"
+      }
+    },
+    "./styles": {
+      "import": {
+        "types": "./dist/styles/index.d.ts",
+        "default": "./dist/styles/index.js"
+      }
     }
   },
-  "typesVersions": {}
+  "typesVersions": {
+    "*": {
+      "styles": [
+        "./dist/styles/index.d.ts"
+      ]
+    }
+  }
 }

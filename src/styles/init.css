@@ -1,0 +1,437 @@
+/* these are the necessary styles for Solid Flow, they get used by base.css and style.css */
+.solid-flow {
+  direction: ltr;
+
+  --xy-edge-stroke-default: #b1b1b7;
+  --xy-edge-stroke-width-default: 1;
+  --xy-edge-stroke-selected-default: #555;
+
+  --xy-connectionline-stroke-default: #b1b1b7;
+  --xy-connectionline-stroke-width-default: 1;
+
+  --xy-attribution-background-color-default: rgba(255, 255, 255, 0.5);
+
+  --xy-minimap-background-color-default: #fff;
+  --xy-minimap-mask-background-color-default: rgb(240, 240, 240, 0.6);
+  --xy-minimap-mask-stroke-color-default: transparent;
+  --xy-minimap-mask-stroke-width-default: 1;
+  --xy-minimap-node-background-color-default: #e2e2e2;
+  --xy-minimap-node-stroke-color-default: transparent;
+  --xy-minimap-node-stroke-width-default: 2;
+
+  --xy-background-color-default: transparent;
+  --xy-background-pattern-dots-color-default: #91919a;
+  --xy-background-pattern-lines-color-default: #eee;
+  --xy-background-pattern-cross-color-default: #e2e2e2;
+}
+
+.solid-flow.dark {
+  --xy-edge-stroke-default: #3e3e3e;
+  --xy-edge-stroke-width-default: 1;
+  --xy-edge-stroke-selected-default: #727272;
+
+  --xy-connectionline-stroke-default: #b1b1b7;
+  --xy-connectionline-stroke-width-default: 1;
+
+  --xy-attribution-background-color-default: rgba(150, 150, 150, 0.25);
+
+  --xy-minimap-background-color-default: #141414;
+  --xy-minimap-mask-background-color-default: rgb(60, 60, 60, 0.6);
+  --xy-minimap-mask-stroke-color-default: transparent;
+  --xy-minimap-mask-stroke-width-default: 1;
+  --xy-minimap-node-background-color-default: #2b2b2b;
+  --xy-minimap-node-stroke-color-default: transparent;
+  --xy-minimap-node-stroke-width-default: 2;
+
+  --xy-background-color-default: #141414;
+  --xy-background-pattern-dots-color-default: #777;
+  --xy-background-pattern-lines-color-default: #777;
+  --xy-background-pattern-cross-color-default: #777;
+}
+
+.xy-flow {
+  background-color: var(--xy-background-color, var(--xy-background-color-default));
+}
+
+.solid-flow__background {
+  background-color: var(
+    --xy-background-color,
+    var(--xy-background-color-props, var(--xy-background-color-default))
+  );
+}
+
+.solid-flow__container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.solid-flow__background {
+  width: 100%;
+  height: 100%;
+}
+
+.solid-flow__pane {
+  z-index: 1;
+
+  &.draggable {
+    cursor: grab;
+  }
+
+  &.dragging {
+    cursor: grabbing;
+  }
+
+  &.selection {
+    cursor: pointer;
+  }
+}
+
+.solid-flow__viewport {
+  transform-origin: 0 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.solid-flow__renderer {
+  z-index: 4;
+}
+
+.solid-flow__selection {
+  z-index: 6;
+}
+
+.solid-flow__nodesselection-rect:focus,
+.solid-flow__nodesselection-rect:focus-visible {
+  outline: none;
+}
+
+.solid-flow__edge-path {
+  stroke: var(--xy-edge-stroke, var(--xy-edge-stroke-default));
+  stroke-width: var(--xy-edge-stroke-width, var(--xy-edge-stroke-width-default));
+  fill: none;
+}
+
+.solid-flow__connection-path {
+  stroke: var(--xy-connectionline-stroke, var(--xy-connectionline-stroke-default));
+  stroke-width: var(
+    --xy-connectionline-stroke-width,
+    var(--xy-connectionline-stroke-width-default)
+  );
+  fill: none;
+}
+
+.solid-flow .solid-flow__edges {
+  position: absolute;
+
+  svg {
+    overflow: visible;
+    position: absolute;
+    pointer-events: none;
+  }
+}
+
+.solid-flow__edge {
+  pointer-events: visibleStroke;
+
+  &.selectable {
+    cursor: pointer;
+  }
+
+  &.animated path {
+    stroke-dasharray: 5;
+    animation: dashdraw 0.5s linear infinite;
+  }
+
+  &.animated path.solid-flow__edge-interaction {
+    stroke-dasharray: none;
+    animation: none;
+  }
+
+  &.inactive {
+    pointer-events: none;
+  }
+
+  &.selected,
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  &.selected .solid-flow__edge-path,
+  &.selectable:focus .solid-flow__edge-path,
+  &.selectable:focus-visible .solid-flow__edge-path {
+    stroke: var(--xy-edge-stroke-selected, var(--xy-edge-stroke-selected-default));
+  }
+
+  &-textwrapper {
+    pointer-events: all;
+  }
+
+  .solid-flow__edge-text {
+    pointer-events: none;
+    user-select: none;
+  }
+}
+.solid-flow__connection {
+  pointer-events: none;
+
+  .animated {
+    stroke-dasharray: 5;
+    animation: dashdraw 0.5s linear infinite;
+  }
+}
+
+svg.solid-flow__connectionline {
+  z-index: 1001;
+  overflow: visible;
+  position: absolute;
+}
+
+.solid-flow__nodes {
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+
+.solid-flow__node {
+  position: absolute;
+  user-select: none;
+  pointer-events: all;
+  transform-origin: 0 0;
+  box-sizing: border-box;
+  cursor: default;
+
+  &.selectable {
+    cursor: pointer;
+  }
+
+  &.draggable {
+    cursor: grab;
+    pointer-events: all;
+
+    &.dragging {
+      cursor: grabbing;
+    }
+  }
+}
+
+.solid-flow__nodesselection {
+  z-index: 3;
+  transform-origin: left top;
+  pointer-events: none;
+
+  &-rect {
+    position: absolute;
+    pointer-events: all;
+    cursor: grab;
+  }
+}
+
+.solid-flow__handle {
+  position: absolute;
+  pointer-events: none;
+  min-width: 5px;
+  min-height: 5px;
+
+  &.connectingfrom {
+    pointer-events: all;
+  }
+
+  &.connectionindicator {
+    pointer-events: all;
+    cursor: crosshair;
+  }
+
+  &-bottom {
+    top: auto;
+    left: 50%;
+    bottom: 0;
+    transform: translate(-50%, 50%);
+  }
+
+  &-top {
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  &-left {
+    top: 50%;
+    left: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  &-right {
+    top: 50%;
+    right: 0;
+    transform: translate(50%, -50%);
+  }
+}
+
+.solid-flow__edgeupdater {
+  cursor: move;
+  pointer-events: all;
+}
+
+.solid-flow__panel {
+  position: absolute;
+  z-index: 5;
+  margin: 15px;
+
+  &.top {
+    top: 0;
+  }
+
+  &.bottom {
+    bottom: 0;
+  }
+
+  &.left {
+    left: 0;
+  }
+
+  &.right {
+    right: 0;
+  }
+
+  &.center {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+.solid-flow__attribution {
+  font-size: 10px;
+  background: var(
+    --xy-attribution-background-color,
+    var(--xy-attribution-background-color-default)
+  );
+  padding: 2px 3px;
+  margin: 0;
+
+  a {
+    text-decoration: none;
+    color: #999;
+  }
+}
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 10;
+  }
+}
+
+.solid-flow__edgelabel-renderer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  left: 0;
+  top: 0;
+}
+
+.solid-flow__viewport-portal {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  user-select: none;
+}
+
+.solid-flow__minimap {
+  background: var(
+    --xy-minimap-background-color-props,
+    var(--xy-minimap-background-color, var(--xy-minimap-background-color-default))
+  );
+
+  &-svg {
+    display: block;
+  }
+
+  &-mask {
+    fill: var(
+      --xy-minimap-mask-background-color-props,
+      var(--xy-minimap-mask-background-color, var(--xy-minimap-mask-background-color-default))
+    );
+    stroke: var(
+      --xy-minimap-mask-stroke-color-props,
+      var(--xy-minimap-mask-stroke-color, var(--xy-minimap-mask-stroke-color-default))
+    );
+    stroke-width: var(
+      --xy-minimap-mask-stroke-width-props,
+      var(--xy-minimap-mask-stroke-width, var(--xy-minimap-mask-stroke-width-default))
+    );
+  }
+
+  &-node {
+    fill: var(
+      --xy-minimap-node-background-color-props,
+      var(--xy-minimap-node-background-color, var(--xy-minimap-node-background-color-default))
+    );
+    stroke: var(
+      --xy-minimap-node-stroke-color-props,
+      var(--xy-minimap-node-stroke-color, var(--xy-minimap-node-stroke-color-default))
+    );
+    stroke-width: var(
+      --xy-minimap-node-stroke-width-props,
+      var(--xy-minimap-node-stroke-width, var(--xy-minimap-node-stroke-width-default))
+    );
+  }
+}
+
+.solid-flow__background {
+  pointer-events: none;
+  z-index: -1;
+}
+
+.solid-flow__background-pattern {
+  &.dots {
+    fill: var(
+      --xy-background-pattern-color-props,
+      var(--xy-background-pattern-color, var(--xy-background-pattern-dots-color-default))
+    );
+  }
+
+  &.lines {
+    stroke: var(
+      --xy-background-pattern-color-props,
+      var(--xy-background-pattern-color, var(--xy-background-pattern-lines-color-default))
+    );
+  }
+
+  &.cross {
+    stroke: var(
+      --xy-background-pattern-color-props,
+      var(--xy-background-pattern-color, var(--xy-background-pattern-cross-color-default))
+    );
+  }
+}
+
+.solid-flow__controls {
+  display: flex;
+  flex-direction: column;
+
+  &.horizontal {
+    flex-direction: row;
+  }
+
+  &-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 26px;
+    width: 26px;
+    padding: 4px;
+
+    svg {
+      width: 100%;
+      max-width: 12px;
+      max-height: 12px;
+      fill: currentColor;
+    }
+  }
+}

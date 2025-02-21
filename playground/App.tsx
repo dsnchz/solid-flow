@@ -1,4 +1,7 @@
-import { Background, Controls, MiniMap, SolidFlow } from "@/components";
+import "@/styles/base.css";
+import "@/styles/style.css";
+
+import { Background, Controls, SolidFlow } from "@/components";
 
 export const App = () => {
   const nodes = [
@@ -28,18 +31,17 @@ export const App = () => {
   ];
 
   return (
-    <div>
-      <div>Playground App</div>
-      <SolidFlow
-        nodes={nodes}
-        edges={edges}
-        fitView
-        onNodeClick={(event) => console.log("on node click", event)}
-      >
-        <Controls />
-        <Background variant="dots" />
-        <MiniMap />
-      </SolidFlow>
-    </div>
+    <SolidFlow
+      nodes={nodes}
+      edges={edges}
+      fitView
+      colorMode="light"
+      width={1000}
+      height={1000}
+      onNodeClick={(event) => console.log("on node click", event)}
+    >
+      <Controls />
+      <Background variant="dots" />
+    </SolidFlow>
   );
 };

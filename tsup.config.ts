@@ -9,6 +9,18 @@ const generateSolidPresetOptions = (watching: boolean): preset.PresetOptions => 
       dev_entry: false,
       server_entry: false,
     },
+    {
+      name: "styles",
+      entry: "src/styles/base.css",
+      dev_entry: false,
+      server_entry: false,
+    },
+    {
+      name: "styles",
+      entry: "src/styles/style.css",
+      dev_entry: false,
+      server_entry: false,
+    },
   ],
   drop_console: !watching, // remove all `console.*` calls and `debugger` statements in prod builds
   cjs: false,

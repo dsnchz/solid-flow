@@ -1,9 +1,196 @@
 /* this gets exported as style.css and can be used for the default theming */
-@import "../../../system/src/styles/init.css";
-@import "../../../system/src/styles/base.css";
-@import "../../../system/src/styles/node-resizer.css";
+/* @import "../../../system/src/styles/init.css";
+/* @import "../../../system/src/styles/style.css"; */
+@import "./init.css";
+@import "./node-resizer.css";
 
-.solid-flow__edge-label {
+.solid-flow {
+  direction: ltr;
+
+  --xy-edge-stroke-default: #b1b1b7;
+  --xy-edge-stroke-width-default: 1;
+  --xy-edge-stroke-selected-default: #555;
+
+  --xy-connectionline-stroke-default: #b1b1b7;
+  --xy-connectionline-stroke-width-default: 1;
+
+  --xy-attribution-background-color-default: rgba(255, 255, 255, 0.5);
+
+  --xy-minimap-background-color-default: #fff;
+  --xy-minimap-mask-background-color-default: rgb(240, 240, 240, 0.6);
+  --xy-minimap-mask-stroke-color-default: transparent;
+  --xy-minimap-mask-stroke-width-default: 1;
+  --xy-minimap-node-background-color-default: #e2e2e2;
+  --xy-minimap-node-stroke-color-default: transparent;
+  --xy-minimap-node-stroke-width-default: 2;
+
+  --xy-background-color-default: transparent;
+  --xy-background-pattern-dots-color-default: #91919a;
+  --xy-background-pattern-lines-color-default: #eee;
+  --xy-background-pattern-cross-color-default: #e2e2e2;
+  --xy-node-border-default: 1px solid #bbb;
+  --xy-node-border-selected-default: 1px solid #555;
+
+  --xy-handle-background-color-default: #333;
+
+  --xy-selection-background-color-default: rgba(150, 150, 180, 0.1);
+  --xy-selection-border-default: 1px dotted rgba(155, 155, 155, 0.8);
+  --xy-resize-background-color-default: #3367d9;
+
+  --controls-button-background-color-default: #fefefe;
+  --controls-button-background-color-hover-default: #f4f4f4;
+  --controls-button-color-default: inherit;
+  --controls-button-color-hover-default: inherit;
+  --controls-button-border-color-default: #eee;
+
+  --minimap-mask-color-default: rgb(240, 240, 240, 0.6);
+  --minimap-mask-stroke-color-default: none;
+  --minimap-mask-stroke-width-default: 1;
+
+  background-color: var(--xy-background-color, var(--xy-background-color-default));
+}
+
+.solid-flow.dark {
+  --xy-edge-stroke-default: #3e3e3e;
+  --xy-edge-stroke-width-default: 1;
+  --xy-edge-stroke-selected-default: #727272;
+
+  --xy-connectionline-stroke-default: #b1b1b7;
+  --xy-connectionline-stroke-width-default: 1;
+
+  --xy-attribution-background-color-default: rgba(150, 150, 150, 0.25);
+
+  --xy-minimap-background-color-default: #141414;
+  --xy-minimap-mask-background-color-default: rgb(60, 60, 60, 0.6);
+  --xy-minimap-mask-stroke-color-default: transparent;
+  --xy-minimap-mask-stroke-width-default: 1;
+  --xy-minimap-node-background-color-default: #2b2b2b;
+  --xy-minimap-node-stroke-color-default: transparent;
+  --xy-minimap-node-stroke-width-default: 2;
+
+  --xy-background-color-default: #141414;
+  --xy-background-pattern-dots-color-default: #777;
+  --xy-background-pattern-lines-color-default: #777;
+  --xy-background-pattern-cross-color-default: #777;
+  --xy-node-color-default: #f8f8f8;
+}
+
+.solid-flow__edge {
+  &.updating {
+    .solid-flow__edge-path {
+      stroke: #777;
+    }
+  }
+
+  &-text {
+    font-size: 10px;
+  }
+}
+
+.solid-flow__node.selectable {
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.solid-flow__node-input,
+.solid-flow__node-default,
+.solid-flow__node-output,
+.solid-flow__node-group {
+  padding: 10px;
+  border-radius: var(--xy-node-border-radius, var(--xy-node-border-radius-default));
+  width: 150px;
+  font-size: 12px;
+  color: var(--xy-node-color, var(--xy-node-color-default));
   text-align: center;
-  position: absolute;
+  border: var(--xy-node-border, var(--xy-node-border-default));
+  background-color: var(--xy-node-background-color, var(--xy-node-background-color-default));
+
+  &.selectable {
+    &:hover {
+      box-shadow: var(--xy-node-boxshadow-hover, var(--xy-node-boxshadow-hover-default));
+    }
+
+    &.selected,
+    &:focus,
+    &:focus-visible {
+      box-shadow: var(--xy-node-boxshadow-selected, var(--xy-node-boxshadow-selected-default));
+    }
+  }
+}
+
+.solid-flow__node-group {
+  background-color: var(
+    --xy-node-group-background-color,
+    var(--xy-node-group-background-color-default)
+  );
+}
+
+.solid-flow__nodesselection-rect,
+.solid-flow__selection {
+  background: var(--xy-selection-background-color, var(--xy-selection-background-color-default));
+  border: var(--xy-selection-border, var(--xy-selection-border-default));
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.solid-flow__handle {
+  width: 6px;
+  height: 6px;
+  background-color: var(--xy-handle-background-color, var(--xy-handle-background-color-default));
+  border: 1px solid var(--xy-handle-border-color, var(--xy-handle-border-color-default));
+  border-radius: 100%;
+}
+
+.solid-flow__controls {
+  box-shadow: var(--xy-controls-box-shadow, var(--xy-controls-box-shadow-default));
+
+  &-button {
+    border: none;
+    background: var(
+      --xy-controls-button-background-color,
+      var(--xy-controls-button-background-color-default)
+    );
+    border-bottom: 1px solid
+      var(
+        --xy-controls-button-border-color-props,
+        var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default))
+      );
+    color: var(
+      --xy-controls-button-color-props,
+      var(--xy-controls-button-color, var(--xy-controls-button-color-default))
+    );
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background: var(
+        --xy-controls-button-background-color-hover-props,
+        var(
+          --xy-controls-button-background-color-hover,
+          var(--xy-controls-button-background-color-hover-default)
+        )
+      );
+      color: var(
+        --xy-controls-button-color-hover-props,
+        var(--xy-controls-button-color-hover, var(--xy-controls-button-color-hover-default))
+      );
+    }
+
+    &:disabled {
+      pointer-events: none;
+
+      svg {
+        fill-opacity: 0.4;
+      }
+    }
+  }
+
+  &-button:last-child {
+    border-bottom: none;
+  }
 }

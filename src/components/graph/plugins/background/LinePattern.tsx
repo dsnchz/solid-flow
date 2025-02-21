@@ -1,3 +1,4 @@
+import { clsx } from "clsx";
 import { type Component, mergeProps } from "solid-js";
 
 import type { BackgroundVariant } from "./types";
@@ -16,9 +17,7 @@ const LinePattern: Component<LinePatternProps> = (props) => {
     <path
       stroke-width={merged.lineWidth}
       d={`M${merged.dimensions[0] / 2} 0 V${merged.dimensions[1]} M0 ${merged.dimensions[1] / 2} H${merged.dimensions[0]}`}
-      class={["solid-flow__background-pattern", merged.variant, merged.class]
-        .filter(Boolean)
-        .join(" ")}
+      class={clsx("solid-flow__background-pattern", merged.variant, merged.class)}
     />
   );
 };
