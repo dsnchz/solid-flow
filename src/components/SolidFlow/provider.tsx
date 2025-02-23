@@ -1,19 +1,26 @@
-import { onCleanup, type ParentComponent } from "solid-js";
+import { type Context, onCleanup, type ParentProps } from "solid-js";
 
 import { createSolidFlow } from "@/data/createSolidFlow";
+import type { Edge, Node } from "@/shared/types";
 
-import { SolidFlowContext } from "../contexts/flow";
-import type { SolidFlowProps } from "./types";
+import { SolidFlowContext, type SolidFlowContextValue } from "../contexts/flow";
+import type { FlowProps } from "./types";
 
-const SolidFlowProvider: ParentComponent<Partial<SolidFlowProps>> = (props) => {
-  const flowStore = createSolidFlow(props);
-  const { reset } = flowStore;
+const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+  props: ParentProps<Partial<FlowProps<NodeType, EdgeType>>>,
+) => {
+  const solidFlow = createSolidFlow(props);
 
   onCleanup(() => {
-    reset();
+    solidFlow.reset();
   });
 
-  return <SolidFlowContext.Provider value={flowStore}>{props.children}</SolidFlowContext.Provider>;
+  // Since we cannot pass generic type info at the point of context creation, we need to cast it here
+  const ContextProvider = (
+    SolidFlowContext as unknown as Context<SolidFlowContextValue<NodeType, EdgeType>>
+  ).Provider;
+
+  return <ContextProvider value={solidFlow}>{props.children}</ContextProvider>;
 };
 
 export default SolidFlowProvider;

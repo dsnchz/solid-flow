@@ -1,7 +1,7 @@
 import type {
   BezierPathOptions,
   DefaultEdgeOptionsBase,
-  EdgeBase,
+  EdgeBase as SystemEdge,
   EdgePosition,
   SmoothStepPathOptions,
   StepPathOptions,
@@ -19,11 +19,11 @@ import type { Node } from "./node";
 export type Edge<
   EdgeData extends Record<string, unknown> = Record<string, unknown>,
   EdgeType extends string | undefined = string | undefined,
-> = EdgeBase<EdgeData, EdgeType> & {
+> = SystemEdge<EdgeData, EdgeType> & {
   readonly label?: string;
   readonly labelStyle?: JSX.CSSProperties;
-  readonly style?: JSX.CSSProperties;
   readonly class?: string;
+  readonly style?: JSX.CSSProperties;
 };
 
 type SmoothStepEdge<EdgeData extends Record<string, unknown> = Record<string, unknown>> = Edge<
@@ -114,17 +114,7 @@ export type StepEdgeProps = EdgeComponentWithPathOptions<StepPathOptions>;
  */
 export type StraightEdgeProps = Omit<EdgeComponentProps, "sourcePosition" | "targetPosition">;
 
-export type EdgeTypes = Record<
-  string,
-  Component<
-    EdgeProps & {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data?: any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      type: any;
-    }
-  >
->;
+export type EdgeTypes = Record<string, Component<EdgeProps>>;
 
 export type DefaultEdgeOptions = DefaultEdgeOptionsBase<Edge>;
 
@@ -161,13 +151,13 @@ export type EdgeLayouted = Pick<
 
 export type EdgeEventHandler = (edge: Edge, event: MouseOrTouchEvent) => void;
 
-export type EdgeEventCallbacks = {
-  readonly onEdgeClick: GraphTargetHandler<Edge>;
-  readonly onEdgeContextMenu: GraphTargetHandler<Edge>;
-  readonly onEdgeMouseEnter: GraphTargetHandler<Edge>;
-  readonly onEdgeMouseLeave: GraphTargetHandler<Edge>;
-  readonly onEdgeMouseMove: GraphTargetHandler<Edge>;
-  readonly onEdgeDrag: GraphTargetContextHandler<Edge>;
-  readonly onEdgeDragStart: GraphTargetContextHandler<Edge>;
-  readonly onEdgeDragStop: GraphTargetContextHandler<Edge>;
+export type EdgeEventCallbacks<EdgeType extends Edge = Edge> = {
+  readonly onEdgeClick: GraphTargetHandler<EdgeType>;
+  readonly onEdgeContextMenu: GraphTargetHandler<EdgeType>;
+  readonly onEdgeMouseEnter: GraphTargetHandler<EdgeType>;
+  readonly onEdgeMouseLeave: GraphTargetHandler<EdgeType>;
+  readonly onEdgeMouseMove: GraphTargetHandler<EdgeType>;
+  readonly onEdgeDrag: GraphTargetContextHandler<EdgeType>;
+  readonly onEdgeDragStart: GraphTargetContextHandler<EdgeType>;
+  readonly onEdgeDragStop: GraphTargetContextHandler<EdgeType>;
 };

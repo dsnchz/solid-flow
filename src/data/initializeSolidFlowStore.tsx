@@ -33,7 +33,7 @@ import {
   updateConnectionLookup,
   type Viewport,
 } from "@xyflow/system";
-import { type Component, mergeProps } from "solid-js";
+import { mergeProps } from "solid-js";
 import { createStore } from "solid-js/store";
 
 import {
@@ -43,17 +43,16 @@ import {
   StraightEdgeInternal,
 } from "@/components/graph/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/graph/node";
-import type { GroupNodeProps } from "@/components/graph/node/GroupNode";
 import type {
   DefaultEdgeOptions,
   DefaultNodeOptions,
   Edge,
   EdgeLayouted,
-  EdgeProps,
+  EdgeTypes,
   FitViewOptions,
   InternalNode,
   Node,
-  NodeProps,
+  NodeTypes,
   OnBeforeDelete,
   OnDelete,
   OnEdgeCreate,
@@ -65,22 +64,24 @@ type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse" | undefined;
 };
 
-export const InitialNodeTypesMap: Record<string, Component<NodeProps> | Component<GroupNodeProps>> =
-  {
-    input: InputNode,
-    output: OutputNode,
-    default: DefaultNode,
-    group: GroupNode,
-  };
+export const InitialNodeTypesMap = {
+  input: InputNode,
+  output: OutputNode,
+  default: DefaultNode,
+  group: GroupNode,
+} satisfies NodeTypes;
 
-export const InitialEdgeTypesMap: Record<string, Component<EdgeProps>> = {
+export const InitialEdgeTypesMap = {
   straight: StraightEdgeInternal,
   smoothstep: SmoothStepEdgeInternal,
   default: BezierEdgeInternal,
   step: StepEdgeInternal,
-};
+} satisfies EdgeTypes;
 
-export const initializeFlowStore = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+export const initializeSolidFlowStore = <
+  NodeType extends Node = Node,
+  EdgeType extends Edge = Edge,
+>(
   props: Partial<FlowStoreProps<NodeType, EdgeType>>,
 ) => {
   const _props = mergeProps(
@@ -122,11 +123,18 @@ export const initializeFlowStore = <NodeType extends Node = Node, EdgeType exten
   }
 
   return createStore({
-    lib: "solid",
-    defaultMarkerColor: "#b1b1b7",
     id: null as string | null,
     nodes: _props.nodes,
     edges: _props.edges,
+    nodeTypes: InitialNodeTypesMap as NodeTypes,
+    edgeTypes: InitialEdgeTypesMap as EdgeTypes,
+    nodesInitialized: false,
+    edgesInitialized: false,
+    viewportInitialized: false,
+    height: 500,
+    width: 500,
+    minZoom: 0.5,
+    maxZoom: 2,
     nodeLookup,
     parentLookup,
     edgeLookup,
@@ -134,10 +142,6 @@ export const initializeFlowStore = <NodeType extends Node = Node, EdgeType exten
     defaultEdgeOptions: _props.defaultEdgeOptions,
     defaultNodeOptions: _props.defaultNodeOptions,
     connectionLookup,
-    height: 500,
-    width: 500,
-    minZoom: 0.5,
-    maxZoom: 2,
     nodeOrigin: _props.nodeOrigin,
     nodeDragThreshold: 1,
     nodeExtent: _props.nodeExtent,
@@ -158,40 +162,33 @@ export const initializeFlowStore = <NodeType extends Node = Node, EdgeType exten
     deleteKeyPressed: false,
     panActivationKeyPressed: false,
     zoomActivationKeyPressed: false,
-    nodeTypes: InitialNodeTypesMap,
-    edgeTypes: InitialEdgeTypesMap,
     viewport,
     connectionMode: "strict" as ConnectionMode,
     domNode: null as HTMLDivElement | null,
     connectionState: initialConnection as ConnectionState,
     connectionLineType: ConnectionLineType.Bezier,
     connectionRadius: 20,
-    isValidConnection: (() => true) as () => boolean,
     nodesDraggable: true,
     nodesConnectable: true,
     elementsSelectable: true,
     selectNodesOnDrag: true,
     onlyRenderVisibleElements: false,
+    lib: "solid",
+    defaultMarkerColor: "#b1b1b7",
+    isValidConnection: (() => true) as () => boolean,
     onError: devWarn as OnError,
     onDelete: undefined as OnDelete | undefined,
     onEdgeCreate: undefined as OnEdgeCreate | undefined,
     onConnect: undefined as OnConnect | undefined,
     onConnectStart: undefined as OnConnectStart | undefined,
     onConnectEnd: undefined as OnConnectEnd | undefined,
-    onBeforeDelete: undefined as OnBeforeDelete | undefined,
-    nodesInitialized: false,
-    edgesInitialized: false,
-    viewportInitialized: false,
+    onBeforeDelete: undefined as OnBeforeDelete<NodeType, EdgeType> | undefined,
 
     // derived store values
     get initialized() {
-      if (!this.nodes.length) {
-        return this.viewportInitialized;
-      } else if (!this.edges.length) {
-        return this.viewportInitialized && this.nodesInitialized;
-      } else {
-        return this.viewportInitialized && this.nodesInitialized && this.edgesInitialized;
-      }
+      if (!this.nodes.length) return this.viewportInitialized;
+      if (!this.edges.length) return this.viewportInitialized && this.nodesInitialized;
+      return this.viewportInitialized && this.nodesInitialized && this.edgesInitialized;
     },
     get connection() {
       const state = this.connectionState;
@@ -225,7 +222,13 @@ export const initializeFlowStore = <NodeType extends Node = Node, EdgeType exten
               true,
             )
           : Array.from(this.nodeLookup.values())
-      ) as InternalNode[];
+      ) as InternalNode<NodeType>[];
+    },
+    get selectedNodes() {
+      return this.nodes.filter((node) => node.selected);
+    },
+    get selectedEdges() {
+      return this.edges.filter((edge) => edge.selected);
     },
     get visibleEdges() {
       const edges =

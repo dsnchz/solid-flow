@@ -1,11 +1,11 @@
 import { getConnectedEdges, getEventPosition, getNodesInside, SelectionMode } from "@xyflow/system";
 import clsx from "clsx";
 import { type ParentComponent } from "solid-js";
+import { produce } from "solid-js/store";
 
 import { useFlowStore } from "@/components/contexts";
 import type { Edge, InternalNode, Node } from "@/shared/types";
 import type { MouseOrTouchEventHandler } from "@/shared/types/events";
-import { produce } from "solid-js/store";
 
 const wrapHandler = (
   handler: (evt: MouseEvent) => void,

@@ -1,19 +1,20 @@
-import { type Component, For, Show } from "solid-js";
+import { For, Show } from "solid-js";
 
 import { useFlowStore } from "@/components/contexts";
 import CallOnMount from "@/components/utility/CallOnMount";
-import type { EdgeComponentKey } from "@/data/types";
-import type { DefaultEdgeOptions, EdgeEventCallbacks } from "@/shared/types";
+import type { DefaultEdgeOptions, Edge, EdgeEventCallbacks, Node } from "@/shared/types";
 
 import EdgeWrapper from "../graph/edge/EdgeWrapper";
 import { MarkerDefinition } from "../graph/marker";
 
-type EdgeRendererProps = Partial<EdgeEventCallbacks> & {
+type EdgeRendererProps<EdgeType extends Edge = Edge> = Partial<EdgeEventCallbacks<EdgeType>> & {
   readonly defaultEdgeOptions?: DefaultEdgeOptions;
 };
 
-const EdgeRenderer: Component<EdgeRendererProps> = (props) => {
-  const { store, setStore } = useFlowStore();
+const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+  props: EdgeRendererProps<EdgeType>,
+) => {
+  const { store, setStore } = useFlowStore<NodeType, EdgeType>();
 
   return (
     <div class="solid-flow__edges">
@@ -23,7 +24,7 @@ const EdgeRenderer: Component<EdgeRendererProps> = (props) => {
 
       <For each={store.visibleEdges}>
         {(edge) => {
-          const edgeType = () => (edge.type || "default") as EdgeComponentKey;
+          const edgeType = () => edge.type ?? "default";
           const selectable = () => edge.selectable ?? store.elementsSelectable;
 
           return (

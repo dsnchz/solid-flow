@@ -1,20 +1,11 @@
 import { errorMessages, Position } from "@xyflow/system";
 import clsx from "clsx";
-import {
-  type Accessor,
-  type Component,
-  createContext,
-  createEffect,
-  mergeProps,
-  onCleanup,
-  Show,
-} from "solid-js";
+import { type Accessor, createContext, createEffect, mergeProps, onCleanup, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 // @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
 import drag from "@/actions/drag";
 import { useFlowStore } from "@/components/contexts";
-import type { NodeComponentKey } from "@/data/types";
 import type { InternalNode, Node, NodeEventCallbacks } from "@/shared/types";
 
 import DefaultNode from "./DefaultNode";
@@ -55,7 +46,7 @@ function getNodeInlineStyleDimensions({
 
 export const NodeIdContext = createContext<Accessor<string>>();
 
-export type NodeWrapperProps = Pick<
+export type NodeWrapperProps<NodeType extends Node = Node> = Pick<
   Node,
   | "id"
   | "class"
@@ -78,24 +69,22 @@ export type NodeWrapperProps = Pick<
   | "initialHeight"
   | "parentId"
 > &
-  Partial<NodeEventCallbacks> & {
+  Partial<NodeEventCallbacks<NodeType>> & {
     readonly measuredWidth?: number;
     readonly measuredHeight?: number;
-    /** Can be a `NodeComponentKey` or any `string` like `"custom"` or `"input"` */
     readonly type?: string;
     readonly positionX: number;
     readonly positionY: number;
     readonly resizeObserver?: ResizeObserver | null;
     readonly isParent?: boolean;
     readonly zIndex: number;
-    readonly node: InternalNode;
+    readonly node: InternalNode<NodeType>;
     readonly initialized?: boolean;
     readonly nodeClickDistance?: number;
   };
 
-const NodeWrapper: Component<NodeWrapperProps> = (props) => {
-  const flowStore = useFlowStore();
-  const { store, updateNodeInternals, handleNodeSelection } = flowStore;
+const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeType>) => {
+  const { store, updateNodeInternals, handleNodeSelection } = useFlowStore();
 
   const _props = mergeProps(
     {
@@ -105,7 +94,7 @@ const NodeWrapper: Component<NodeWrapperProps> = (props) => {
       initialized: false,
       isParent: false,
       selected: false,
-      type: "default" as NodeComponentKey,
+      type: "default",
     },
     props,
   );
@@ -116,7 +105,7 @@ const NodeWrapper: Component<NodeWrapperProps> = (props) => {
   let prevSourcePosition: Position | undefined = undefined;
   let prevTargetPosition: Position | undefined = undefined;
 
-  const nodeTypeValid = () => !!store.nodeTypes[_props.type];
+  const nodeTypeValid = () => _props.type in store.nodeTypes;
   const nodeComponent = () => store.nodeTypes[_props.type] || DefaultNode;
 
   createEffect(() => {
@@ -251,6 +240,8 @@ const NodeWrapper: Component<NodeWrapperProps> = (props) => {
             component={nodeComponent()}
             data={_props.data}
             id={_props.id}
+            width={`${_props.width}px`}
+            height={`${_props.height}px`}
             selected={_props.selected}
             selectable={_props.selectable ?? store.elementsSelectable ?? true}
             deletable={_props.deletable}
@@ -265,8 +256,6 @@ const NodeWrapper: Component<NodeWrapperProps> = (props) => {
             isConnectable={_props.connectable}
             positionAbsoluteX={_props.positionX}
             positionAbsoluteY={_props.positionY}
-            width={_props.width}
-            height={_props.height}
           />
         </div>
       </NodeIdContext.Provider>

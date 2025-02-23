@@ -43,8 +43,8 @@ export function updateStore<NodeType extends Node, EdgeType extends Edge>(
 
 const getKeys = <T extends object>(obj: T) => Object.keys(obj) as Array<keyof T>;
 
-export type UpdatableStoreProps = Pick<
-  FlowProps,
+export type UpdatableStoreProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = Pick<
+  FlowProps<NodeType, EdgeType>,
   | "id"
   | "connectionLineType"
   | "connectionRadius"
@@ -72,7 +72,7 @@ export type UpdatableStoreProps = Pick<
 
 export function updateStoreByKeys<NodeType extends Node, EdgeType extends Edge>(
   setStore: FlowStoreSetter<NodeType, EdgeType>,
-  keys: Partial<UpdatableStoreProps>,
+  keys: Partial<UpdatableStoreProps<NodeType, EdgeType>>,
 ) {
   for (const key of getKeys(keys)) {
     if (keys[key] !== undefined) {

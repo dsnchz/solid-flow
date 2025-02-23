@@ -1,24 +1,26 @@
 import { getMarkerId } from "@xyflow/system";
 import clsx from "clsx";
-import { type Component, Show } from "solid-js";
+import { Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import { useFlowStore } from "@/components/contexts";
 import { EdgeIdContext } from "@/components/contexts/edgeId";
-import type { EdgeComponentKey } from "@/data/types";
 import { useHandleEdgeSelect } from "@/hooks/useHandleEdgeSelect";
-import type { EdgeEventCallbacks, EdgeLayouted } from "@/shared/types";
+import type { Edge, EdgeEventCallbacks, EdgeLayouted, Node } from "@/shared/types";
 
 import { BezierEdgeInternal } from ".";
 
-export type EdgeWrapperProps = EdgeLayouted & Partial<EdgeEventCallbacks>;
+export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeLayouted &
+  Partial<EdgeEventCallbacks<EdgeType>>;
 
-const EdgeWrapper: Component<EdgeWrapperProps> = (props) => {
-  const { store } = useFlowStore();
+const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+  props: EdgeWrapperProps<EdgeType>,
+) => {
+  const { store } = useFlowStore<NodeType, EdgeType>();
   const handleEdgeSelect = useHandleEdgeSelect();
 
   // Computed values
-  const edgeType = () => (props.type || "default") as EdgeComponentKey;
+  const edgeType = () => props.type ?? "default";
   const edgeComponent = () => store.edgeTypes[edgeType()] || BezierEdgeInternal;
   const markerStartUrl = () =>
     props.markerStart ? `url('#${getMarkerId(props.markerStart, store.id)}')` : undefined;

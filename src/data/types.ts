@@ -21,15 +21,8 @@ import type {
   NodeTypes,
 } from "@/shared/types";
 
-import type {
-  initializeFlowStore,
-  InitialEdgeTypesMap,
-  InitialNodeTypesMap,
-} from "./initializeFlowStore";
 import type { createSolidFlow } from "./createSolidFlow";
-
-export type EdgeComponentKey = keyof typeof InitialEdgeTypesMap;
-export type NodeComponentKey = keyof typeof InitialNodeTypesMap;
+import type { initializeSolidFlowStore } from "./initializeSolidFlowStore";
 
 export type FlowStoreProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   readonly nodes: NodeType[];
@@ -53,7 +46,7 @@ type Graph = {
 export type SolidStore<T> = [get: Store<T>, set: SetStoreFunction<T>];
 
 type SolidFlowStore<NodeType extends Node, EdgeType extends Edge> = ReturnType<
-  typeof initializeFlowStore<NodeType, EdgeType>
+  typeof initializeSolidFlowStore<NodeType, EdgeType>
 >;
 export type FlowStoreState<NodeType extends Node, EdgeType extends Edge> = SolidFlowStore<
   NodeType,

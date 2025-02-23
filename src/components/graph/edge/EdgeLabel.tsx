@@ -1,10 +1,10 @@
 import type { Component, JSX } from "solid-js";
 
+import { useEdgeId } from "@/components/contexts";
 import { useHandleEdgeSelect } from "@/hooks/useHandleEdgeSelect";
 
 import EdgeLabelRenderer from "./EdgeLabelRenderer";
 import type { BaseEdgeProps } from "./types";
-import { useEdgeId } from "@/components/contexts";
 
 type EdgeLabelProps = {
   readonly style?: BaseEdgeProps["labelStyle"];

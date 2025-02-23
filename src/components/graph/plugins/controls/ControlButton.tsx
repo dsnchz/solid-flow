@@ -1,13 +1,14 @@
 import clsx from "clsx";
 import type { JSX, ParentComponent } from "solid-js";
 
-export type ControlButtonProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> & {
+export type ControlButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
   readonly class: string;
   readonly bgColor: string;
   readonly bgColorHover: string;
   readonly color: string;
   readonly colorHover: string;
   readonly borderColor: string;
+  readonly onClick: JSX.EventHandler<HTMLButtonElement, MouseEvent>;
 };
 
 const ControlButton: ParentComponent<Partial<ControlButtonProps>> = (props) => {
@@ -28,7 +29,7 @@ const ControlButton: ParentComponent<Partial<ControlButtonProps>> = (props) => {
   return (
     <button
       type="button"
-      onClick={props.onClick}
+      onClick={(e) => props.onClick?.(e)}
       class={clsx("solid-flow__controls-button", props.class)}
       style={style()}
       {...props}

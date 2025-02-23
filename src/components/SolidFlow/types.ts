@@ -3,6 +3,7 @@ import type {
   ConnectionMode,
   CoordinateExtent,
   IsValidConnection,
+  NodeBase,
   NodeOrigin,
   OnConnect,
   OnConnectEnd,
@@ -43,13 +44,13 @@ export type SolidFlowProps = {
   readonly nodeOrigin: NodeOrigin;
 };
 
-type EventProps = {
+type EventProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   readonly onInit: () => void;
-  readonly onEdgeCreate: (edge: Edge) => void;
+  readonly onEdgeCreate: (edge: EdgeType) => void;
   readonly onConnect: OnConnect;
   readonly onConnectStart: OnConnectStart;
   readonly onConnectEnd: OnConnectEnd;
-  readonly onBeforeDelete: OnBeforeDelete;
+  readonly onBeforeDelete: OnBeforeDelete<NodeType, EdgeType>;
   readonly onError: (error: Error) => void;
   readonly onDelete: OnDelete;
   readonly onMove: OnMove;
@@ -59,25 +60,28 @@ type EventProps = {
   readonly onPaneContextMenu: MouseOrTouchEventHandler;
   readonly isValidConnection: IsValidConnection;
 
-  readonly onNodeClick: GraphTargetHandler<Node>;
-  readonly onNodeContextMenu: GraphTargetHandler<Node>;
-  readonly onNodeMouseEnter: GraphTargetHandler<Node>;
-  readonly onNodeMouseLeave: GraphTargetHandler<Node>;
-  readonly onNodeMouseMove: GraphTargetHandler<Node>;
-  readonly onNodeDrag: GraphTargetContextHandler<Node>;
-  readonly onNodeDragStart: GraphTargetContextHandler<Node>;
-  readonly onNodeDragStop: GraphTargetContextHandler<Node>;
-  readonly onNodeSelectionContextMenu?: GraphMultiTargetHandler<Node>;
-  readonly onNodeSelectionClick?: GraphMultiTargetHandler<Node>;
+  readonly onNodeClick: GraphTargetHandler<NodeType>;
+  readonly onNodeContextMenu: GraphTargetHandler<NodeType>;
+  readonly onNodeMouseEnter: GraphTargetHandler<NodeType>;
+  readonly onNodeMouseLeave: GraphTargetHandler<NodeType>;
+  readonly onNodeMouseMove: GraphTargetHandler<NodeType>;
+  readonly onNodeDrag: GraphTargetContextHandler<NodeBase>;
+  readonly onNodeDragStart: GraphTargetContextHandler<NodeBase>;
+  readonly onNodeDragStop: GraphTargetContextHandler<NodeBase>;
+  readonly onNodeSelectionContextMenu?: GraphMultiTargetHandler<NodeType>;
+  readonly onNodeSelectionClick?: GraphMultiTargetHandler<NodeType>;
 
-  readonly onEdgeClick: GraphTargetHandler<Edge>;
-  readonly onEdgeContextMenu: GraphTargetHandler<Edge>;
-  readonly onEdgeMouseEnter: GraphTargetHandler<Edge>;
-  readonly onEdgeMouseLeave: GraphTargetHandler<Edge>;
-  readonly onEdgeMouseMove: GraphTargetHandler<Edge>;
+  readonly onEdgeClick: GraphTargetHandler<EdgeType>;
+  readonly onEdgeContextMenu: GraphTargetHandler<EdgeType>;
+  readonly onEdgeMouseEnter: GraphTargetHandler<EdgeType>;
+  readonly onEdgeMouseLeave: GraphTargetHandler<EdgeType>;
+  readonly onEdgeMouseMove: GraphTargetHandler<EdgeType>;
 };
 
-export type FlowProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = EventProps & {
+export type FlowProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = EventProps<
+  NodeType,
+  EdgeType
+> & {
   readonly id: string;
   readonly class: string;
   readonly style: JSX.CSSProperties;

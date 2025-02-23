@@ -1,18 +1,19 @@
 import { nodeHasDimensions } from "@xyflow/system";
-import { type Component, For, onCleanup } from "solid-js";
+import { For, onCleanup } from "solid-js";
 
 import { useFlowStore } from "@/components/contexts";
-import type { NodeComponentKey } from "@/data/types";
-import type { NodeEventCallbacks } from "@/shared/types";
+import type { Node, NodeEventCallbacks } from "@/shared/types";
 
 import NodeWrapper from "../graph/node/NodeWrapper";
 
-export type NodeRendererProps = Partial<NodeEventCallbacks> & {
+export type NodeRendererProps<NodeType extends Node = Node> = Partial<
+  NodeEventCallbacks<NodeType>
+> & {
   readonly nodeClickDistance?: number;
 };
 
-const NodeRenderer: Component<NodeRendererProps> = (props) => {
-  const { store, updateNodeInternals } = useFlowStore();
+const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererProps<NodeType>) => {
+  const { store, updateNodeInternals } = useFlowStore<NodeType>();
 
   const resizeObserver =
     typeof ResizeObserver === "undefined"
@@ -58,7 +59,7 @@ const NodeRenderer: Component<NodeRendererProps> = (props) => {
 
           const zIndex = () => node.internals.z ?? 0;
           const deletable = () => node.deletable ?? true;
-          const type = () => (node.type as NodeComponentKey | undefined) ?? "default";
+          const type = () => node.type ?? "default";
 
           return (
             <NodeWrapper

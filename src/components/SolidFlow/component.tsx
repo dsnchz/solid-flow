@@ -1,6 +1,7 @@
 import { PanOnScrollMode } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, onCleanup, onMount, type Context, type ParentProps } from "solid-js";
+import { type Context, createEffect, onCleanup, onMount, type ParentProps } from "solid-js";
+import { produce } from "solid-js/store";
 
 import { EdgeRenderer, NodeRenderer, Pane, Viewport, Zoom } from "@/components/container";
 import { ConnectionLine } from "@/components/graph/connection";
@@ -14,7 +15,6 @@ import type { Edge, Node } from "@/shared/types";
 import { SolidFlowContext, type SolidFlowContextValue } from "../contexts/flow";
 import type { FlowProps } from "./types";
 import { updateStore, updateStoreByKeys } from "./utils";
-import { produce } from "solid-js/store";
 
 const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<Partial<FlowProps<NodeType, EdgeType>>>,

@@ -1,21 +1,21 @@
 import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
 import clsx from "clsx";
-import { type Component, Show } from "solid-js";
+import { Show } from "solid-js";
 
 // @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
 import drag from "@/actions/drag";
 import { useFlowStore } from "@/components/contexts";
 import Selection from "@/components/graph/selection/Selection";
-import type { GraphMultiTargetHandler } from "@/shared/types/events";
+import type { GraphMultiTargetHandler, MouseOrTouchEvent } from "@/shared/types/events";
 import type { Node, NodeEventCallbacks } from "@/shared/types/node";
 
-type NodeSelectionProps = Partial<NodeEventCallbacks> & {
-  readonly onSelectionContextMenu?: GraphMultiTargetHandler<Node>;
-  readonly onSelectionClick?: GraphMultiTargetHandler<Node>;
+type NodeSelectionProps<NodeType extends Node = Node> = Partial<NodeEventCallbacks<NodeType>> & {
+  readonly onSelectionContextMenu?: GraphMultiTargetHandler<NodeType>;
+  readonly onSelectionClick?: GraphMultiTargetHandler<NodeType>;
 };
 
-const NodeSelection: Component<NodeSelectionProps> = (props) => {
-  const flowStore = useFlowStore();
+const NodeSelection = <NodeType extends Node = Node>(props: NodeSelectionProps<NodeType>) => {
+  const flowStore = useFlowStore<NodeType>();
   const { store } = flowStore;
 
   const bounds = () => {
@@ -27,12 +27,12 @@ const NodeSelection: Component<NodeSelectionProps> = (props) => {
     return null;
   };
 
-  const onContextMenu = (event: MouseEvent | TouchEvent) => {
+  const onContextMenu = (event: MouseOrTouchEvent) => {
     const selectedNodes = store.nodes.filter((n) => n.selected);
     props.onSelectionContextMenu?.(selectedNodes, event);
   };
 
-  const onClick = (event: MouseEvent | TouchEvent) => {
+  const onClick = (event: MouseOrTouchEvent) => {
     const selectedNodes = store.nodes.filter((n) => n.selected);
     props.onSelectionClick?.(selectedNodes, event);
   };
@@ -55,13 +55,13 @@ const NodeSelection: Component<NodeSelectionProps> = (props) => {
         }}
         use:drag={{
           disabled: false,
-          onDrag: (event: MouseEvent | TouchEvent, _, __, nodes: Node[]) => {
+          onDrag: (event, _, __, nodes) => {
             props.onNodeDrag?.(null, nodes, event);
           },
-          onDragStart: (event: MouseEvent | TouchEvent, _, __, nodes: Node[]) => {
+          onDragStart: (event, _, __, nodes) => {
             props.onNodeDragStart?.(null, nodes, event);
           },
-          onDragStop: (event: MouseEvent | TouchEvent, _, __, nodes: Node[]) => {
+          onDragStop: (event, _, __, nodes) => {
             props.onNodeDragStop?.(null, nodes, event);
           },
         }}

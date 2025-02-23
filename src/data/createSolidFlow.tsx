@@ -12,6 +12,8 @@ import {
   getNodesBounds as getNodesBoundsSystem,
   initialConnection,
   type InternalNodeUpdate,
+  type NodeDimensionChange,
+  type NodePositionChange,
   panBy as panBySystem,
   updateAbsolutePositions,
   updateConnectionLookup,
@@ -21,29 +23,23 @@ import {
   type XYPosition,
 } from "@xyflow/system";
 import { createEffect } from "solid-js";
+import { produce } from "solid-js/store";
 
-import type {
-  Edge,
-  EdgeTypes,
-  FitViewOptions,
-  Node,
-  NodeGraph,
-  NodeTypes,
-} from "@/shared/types";
+import type { Edge, EdgeTypes, FitViewOptions, Node, NodeGraph, NodeTypes } from "@/shared/types";
 
 import {
   InitialEdgeTypesMap,
-  initializeFlowStore,
+  initializeSolidFlowStore,
   InitialNodeTypesMap,
-} from "./initializeFlowStore";
+} from "./initializeSolidFlowStore";
 import type { FlowStoreProps } from "./types";
-import { produce } from "solid-js/store";
 
 export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: Partial<FlowStoreProps<NodeType, EdgeType>>,
 ) => {
-  const [store, setStore] = initializeFlowStore(props);
+  const [store, setStore] = initializeSolidFlowStore(props);
 
+  // We now define custom public actions/setters for the store
   const setNodes = (cb: (nodes: NodeType[]) => NodeType[]) => {
     const nextNodes = cb(store.nodes).map((node) => ({
       ...store.defaultNodeOptions,
@@ -85,16 +81,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const updateNodePositions: UpdateNodePositions = (nodeDragItems, dragging = false) => {
-    for (const [id, dragItem] of nodeDragItems) {
-      const node = store.nodeLookup.get(id)?.internals.userNode;
-
-      if (!node) continue;
-
-      node.position = dragItem.position;
-      node.dragging = dragging;
-    }
-
-    setNodes((nds) => nds); // Refresh the nodes to ensure the changes are applied
+    setStore(
+      "nodes",
+      (node) => nodeDragItems.has(node.id),
+      produce((node) => {
+        node.dragging = dragging;
+        node.position = nodeDragItems.get(node.id)!.position;
+      }),
+    );
   };
 
   const updateNodeInternals = (updates: Map<string, InternalNodeUpdate>) => {
@@ -126,30 +120,43 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       setStore("fitViewOnInitDone", fitViewOnInitDone);
     }
 
-    for (const change of changes) {
-      const node = nodeLookup.get(change.id)?.internals.userNode;
+    const nodeToChange = changes.reduce<Map<string, NodeDimensionChange | NodePositionChange>>(
+      (acc, change) => {
+        const node = nodeLookup.get(change.id)?.internals.userNode;
 
-      if (!node) continue;
+        if (!node) return acc;
 
-      switch (change.type) {
-        case "dimensions": {
-          const measured = { ...node.measured, ...change.dimensions };
+        acc.set(node.id, change);
 
-          if (change.setAttributes) {
-            node.width = change.dimensions?.width ?? node.width;
-            node.height = change.dimensions?.height ?? node.height;
+        return acc;
+      },
+      new Map(),
+    );
+
+    setStore(
+      "nodes",
+      (node) => nodeToChange.has(node.id),
+      produce((node) => {
+        const change = nodeToChange.get(node.id)!;
+
+        switch (change.type) {
+          case "dimensions": {
+            const measured = { ...node.measured, ...change.dimensions };
+
+            if (change.setAttributes) {
+              node.width = change.dimensions?.width ?? node.width;
+              node.height = change.dimensions?.height ?? node.height;
+            }
+
+            node.measured = measured;
+            break;
           }
-
-          node.measured = measured;
-          break;
+          case "position":
+            node.position = change.position ?? node.position;
+            break;
         }
-        case "position":
-          node.position = change.position ?? node.position;
-          break;
-      }
-    }
-
-    setNodes((nds) => nds); // Refresh the nodes to ensure the changes are applied
+      }),
+    );
 
     if (!store.nodesInitialized) {
       setStore("nodesInitialized", true);
@@ -233,24 +240,30 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     store.panZoom?.setClickDistance(distance);
   };
 
-  const unselectNodesAndEdges = (graph?: Partial<NodeGraph<NodeType, EdgeType>>) => {
-    const { nodes, edges } = graph || {};
+  const unselectNodesAndEdges = ({ nodes, edges }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
+    const nodesToUnselect = new Set((nodes ? nodes : store.nodes).map(({ id }) => id));
 
-    setStore(
-      "nodes",
-      (node) => !!node.selected,
-      produce((node) => {
-        node.selected = false;
-      }),
-    );
-  
-    setStore(
-      "edges",
-      (edge) => !!edge.selected,
-      produce((edge) => {
-        edge.selected = false;
-      }),
-    );
+    if (nodesToUnselect.size) {
+      setStore(
+        "nodes",
+        (node) => nodesToUnselect.has(node.id),
+        produce((node) => {
+          node.selected = false;
+        }),
+      );
+    }
+
+    const edgesToUnselect = new Set((edges ? edges : store.edges).map(({ id }) => id));
+
+    if (edgesToUnselect.size) {
+      setStore(
+        "edges",
+        (edge) => edgesToUnselect.has(edge.id),
+        produce((edge) => {
+          edge.selected = false;
+        }),
+      );
+    }
   };
 
   const addSelectedNodes = (ids: string[]) => {
@@ -370,21 +383,24 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   createEffect(() => {
     if (!store.deleteKeyPressed) return;
 
-    // Need to localize the functions to keep reactivity healthy
-    const _setNodes = setNodes;
-    const _setEdges = setEdges;
-
-    getElementsToRemove({
-      nodesToRemove: store.nodes.filter((node) => node.selected),
-      edgesToRemove: store.edges.filter((edge) => edge.selected),
+    getElementsToRemove<NodeType, EdgeType>({
       nodes: store.nodes,
       edges: store.edges,
+      nodesToRemove: store.selectedNodes,
+      edgesToRemove: store.selectedEdges,
       onBeforeDelete: store.onBeforeDelete,
     }).then(({ nodes: matchingNodes, edges: matchingEdges }) => {
-      if (matchingNodes.length || matchingEdges.length) {
-        _setNodes((nds) => nds.filter((node) => !matchingNodes.some((mN) => mN.id === node.id)));
-        _setEdges((eds) => eds.filter((edge) => !matchingEdges.some((mE) => mE.id === edge.id)));
+      if (matchingNodes.length) {
+        const nodesToRemove = new Set(matchingNodes.map((mN) => mN.id));
+        setStore("nodes", (nodes) => nodes.filter((node) => !nodesToRemove.has(node.id)));
+      }
 
+      if (matchingEdges.length) {
+        const edgesToRemove = new Set(matchingEdges.map((mE) => mE.id));
+        setStore("edges", (edges) => edges.filter((edge) => !edgesToRemove.has(edge.id)));
+      }
+
+      if (matchingNodes.length || matchingEdges.length) {
         store.onDelete?.({
           nodes: matchingNodes,
           edges: matchingEdges,

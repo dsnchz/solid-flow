@@ -81,7 +81,9 @@ export type NodeGraph<NodeType extends Node = Node, EdgeType extends Edge = Edge
   readonly edges: EdgeType[];
 };
 
-export type OnDelete = (params: NodeGraph) => void;
+export type OnDelete = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+  params: NodeGraph<NodeType, EdgeType>,
+) => void;
 export type OnEdgeCreate = (connection: Connection) => Edge | Connection;
 export type OnBeforeDelete<
   NodeType extends Node = Node,

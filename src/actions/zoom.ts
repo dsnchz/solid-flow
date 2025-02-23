@@ -6,9 +6,9 @@ import {
   XYPanZoom,
 } from "@xyflow/system";
 import { type Accessor } from "solid-js";
+import { produce } from "solid-js/store";
 
 import { useSolidFlow } from "@/components/contexts/flow";
-import { produce } from "solid-js/store";
 
 export type ZoomDirectiveParams = {
   readonly onPanZoomStart?: OnPanZoom;
