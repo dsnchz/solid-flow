@@ -1,10 +1,12 @@
 import "@/styles/base.css";
 import "@/styles/style.css";
 
+import { createStore } from "solid-js/store";
+
 import { Background, Controls, SolidFlow } from "@/components";
 
 export const App = () => {
-  const nodes = [
+  const [nodes] = createStore([
     {
       id: "1",
       type: "input",
@@ -17,10 +19,10 @@ export const App = () => {
       data: { label: "Node" },
       position: { x: 0, y: 150 },
     },
-  ];
+  ]);
 
   // same for edges
-  const edges = [
+  const [edges] = createStore([
     {
       id: "1-2",
       type: "default",
@@ -28,7 +30,7 @@ export const App = () => {
       target: "2",
       label: "Edge Text",
     },
-  ];
+  ]);
 
   return (
     <SolidFlow

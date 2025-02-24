@@ -1,11 +1,7 @@
-import {
-  type OnPanZoom,
-  PanOnScrollMode,
-  type Transform,
-  type Viewport,
-  XYPanZoom,
-} from "@xyflow/system";
-import { type Accessor } from "solid-js";
+import type { OnPanZoom, PanOnScrollMode, Transform, Viewport } from "@xyflow/system";
+import { XYPanZoom } from "@xyflow/system";
+import type { Accessor } from "solid-js";
+import { createEffect, onMount } from "solid-js";
 import { produce } from "solid-js/store";
 
 import { useSolidFlow } from "@/components/contexts/flow";
@@ -33,54 +29,42 @@ export type ZoomDirectiveParams = {
   readonly noPanClassName: string;
 };
 
-declare module "solid-js" {
-  namespace JSX {
-    interface Directives {
-      readonly zoom: ZoomDirectiveParams;
-    }
-  }
-}
-
-export default function zoom(domNode: Element, params: Accessor<ZoomDirectiveParams>) {
-  const options = params();
+const createZoomable = (
+  elem: Accessor<HTMLElement | undefined>,
+  params: Accessor<ZoomDirectiveParams>,
+) => {
   const { store, setStore } = useSolidFlow();
 
-  const setDragging = (dragging: boolean) => {
+  const onDraggingChange = (dragging: boolean) => {
     setStore("dragging", dragging);
   };
 
-  const panZoomInstance = XYPanZoom({
-    domNode,
-    minZoom: store.minZoom,
-    maxZoom: store.maxZoom,
-    translateExtent: store.translateExtent,
-    viewport: options.initialViewport,
-    paneClickDistance: options.paneClickDistance,
-    onDraggingChange: setDragging,
-  });
+  onMount(() => {
+    const panZoomInstance = XYPanZoom({
+      domNode: elem()!,
+      minZoom: store.minZoom,
+      maxZoom: store.maxZoom,
+      translateExtent: store.translateExtent,
+      viewport: params().initialViewport,
+      paneClickDistance: params().paneClickDistance,
+      onDraggingChange,
+    });
 
-  const currentViewport = panZoomInstance.getViewport();
+    setStore(
+      produce((store) => {
+        store.viewport = panZoomInstance.getViewport();
+        store.panZoom = panZoomInstance;
+      }),
+    );
 
-  setStore(
-    produce((store) => {
-      store.viewport = currentViewport;
-      store.panZoom = panZoomInstance;
-    }),
-  );
-
-  panZoomInstance.update({
-    lib: store.lib,
-    zoomActivationKeyPressed: store.zoomActivationKeyPressed,
-    ...options,
-  });
-
-  return {
-    update(params: ZoomDirectiveParams) {
+    createEffect(() => {
       panZoomInstance.update({
         lib: store.lib,
         zoomActivationKeyPressed: store.zoomActivationKeyPressed,
-        ...params,
+        ...params(),
       });
-    },
-  };
-}
+    });
+  });
+};
+
+export default createZoomable;

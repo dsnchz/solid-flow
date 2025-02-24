@@ -4,10 +4,10 @@ import { createSolidFlow } from "@/data/createSolidFlow";
 import type { Edge, Node } from "@/shared/types";
 
 import { SolidFlowContext, type SolidFlowContextValue } from "../contexts/flow";
-import type { FlowProps } from "./types";
+import type { SolidFlowProps } from "./types";
 
 const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
-  props: ParentProps<Partial<FlowProps<NodeType, EdgeType>>>,
+  props: ParentProps<Partial<SolidFlowProps<NodeType, EdgeType>>>,
 ) => {
   const solidFlow = createSolidFlow(props);
 

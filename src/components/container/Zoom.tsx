@@ -6,10 +6,9 @@ import {
   type Transform,
   type Viewport,
 } from "@xyflow/system";
-import { type ParentComponent } from "solid-js";
+import { createSignal, type ParentComponent } from "solid-js";
 
-// @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
-import zoom from "@/actions/zoom";
+import createZoomable from "@/actions/createZoomable";
 import { useFlowStore } from "@/components/contexts";
 
 export type ZoomProps = {
@@ -30,6 +29,7 @@ export type ZoomProps = {
 const Zoom: ParentComponent<ZoomProps> = (props) => {
   const flowStore = useFlowStore();
   const { store, setStore } = flowStore;
+  const [ref, setRef] = createSignal<HTMLDivElement>();
 
   const viewPort = () => props.initialViewport || { x: 0, y: 0, zoom: 1 };
   const panOnDrag = () => store.panActivationKeyPressed || props.panOnDrag;
@@ -40,30 +40,28 @@ const Zoom: ParentComponent<ZoomProps> = (props) => {
     setStore("viewport", { x, y, zoom });
   };
 
+  createZoomable(ref, () => ({
+    initialViewport: viewPort(),
+    zoomOnScroll: props.zoomOnScroll,
+    zoomOnDoubleClick: props.zoomOnDoubleClick,
+    zoomOnPinch: props.zoomOnPinch,
+    panOnScroll: panOnScroll(),
+    panOnDrag: panOnDrag(),
+    panOnScrollSpeed: 0.5,
+    panOnScrollMode: props.panOnScrollMode || PanOnScrollMode.Free,
+    preventScrolling: typeof props.preventScrolling === "boolean" ? props.preventScrolling : true,
+    noPanClassName: "nopan",
+    noWheelClassName: "nowheel",
+    userSelectionActive: !!store.selectionRect,
+    paneClickDistance: props.paneClickDistance,
+    onPanZoomStart: props.onMoveStart,
+    onPanZoom: props.onMove,
+    onPanZoomEnd: props.onMoveEnd,
+    onTransformChange,
+  }));
+
   return (
-    <div
-      class="solid-flow__zoom"
-      use:zoom={{
-        initialViewport: viewPort(),
-        onPanZoomStart: props.onMoveStart,
-        onPanZoom: props.onMove,
-        onPanZoomEnd: props.onMoveEnd,
-        zoomOnScroll: props.zoomOnScroll,
-        zoomOnDoubleClick: props.zoomOnDoubleClick,
-        zoomOnPinch: props.zoomOnPinch,
-        panOnScroll: panOnScroll(),
-        panOnDrag: panOnDrag(),
-        panOnScrollSpeed: 0.5,
-        panOnScrollMode: props.panOnScrollMode || PanOnScrollMode.Free,
-        preventScrolling:
-          typeof props.preventScrolling === "boolean" ? props.preventScrolling : true,
-        noPanClassName: "nopan",
-        noWheelClassName: "nowheel",
-        userSelectionActive: !!store.selectionRect,
-        paneClickDistance: props.paneClickDistance,
-        onTransformChange,
-      }}
-    >
+    <div class="solid-flow__zoom" ref={setRef}>
       {props.children}
     </div>
   );

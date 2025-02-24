@@ -4,7 +4,7 @@ import type { FlowStoreSetter, SolidFlowStoreSetter } from "@/data/types";
 import type { Edge, EdgeTypes } from "@/shared/types/edge";
 import type { Node, NodeTypes } from "@/shared/types/node";
 
-import type { FlowProps } from "./types";
+import type { SolidFlowProps } from "./types";
 
 type UpdatableStoreParams = {
   readonly nodeTypes: NodeTypes;
@@ -44,7 +44,7 @@ export function updateStore<NodeType extends Node, EdgeType extends Edge>(
 const getKeys = <T extends object>(obj: T) => Object.keys(obj) as Array<keyof T>;
 
 export type UpdatableStoreProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = Pick<
-  FlowProps<NodeType, EdgeType>,
+  SolidFlowProps<NodeType, EdgeType>,
   | "id"
   | "connectionLineType"
   | "connectionRadius"

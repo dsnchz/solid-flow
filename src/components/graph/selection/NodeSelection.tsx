@@ -1,9 +1,8 @@
 import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
 import clsx from "clsx";
-import { Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 
-// @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
-import drag from "@/actions/drag";
+import createDraggable from "@/actions/createDraggable";
 import { useFlowStore } from "@/components/contexts";
 import Selection from "@/components/graph/selection/Selection";
 import type { GraphMultiTargetHandler, MouseOrTouchEvent } from "@/shared/types/events";
@@ -15,8 +14,8 @@ type NodeSelectionProps<NodeType extends Node = Node> = Partial<NodeEventCallbac
 };
 
 const NodeSelection = <NodeType extends Node = Node>(props: NodeSelectionProps<NodeType>) => {
-  const flowStore = useFlowStore<NodeType>();
-  const { store } = flowStore;
+  const { store } = useFlowStore<NodeType>();
+  const [ref, setRef] = createSignal<HTMLElement>();
 
   const bounds = () => {
     if (store.selectionRectMode === "nodes") {
@@ -37,6 +36,19 @@ const NodeSelection = <NodeType extends Node = Node>(props: NodeSelectionProps<N
     props.onSelectionClick?.(selectedNodes, event);
   };
 
+  createDraggable(ref, () => ({
+    disabled: false,
+    onDrag: (event, _, __, nodes) => {
+      props.onNodeDrag?.(null, nodes, event);
+    },
+    onDragStart: (event, _, __, nodes) => {
+      props.onNodeDragStart?.(null, nodes, event);
+    },
+    onDragStop: (event, _, __, nodes) => {
+      props.onNodeDragStop?.(null, nodes, event);
+    },
+  }));
+
   return (
     <Show
       when={
@@ -53,18 +65,7 @@ const NodeSelection = <NodeType extends Node = Node>(props: NodeSelectionProps<N
           height: `${bounds()!.height}px`,
           transform: `translate(${bounds()!.x}px, ${bounds()!.y}px)`,
         }}
-        use:drag={{
-          disabled: false,
-          onDrag: (event, _, __, nodes) => {
-            props.onNodeDrag?.(null, nodes, event);
-          },
-          onDragStart: (event, _, __, nodes) => {
-            props.onNodeDragStart?.(null, nodes, event);
-          },
-          onDragStop: (event, _, __, nodes) => {
-            props.onNodeDragStop?.(null, nodes, event);
-          },
-        }}
+        ref={setRef}
         onContextMenu={onContextMenu}
         onClick={onClick}
         role="button"

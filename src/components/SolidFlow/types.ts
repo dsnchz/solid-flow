@@ -17,6 +17,7 @@ import type {
   Viewport,
 } from "@xyflow/system";
 import type { JSX } from "solid-js";
+import type { Store } from "solid-js/store";
 
 import type {
   DefaultEdgeOptions,
@@ -35,7 +36,7 @@ import type {
   MouseOrTouchEventHandler,
 } from "@/shared/types/events";
 
-export type SolidFlowProps = {
+export type SolidFlowInitialProps = {
   readonly initialNodes: Node[];
   readonly initialEdges: Edge[];
   readonly initialWidth: number;
@@ -78,7 +79,7 @@ type EventProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   readonly onEdgeMouseMove: GraphTargetHandler<EdgeType>;
 };
 
-export type FlowProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = EventProps<
+export type SolidFlowProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = EventProps<
   NodeType,
   EdgeType
 > & {
@@ -87,9 +88,11 @@ export type FlowProps<NodeType extends Node = Node, EdgeType extends Edge = Edge
   readonly style: JSX.CSSProperties;
   readonly colorMode: "light" | "dark";
   readonly defaultMarkerColor: string;
-  readonly nodes: NodeType[];
+  /** The nodes to render. **Must** be a SolidJS store from `createStore`. */
+  readonly nodes: Store<NodeType[]>;
   readonly nodeTypes: NodeTypes;
-  readonly edges: EdgeType[];
+  /** The edges to render. **Must** be a SolidJS store from `createStore`. */
+  readonly edges: Store<EdgeType[]>;
   readonly edgeTypes: EdgeTypes;
   readonly nodeOrigin: NodeOrigin;
   readonly viewport: Viewport;

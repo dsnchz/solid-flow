@@ -13,11 +13,11 @@ import { colorModeClass } from "@/shared/signals/colorModeClass";
 import type { Edge, Node } from "@/shared/types";
 
 import { SolidFlowContext, type SolidFlowContextValue } from "../contexts/flow";
-import type { FlowProps } from "./types";
+import type { SolidFlowProps } from "./types";
 import { updateStore, updateStoreByKeys } from "./utils";
 
 const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
-  props: ParentProps<Partial<FlowProps<NodeType, EdgeType>>>,
+  props: ParentProps<Partial<SolidFlowProps<NodeType, EdgeType>>>,
 ) => {
   let domNode!: HTMLDivElement;
 

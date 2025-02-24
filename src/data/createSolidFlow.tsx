@@ -34,14 +34,19 @@ import {
 } from "./initializeSolidFlowStore";
 import type { FlowStoreProps } from "./types";
 
+type SetterCallback<T> = (value: T) => T;
+
 export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: Partial<FlowStoreProps<NodeType, EdgeType>>,
 ) => {
   const [store, setStore] = initializeSolidFlowStore(props);
 
   // We now define custom public actions/setters for the store
-  const setNodes = (cb: (nodes: NodeType[]) => NodeType[]) => {
-    const nextNodes = cb(store.nodes).map((node) => ({
+  const setNodes = (nodesOrCallback: NodeType[] | SetterCallback<NodeType[]>) => {
+    const nodes =
+      typeof nodesOrCallback === "function" ? nodesOrCallback(store.nodes) : nodesOrCallback;
+
+    const nextNodes = nodes.map((node) => ({
       ...store.defaultNodeOptions,
       ...node,
     }));
@@ -57,8 +62,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setStore("nodes", nextNodes);
   };
 
-  const setEdges = (cb: (edges: EdgeType[]) => EdgeType[]) => {
-    const nextEdges = cb(store.edges).map((edge) => ({
+  const setEdges = (edgesOrCallback: EdgeType[] | SetterCallback<EdgeType[]>) => {
+    const edges =
+      typeof edgesOrCallback === "function" ? edgesOrCallback(store.edges) : edgesOrCallback;
+
+    const nextEdges = edges.map((edge) => ({
       ...store.defaultEdgeOptions,
       ...edge,
     }));
@@ -266,6 +274,24 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     }
   };
 
+  const removeNodesAndEdges = (graph: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
+    const { nodes = [], edges = [] } = graph;
+
+    if (nodes.length) {
+      const nodesToRemove = new Set(nodes.map((mN) => mN.id));
+      setStore("nodes", (nodes) => nodes.filter((node) => !nodesToRemove.has(node.id)));
+    }
+
+    if (edges.length) {
+      const edgesToRemove = new Set(edges.map((mE) => mE.id));
+      setStore("edges", (edges) => edges.filter((edge) => !edgesToRemove.has(edge.id)));
+    }
+
+    if (nodes.length || edges.length) {
+      store.onDelete?.({ nodes, edges });
+    }
+  };
+
   const addSelectedNodes = (ids: string[]) => {
     const isMultiSelection = store.multiselectionKeyPressed;
 
@@ -389,24 +415,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       nodesToRemove: store.selectedNodes,
       edgesToRemove: store.selectedEdges,
       onBeforeDelete: store.onBeforeDelete,
-    }).then(({ nodes: matchingNodes, edges: matchingEdges }) => {
-      if (matchingNodes.length) {
-        const nodesToRemove = new Set(matchingNodes.map((mN) => mN.id));
-        setStore("nodes", (nodes) => nodes.filter((node) => !nodesToRemove.has(node.id)));
-      }
-
-      if (matchingEdges.length) {
-        const edgesToRemove = new Set(matchingEdges.map((mE) => mE.id));
-        setStore("edges", (edges) => edges.filter((edge) => !edgesToRemove.has(edge.id)));
-      }
-
-      if (matchingNodes.length || matchingEdges.length) {
-        store.onDelete?.({
-          nodes: matchingNodes,
-          edges: matchingEdges,
-        });
-      }
-    });
+    }).then(removeNodesAndEdges);
   });
 
   const storeActions = {
@@ -428,6 +437,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setTranslateExtent,
     setPaneClickDistance,
     unselectNodesAndEdges,
+    removeNodesAndEdges,
     handleNodeSelection,
     panBy,
     updateConnection,

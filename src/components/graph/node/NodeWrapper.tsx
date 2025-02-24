@@ -1,10 +1,17 @@
 import { errorMessages, Position } from "@xyflow/system";
 import clsx from "clsx";
-import { type Accessor, createContext, createEffect, mergeProps, onCleanup, Show } from "solid-js";
+import {
+  type Accessor,
+  createContext,
+  createEffect,
+  createSignal,
+  mergeProps,
+  onCleanup,
+  Show,
+} from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-// @ts-expect-error 6133 - Typescript is not able to discern that directive functions are used in JSX
-import drag from "@/actions/drag";
+import createDraggable from "@/actions/createDraggable";
 import { useFlowStore } from "@/components/contexts";
 import type { InternalNode, Node, NodeEventCallbacks } from "@/shared/types";
 
@@ -99,7 +106,8 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     props,
   );
 
-  let nodeRef!: HTMLDivElement;
+  const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
+
   let prevNodeRef: HTMLDivElement | undefined = undefined;
   let prevType: string | undefined = undefined;
   let prevSourcePosition: Position | undefined = undefined;
@@ -140,7 +148,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
               _props.id,
               {
                 id: _props.id,
-                nodeElement: nodeRef,
+                nodeElement: nodeRef()!,
                 force: true,
               },
             ],
@@ -157,10 +165,10 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
   createEffect(() => {
     if (!_props.resizeObserver) return;
 
-    if (nodeRef !== prevNodeRef || !_props.initialized) {
+    if (nodeRef() !== prevNodeRef || !_props.initialized) {
       if (prevNodeRef) _props.resizeObserver.unobserve(prevNodeRef);
-      if (nodeRef) _props.resizeObserver.observe(nodeRef);
-      prevNodeRef = nodeRef;
+      if (nodeRef()) _props.resizeObserver.observe(nodeRef()!);
+      prevNodeRef = nodeRef();
     }
   });
 
@@ -183,31 +191,32 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     _props.onNodeClick?.(_props.node, event);
   };
 
+  createDraggable(nodeRef, () => ({
+    nodeId: _props.id,
+    isSelectable: _props.selectable,
+    disabled: false,
+    handleSelector: _props.dragHandle,
+    noDragClass: "nodrag",
+    nodeClickDistance: _props.nodeClickDistance,
+    onNodeMouseDown: handleNodeSelection,
+    onDrag: (event, _, targetNode, nodes) => {
+      _props.onNodeDrag?.(targetNode, nodes, event);
+    },
+    onDragStart: (event, _, targetNode, nodes) => {
+      _props.onNodeDragStart?.(targetNode, nodes, event);
+    },
+    onDragStop: (event, _, targetNode, nodes) => {
+      _props.onNodeDragStop?.(targetNode, nodes, event);
+    },
+  }));
+
   const nodeId = () => _props.id;
 
   return (
     <Show when={!_props.hidden}>
       <NodeIdContext.Provider value={nodeId}>
         <div
-          ref={nodeRef}
-          use:drag={{
-            nodeId: _props.id,
-            isSelectable: _props.selectable,
-            disabled: false,
-            handleSelector: _props.dragHandle,
-            noDragClass: "nodrag",
-            nodeClickDistance: _props.nodeClickDistance,
-            onNodeMouseDown: handleNodeSelection,
-            onDrag: (event, _, targetNode, nodes) => {
-              _props.onNodeDrag?.(targetNode, nodes, event);
-            },
-            onDragStart: (event, _, targetNode, nodes) => {
-              _props.onNodeDragStart?.(targetNode, nodes, event);
-            },
-            onDragStop: (event, _, targetNode, nodes) => {
-              _props.onNodeDragStop?.(targetNode, nodes, event);
-            },
-          }}
+          ref={setNodeRef}
           data-id={_props.id}
           onClick={onSelectNodeHandler}
           onMouseEnter={(event) => _props.onNodeMouseEnter?.(_props.node, event)}
