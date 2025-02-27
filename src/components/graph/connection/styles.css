@@ -1,0 +1,23 @@
+svg.solid-flow__connectionline {
+  z-index: 1001;
+  overflow: visible;
+  position: absolute;
+}
+
+.solid-flow__connection {
+  pointer-events: none;
+
+  .animated {
+    stroke-dasharray: 5;
+    animation: dashdraw 0.5s linear infinite;
+  }
+}
+
+.solid-flow__connection-path {
+  fill: none;
+  stroke: var(--xy-connectionline-stroke, var(--xy-connectionline-stroke-default));
+  stroke-width: var(
+    --xy-connectionline-stroke-width,
+    var(--xy-connectionline-stroke-width-default)
+  );
+}

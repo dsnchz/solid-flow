@@ -7,7 +7,8 @@ const Viewport: ParentComponent = (props) => {
 
   return (
     <div
-      class="solid-flow__viewport xyflow__viewport"
+      // TODO: Figure out why nodes disappear when we remove the xyflow__viewport class.
+      class="xyflow__viewport solid-flow__viewport"
       style={{
         transform: `translate(${store.viewport.x}px, ${store.viewport.y}px) scale(${store.viewport.zoom})`,
       }}

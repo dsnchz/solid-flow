@@ -148,7 +148,7 @@ const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   return (
     <div
       ref={domNode}
-      class={clsx(["solid-flow", props.class, colorModeClass()])}
+      class={clsx(["xy-flow", "solid-flow", props.class, colorModeClass()])}
       style={props.style}
       data-testid="solid-flow__wrapper"
       role="application"

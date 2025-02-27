@@ -1,0 +1,46 @@
+.solid-flow__handle {
+  position: absolute;
+  pointer-events: none;
+  min-width: 5px;
+  min-height: 5px;
+
+  width: 6px;
+  height: 6px;
+  background-color: var(--xy-handle-background-color, var(--xy-handle-background-color-default));
+  border: 1px solid var(--xy-handle-border-color, var(--xy-handle-border-color-default));
+  border-radius: 100%;
+
+  &.connectingfrom {
+    pointer-events: all;
+  }
+
+  &.connectionindicator {
+    pointer-events: all;
+    cursor: crosshair;
+  }
+
+  &.bottom {
+    top: auto;
+    left: 50%;
+    bottom: 0;
+    transform: translate(-50%, 50%);
+  }
+
+  &.top {
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  &.left {
+    top: 50%;
+    left: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  &.right {
+    top: 50%;
+    right: 0;
+    transform: translate(50%, -50%);
+  }
+}

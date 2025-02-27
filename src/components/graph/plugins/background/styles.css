@@ -1,0 +1,34 @@
+.solid-flow__background {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+
+  background-color: var(
+    --xy-background-color,
+    var(--xy-background-color-props, var(--xy-background-color-default))
+  );
+}
+
+.solid-flow__background-pattern {
+  &.dots {
+    fill: var(
+      --xy-background-pattern-color-props,
+      var(--xy-background-pattern-color, var(--xy-background-pattern-dots-color-default))
+    );
+  }
+
+  &.lines {
+    stroke: var(
+      --xy-background-pattern-color-props,
+      var(--xy-background-pattern-color, var(--xy-background-pattern-lines-color-default))
+    );
+  }
+
+  &.cross {
+    stroke: var(
+      --xy-background-pattern-color-props,
+      var(--xy-background-pattern-color, var(--xy-background-pattern-cross-color-default))
+    );
+  }
+}

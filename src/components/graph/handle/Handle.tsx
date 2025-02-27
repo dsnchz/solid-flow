@@ -116,11 +116,12 @@ const Handle: ParentComponent<HandleProps> = (props) => {
       tabIndex={-1}
       onMouseDown={onPointerDown}
       onTouchStart={onPointerDown}
+      style={props.style}
       class={clsx(
         "solid-flow__handle",
-        `solid-flow__handle-${props.position}`,
         "nodrag",
         "nopan",
+        props.position,
         {
           valid: valid(),
           connectingto: connectingTo(),
@@ -133,10 +134,8 @@ const Handle: ParentComponent<HandleProps> = (props) => {
           connectionindicator:
             props.isConnectable && (!connectionInProcess() || isPossibleEndHandle()),
         },
-        props.position,
         props.class,
       )}
-      style={props.style}
     >
       {props.children}
     </div>

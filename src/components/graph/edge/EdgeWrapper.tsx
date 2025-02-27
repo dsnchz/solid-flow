@@ -58,7 +58,8 @@ const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       <Show when={!props.hidden}>
         <svg style={{ "z-index": props.zIndex }}>
           <g
-            class={clsx(["solid-flow__edge", props.class])}
+            role="img"
+            class={clsx(["solid-flow__edge", edgeType(), props.class])}
             classList={{
               animated: props.animated,
               selected: props.selected,
@@ -76,7 +77,6 @@ const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
                   ? props.ariaLabel
                   : `Edge from ${props.source} to ${props.target}`
             }
-            role="img"
           >
             <Dynamic
               component={edgeComponent()}

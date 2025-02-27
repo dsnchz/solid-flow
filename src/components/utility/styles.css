@@ -1,0 +1,14 @@
+.solid-flow__attribution {
+  font-size: 10px;
+  background: var(
+    --xy-attribution-background-color,
+    var(--xy-attribution-background-color-default)
+  );
+  padding: 2px 3px;
+  margin: 0;
+
+  a {
+    text-decoration: none;
+    color: #999;
+  }
+}

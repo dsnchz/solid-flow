@@ -1,0 +1,86 @@
+.solid-flow__edgelabel-renderer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  left: 0;
+  top: 0;
+  z-index: 0;
+}
+
+.solid-flow__edge-label {
+  text-align: center;
+  position: absolute;
+  padding: 2px;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--xy-edge-label-color, var(--xy-edge-label-color-default));
+  background: var(--xy-edge-label-background-color, var(--xy-edge-label-background-color-default));
+}
+
+.solid-flow__edge-path {
+  stroke: var(--xy-edge-stroke, var(--xy-edge-stroke-default));
+  stroke-width: var(--xy-edge-stroke-width, var(--xy-edge-stroke-width-default));
+  fill: none;
+}
+
+.solid-flow__edges {
+  position: absolute;
+
+  svg {
+    overflow: visible;
+    position: absolute;
+    pointer-events: none;
+  }
+}
+
+.solid-flow__edge {
+  pointer-events: visibleStroke;
+
+  &.updating {
+    .solid-flow__edge-path {
+      stroke: #777;
+    }
+  }
+
+  &.selectable {
+    cursor: pointer;
+  }
+
+  &.animated path {
+    stroke-dasharray: 5;
+    animation: dashdraw 0.5s linear infinite;
+  }
+
+  &.animated path.solid-flow__edge-interaction {
+    stroke-dasharray: none;
+    animation: none;
+  }
+
+  &.inactive {
+    pointer-events: none;
+  }
+
+  &.selected,
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  &.selected .solid-flow__edge-path,
+  &.selectable:focus .solid-flow__edge-path,
+  &.selectable:focus-visible .solid-flow__edge-path {
+    stroke: var(--xy-edge-stroke-selected, var(--xy-edge-stroke-selected-default));
+  }
+
+  &.textwrapper {
+    pointer-events: all;
+  }
+
+  &.text {
+    font-size: 10px;
+    pointer-events: none;
+    user-select: none;
+  }
+}

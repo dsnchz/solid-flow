@@ -1,4 +1,3 @@
-import "@/styles/base.css";
 import "@/styles/style.css";
 
 import { createStore } from "solid-js/store";
@@ -15,13 +14,12 @@ export const App = () => {
     },
     {
       id: "2",
-      type: "custom",
-      data: { label: "Node" },
+      type: "output",
+      data: { label: "Output Node" },
       position: { x: 0, y: 150 },
     },
   ]);
 
-  // same for edges
   const [edges] = createStore([
     {
       id: "1-2",

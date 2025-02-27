@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { mergeProps, type ParentComponent, Show } from "solid-js";
 
 import { useFlowStore } from "@/components/contexts";
@@ -79,8 +80,8 @@ const Background: ParentComponent<Partial<BackgroundProps>> = (props) => {
 
   return (
     <svg
-      class={["solid-flow__background", merged.class].filter(Boolean).join(" ")}
       data-testid="solid-flow__background"
+      class={clsx("solid-flow__background", merged.class)}
       style={{
         "--xy-background-color-props": merged.bgColor,
         "--xy-background-pattern-color-props": merged.patternColor,
@@ -101,7 +102,6 @@ const Background: ParentComponent<Partial<BackgroundProps>> = (props) => {
         >
           <LinePattern
             dimensions={patternDimensions()}
-            variant={merged.variant}
             lineWidth={merged.lineWidth}
             class={merged.patternClass}
           />

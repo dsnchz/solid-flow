@@ -1,13 +1,21 @@
 @import "./init.css";
-@import "./node-resizer.css";
 
-.selection-wrapper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 7;
-  pointer-events: all;
-}
+/* Container Styles */
+@import "../components/container/styles.css";
+
+/* Graph Styles */
+@import "../components/graph/connection/styles.css";
+@import "../components/graph/edge/styles.css";
+@import "../components/graph/handle/styles.css";
+@import "../components/graph/node/styles.css";
+@import "../components/graph/plugins/background/styles.css";
+@import "../components/graph/plugins/controls/styles.css";
+@import "../components/graph/plugins/minimap/styles.css";
+@import "../components/graph/plugins/nodeResizer/styles.css";
+@import "../components/graph/selection/styles.css";
+
+/* Utility Styles */
+@import "../components/utility/styles.css";
 
 .solid-flow {
   width: 100%;
@@ -17,58 +25,4 @@
   z-index: 0;
 
   background-color: var(--background-color, var(--background-color-default));
-}
-
-.solid-flow__edge-label {
-  text-align: center;
-  position: absolute;
-  padding: 2px;
-  font-size: 10px;
-  cursor: pointer;
-  color: var(--xy-edge-label-color, var(--xy-edge-label-color-default));
-  background: var(--xy-edge-label-background-color, var(--xy-edge-label-background-color-default));
-}
-
-.solid-flow__nodes {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 0;
-}
-
-.solid-flow__edgelabel-renderer {
-  z-index: 0;
-}
-
-.solid-flow__selection {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.solid-flow__pane {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.solid-flow__viewport {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.solid-flow__zoom {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 4;
 }

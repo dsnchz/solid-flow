@@ -1,0 +1,69 @@
+.solid-flow__controls {
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--xy-controls-box-shadow, var(--xy-controls-box-shadow-default));
+
+  &.horizontal {
+    flex-direction: row;
+  }
+
+  button {
+    cursor: pointer;
+    user-select: none;
+    border: none;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 26px;
+    width: 26px;
+    padding: 4px;
+
+    background: var(
+      --xy-controls-button-background-color,
+      var(--xy-controls-button-background-color-default)
+    );
+    border-bottom: 1px solid
+      var(
+        --xy-controls-button-border-color-props,
+        var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default))
+      );
+    color: var(
+      --xy-controls-button-color-props,
+      var(--xy-controls-button-color, var(--xy-controls-button-color-default))
+    );
+
+    &:hover {
+      background: var(
+        --xy-controls-button-background-color-hover-props,
+        var(
+          --xy-controls-button-background-color-hover,
+          var(--xy-controls-button-background-color-hover-default)
+        )
+      );
+      color: var(
+        --xy-controls-button-color-hover-props,
+        var(--xy-controls-button-color-hover, var(--xy-controls-button-color-hover-default))
+      );
+    }
+
+    &:disabled {
+      pointer-events: none;
+
+      svg {
+        fill-opacity: 0.4;
+      }
+    }
+
+    svg {
+      width: 100%;
+      max-width: 12px;
+      max-height: 12px;
+      fill: currentColor;
+    }
+  }
+
+  button:last-child {
+    border-bottom: none;
+  }
+}

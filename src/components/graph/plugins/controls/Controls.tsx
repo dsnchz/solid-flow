@@ -137,7 +137,9 @@ const Controls: ParentComponent<Partial<ControlsProps>> = (props) => {
           aria-label="toggle interactivity"
           {...buttonProps()}
         >
-          {getIsInteractive() ? <Unlock /> : <Lock />}
+          <Show when={getIsInteractive()} fallback={<Lock />}>
+            <Unlock />
+          </Show>
         </ControlButton>
       </Show>
       {_props.children}

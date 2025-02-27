@@ -210,6 +210,14 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     },
   }));
 
+  const style = () => ({
+    "z-index": _props.zIndex,
+    transform: `translate(${_props.positionX}px, ${_props.positionY}px)`,
+    visibility: _props.initialized ? "visible" : "hidden",
+    ...(_props.style && typeof _props.style === "object" ? _props.style : {}),
+    ...inlineStyleDimensions(),
+  }) as const;
+
   const nodeId = () => _props.id;
 
   return (
@@ -223,9 +231,10 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
           onMouseLeave={(event) => _props.onNodeMouseLeave?.(_props.node, event)}
           onMouseMove={(event) => _props.onNodeMouseMove?.(_props.node, event)}
           onContextMenu={(event) => _props.onNodeContextMenu?.(_props.node, event)}
+          style={style()}
           class={clsx(
             "solid-flow__node",
-            `solid-flow__node-${_props.type}`,
+            _props.type,
             {
               dragging: _props.dragging,
               selected: _props.selected,
@@ -237,13 +246,6 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
             },
             _props.class,
           )}
-          style={{
-            "z-index": _props.zIndex,
-            transform: `translate(${_props.positionX}px, ${_props.positionY}px)`,
-            visibility: _props.initialized ? "visible" : "hidden",
-            ...(_props.style && typeof _props.style === "object" ? _props.style : {}),
-            ...inlineStyleDimensions(),
-          }}
         >
           <Dynamic
             component={nodeComponent()}
