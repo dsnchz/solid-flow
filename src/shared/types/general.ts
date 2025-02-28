@@ -1,11 +1,14 @@
 import type {
   Connection,
+  ConnectionLineType as SystemConnectionLineType,
   EdgeChange,
   FitViewOptionsBase,
   Handle,
   HandleProps as HandlePropsSystem,
   NodeChange,
   OnBeforeDeleteBase,
+  PanOnScrollMode as SystemPanOnScrollMode,
+  SelectionMode as SystemSelectionMode,
   XYPosition,
 } from "@xyflow/system";
 
@@ -93,3 +96,9 @@ export type OnBeforeDelete<
 export type IsValidConnection<EdgeType extends Edge = Edge> = (
   edge: EdgeType | Connection,
 ) => boolean;
+
+export type ConnectionLineType = `${SystemConnectionLineType}`;
+
+export type SelectionMode = `${SystemSelectionMode}`;
+
+export type PanOnScrollMode = `${SystemPanOnScrollMode}`;

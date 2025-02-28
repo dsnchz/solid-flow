@@ -1,15 +1,21 @@
 import type {
   BezierPathOptions,
+  Connection,
   DefaultEdgeOptionsBase,
   EdgeBase as SystemEdge,
   EdgePosition,
+  FinalConnectionState,
+  Handle,
+  HandleType,
+  Position,
   SmoothStepPathOptions,
   StepPathOptions,
 } from "@xyflow/system";
 import type { Component, JSX } from "solid-js";
 
 import type { GraphTargetContextHandler, GraphTargetHandler, MouseOrTouchEvent } from "./events";
-import type { Node } from "./node";
+import type { ConnectionLineType } from "./general";
+import type { InternalNode, Node } from "./node";
 
 /**
  * An `Edge` is the complete description with everything Solid Flow needs
@@ -24,6 +30,8 @@ export type Edge<
   readonly labelStyle?: JSX.CSSProperties;
   readonly class?: string;
   readonly style?: JSX.CSSProperties;
+  readonly reconnectable?: boolean | HandleType;
+  readonly focusable?: boolean;
 };
 
 type SmoothStepEdge<EdgeData extends Record<string, unknown> = Record<string, unknown>> = Edge<
@@ -120,44 +128,104 @@ export type DefaultEdgeOptions = DefaultEdgeOptionsBase<Edge>;
 
 export type EdgeLayouted = Pick<
   Edge,
-  | "type"
-  | "id"
-  | "data"
-  | "style"
-  | "source"
-  | "target"
   | "animated"
-  | "selected"
-  | "selectable"
+  | "ariaLabel"
+  | "class"
+  | "data"
   | "deletable"
+  | "focusable"
+  | "hidden"
+  | "id"
+  | "interactionWidth"
   | "label"
   | "labelStyle"
-  | "interactionWidth"
-  | "markerStart"
   | "markerEnd"
+  | "markerStart"
+  | "reconnectable"
+  | "selected"
+  | "selectable"
+  | "source"
   | "sourceHandle"
+  | "style"
+  | "target"
   | "targetHandle"
-  | "ariaLabel"
-  | "hidden"
-  | "class"
+  | "type"
   | "zIndex"
 > &
   EdgePosition & {
-    sourceNode?: Node;
-    targetNode?: Node;
-    sourceHandleId?: string | null;
-    targetHandleId?: string | null;
+    readonly sourceNode?: Node;
+    readonly targetNode?: Node;
+    readonly sourceHandleId?: string | null;
+    readonly targetHandleId?: string | null;
   };
 
 export type EdgeEventHandler = (edge: Edge, event: MouseOrTouchEvent) => void;
 
-export type EdgeEventCallbacks<EdgeType extends Edge = Edge> = {
+export type EdgeEventCallbacks<EdgeType extends Edge = Edge> = EdgeClickEvents<EdgeType> &
+  EdgeMouseEvents<EdgeType> &
+  EdgeDragEvents<EdgeType> &
+  EdgeConnectionEvents<EdgeType>;
+
+export type EdgeClickEvents<EdgeType extends Edge = Edge> = {
   readonly onEdgeClick: GraphTargetHandler<EdgeType>;
   readonly onEdgeContextMenu: GraphTargetHandler<EdgeType>;
+};
+
+export type EdgeMouseEvents<EdgeType extends Edge = Edge> = {
   readonly onEdgeMouseEnter: GraphTargetHandler<EdgeType>;
   readonly onEdgeMouseLeave: GraphTargetHandler<EdgeType>;
   readonly onEdgeMouseMove: GraphTargetHandler<EdgeType>;
+};
+
+export type EdgeDragEvents<EdgeType extends Edge = Edge> = {
   readonly onEdgeDrag: GraphTargetContextHandler<EdgeType>;
   readonly onEdgeDragStart: GraphTargetContextHandler<EdgeType>;
   readonly onEdgeDragStop: GraphTargetContextHandler<EdgeType>;
 };
+
+export type OnReconnect<EdgeType extends Edge = Edge> = (
+  oldEdge: EdgeType,
+  newConnection: Connection,
+) => void;
+
+export type EdgeConnectionEvents<EdgeType extends Edge = Edge> = {
+  readonly onEdgeReconnect?: OnReconnect<EdgeType>;
+  readonly onEdgeReconnectStart?: (
+    event: MouseOrTouchEvent,
+    edge: EdgeType,
+    handleType: HandleType,
+  ) => void;
+  readonly onEdgeReconnectEnd?: (
+    event: MouseOrTouchEvent,
+    edge: EdgeType,
+    handleType: HandleType,
+    connectionState: FinalConnectionState,
+  ) => void;
+};
+
+/**
+ * If you want to render a custom component for connection lines, you can set the
+ * `connectionLineComponent` prop on the [`<SolidFlow />`](/api-reference/react-flow#connection-connectionLineComponent)
+ * component. The `ConnectionLineComponentProps` are passed to your custom component.
+ *
+ * @public
+ */
+export type ConnectionLineComponentProps<NodeType extends Node = Node> = {
+  readonly connectionLineStyle?: string | JSX.CSSProperties;
+  readonly connectionLineType: ConnectionLineType;
+  readonly fromNode: InternalNode<NodeType>;
+  readonly fromHandle: Handle;
+  readonly fromX: number;
+  readonly fromY: number;
+  readonly toX: number;
+  readonly toY: number;
+  readonly fromPosition: Position;
+  readonly toPosition: Position;
+  readonly connectionStatus: "valid" | "invalid" | null;
+  readonly toNode: InternalNode<NodeType> | null;
+  readonly toHandle: Handle | null;
+};
+
+export type ConnectionLineComponent<NodeType extends Node = Node> = Component<
+  ConnectionLineComponentProps<NodeType>
+>;

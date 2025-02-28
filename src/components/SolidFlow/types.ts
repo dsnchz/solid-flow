@@ -1,5 +1,4 @@
 import type {
-  ConnectionLineType,
   ConnectionMode,
   CoordinateExtent,
   IsValidConnection,
@@ -12,14 +11,16 @@ import type {
   OnMoveEnd,
   OnMoveStart,
   PanelPosition,
-  PanOnScrollMode,
   ProOptions,
+  SnapGrid,
   Viewport,
 } from "@xyflow/system";
 import type { JSX } from "solid-js";
 import type { Store } from "solid-js/store";
 
 import type {
+  ConnectionLineComponent,
+  ConnectionLineType,
   DefaultEdgeOptions,
   Edge,
   EdgeTypes,
@@ -28,6 +29,8 @@ import type {
   NodeTypes,
   OnBeforeDelete,
   OnDelete,
+  PanOnScrollMode,
+  SelectionMode,
 } from "@/shared/types";
 import type {
   GraphMultiTargetHandler,
@@ -88,11 +91,32 @@ export type SolidFlowProps<NodeType extends Node = Node, EdgeType extends Edge =
   readonly style: JSX.CSSProperties;
   readonly colorMode: "light" | "dark";
   readonly defaultMarkerColor: string;
-  /** The nodes to render. **Must** be a SolidJS store from `createStore`. */
+  /**
+   * The array store of nodes to render in a controlled flow.
+   * @example
+   * const nodes = createStore([
+   *  {
+   *    id: 'node-1',
+   *    type: 'input',
+   *    data: { label: 'Node 1' },
+   *    position: { x: 250, y: 50 }
+   *  }
+   * ];
+   */
   readonly nodes: Store<NodeType[]>;
-  readonly nodeTypes: NodeTypes;
-  /** The edges to render. **Must** be a SolidJS store from `createStore`. */
+  /**
+   * The array store of edges to render in a controlled flow.
+   * @example
+   * const edges = createStore([
+   *  {
+   *    id: 'edge-1-2',
+   *    source: 'node-1',
+   *    target: 'node-2',
+   *  }
+   * ];
+   */
   readonly edges: Store<EdgeType[]>;
+  readonly nodeTypes: NodeTypes;
   readonly edgeTypes: EdgeTypes;
   readonly nodeOrigin: NodeOrigin;
   readonly viewport: Viewport;
@@ -106,7 +130,14 @@ export type SolidFlowProps<NodeType extends Node = Node, EdgeType extends Edge =
   readonly paneClickDistance: number;
   readonly nodeClickDistance: number;
   readonly selectionKey: string;
-  readonly selectionMode: string;
+  readonly selectionMode: SelectionMode;
+  /** Set this prop to make the flow snap to the grid */
+  readonly snapToGrid: boolean;
+  /**
+   * Grid all nodes will snap to
+   * @example [20, 20]
+   */
+  readonly snapGrid: SnapGrid;
   readonly panActivationKey: string;
   readonly multiSelectionKey: string;
   readonly zoomActivationKey: string;
@@ -114,14 +145,14 @@ export type SolidFlowProps<NodeType extends Node = Node, EdgeType extends Edge =
   readonly nodesConnectable: boolean;
   readonly nodeDragThreshold: number;
   readonly elementsSelectable: boolean;
-  readonly snapGrid: [number, number];
   readonly deleteKey: string;
+  readonly reconnectRadius: number;
   readonly connectionRadius: number;
   readonly connectionMode: ConnectionMode;
   readonly connectionLineType: ConnectionLineType;
-  readonly connectionLineStyle: string;
-  readonly connectionLineContainerStyle: string;
-  readonly connectionLineContent: JSX.Element;
+  readonly connectionLineStyle: string | JSX.CSSProperties;
+  readonly connectionLineContainerStyle: string | JSX.CSSProperties;
+  readonly connectionLineComponent: ConnectionLineComponent<NodeType>;
   readonly translateExtent: CoordinateExtent;
   readonly nodeExtent: CoordinateExtent;
   readonly onlyRenderVisibleElements: boolean;

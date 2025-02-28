@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { mergeProps, type ParentComponent, Show } from "solid-js";
+import { type JSX, mergeProps, Show } from "solid-js";
 
 import { useFlowStore } from "@/components/contexts";
 
@@ -34,10 +34,12 @@ type BackgroundProps = {
   readonly size: number;
   /** Line width of the Line pattern */
   readonly lineWidth: number;
+  /** Style applied to the container */
+  readonly style: JSX.CSSProperties;
 };
 
-const Background: ParentComponent<Partial<BackgroundProps>> = (props) => {
-  const merged = mergeProps(
+const Background = (props: Partial<BackgroundProps>) => {
+  const _props = mergeProps(
     {
       id: undefined,
       variant: "dots" as BackgroundVariant,
@@ -48,19 +50,20 @@ const Background: ParentComponent<Partial<BackgroundProps>> = (props) => {
       patternColor: undefined,
       patternClass: undefined,
       class: "",
+      style: {} as JSX.CSSProperties,
     },
     props,
   );
 
   const { store } = useFlowStore();
 
-  const patternSize = () => merged.size || DEFAULT_SIZE[merged.variant];
-  const isDots = () => merged.variant === "dots";
-  const isCross = () => merged.variant === "cross";
+  const patternSize = () => _props.size || DEFAULT_SIZE[_props.variant];
+  const isDots = () => _props.variant === "dots";
+  const isCross = () => _props.variant === "cross";
   const gapXY = () =>
-    Array.isArray(merged.gap) ? merged.gap : ([merged.gap, merged.gap] as [number, number]);
+    Array.isArray(_props.gap) ? _props.gap : ([_props.gap, _props.gap] as [number, number]);
 
-  const patternId = () => `background-pattern-${store.id}-${merged.id ? merged.id : ""}`;
+  const patternId = () => `background-pattern-${store.id}-${_props.id ? _props.id : ""}`;
 
   const scaledGap = () =>
     [gapXY()[0] * store.viewport.zoom || 1, gapXY()[1] * store.viewport.zoom || 1] as [
@@ -81,10 +84,11 @@ const Background: ParentComponent<Partial<BackgroundProps>> = (props) => {
   return (
     <svg
       data-testid="solid-flow__background"
-      class={clsx("solid-flow__background", merged.class)}
+      class={clsx("solid-flow__container solid-flow__background", _props.class)}
       style={{
-        "--xy-background-color-props": merged.bgColor,
-        "--xy-background-pattern-color-props": merged.patternColor,
+        ..._props.style,
+        "--xy-background-color-props": _props.bgColor,
+        "--xy-background-pattern-color-props": _props.patternColor,
       }}
     >
       <pattern
@@ -98,12 +102,12 @@ const Background: ParentComponent<Partial<BackgroundProps>> = (props) => {
       >
         <Show
           when={!isDots()}
-          fallback={<DotPattern radius={scaledSize() / 2} class={merged.patternClass} />}
+          fallback={<DotPattern radius={scaledSize() / 2} class={_props.patternClass} />}
         >
           <LinePattern
             dimensions={patternDimensions()}
-            lineWidth={merged.lineWidth}
-            class={merged.patternClass}
+            lineWidth={_props.lineWidth}
+            class={_props.patternClass}
           />
         </Show>
       </pattern>

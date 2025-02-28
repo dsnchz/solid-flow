@@ -12,6 +12,7 @@ It is a highly customizable component for building interactive graphs and node-b
 
 ## Remaining TODOs for v0.1.0:
 
+- [ ] Get node dragging working (in-progress)
 - [ ] Synchronize userland state with internal Solid Flow state (in-progress)
 - [ ] Add core CSS styles from @xyflow/system and Svelte Flow (in-progress)
 - [ ] Port Svelte Flow tests

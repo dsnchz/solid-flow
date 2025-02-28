@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { Index, Show } from "solid-js";
 
 import { useFlowStore } from "@/components/contexts";
 import CallOnMount from "@/components/utility/CallOnMount";
@@ -9,6 +9,7 @@ import { MarkerDefinition } from "../graph/marker";
 
 type EdgeRendererProps<EdgeType extends Edge = Edge> = Partial<EdgeEventCallbacks<EdgeType>> & {
   readonly defaultEdgeOptions?: DefaultEdgeOptions;
+  readonly reconnectRadius: number;
 };
 
 const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
@@ -22,16 +23,12 @@ const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge
         <MarkerDefinition />
       </svg>
 
-      <For each={store.visibleEdges}>
+      <Index each={store.visibleEdges}>
         {(edge) => {
-          const edgeType = () => edge.type ?? "default";
-          const selectable = () => edge.selectable ?? store.elementsSelectable;
-
           return (
             <EdgeWrapper
-              {...edge}
-              selectable={selectable()}
-              type={edgeType()}
+              edge={edge()}
+              reconnectRadius={props.reconnectRadius}
               onEdgeClick={props.onEdgeClick}
               onEdgeContextMenu={props.onEdgeContextMenu}
               onEdgeMouseEnter={props.onEdgeMouseEnter}
@@ -39,7 +36,7 @@ const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge
             />
           );
         }}
-      </For>
+      </Index>
 
       <Show when={store.visibleEdges.length > 0}>
         <CallOnMount

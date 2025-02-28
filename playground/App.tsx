@@ -1,5 +1,6 @@
 import "@/styles/style.css";
 
+import { createEffect } from "solid-js";
 import { createStore } from "solid-js/store";
 
 import { Background, Controls, SolidFlow } from "@/components";
@@ -30,6 +31,10 @@ export const App = () => {
     },
   ]);
 
+  createEffect(() => {
+    console.log("nodes", nodes);
+  });
+
   return (
     <SolidFlow
       nodes={nodes}
@@ -39,6 +44,7 @@ export const App = () => {
       width={1000}
       height={1000}
       onNodeClick={(event) => console.log("on node click", event)}
+      onError={(error) => console.log("on error", error)}
     >
       <Controls />
       <Background variant="dots" />

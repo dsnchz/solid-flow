@@ -66,7 +66,7 @@ const Pane: ParentComponent<PaneProps> = (props) => {
     props.onPaneClick?.(event);
 
     unselectNodesAndEdges();
-    setStore("selectionRectMode", null);
+    setStore("selectionRectMode", undefined);
   };
 
   const onPointerDown = (event: PointerEvent) => {
@@ -166,7 +166,7 @@ const Pane: ParentComponent<PaneProps> = (props) => {
       onClick?.(event);
     }
 
-    setStore("selectionRect", null);
+    setStore("selectionRect", undefined);
 
     if (selectedNodes.length > 0) {
       setStore("selectionRectMode", "nodes");
@@ -193,7 +193,7 @@ const Pane: ParentComponent<PaneProps> = (props) => {
   return (
     <div
       ref={container}
-      class={clsx("solid-flow__pane", {
+      class={clsx("solid-flow__container solid-flow__pane", {
         selection: isSelecting(),
         dragging: store.dragging,
         draggable:

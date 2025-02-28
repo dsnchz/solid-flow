@@ -6,15 +6,13 @@ import {
   XYHandle,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createContext, createEffect, type ParentComponent, useContext } from "solid-js";
+import { createEffect, type ParentProps } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
+import { useFlowStore, useNodeId } from "@/components/contexts";
 import type { HandleProps } from "@/shared/types";
 
-export const HandleContext = createContext<string>();
-
-const Handle: ParentComponent<HandleProps> = (props) => {
-  const nodeId = useContext(HandleContext);
+const Handle = (props: ParentProps<HandleProps>) => {
+  const nodeId = useNodeId();
   const { store, updateConnection, cancelConnection, panBy, addEdge } = useFlowStore();
 
   // Computed values
@@ -27,7 +25,7 @@ const Handle: ParentComponent<HandleProps> = (props) => {
     if ((isMouseTriggered && event.button === 0) || !isMouseTriggered) {
       XYHandle.onPointerDown(event, {
         handleId: handleId(),
-        nodeId: nodeId ?? "",
+        nodeId: nodeId(),
         isTarget: isTarget(),
         connectionRadius: store.connectionRadius,
         domNode: store.domNode,
@@ -73,7 +71,7 @@ const Handle: ParentComponent<HandleProps> = (props) => {
     if (props.onConnect || props.onDisconnect) {
       // store.edges();
       connections = store.connectionLookup.get(
-        `${nodeId}-${props.type}${props.id ? `-${props.id}` : ""}`,
+        `${nodeId()}-${props.type}${props.id ? `-${props.id}` : ""}`,
       );
     }
 
@@ -89,19 +87,19 @@ const Handle: ParentComponent<HandleProps> = (props) => {
 
   const connectionInProcess = () => !!store.connection.fromHandle;
   const connectingFrom = () =>
-    store.connection.fromHandle?.nodeId === nodeId &&
+    store.connection.fromHandle?.nodeId === nodeId() &&
     store.connection.fromHandle?.type === props.type &&
     store.connection.fromHandle?.id === handleId();
 
   const connectingTo = () =>
-    store.connection.toHandle?.nodeId === nodeId &&
+    store.connection.toHandle?.nodeId === nodeId() &&
     store.connection.toHandle?.type === props.type &&
     store.connection.toHandle?.id === handleId();
 
   const isPossibleEndHandle = () =>
     store.connectionMode === "strict"
       ? store.connection.fromHandle?.type !== props.type
-      : nodeId !== store.connection.fromHandle?.nodeId ||
+      : nodeId() !== store.connection.fromHandle?.nodeId ||
         handleId() !== store.connection.fromHandle?.id;
 
   const valid = () => Boolean(connectingTo() && store.connection.isValid);
@@ -109,9 +107,9 @@ const Handle: ParentComponent<HandleProps> = (props) => {
   return (
     <div
       data-handleid={handleId()}
-      data-nodeid={nodeId}
+      data-nodeid={nodeId()}
       data-handlepos={props.position}
-      data-id={`${store.id}-${nodeId}-${props.id || null}-${props.type}`}
+      data-id={`${store.id}-${nodeId()}-${props.id || null}-${props.type}`}
       role="button"
       tabIndex={-1}
       onMouseDown={onPointerDown}

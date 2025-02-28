@@ -18,11 +18,10 @@ export type PanelProps = JSX.HTMLAttributes<HTMLDivElement> & {
 const Panel: Component<PanelProps> = (props) => {
   const { store } = useFlowStore();
   const position = () => props.position || "top-right";
-  const positionClasses = () => `${position()}`.split("-");
 
   return (
     <div
-      class={clsx(["solid-flow__panel", props.class, ...positionClasses()])}
+      class={clsx(["solid-flow__panel", ...position().split("-"), props.class])}
       style={{
         ...(props.style ?? {}),
         "pointer-events": store.selectionRectMode ? "none" : undefined,

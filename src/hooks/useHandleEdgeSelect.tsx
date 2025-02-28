@@ -17,7 +17,7 @@ export function useHandleEdgeSelect() {
       edge.selectable || (store.elementsSelectable && typeof edge.selectable === "undefined");
 
     if (selectable) {
-      setStore({ selectionRect: null, selectionRectMode: null });
+      setStore({ selectionRect: undefined, selectionRectMode: undefined });
 
       if (!edge.selected) {
         addSelectedEdges([id]);

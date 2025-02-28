@@ -7,11 +7,6 @@ import { produce } from "solid-js/store";
 import { useSolidFlow } from "@/components/contexts/flow";
 
 export type ZoomDirectiveParams = {
-  readonly onPanZoomStart?: OnPanZoom;
-  readonly onPanZoom?: OnPanZoom;
-  readonly onPanZoomEnd?: OnPanZoom;
-  readonly onPaneContextMenu?: (event: MouseEvent) => void;
-  readonly onTransformChange: (transform: Transform) => void;
   readonly initialViewport: Viewport;
   readonly preventScrolling: boolean;
   readonly panOnScroll: boolean;
@@ -27,6 +22,10 @@ export type ZoomDirectiveParams = {
   // changing it to class would require object restructuring for use with panZoomInstance.update
   readonly noWheelClassName: string;
   readonly noPanClassName: string;
+  readonly onPanZoomStart?: OnPanZoom;
+  readonly onPanZoom?: OnPanZoom;
+  readonly onPanZoomEnd?: OnPanZoom;
+  readonly onPaneContextMenu?: (event: MouseEvent) => void;
 };
 
 const createZoomable = (
@@ -39,6 +38,11 @@ const createZoomable = (
     setStore("dragging", dragging);
   };
 
+  const onTransformChange = (transform: Transform) => {
+    const [x, y, zoom] = transform;
+    setStore("viewport", { x, y, zoom });
+  };
+
   onMount(() => {
     const panZoomInstance = XYPanZoom({
       domNode: elem()!,
@@ -48,6 +52,9 @@ const createZoomable = (
       viewport: params().initialViewport,
       paneClickDistance: params().paneClickDistance,
       onDraggingChange,
+      onPanZoomStart: params().onPanZoomStart,
+      onPanZoom: params().onPanZoom,
+      onPanZoomEnd: params().onPanZoomEnd,
     });
 
     setStore(
@@ -61,6 +68,7 @@ const createZoomable = (
       panZoomInstance.update({
         lib: store.lib,
         zoomActivationKeyPressed: store.zoomActivationKeyPressed,
+        onTransformChange,
         ...params(),
       });
     });

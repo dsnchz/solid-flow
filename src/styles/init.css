@@ -100,10 +100,6 @@
   left: 0;
 }
 
-.solid-flow__renderer {
-  z-index: 4;
-}
-
 .solid-flow__nodesselection-rect:focus,
 .solid-flow__nodesselection-rect:focus-visible {
   outline: none;

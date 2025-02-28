@@ -15,7 +15,7 @@ type NodeSelectionProps<NodeType extends Node = Node> = Partial<NodeEventCallbac
 
 const NodeSelection = <NodeType extends Node = Node>(props: NodeSelectionProps<NodeType>) => {
   const { store } = useFlowStore<NodeType>();
-  const [ref, setRef] = createSignal<HTMLElement>();
+  const [ref, setRef] = createSignal<HTMLDivElement>();
 
   const bounds = () => {
     if (store.selectionRectMode === "nodes") {

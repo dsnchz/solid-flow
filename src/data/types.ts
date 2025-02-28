@@ -25,6 +25,7 @@ import type { createSolidFlow } from "./createSolidFlow";
 import type { initializeSolidFlowStore } from "./initializeSolidFlowStore";
 
 export type FlowStoreProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
+  readonly id: string;
   readonly nodes: NodeType[];
   readonly edges: EdgeType[];
   readonly viewport: Viewport;

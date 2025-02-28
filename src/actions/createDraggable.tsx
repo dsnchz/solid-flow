@@ -1,10 +1,9 @@
-import type { XYDragInstance } from "@xyflow/system";
 import { type OnDrag, XYDrag } from "@xyflow/system";
 import type { Accessor } from "solid-js";
-import { createEffect, onCleanup, onMount } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 
 import { useSolidFlow } from "@/components/contexts/flow";
-import type { Edge, Node } from "@/shared/types";
+import type { Node } from "@/shared/types";
 
 export type CreateDraggableParams = {
   readonly disabled: boolean;
@@ -19,53 +18,45 @@ export type CreateDraggableParams = {
   readonly onNodeMouseDown: (id: string) => void;
 };
 
-function updateDrag(
-  domNode: Element,
-  dragInstance: XYDragInstance,
-  params: Partial<CreateDraggableParams>,
-) {
-  if (params.disabled) {
-    dragInstance.destroy();
-    return;
-  }
+type OnNodeDrag<NodeType extends Node> = (
+  event: MouseEvent,
+  node: NodeType,
+  nodes: NodeType[],
+) => void;
 
-  dragInstance.update({
-    domNode,
-    noDragClassName: params.noDragClass,
-    handleSelector: params.handleSelector,
-    nodeId: params.nodeId,
-    isSelectable: params.isSelectable,
-    nodeClickDistance: params.nodeClickDistance,
-  });
-}
-
-const createDraggable = (
+const createDraggable = <NodeType extends Node>(
   elem: Accessor<HTMLElement | undefined>,
   params: Accessor<Partial<CreateDraggableParams>>,
 ) => {
-  const { store, panBy, updateNodePositions, unselectNodesAndEdges } = useSolidFlow<Node, Edge>();
+  const { store, panBy, updateNodePositions, unselectNodesAndEdges } = useSolidFlow();
+  const [dragging, setDragging] = createSignal(false);
 
   onMount(() => {
-    const dragInstance = XYDrag({
-      onDrag: params().onDrag,
-      onDragStart: params().onDragStart,
-      onDragStop: params().onDragStop,
-      onNodeMouseDown: params().onNodeMouseDown,
-      getStoreItems: () => {
-        const snapGrid = store.snapGrid;
-        const vp = store.viewport;
+    const { onDrag, onDragStart, onDragStop, onNodeMouseDown } = params();
 
+    const dragInstance = XYDrag<OnNodeDrag<NodeType>>({
+      onDrag,
+      onDragStart: (event, dragItems, node, nodes) => {
+        setDragging(true);
+        onDragStart?.(event, dragItems, node, nodes);
+      },
+      onDragStop: (event, dragItems, node, nodes) => {
+        setDragging(false);
+        onDragStop?.(event, dragItems, node, nodes);
+      },
+      onNodeMouseDown,
+      getStoreItems: () => {
         return {
           nodes: store.nodes,
           nodeLookup: store.nodeLookup,
           edges: store.edges,
           nodeExtent: store.nodeExtent,
-          snapGrid: snapGrid ? snapGrid : [0, 0],
-          snapToGrid: !!snapGrid,
+          snapGrid: store.snapGrid ? store.snapGrid : [0, 0],
+          snapToGrid: Boolean(store.snapGrid),
           nodeOrigin: store.nodeOrigin,
           multiSelectionActive: store.multiselectionKeyPressed,
           domNode: store.domNode,
-          transform: [vp.x, vp.y, vp.zoom],
+          transform: [store.viewport.x, store.viewport.y, store.viewport.zoom],
           autoPanOnNodeDrag: store.autoPanOnNodeDrag,
           nodesDraggable: store.nodesDraggable,
           selectNodesOnDrag: store.selectNodesOnDrag,
@@ -77,14 +68,32 @@ const createDraggable = (
       },
     });
 
+    function updateDrag(elem: Element, params: Partial<CreateDraggableParams>) {
+      if (params.disabled) {
+        dragInstance.destroy();
+        return;
+      }
+
+      dragInstance.update({
+        domNode: elem,
+        noDragClassName: params.noDragClass,
+        handleSelector: params.handleSelector,
+        nodeId: params.nodeId,
+        isSelectable: params.isSelectable,
+        nodeClickDistance: params.nodeClickDistance,
+      });
+    }
+
     createEffect(() => {
-      updateDrag(elem()!, dragInstance, params());
+      updateDrag(elem()!, params());
     });
 
     onCleanup(() => {
       dragInstance.destroy();
     });
   });
+
+  return dragging;
 };
 
 export default createDraggable;

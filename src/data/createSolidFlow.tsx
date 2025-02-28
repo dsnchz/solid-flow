@@ -25,19 +25,27 @@ import {
 import { createEffect } from "solid-js";
 import { produce } from "solid-js/store";
 
-import type { Edge, EdgeTypes, FitViewOptions, Node, NodeGraph, NodeTypes } from "@/shared/types";
+import type { SolidFlowProps } from "@/components/SolidFlow/types";
+import type {
+  Edge,
+  EdgeTypes,
+  FitViewOptions,
+  InternalNode,
+  Node,
+  NodeGraph,
+  NodeTypes,
+} from "@/shared/types";
 
 import {
   InitialEdgeTypesMap,
   initializeSolidFlowStore,
   InitialNodeTypesMap,
 } from "./initializeSolidFlowStore";
-import type { FlowStoreProps } from "./types";
 
 type SetterCallback<T> = (value: T) => T;
 
 export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
-  props: Partial<FlowStoreProps<NodeType, EdgeType>>,
+  props: Partial<SolidFlowProps<NodeType, EdgeType>>,
 ) => {
   const [store, setStore] = initializeSolidFlowStore(props);
 
@@ -88,32 +96,18 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setStore("edgeTypes", { ...InitialEdgeTypesMap, ...edgeTypes });
   };
 
-  const updateNodePositions: UpdateNodePositions = (nodeDragItems, dragging = false) => {
-    setStore(
-      "nodes",
-      (node) => nodeDragItems.has(node.id),
-      produce((node) => {
-        node.dragging = dragging;
-        node.position = nodeDragItems.get(node.id)!.position;
-      }),
-    );
-  };
-
   const updateNodeInternals = (updates: Map<string, InternalNodeUpdate>) => {
-    const nodeLookup = store.nodeLookup;
-    const parentLookup = store.parentLookup;
-
     const { changes, updatedInternals } = updateNodeInternalsSystem(
       updates,
-      nodeLookup,
-      parentLookup,
+      store.nodeLookup,
+      store.parentLookup,
       store.domNode,
       store.nodeOrigin,
     );
 
     if (!updatedInternals) return;
 
-    updateAbsolutePositions(nodeLookup, parentLookup, {
+    updateAbsolutePositions(store.nodeLookup, store.parentLookup, {
       nodeOrigin: store.nodeOrigin,
       nodeExtent: store.nodeExtent,
     });
@@ -130,7 +124,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
     const nodeToChange = changes.reduce<Map<string, NodeDimensionChange | NodePositionChange>>(
       (acc, change) => {
-        const node = nodeLookup.get(change.id)?.internals.userNode;
+        const node = store.nodeLookup.get(change.id)?.internals.userNode;
 
         if (!node) return acc;
 
@@ -169,6 +163,23 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     if (!store.nodesInitialized) {
       setStore("nodesInitialized", true);
     }
+  };
+
+  const updateNodePositions: UpdateNodePositions = (nodeDragItems, dragging = false) => {
+    setStore(
+      "nodes",
+      (node) => nodeDragItems.has(node.id),
+      produce((node) => {
+        node.dragging = dragging;
+        node.position = nodeDragItems.get(node.id)!.position;
+      }),
+    );
+
+    // This is crucial - update absolute positions for rendering
+    updateAbsolutePositions(store.nodeLookup, store.parentLookup, {
+      nodeOrigin: store.nodeOrigin,
+      nodeExtent: store.nodeExtent,
+    });
   };
 
   const fitView = async (options?: FitViewOptions) => {
@@ -351,8 +362,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
     setStore(
       produce((store) => {
-        store.selectionRect = null;
-        store.selectionRectMode = null;
+        store.selectionRect = undefined;
+        store.selectionRectMode = undefined;
       }),
     );
 
@@ -376,7 +387,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     });
   };
 
-  const updateConnection = (connection: ConnectionState) => {
+  const updateConnection = (connection: ConnectionState<InternalNode<NodeType>>) => {
     setStore("connectionState", connection);
   };
 
@@ -395,9 +406,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setStore(
       produce((store) => {
         store.fitViewOnInitDone = false;
-        store.selectionRect = null;
-        store.selectionRectMode = null;
-        store.snapGrid = null;
+        store.selectionRect = undefined;
+        store.selectionRectMode = undefined;
+        store.snapGrid = [15, 15];
         store.isValidConnection = () => true;
       }),
     );

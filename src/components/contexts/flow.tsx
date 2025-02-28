@@ -12,7 +12,9 @@ export const SolidFlowContext = createContext<SolidFlowContextValue>();
 
 export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge = Edge>() {
   // Since we cannot pass generic types info at the point of context creation, we need to cast it here
-  const ctx = useContext(SolidFlowContext) as unknown as SolidFlowContextValue<NodeType, EdgeType>;
+  const ctx = useContext(SolidFlowContext) as unknown as
+    | SolidFlowContextValue<NodeType, EdgeType>
+    | undefined;
 
   if (!ctx) {
     throw new Error(

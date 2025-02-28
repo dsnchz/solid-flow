@@ -1,44 +1,73 @@
 import { getMarkerId } from "@xyflow/system";
 import clsx from "clsx";
-import { Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import { useFlowStore } from "@/components/contexts";
 import { EdgeIdContext } from "@/components/contexts/edgeId";
+import type { SolidFlowProps } from "@/components/SolidFlow/types";
 import { useHandleEdgeSelect } from "@/hooks/useHandleEdgeSelect";
 import type { Edge, EdgeEventCallbacks, EdgeLayouted, Node } from "@/shared/types";
+import type { MouseOrTouchEvent } from "@/shared/types/events";
 
 import { BezierEdgeInternal } from ".";
+import { EdgeUpdateAnchors } from "./EdgeUpdateAnchors";
 
-export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeLayouted &
-  Partial<EdgeEventCallbacks<EdgeType>>;
+export type EdgeWrapperProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = Partial<
+  EdgeEventCallbacks<EdgeType>
+> &
+  Pick<SolidFlowProps<NodeType, EdgeType>, "reconnectRadius"> & {
+    readonly edge: EdgeLayouted;
+  };
 
 const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
-  props: EdgeWrapperProps<EdgeType>,
+  props: EdgeWrapperProps<NodeType, EdgeType>,
 ) => {
   const { store } = useFlowStore<NodeType, EdgeType>();
   const handleEdgeSelect = useHandleEdgeSelect();
 
+  const [updateHover, setUpdateHover] = createSignal(false);
+  const [reconnecting, setReconnecting] = createSignal(false);
+
   // Computed values
-  const edgeType = () => props.type ?? "default";
+  const storedEdge = () => store.edgeLookup.get(props.edge.id)!;
+  const edgeType = () => props.edge.type ?? "default";
+  const edgeId = () => storedEdge().id;
+
+  const isSelectable = () => props.edge.selectable ?? store.elementsSelectable;
   const edgeComponent = () => store.edgeTypes[edgeType()] || BezierEdgeInternal;
+
+  const isReconnectable = () =>
+    Boolean(
+      props.onEdgeReconnect &&
+        (storedEdge().reconnectable ||
+          (storedEdge().reconnectable && typeof storedEdge().reconnectable === "undefined")),
+    );
+
+  const isFocusable = () =>
+    Boolean(
+      storedEdge().focusable ||
+        (props.edge.focusable && typeof storedEdge().focusable === "undefined"),
+    );
+
   const markerStartUrl = () =>
-    props.markerStart ? `url('#${getMarkerId(props.markerStart, store.id)}')` : undefined;
+    props.edge.markerStart
+      ? `url('#${getMarkerId(storedEdge().markerStart, store.id)}')`
+      : undefined;
   const markerEndUrl = () =>
-    props.markerEnd ? `url('#${getMarkerId(props.markerEnd, store.id)}')` : undefined;
-  const isSelectable = () => props.selectable ?? store.elementsSelectable;
+    props.edge.markerEnd ? `url('#${getMarkerId(storedEdge().markerEnd, store.id)}')` : undefined;
 
-  const onClick = (event: MouseEvent | TouchEvent) => {
-    const edge = store.edgeLookup.get(props.id);
+  const onClick = (event: MouseOrTouchEvent) => {
+    const edge = storedEdge();
 
-    if (edge) {
-      handleEdgeSelect(props.id);
-      props.onEdgeClick?.(edge, event);
-    }
+    if (!edge) return;
+
+    handleEdgeSelect(storedEdge().id);
+    props.onEdgeClick?.(storedEdge(), event);
   };
 
   const onMouseEvent = (event: MouseEvent, type: "contextmenu" | "mouseenter" | "mouseleave") => {
-    const edge = store.edgeLookup.get(props.id);
+    const edge = storedEdge();
 
     if (!edge) return;
 
@@ -51,59 +80,94 @@ const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     handlers[type]?.(edge, event);
   };
 
-  const idValue = () => props.id;
+  // const onKeyDown = (event: KeyboardEvent) => {
+  //   if (!disableKeyboardA11y && elementSelectionKeys.includes(event.key) && isSelectable) {
+  //     const { unselectNodesAndEdges, addSelectedEdges } = store.getState();
+  //     const unselect = event.key === 'Escape';
+
+  //     if (unselect) {
+  //       edge().blur();
+  //       unselectNodesAndEdges({ edges: [edge] });
+  //     } else {
+  //       addSelectedEdges([id]);
+  //     }
+  //   }
+  // };
+
+  const ariaLabel = () =>
+    storedEdge().ariaLabel ?? `Edge from ${storedEdge().source} to ${storedEdge().target}`;
 
   return (
-    <EdgeIdContext.Provider value={idValue}>
-      <Show when={!props.hidden}>
-        <svg style={{ "z-index": props.zIndex }}>
+    <EdgeIdContext.Provider value={edgeId}>
+      <Show when={!props.edge.hidden}>
+        <svg style={{ "z-index": props.edge.zIndex }}>
           <g
-            role="img"
-            class={clsx(["solid-flow__edge", edgeType(), props.class])}
-            classList={{
-              animated: props.animated,
-              selected: props.selected,
-              selectable: isSelectable(),
-            }}
-            data-id={props.id}
+            role={isFocusable() ? "button" : "img"}
+            data-id={props.edge.id}
             onClick={onClick}
             onContextMenu={(e) => onMouseEvent(e, "contextmenu")}
             onMouseEnter={(e) => onMouseEvent(e, "mouseenter")}
             onMouseLeave={(e) => onMouseEvent(e, "mouseleave")}
-            aria-label={
-              props.ariaLabel === null
-                ? undefined
-                : props.ariaLabel
-                  ? props.ariaLabel
-                  : `Edge from ${props.source} to ${props.target}`
-            }
+            tabIndex={isFocusable() ? 0 : undefined}
+            aria-label={ariaLabel()}
+            class={clsx(
+              "solid-flow__edge",
+              edgeType(),
+              {
+                animated: props.edge.animated,
+                selected: props.edge.selected,
+                selectable: isSelectable(),
+                updating: updateHover(),
+              },
+              props.edge.class,
+            )}
           >
-            <Dynamic
-              component={edgeComponent()}
-              id={props.id}
-              source={props.source}
-              target={props.target}
-              sourceX={props.sourceX}
-              sourceY={props.sourceY}
-              targetX={props.targetX}
-              targetY={props.targetY}
-              sourcePosition={props.sourcePosition}
-              targetPosition={props.targetPosition}
-              animated={props.animated}
-              selected={props.selected}
-              label={props.label}
-              labelStyle={props.labelStyle}
-              data={props.data}
-              style={props.style}
-              interactionWidth={props.interactionWidth}
-              sourceHandleId={props.sourceHandle}
-              targetHandleId={props.targetHandle}
-              deletable={props.deletable ?? true}
-              selectable={isSelectable()}
-              type={edgeType()}
-              markerStart={markerStartUrl()}
-              markerEnd={markerEndUrl()}
-            />
+            <Show when={!reconnecting()}>
+              <Dynamic
+                component={edgeComponent()}
+                id={props.edge.id}
+                source={props.edge.source}
+                target={props.edge.target}
+                sourceX={props.edge.sourceX}
+                sourceY={props.edge.sourceY}
+                targetX={props.edge.targetX}
+                targetY={props.edge.targetY}
+                sourcePosition={props.edge.sourcePosition}
+                targetPosition={props.edge.targetPosition}
+                animated={props.edge.animated}
+                selected={props.edge.selected}
+                label={props.edge.label}
+                labelStyle={props.edge.labelStyle}
+                data={props.edge.data}
+                style={props.edge.style}
+                interactionWidth={props.edge.interactionWidth}
+                sourceHandleId={props.edge.sourceHandle}
+                targetHandleId={props.edge.targetHandle}
+                deletable={props.edge.deletable ?? true}
+                selectable={isSelectable()}
+                type={edgeType()}
+                markerStart={markerStartUrl()}
+                markerEnd={markerEndUrl()}
+              />
+            </Show>
+            <Show when={isReconnectable()}>
+              <EdgeUpdateAnchors<EdgeType>
+                edge={storedEdge()}
+                isReconnectable={isReconnectable()}
+                reconnectRadius={props.reconnectRadius}
+                onEdgeReconnect={props.onEdgeReconnect}
+                onEdgeReconnectStart={props.onEdgeReconnectStart}
+                onEdgeReconnectEnd={props.onEdgeReconnectEnd}
+                sourceX={props.edge.sourceX}
+                sourceY={props.edge.sourceY}
+                targetX={props.edge.targetX}
+                targetY={props.edge.targetY}
+                sourcePosition={props.edge.sourcePosition}
+                targetPosition={props.edge.targetPosition}
+                setUpdateHover={setUpdateHover}
+                setReconnecting={setReconnecting}
+              />
+            </Show>
           </g>
         </svg>
       </Show>

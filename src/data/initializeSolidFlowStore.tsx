@@ -1,9 +1,7 @@
 /* eslint-disable solid/reactivity */
 import {
   adoptUserNodes,
-  ConnectionLineType,
   type ConnectionLookup,
-  type ConnectionMode,
   type ConnectionState,
   createMarkerIds,
   devWarn,
@@ -18,7 +16,6 @@ import {
   isEdgeVisible,
   type MarkerProps,
   type NodeLookup,
-  type NodeOrigin,
   type OnConnect,
   type OnConnectEnd,
   type OnConnectStart,
@@ -26,10 +23,7 @@ import {
   type PanZoomInstance,
   type ParentLookup,
   pointToRendererPoint,
-  SelectionMode,
   type SelectionRect,
-  type SnapGrid,
-  type Transform,
   updateConnectionLookup,
   type Viewport,
 } from "@xyflow/system";
@@ -43,9 +37,8 @@ import {
   StraightEdgeInternal,
 } from "@/components/graph/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/graph/node";
+import type { SolidFlowProps } from "@/components/SolidFlow/types";
 import type {
-  DefaultEdgeOptions,
-  DefaultNodeOptions,
   Edge,
   EdgeLayouted,
   EdgeTypes,
@@ -58,7 +51,7 @@ import type {
   OnEdgeCreate,
 } from "@/shared/types";
 
-import type { FlowStoreProps } from "./types";
+import { getDefaultFlowStateProps } from "./utils";
 
 type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse" | undefined;
@@ -82,21 +75,9 @@ export const initializeSolidFlowStore = <
   NodeType extends Node = Node,
   EdgeType extends Edge = Edge,
 >(
-  props: Partial<FlowStoreProps<NodeType, EdgeType>>,
+  props: Partial<SolidFlowProps<NodeType, EdgeType>>,
 ) => {
-  const _props = mergeProps(
-    {
-      nodes: [] as NodeType[],
-      edges: [] as EdgeType[],
-      fitView: false,
-      nodeOrigin: [0, 0] as NodeOrigin,
-      nodeExtent: infiniteExtent,
-      elevateNodesOnSelect: false,
-      defaultNodeOptions: {} as DefaultNodeOptions,
-      defaultEdgeOptions: {} as DefaultEdgeOptions,
-    },
-    props,
-  );
+  const _props = mergeProps(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
 
   const nodeLookup: NodeLookup<InternalNode<NodeType>> = new Map();
   const parentLookup: ParentLookup<InternalNode<NodeType>> = new Map();
@@ -117,64 +98,72 @@ export const initializeSolidFlowStore = <
   if (_props.fitView && _props.width && _props.height) {
     const bounds = getInternalNodesBounds(nodeLookup, {
       filter: (node) =>
-        !!((node.width || node.initialWidth) && (node.height || node.initialHeight)),
+        Boolean((node.width || node.initialWidth) && (node.height || node.initialHeight)),
     });
-    viewport = getViewportForBounds(bounds, _props.width, _props.height, 0.5, 2, 0.1);
+
+    viewport = getViewportForBounds(
+      bounds,
+      _props.width,
+      _props.height,
+      _props.minZoom,
+      _props.maxZoom,
+      0.1,
+    );
   }
 
   return createStore({
-    id: null as string | null,
+    id: _props.id,
     nodes: _props.nodes,
     edges: _props.edges,
     nodeTypes: InitialNodeTypesMap as NodeTypes,
     edgeTypes: InitialEdgeTypesMap as EdgeTypes,
-    nodesInitialized: false,
-    edgesInitialized: false,
-    viewportInitialized: false,
-    height: 500,
-    width: 500,
-    minZoom: 0.5,
-    maxZoom: 2,
+    height: _props.height,
+    width: _props.width,
+    minZoom: _props.minZoom,
+    maxZoom: _props.maxZoom,
     nodeLookup,
     parentLookup,
     edgeLookup,
+    viewport,
+    connectionLookup,
     elevateNodesOnSelect: _props.elevateNodesOnSelect,
     defaultEdgeOptions: _props.defaultEdgeOptions,
     defaultNodeOptions: _props.defaultNodeOptions,
-    connectionLookup,
     nodeOrigin: _props.nodeOrigin,
-    nodeDragThreshold: 1,
+    nodeDragThreshold: _props.nodeDragThreshold,
     nodeExtent: _props.nodeExtent,
     translateExtent: infiniteExtent,
-    autoPanOnNodeDrag: true,
-    autoPanOnConnect: true,
+    autoPanOnNodeDrag: _props.autoPanOnNodeDrag,
+    autoPanOnConnect: _props.autoPanOnConnect,
+    snapGrid: _props.snapGrid,
+    snapToGrid: _props.snapToGrid,
+    selectionMode: _props.selectionMode,
+    nodesDraggable: _props.nodesDraggable,
+    nodesConnectable: _props.nodesConnectable,
+    elementsSelectable: _props.elementsSelectable,
+    selectNodesOnDrag: _props.selectNodesOnDrag,
+    onlyRenderVisibleElements: _props.onlyRenderVisibleElements,
+    defaultMarkerColor: _props.defaultMarkerColor,
+    connectionMode: _props.connectionMode,
+    connectionLineType: _props.connectionLineType,
+    connectionRadius: _props.connectionRadius,
+    connectionState: initialConnection as ConnectionState<InternalNode<NodeType>>,
+    selectionRect: undefined as SelectionRect | undefined,
+    selectionRectMode: undefined as string | undefined,
+    domNode: null as HTMLDivElement | null,
+    panZoom: null as PanZoomInstance | null,
+    fitViewOptions: undefined as FitViewOptions | undefined,
     fitViewOnInit: false,
     fitViewOnInitDone: false,
-    fitViewOptions: undefined as FitViewOptions | undefined,
-    panZoom: null as PanZoomInstance | null,
-    snapGrid: null as SnapGrid | null,
     dragging: false,
-    selectionMode: SelectionMode.Partial,
-    selectionRect: null as SelectionRect | null,
-    selectionRectMode: null as string | null,
     selectionKeyPressed: false,
     multiselectionKeyPressed: false,
     deleteKeyPressed: false,
     panActivationKeyPressed: false,
     zoomActivationKeyPressed: false,
-    viewport,
-    connectionMode: "strict" as ConnectionMode,
-    domNode: null as HTMLDivElement | null,
-    connectionState: initialConnection as ConnectionState,
-    connectionLineType: ConnectionLineType.Bezier,
-    connectionRadius: 20,
-    nodesDraggable: true,
-    nodesConnectable: true,
-    elementsSelectable: true,
-    selectNodesOnDrag: true,
-    onlyRenderVisibleElements: false,
-    lib: "solid",
-    defaultMarkerColor: "#b1b1b7",
+    nodesInitialized: false,
+    edgesInitialized: false,
+    viewportInitialized: false,
     isValidConnection: (() => true) as () => boolean,
     onError: devWarn as OnError,
     onDelete: undefined as OnDelete | undefined,
@@ -185,6 +174,9 @@ export const initializeSolidFlowStore = <
     onBeforeDelete: undefined as OnBeforeDelete<NodeType, EdgeType> | undefined,
 
     // derived store values
+    get lib() {
+      return "solid" as const; // Made this a derived store get value to prevent overwriting the value
+    },
     get initialized() {
       if (!this.nodes.length) return this.viewportInitialized;
       if (!this.edges.length) return this.viewportInitialized && this.nodesInitialized;
@@ -193,16 +185,12 @@ export const initializeSolidFlowStore = <
     get connection() {
       const state = this.connectionState;
 
-      return state.inProgress
-        ? {
-            ...state,
-            to: pointToRendererPoint(state.to, [
-              this.viewport.x,
-              this.viewport.y,
-              this.viewport.zoom,
-            ]),
-          }
-        : { ...state };
+      return {
+        ...state,
+        to: state.inProgress
+          ? pointToRendererPoint(state.to, [this.viewport.x, this.viewport.y, this.viewport.zoom])
+          : state.to,
+      } as ConnectionState<InternalNode<NodeType>>;
     },
     get markers() {
       return createMarkerIds(this.edges, {
@@ -211,18 +199,14 @@ export const initializeSolidFlowStore = <
       }) as RefinedMarkerProps[];
     },
     get visibleNodes() {
-      const transform: Transform = [this.viewport.x, this.viewport.y, this.viewport.zoom];
+      const viewportNodes = getNodesInside(
+        this.nodeLookup,
+        { x: 0, y: 0, width: this.width, height: this.height },
+        [this.viewport.x, this.viewport.y, this.viewport.zoom],
+        true,
+      );
 
-      return (
-        this.onlyRenderVisibleElements
-          ? getNodesInside(
-              this.nodeLookup,
-              { x: 0, y: 0, width: this.width, height: this.height },
-              transform,
-              true,
-            )
-          : Array.from(this.nodeLookup.values())
-      ) as InternalNode<NodeType>[];
+      return this.onlyRenderVisibleElements ? viewportNodes : Array.from(this.nodeLookup.values());
     },
     get selectedNodes() {
       return this.nodes.filter((node) => node.selected);
@@ -231,6 +215,8 @@ export const initializeSolidFlowStore = <
       return this.edges.filter((edge) => edge.selected);
     },
     get visibleEdges() {
+      updateConnectionLookup(this.connectionLookup, this.edgeLookup, this.edges);
+
       const edges =
         this.onlyRenderVisibleElements && this.width && this.height
           ? this.edges.filter((edge) => {
@@ -251,7 +237,7 @@ export const initializeSolidFlowStore = <
             })
           : this.edges;
 
-      return edges.reduce<EdgeLayouted[]>((res, edge) => {
+      const result = edges.reduce<EdgeLayouted[]>((res, edge) => {
         const sourceNode = this.nodeLookup.get(edge.source);
         const targetNode = this.nodeLookup.get(edge.target);
 
@@ -260,12 +246,14 @@ export const initializeSolidFlowStore = <
         const edgePosition = getEdgePosition({
           id: edge.id,
           sourceNode,
-          targetNode,
           sourceHandle: edge.sourceHandle || null,
+          targetNode,
           targetHandle: edge.targetHandle || null,
           connectionMode: this.connectionMode,
           onError: this.onError,
         });
+
+        console.log("GET EDGE POSITION >>>>", edge.sourceHandle, edge.targetHandle, edgePosition);
 
         if (edgePosition) {
           res.push({
@@ -283,6 +271,10 @@ export const initializeSolidFlowStore = <
 
         return res;
       }, []);
+
+      console.log("visibleEdges", result);
+
+      return result;
     },
   });
 };
