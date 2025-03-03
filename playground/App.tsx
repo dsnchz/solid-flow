@@ -4,9 +4,10 @@ import { createEffect } from "solid-js";
 import { createStore } from "solid-js/store";
 
 import { Background, Controls, SolidFlow } from "@/components";
+import type { Edge, Node } from "@/shared/types";
 
 export const App = () => {
-  const [nodes] = createStore([
+  const [nodes] = createStore<Node[]>([
     {
       id: "1",
       type: "input",
@@ -21,13 +22,15 @@ export const App = () => {
     },
   ]);
 
-  const [edges] = createStore([
+  const [edges] = createStore<Edge[]>([
     {
       id: "1-2",
       type: "default",
       source: "1",
       target: "2",
+      interactionWidth: 10,
       label: "Edge Text",
+      animated: true,
     },
   ]);
 
@@ -44,7 +47,7 @@ export const App = () => {
       width={1000}
       height={1000}
       onNodeClick={(event) => console.log("on node click", event)}
-      onError={(error) => console.log("on error", error)}
+      onError={(id, message) => console.log("on error", typeof id, typeof message)}
     >
       <Controls />
       <Background variant="dots" />

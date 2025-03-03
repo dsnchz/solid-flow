@@ -19,34 +19,36 @@ const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge
 
   return (
     <div class="solid-flow__edges">
-      <svg class="solid-flow__marker">
-        <MarkerDefinition />
-      </svg>
+      <Show when={store.nodesInitialized}>
+        <svg class="solid-flow__marker">
+          <MarkerDefinition />
+        </svg>
 
-      <Index each={store.visibleEdges}>
-        {(edge) => {
-          return (
-            <EdgeWrapper
-              edge={edge()}
-              reconnectRadius={props.reconnectRadius}
-              onEdgeClick={props.onEdgeClick}
-              onEdgeContextMenu={props.onEdgeContextMenu}
-              onEdgeMouseEnter={props.onEdgeMouseEnter}
-              onEdgeMouseLeave={props.onEdgeMouseLeave}
-            />
-          );
-        }}
-      </Index>
+        <Index each={store.visibleEdges}>
+          {(edge) => {
+            return (
+              <EdgeWrapper<NodeType, EdgeType>
+                edge={edge()}
+                reconnectRadius={props.reconnectRadius}
+                onEdgeClick={props.onEdgeClick}
+                onEdgeContextMenu={props.onEdgeContextMenu}
+                onEdgeMouseEnter={props.onEdgeMouseEnter}
+                onEdgeMouseLeave={props.onEdgeMouseLeave}
+              />
+            );
+          }}
+        </Index>
 
-      <Show when={store.visibleEdges.length > 0}>
-        <CallOnMount
-          onMount={() => {
-            setStore("edgesInitialized", true);
-          }}
-          onCleanup={() => {
-            setStore("edgesInitialized", false);
-          }}
-        />
+        <Show when={store.visibleEdges.length > 0}>
+          <CallOnMount
+            onMount={() => {
+              setStore("edgesInitialized", true);
+            }}
+            onCleanup={() => {
+              setStore("edgesInitialized", false);
+            }}
+          />
+        </Show>
       </Show>
     </div>
   );

@@ -198,6 +198,12 @@ export const initializeSolidFlowStore = <
         id: this.id,
       }) as RefinedMarkerProps[];
     },
+    get selectedNodes() {
+      return this.nodes.filter((node) => node.selected);
+    },
+    get selectedEdges() {
+      return this.edges.filter((edge) => edge.selected);
+    },
     get visibleNodes() {
       const viewportNodes = getNodesInside(
         this.nodeLookup,
@@ -208,34 +214,29 @@ export const initializeSolidFlowStore = <
 
       return this.onlyRenderVisibleElements ? viewportNodes : Array.from(this.nodeLookup.values());
     },
-    get selectedNodes() {
-      return this.nodes.filter((node) => node.selected);
-    },
-    get selectedEdges() {
-      return this.edges.filter((edge) => edge.selected);
-    },
     get visibleEdges() {
-      updateConnectionLookup(this.connectionLookup, this.edgeLookup, this.edges);
+      const filterVisibleEdges = Boolean(
+        this.onlyRenderVisibleElements && this.width && this.height,
+      );
 
-      const edges =
-        this.onlyRenderVisibleElements && this.width && this.height
-          ? this.edges.filter((edge) => {
-              const sourceNode = this.nodeLookup.get(edge.source);
-              const targetNode = this.nodeLookup.get(edge.target);
+      const edges = !filterVisibleEdges
+        ? this.edges
+        : this.edges.filter((edge) => {
+            const sourceNode = this.nodeLookup.get(edge.source);
+            const targetNode = this.nodeLookup.get(edge.target);
 
-              return (
-                sourceNode &&
-                targetNode &&
-                isEdgeVisible({
-                  sourceNode,
-                  targetNode,
-                  width: this.width,
-                  height: this.height,
-                  transform: [this.viewport.x, this.viewport.y, this.viewport.zoom],
-                })
-              );
-            })
-          : this.edges;
+            return (
+              sourceNode &&
+              targetNode &&
+              isEdgeVisible({
+                sourceNode,
+                targetNode,
+                width: this.width,
+                height: this.height,
+                transform: [this.viewport.x, this.viewport.y, this.viewport.zoom],
+              })
+            );
+          });
 
       const result = edges.reduce<EdgeLayouted[]>((res, edge) => {
         const sourceNode = this.nodeLookup.get(edge.source);
@@ -246,14 +247,12 @@ export const initializeSolidFlowStore = <
         const edgePosition = getEdgePosition({
           id: edge.id,
           sourceNode,
-          sourceHandle: edge.sourceHandle || null,
+          sourceHandle: edge.sourceHandle ?? null,
           targetNode,
-          targetHandle: edge.targetHandle || null,
+          targetHandle: edge.targetHandle ?? null,
           connectionMode: this.connectionMode,
           onError: this.onError,
         });
-
-        console.log("GET EDGE POSITION >>>>", edge.sourceHandle, edge.targetHandle, edgePosition);
 
         if (edgePosition) {
           res.push({
@@ -271,8 +270,6 @@ export const initializeSolidFlowStore = <
 
         return res;
       }, []);
-
-      console.log("visibleEdges", result);
 
       return result;
     },

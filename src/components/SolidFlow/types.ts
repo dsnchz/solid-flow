@@ -7,6 +7,7 @@ import type {
   OnConnect,
   OnConnectEnd,
   OnConnectStart,
+  OnError,
   OnMove,
   OnMoveEnd,
   OnMoveStart,
@@ -55,7 +56,7 @@ type EventProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   readonly onConnectStart: OnConnectStart;
   readonly onConnectEnd: OnConnectEnd;
   readonly onBeforeDelete: OnBeforeDelete<NodeType, EdgeType>;
-  readonly onError: (error: Error) => void;
+  readonly onError: OnError;
   readonly onDelete: OnDelete;
   readonly onMove: OnMove;
   readonly onMoveStart: OnMoveStart;
