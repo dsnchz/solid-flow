@@ -69,7 +69,6 @@ const Handle = (props: ParentProps<HandleProps>) => {
 
   createEffect(() => {
     if (props.onConnect || props.onDisconnect) {
-      // store.edges();
       connections = store.connectionLookup.get(
         `${nodeId()}-${props.type}${props.id ? `-${props.id}` : ""}`,
       );

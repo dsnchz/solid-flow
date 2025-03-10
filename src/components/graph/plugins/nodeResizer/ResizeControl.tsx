@@ -1,6 +1,5 @@
 import {
   type ControlPosition,
-  ResizeControlVariant,
   XYResizer,
   type XYResizerChange,
   type XYResizerChildChange,
@@ -9,6 +8,7 @@ import clsx from "clsx";
 import { createEffect, onCleanup, onMount, type ParentComponent } from "solid-js";
 
 import { useFlowStore, useNodeId } from "@/components/contexts";
+import type { ResizeControlVariant } from "@/shared/types";
 
 import type { NodeResizerProps } from "./NodeResizer";
 
@@ -48,13 +48,12 @@ const ResizeControl: ParentComponent<Partial<ResizeControlProps>> = (props) => {
   const getId = () => (typeof props.nodeId === "string" ? props.nodeId : contextNodeId());
 
   const getDefaultPosition = () =>
-    (props.variant === ResizeControlVariant.Line ? "right" : "bottom-right") as ControlPosition;
+    (props.variant === "line" ? "right" : "bottom-right") as ControlPosition;
 
   const getControlPosition = () => props.position ?? getDefaultPosition();
   const getPositionClassNames = () => getControlPosition().split("-");
 
-  const getColorStyleProp = () =>
-    props.variant === ResizeControlVariant.Line ? "border-color" : "background-color";
+  const getColorStyleProp = () => (props.variant === "line" ? "border-color" : "background-color");
   const getStyle = () => props.style ?? "";
   const getControlStyle = () =>
     props.color ? `${getStyle()} ${getColorStyleProp()}: ${props.color};` : getStyle();

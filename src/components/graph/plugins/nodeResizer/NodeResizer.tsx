@@ -2,12 +2,11 @@ import {
   type OnResize,
   type OnResizeEnd,
   type OnResizeStart,
-  ResizeControlVariant,
   type ShouldResize,
   XY_RESIZER_HANDLE_POSITIONS,
   XY_RESIZER_LINE_POSITIONS,
 } from "@xyflow/system";
-import { type Component, For } from "solid-js";
+import { For, mergeProps, Show } from "solid-js";
 
 import ResizeControl from "./ResizeControl";
 
@@ -27,7 +26,7 @@ export type NodeResizerProps = {
   /** Style applied to line */
   readonly lineStyle: string;
   /** Are the controls visible */
-  readonly isVisible: boolean;
+  readonly visible: boolean;
   /** Minimum width of node */
   readonly minWidth: number;
   /** Minimum height of node */
@@ -48,60 +47,62 @@ export type NodeResizerProps = {
   readonly onResizeEnd: OnResizeEnd;
 };
 
-const NodeResizer: Component<Partial<NodeResizerProps>> = (props) => {
-  const getMinWidth = () => props.minWidth || 10;
-  const getMinHeight = () => props.minHeight || 10;
-  const getMaxWidth = () => props.maxWidth || Number.MAX_VALUE;
-  const getMaxHeight = () => props.maxHeight || Number.MAX_VALUE;
+const NodeResizer = (props: Partial<NodeResizerProps>) => {
+  const _props = mergeProps(
+    {
+      minWidth: 10,
+      maxWidth: Number.MAX_VALUE,
+      minHeight: 10,
+      maxHeight: Number.MAX_VALUE,
+      visible: true,
+    },
+    props,
+  );
 
   return (
-    <>
-      {props.isVisible !== false && (
-        <>
-          <For each={XY_RESIZER_LINE_POSITIONS}>
-            {(position) => (
-              <ResizeControl
-                class={props.lineClass}
-                style={props.lineStyle}
-                nodeId={props.nodeId}
-                position={position}
-                variant={ResizeControlVariant.Line}
-                color={props.color}
-                minWidth={getMinWidth()}
-                minHeight={getMinHeight()}
-                maxWidth={getMaxWidth()}
-                maxHeight={getMaxHeight()}
-                onResizeStart={props.onResizeStart}
-                keepAspectRatio={props.keepAspectRatio}
-                shouldResize={props.shouldResize}
-                onResize={props.onResize}
-                onResizeEnd={props.onResizeEnd}
-              />
-            )}
-          </For>
-          <For each={XY_RESIZER_HANDLE_POSITIONS}>
-            {(position) => (
-              <ResizeControl
-                class={props.handleClass}
-                style={props.handleStyle}
-                nodeId={props.nodeId}
-                position={position}
-                color={props.color}
-                minWidth={getMinWidth()}
-                minHeight={getMinHeight()}
-                maxWidth={getMaxWidth()}
-                maxHeight={getMaxHeight()}
-                onResizeStart={props.onResizeStart}
-                keepAspectRatio={props.keepAspectRatio}
-                shouldResize={props.shouldResize}
-                onResize={props.onResize}
-                onResizeEnd={props.onResizeEnd}
-              />
-            )}
-          </For>
-        </>
-      )}
-    </>
+    <Show when={_props.visible}>
+      <For each={XY_RESIZER_LINE_POSITIONS}>
+        {(position) => (
+          <ResizeControl
+            variant="line"
+            position={position}
+            class={_props.lineClass}
+            style={_props.lineStyle}
+            nodeId={_props.nodeId}
+            color={_props.color}
+            minWidth={_props.minWidth}
+            maxWidth={_props.maxWidth}
+            minHeight={_props.minHeight}
+            maxHeight={_props.maxHeight}
+            onResizeStart={_props.onResizeStart}
+            keepAspectRatio={_props.keepAspectRatio}
+            shouldResize={_props.shouldResize}
+            onResize={_props.onResize}
+            onResizeEnd={_props.onResizeEnd}
+          />
+        )}
+      </For>
+      <For each={XY_RESIZER_HANDLE_POSITIONS}>
+        {(position) => (
+          <ResizeControl
+            position={position}
+            class={_props.handleClass}
+            style={_props.handleStyle}
+            nodeId={_props.nodeId}
+            color={_props.color}
+            minWidth={_props.minWidth}
+            minHeight={_props.minHeight}
+            maxWidth={_props.maxWidth}
+            maxHeight={_props.maxHeight}
+            onResizeStart={_props.onResizeStart}
+            keepAspectRatio={_props.keepAspectRatio}
+            shouldResize={_props.shouldResize}
+            onResize={_props.onResize}
+            onResizeEnd={_props.onResizeEnd}
+          />
+        )}
+      </For>
+    </Show>
   );
 };
 

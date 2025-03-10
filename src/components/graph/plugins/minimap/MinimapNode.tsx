@@ -1,7 +1,8 @@
 import clsx from "clsx";
-import type { JSX } from "solid-js";
+import { type JSX, mergeProps } from "solid-js";
 
 type MinimapNodeProps = {
+  readonly class?: string;
   readonly x: number;
   readonly y: number;
   readonly width?: number;
@@ -12,15 +13,23 @@ type MinimapNodeProps = {
   readonly strokeColor?: string;
   readonly strokeWidth?: number;
   readonly selected?: boolean;
-  readonly class?: string;
 };
 
 const MinimapNode = (props: MinimapNodeProps) => {
+  const _props = mergeProps(
+    {
+      borderRadius: 5,
+      width: 0,
+      height: 0,
+    },
+    props,
+  );
+
   const style = () =>
     Object.entries({
-      fill: props.color,
-      stroke: props.strokeColor,
-      "stroke-width": props.strokeWidth,
+      fill: _props.color,
+      stroke: _props.strokeColor,
+      "stroke-width": _props.strokeWidth,
     })
       .filter(([_, value]) => value !== undefined)
       .reduce<Record<string, string | number>>((acc, [key, value]) => {
@@ -30,16 +39,15 @@ const MinimapNode = (props: MinimapNodeProps) => {
 
   return (
     <rect
-      class={clsx("solid-flow__minimap-node", props.class)}
-      classList={{ selected: props.selected }}
-      x={props.x}
-      y={props.y}
-      rx={props.borderRadius ?? 5}
-      ry={props.borderRadius ?? 5}
-      width={props.width ?? 0}
-      height={props.height ?? 0}
+      class={clsx("solid-flow__minimap-node", { selected: _props.selected }, _props.class)}
+      x={_props.x}
+      y={_props.y}
+      rx={_props.borderRadius}
+      ry={_props.borderRadius}
+      width={_props.width}
+      height={_props.height}
+      shape-rendering={_props.shapeRendering}
       style={style()}
-      shape-rendering={props.shapeRendering}
     />
   );
 };

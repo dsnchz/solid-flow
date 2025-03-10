@@ -1,15 +1,15 @@
 import {
-  addEdge as addEdgeUtil,
+  addEdge as systemAddEdge,
   adoptUserNodes,
   type Connection,
   type ConnectionState,
   type CoordinateExtent,
   errorMessages,
-  fitView as fitViewSystem,
+  fitView as systemFitView,
   getDimensions,
   getElementsToRemove,
   getFitViewNodes,
-  getNodesBounds as getNodesBoundsSystem,
+  getNodesBounds as systemGetNodesBounds,
   initialConnection,
   type InternalNodeUpdate,
   type NodeDimensionChange,
@@ -17,12 +17,12 @@ import {
   panBy as panBySystem,
   updateAbsolutePositions,
   updateConnectionLookup,
-  updateNodeInternals as updateNodeInternalsSystem,
+  updateNodeInternals as systemUpdateNodeInternals,
   type UpdateNodePositions,
   type ViewportHelperFunctionOptions,
   type XYPosition,
 } from "@xyflow/system";
-import { createEffect } from "solid-js";
+import { batch, createEffect } from "solid-js";
 import { produce } from "solid-js/store";
 
 import type { SolidFlowProps } from "@/components/SolidFlow/types";
@@ -59,12 +59,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       ...node,
     }));
 
-    adoptUserNodes(nextNodes, store.nodeLookup, store.parentLookup, {
-      elevateNodesOnSelect: store.elevateNodesOnSelect,
-      nodeOrigin: store.nodeOrigin,
-      nodeExtent: store.nodeExtent,
-      defaults: store.defaultNodeOptions,
-      checkEquality: false,
+    batch(() => {
+      adoptUserNodes(nextNodes, store.nodeLookup, store.parentLookup, {
+        elevateNodesOnSelect: store.elevateNodesOnSelect,
+        nodeOrigin: store.nodeOrigin,
+        nodeExtent: store.nodeExtent,
+        defaults: store.defaultNodeOptions,
+        checkEquality: false,
+      });
     });
 
     setStore("nodes", nextNodes);
@@ -79,13 +81,15 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       ...edge,
     }));
 
-    updateConnectionLookup(store.connectionLookup, store.edgeLookup, nextEdges);
+    batch(() => {
+      updateConnectionLookup(store.connectionLookup, store.edgeLookup, nextEdges);
+    });
 
     setStore("edges", nextEdges);
   };
 
   const addEdge = (edgeParams: EdgeType | Connection) => {
-    setEdges((edges) => addEdgeUtil(edgeParams, edges));
+    setEdges((edges) => systemAddEdge(edgeParams, edges));
   };
 
   const setNodeTypes = (nodeTypes: NodeTypes) => {
@@ -97,7 +101,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const updateNodeInternals = (updates: Map<string, InternalNodeUpdate>) => {
-    const { changes, updatedInternals } = updateNodeInternalsSystem(
+    const { changes, updatedInternals } = systemUpdateNodeInternals(
       updates,
       store.nodeLookup,
       store.parentLookup,
@@ -175,10 +179,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       }),
     );
 
-    // This is crucial - update absolute positions for rendering
-    updateAbsolutePositions(store.nodeLookup, store.parentLookup, {
-      nodeOrigin: store.nodeOrigin,
-      nodeExtent: store.nodeExtent,
+    batch(() => {
+      adoptUserNodes(store.nodes, store.nodeLookup, store.parentLookup, {
+        elevateNodesOnSelect: store.elevateNodesOnSelect,
+        nodeOrigin: store.nodeOrigin,
+        nodeExtent: store.nodeExtent,
+        defaults: store.defaultNodeOptions,
+        checkEquality: false,
+      });
     });
   };
 
@@ -192,7 +200,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
     const fitViewNodes = getFitViewNodes(store.nodeLookup, options);
 
-    return fitViewSystem(
+    return systemFitView(
       {
         nodes: fitViewNodes,
         width,
@@ -212,7 +220,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
     const fitViewNodes = getFitViewNodes(store.nodeLookup, options);
 
-    fitViewSystem(
+    systemFitView(
       {
         nodes: fitViewNodes,
         width: store.width,
@@ -395,11 +403,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setStore("connectionState", initialConnection);
   };
 
-  const getNodesBounds = (nodes: Node[]) => {
-    const _nodeLookup = store.nodeLookup;
-    const _nodeOrigin = store.nodeOrigin;
-
-    return getNodesBoundsSystem(nodes, { nodeLookup: _nodeLookup, nodeOrigin: _nodeOrigin });
+  const getNodesBounds = (nodes: NodeType[]) => {
+    return systemGetNodesBounds(nodes, {
+      nodeLookup: store.nodeLookup,
+      nodeOrigin: store.nodeOrigin,
+    });
   };
 
   const reset = () => {

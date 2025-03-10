@@ -1,4 +1,5 @@
 /* eslint-disable solid/reactivity */
+import { ReactiveMap } from "@solid-primitives/map";
 import {
   adoptUserNodes,
   type ConnectionLookup,
@@ -27,7 +28,7 @@ import {
   updateConnectionLookup,
   type Viewport,
 } from "@xyflow/system";
-import { mergeProps } from "solid-js";
+import { batch, mergeProps } from "solid-js";
 import { createStore } from "solid-js/store";
 
 import {
@@ -79,19 +80,21 @@ export const initializeSolidFlowStore = <
 ) => {
   const _props = mergeProps(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
 
-  const nodeLookup: NodeLookup<InternalNode<NodeType>> = new Map();
-  const parentLookup: ParentLookup<InternalNode<NodeType>> = new Map();
-  const connectionLookup: ConnectionLookup = new Map();
-  const edgeLookup: EdgeLookup<EdgeType> = new Map();
+  const nodeLookup: NodeLookup<InternalNode<NodeType>> = new ReactiveMap();
+  const parentLookup: ParentLookup<InternalNode<NodeType>> = new ReactiveMap();
+  const edgeLookup: EdgeLookup<EdgeType> = new ReactiveMap();
+  const connectionLookup: ConnectionLookup = new ReactiveMap();
 
-  adoptUserNodes(_props.nodes, nodeLookup, parentLookup, {
-    nodeExtent: _props.nodeExtent,
-    nodeOrigin: _props.nodeOrigin,
-    elevateNodesOnSelect: false,
-    checkEquality: false,
+  batch(() => {
+    adoptUserNodes(_props.nodes, nodeLookup, parentLookup, {
+      nodeExtent: _props.nodeExtent,
+      nodeOrigin: _props.nodeOrigin,
+      elevateNodesOnSelect: false,
+      checkEquality: false,
+    });
+
+    updateConnectionLookup(connectionLookup, edgeLookup, _props.edges);
   });
-
-  updateConnectionLookup(connectionLookup, edgeLookup, _props.edges);
 
   let viewport: Viewport = { x: 0, y: 0, zoom: 1 };
 

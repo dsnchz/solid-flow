@@ -8,6 +8,7 @@ import type {
   NodeChange,
   OnBeforeDeleteBase,
   PanOnScrollMode as SystemPanOnScrollMode,
+  ResizeControlVariant as SystemResizeControlVariant,
   SelectionMode as SystemSelectionMode,
   XYPosition,
 } from "@xyflow/system";
@@ -102,3 +103,5 @@ export type ConnectionLineType = `${SystemConnectionLineType}`;
 export type SelectionMode = `${SystemSelectionMode}`;
 
 export type PanOnScrollMode = `${SystemPanOnScrollMode}`;
+
+export type ResizeControlVariant = `${SystemResizeControlVariant}`;
