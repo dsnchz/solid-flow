@@ -65,6 +65,7 @@
   },
   "dependencies": {
     "@solid-primitives/map": "^0.6.0",
+    "@solidjs/router": "^0.15.3",
     "clsx": "^2.1.1"
   },
   "main": "./dist/index/index.js",

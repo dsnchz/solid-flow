@@ -1,56 +1,39 @@
 import "@/styles/style.css";
 
-import { createEffect } from "solid-js";
-import { createStore } from "solid-js/store";
+import { Route, Router, useSearchParams } from "@solidjs/router";
+import { ErrorBoundary } from "solid-js";
+import { Dynamic } from "solid-js/web";
 
-import { Background, Controls, SolidFlow } from "@/components";
-import type { Edge, Node } from "@/shared/types";
+import { SolidFlowProvider } from "@/components";
+
+import { AppStateBar } from "./AppStateBar";
+import { SolidFlowExamplesMap } from "./constants";
+import ErrorPage from "./ErrorPage";
 
 export const App = () => {
-  const [nodes] = createStore<Node[]>([
-    {
-      id: "1",
-      type: "input",
-      data: { label: "Input Node" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "2",
-      type: "output",
-      data: { label: "Output Node" },
-      position: { x: 0, y: 150 },
-    },
-  ]);
+  return (
+    <ErrorBoundary fallback={(e, r) => <ErrorPage error={e} reset={r} />}>
+      <SolidFlowProvider>
+        <Router>
+          <Route path="/" component={AppContent} />
+        </Router>
+      </SolidFlowProvider>
+    </ErrorBoundary>
+  );
+};
 
-  const [edges] = createStore<Edge[]>([
-    {
-      id: "1-2",
-      type: "default",
-      source: "1",
-      target: "2",
-      interactionWidth: 10,
-      label: "Edge Text",
-      animated: true,
-    },
-  ]);
-
-  createEffect(() => {
-    console.log("nodes", nodes);
-  });
+const AppContent = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const exampleKey = () => (searchParams.example as keyof typeof SolidFlowExamplesMap) || "Basic";
 
   return (
-    <SolidFlow
-      nodes={nodes}
-      edges={edges}
-      fitView
-      colorMode="light"
-      width={1000}
-      height={1000}
-      onNodeClick={(event) => console.log("on node click", event)}
-      onError={(id, message) => console.log("on error", typeof id, typeof message)}
-    >
-      <Controls />
-      <Background variant="dots" />
-    </SolidFlow>
+    <div style={{ display: "flex", "flex-direction": "column", width: "100vw", height: "100vh" }}>
+      <AppStateBar
+        onChange={(exampleKey) => {
+          setSearchParams({ example: exampleKey });
+        }}
+      />
+      <Dynamic component={SolidFlowExamplesMap[exampleKey()]} />
+    </div>
   );
 };

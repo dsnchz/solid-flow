@@ -68,7 +68,7 @@ const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
 
   // User can wrap SolidFlow with an outer context provider to provide custom context values
   const solidFlow = useContext(TypedSolidFlowContext) ?? createSolidFlow(_props);
-  const { store, reset, setStore, setPaneClickDistance } = solidFlow;
+  const { store, reset, setNodes, setEdges, setStore, setPaneClickDistance } = solidFlow;
 
   onMount(() => {
     setStore(
@@ -78,6 +78,19 @@ const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
         store.height = domNode.clientHeight;
       }),
     );
+
+    /**
+     * We set nodes/edges/viewport here onMount to sync the internal store state with the external user-state.
+     * This becomes important especially when the user wants to access the internal store state externally
+     * within their application via use of the <SolidFlowProvider /> component which initializes everything
+     * to default values.
+     */
+    setNodes(_props.nodes);
+    setEdges(_props.edges);
+
+    if (_props.viewport) {
+      setStore("viewport", _props.viewport);
+    }
 
     if (_props.paneClickDistance !== undefined) {
       setPaneClickDistance(_props.paneClickDistance);
