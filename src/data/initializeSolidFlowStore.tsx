@@ -201,6 +201,9 @@ export const initializeSolidFlowStore = <
         id: this.id,
       }) as RefinedMarkerProps[];
     },
+    get internalNodes() {
+      return Array.from(this.nodeLookup.values());
+    },
     get selectedNodes() {
       return this.nodes.filter((node) => node.selected);
     },
