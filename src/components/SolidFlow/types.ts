@@ -132,11 +132,14 @@ export type SolidFlowProps<NodeType extends Node = Node, EdgeType extends Edge =
   readonly nodeClickDistance: number;
   readonly selectionKey: string;
   readonly selectionMode: SelectionMode;
-  /** Set this prop to make the flow snap to the grid */
+  /**
+   * Set this prop to make the flow snap to the grid
+   * @default false
+   */
   readonly snapToGrid: boolean;
   /**
    * Grid all nodes will snap to
-   * @example [20, 20]
+   * @default [15, 15]
    */
   readonly snapGrid: SnapGrid;
   readonly panActivationKey: string;

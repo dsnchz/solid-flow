@@ -159,6 +159,7 @@ const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
       connectionRadius: _props.connectionRadius,
       selectionMode: _props.selectionMode,
       snapGrid: _props.snapGrid,
+      snapToGrid: _props.snapToGrid,
       defaultMarkerColor: _props.defaultMarkerColor,
       nodesDraggable: _props.nodesDraggable,
       nodesConnectable: _props.nodesConnectable,

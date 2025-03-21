@@ -50,6 +50,7 @@ export type UpdatableStoreProps<NodeType extends Node = Node, EdgeType extends E
   | "connectionRadius"
   | "selectionMode"
   | "snapGrid"
+  | "snapToGrid"
   | "defaultMarkerColor"
   | "nodesDraggable"
   | "nodesConnectable"
