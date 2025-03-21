@@ -70,7 +70,7 @@ const ResizeControl: ParentComponent<Partial<ResizeControlProps>> = (props) => {
       getStoreItems: () => {
         return {
           nodeLookup: store.nodeLookup,
-          transform: [store.viewport.x, store.viewport.y, store.viewport.zoom],
+          transform: store.transform,
           snapGrid: store.snapGrid ?? undefined,
           snapToGrid: !!store.snapGrid,
           nodeOrigin: store.nodeOrigin,

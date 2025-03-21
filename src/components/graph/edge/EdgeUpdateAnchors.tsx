@@ -3,7 +3,6 @@ import {
   type EdgePosition,
   type FinalConnectionState,
   type HandleType,
-  type Transform,
   XYHandle,
 } from "@xyflow/system";
 import { Show } from "solid-js";
@@ -71,7 +70,7 @@ export function EdgeUpdateAnchors<EdgeType extends Edge = Edge>(
       onConnectStart: store.onConnectStart,
       onConnectEnd: store.onConnectEnd,
       onReconnectEnd: _onReconnectEnd,
-      getTransform: () => [store.viewport.x, store.viewport.y, store.viewport.zoom] as Transform,
+      getTransform: () => store.transform,
       getFromHandle: () => store.connection.fromHandle,
     });
   };

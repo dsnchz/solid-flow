@@ -56,7 +56,7 @@ const createDraggable = <NodeType extends Node>(
           nodeOrigin: store.nodeOrigin,
           multiSelectionActive: store.multiselectionKeyPressed,
           domNode: store.domNode,
-          transform: [store.viewport.x, store.viewport.y, store.viewport.zoom],
+          transform: store.transform,
           autoPanOnNodeDrag: store.autoPanOnNodeDrag,
           nodesDraggable: store.nodesDraggable,
           selectNodesOnDrag: store.selectNodesOnDrag,

@@ -9,7 +9,6 @@ import {
   type Rect,
   rendererPointToPoint,
   type SnapGrid,
-  type Transform,
   type Viewport,
   type XYPosition,
 } from "@xyflow/system";
@@ -120,16 +119,14 @@ const useViewport = () => {
       const correctedPosition = { x: clientPosition.x - domX, y: clientPosition.y - domY };
       const snapGrid = options.snapGrid ?? store.snapGrid;
       const snapToGrid = options.snapToGrid ?? store.snapToGrid;
-      const transform = [store.viewport.x, store.viewport.y, store.viewport.zoom] as Transform;
 
-      return pointToRendererPoint(correctedPosition, transform, snapToGrid, snapGrid);
+      return pointToRendererPoint(correctedPosition, store.transform, snapToGrid, snapGrid);
     },
     flowToScreenPosition: (flowPosition: XYPosition) => {
       if (!store.domNode) return flowPosition;
 
       const { x: domX, y: domY } = store.domNode.getBoundingClientRect();
-      const transform = [store.viewport.x, store.viewport.y, store.viewport.zoom] as Transform;
-      const rendererPosition = rendererPointToPoint(flowPosition, transform);
+      const rendererPosition = rendererPointToPoint(flowPosition, store.transform);
 
       return {
         x: rendererPosition.x + domX,

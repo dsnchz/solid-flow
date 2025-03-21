@@ -58,7 +58,7 @@ const Handle = (props: ParentProps<HandleProps>) => {
         onConnectEnd: (event, connectionState) => {
           store.onConnectEnd?.(event, connectionState);
         },
-        getTransform: () => [store.viewport.x, store.viewport.y, store.viewport.zoom],
+        getTransform: () => store.transform,
         getFromHandle: () => store.connection.fromHandle,
       });
     }

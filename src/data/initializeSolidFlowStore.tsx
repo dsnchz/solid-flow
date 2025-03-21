@@ -25,6 +25,7 @@ import {
   type ParentLookup,
   pointToRendererPoint,
   type SelectionRect,
+  type Transform,
   updateConnectionLookup,
   type Viewport,
 } from "@xyflow/system";
@@ -185,14 +186,15 @@ export const initializeSolidFlowStore = <
       if (!this.edges.length) return this.viewportInitialized && this.nodesInitialized;
       return this.viewportInitialized && this.nodesInitialized && this.edgesInitialized;
     },
+    get transform() {
+      return [this.viewport.x, this.viewport.y, this.viewport.zoom] as Transform;
+    },
     get connection() {
       const state = this.connectionState;
 
       return {
         ...state,
-        to: state.inProgress
-          ? pointToRendererPoint(state.to, [this.viewport.x, this.viewport.y, this.viewport.zoom])
-          : state.to,
+        to: state.inProgress ? pointToRendererPoint(state.to, this.transform) : state.to,
       } as ConnectionState<InternalNode<NodeType>>;
     },
     get markers() {
@@ -214,7 +216,7 @@ export const initializeSolidFlowStore = <
       const viewportNodes = getNodesInside(
         this.nodeLookup,
         { x: 0, y: 0, width: this.width, height: this.height },
-        [this.viewport.x, this.viewport.y, this.viewport.zoom],
+        this.transform,
         true,
       );
 
@@ -239,7 +241,7 @@ export const initializeSolidFlowStore = <
                 targetNode,
                 width: this.width,
                 height: this.height,
-                transform: [this.viewport.x, this.viewport.y, this.viewport.zoom],
+                transform: this.transform,
               })
             );
           });

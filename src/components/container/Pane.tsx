@@ -122,7 +122,7 @@ const Pane: ParentComponent<PaneProps> = (props) => {
     selectedNodes = getNodesInside(
       store.nodeLookup,
       nextUserSelectRect,
-      [store.viewport.x, store.viewport.y, store.viewport.zoom],
+      store.transform,
       store.selectionMode === SelectionMode.Partial,
       true,
     );
