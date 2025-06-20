@@ -1,94 +1,74 @@
 import type {
   Connection,
   CoordinateExtent,
+  InternalNodeBase,
   InternalNodeUpdate,
-  NodeOrigin,
+  NodeDragItem,
+  SetCenter,
   UpdateConnection,
-  UpdateNodePositions,
-  Viewport,
   ViewportHelperFunctionOptions,
   XYPosition,
 } from "@xyflow/system";
 import type { SetStoreFunction, Store } from "solid-js/store";
 
-import type {
-  DefaultEdgeOptions,
-  DefaultNodeOptions,
-  Edge,
-  EdgeTypes,
-  FitViewOptions,
-  Node,
-  NodeTypes,
-} from "@/shared/types";
+import type { FitViewOptions } from "@/shared/types";
+import type { Edge, Node } from "@/types";
 
-import type { createSolidFlow } from "./createSolidFlow";
 import type { initializeSolidFlowStore } from "./initializeSolidFlowStore";
 
-export type FlowStoreProps<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
-  readonly id: string;
-  readonly nodes: NodeType[];
-  readonly edges: EdgeType[];
-  readonly viewport: Viewport;
-  readonly defaultNodeOptions: DefaultNodeOptions;
-  readonly defaultEdgeOptions: DefaultEdgeOptions;
-  readonly width: number;
-  readonly height: number;
-  readonly fitView: boolean;
-  readonly nodeOrigin: NodeOrigin;
-  readonly nodeExtent: CoordinateExtent;
-  readonly elevateNodesOnSelect: boolean;
-};
-
-type Graph = {
-  readonly nodes: Node[];
-  readonly edges: Edge[];
+type Graph<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
+  readonly nodes?: NodeType[];
+  readonly edges?: EdgeType[];
 };
 
 export type SolidStore<T> = [get: Store<T>, set: SetStoreFunction<T>];
 
-type SolidFlowStore<NodeType extends Node, EdgeType extends Edge> = ReturnType<
+type InitializedFlowStore<NodeType extends Node, EdgeType extends Edge> = ReturnType<
   typeof initializeSolidFlowStore<NodeType, EdgeType>
 >;
-export type FlowStoreState<NodeType extends Node, EdgeType extends Edge> = SolidFlowStore<
-  NodeType,
-  EdgeType
->[0];
-export type SolidFlowStoreSetter<NodeType extends Node, EdgeType extends Edge> = SolidFlowStore<
-  NodeType,
-  EdgeType
->[1];
 
-type Handler<T, R = void> = (value: T) => R;
-type OptionalHandler<T, R = void> = (value?: T) => R;
+export type SolidFlowStoreState<
+  NodeType extends Node,
+  EdgeType extends Edge,
+> = InitializedFlowStore<NodeType, EdgeType>["store"];
 
-export type FlowStoreActions = {
-  readonly syncViewport: (viewportStore?: SolidStore<Viewport>) => void;
-  readonly setNodeTypes: Handler<NodeTypes>;
-  readonly setEdgeTypes: Handler<EdgeTypes>;
-  readonly addEdge: Handler<Edge | Connection>;
-  readonly zoomIn: OptionalHandler<ViewportHelperFunctionOptions, Promise<boolean>>;
-  readonly zoomOut: OptionalHandler<ViewportHelperFunctionOptions, Promise<boolean>>;
-  readonly setMinZoom: Handler<number>;
-  readonly setMaxZoom: Handler<number>;
-  readonly setTranslateExtent: Handler<CoordinateExtent>;
-  readonly setPaneClickDistance: Handler<number>;
-  readonly fitView: OptionalHandler<FitViewOptions, Promise<boolean>>;
-  readonly updateNodePositions: UpdateNodePositions;
-  readonly updateNodeInternals: Handler<Map<string, InternalNodeUpdate>>;
-  readonly unselectNodesAndEdges: OptionalHandler<Partial<Graph>>;
-  readonly addSelectedNodes: Handler<string[]>;
-  readonly addSelectedEdges: Handler<string[]>;
-  readonly handleNodeSelection: Handler<string>;
-  readonly panBy: Handler<XYPosition, Promise<boolean>>;
+export type SolidFlowStoreSetter<
+  NodeType extends Node,
+  EdgeType extends Edge,
+> = InitializedFlowStore<NodeType, EdgeType>["setStore"];
+
+export type FlowStoreActions<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
+  readonly addEdge: (edge: EdgeType | Connection) => void;
+  readonly zoomIn: (options?: ViewportHelperFunctionOptions) => Promise<boolean>;
+  readonly zoomOut: (options?: ViewportHelperFunctionOptions) => Promise<boolean>;
+  readonly setMinZoom: (minZoom: number) => void;
+  readonly setMaxZoom: (maxZoom: number) => void;
+  readonly setTranslateExtent: (extent: CoordinateExtent) => void;
+  readonly setPaneClickDistance: (distance: number) => void;
+  readonly fitView: (options?: FitViewOptions) => Promise<boolean>;
+  readonly setCenter: SetCenter;
+  readonly updateNodePositions: (
+    nodeDragItems: Map<string, NodeDragItem | InternalNodeBase<NodeType>>,
+    dragging?: boolean,
+  ) => void;
+  readonly updateNodeInternals: (updates: Map<string, InternalNodeUpdate>) => void;
+  readonly unselectNodesAndEdges: (params?: Graph<NodeType, EdgeType>) => void;
+  readonly addSelectedNodes: (ids: string[]) => void;
+  readonly addSelectedEdges: (ids: string[]) => void;
+  readonly handleNodeSelection: (
+    id: string,
+    unselect?: boolean,
+    nodeRef?: HTMLDivElement | null,
+  ) => void;
+  readonly handleEdgeSelection: (id: string) => void;
+  readonly moveSelectedNodes: (direction: XYPosition, factor: number) => void;
+  readonly panBy: (delta: XYPosition) => Promise<boolean>;
   readonly updateConnection: UpdateConnection;
   readonly cancelConnection: () => void;
   readonly reset: () => void;
 };
 
-export type FlowStore<NodeType extends Node, EdgeType extends Edge> = ReturnType<
-  typeof createSolidFlow<NodeType, EdgeType>
->;
-export type FlowStoreSetter<NodeType extends Node, EdgeType extends Edge> = SolidFlowStore<
-  NodeType,
-  EdgeType
->[1];
+export type SolidFlowStore<NodeType extends Node, EdgeType extends Edge> = {
+  readonly store: SolidFlowStoreState<NodeType, EdgeType>;
+  readonly setStore: SolidFlowStoreSetter<NodeType, EdgeType>;
+};

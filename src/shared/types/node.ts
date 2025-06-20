@@ -3,7 +3,7 @@ import type {
   NodeBase as SystemNode,
   NodeProps as SystemNodeProps,
 } from "@xyflow/system";
-import type { Component, JSX } from "solid-js";
+import type { JSX } from "solid-js";
 
 import type { GraphTargetContextHandler, GraphTargetHandler } from "./events";
 
@@ -16,7 +16,7 @@ export type Node<
   NodeType extends string = string,
 > = SystemNode<NodeData, NodeType> & {
   readonly class?: string;
-  readonly style?: JSX.CSSProperties | string;
+  readonly style?: JSX.CSSProperties;
 };
 
 /**
@@ -27,16 +27,13 @@ export type Node<
  */
 export type InternalNode<NodeType extends Node = Node> = InternalNodeBase<NodeType>;
 
-export type NodeProps<NodeType extends Node = Node> = Omit<
-  SystemNodeProps<NodeType>,
-  "width" | "height"
-> & {
+export type NodeProps<NodeType extends Node = Node> = SystemNodeProps<NodeType> & {
   readonly type: string;
-  readonly width?: JSX.CSSProperties["width"];
-  readonly height?: JSX.CSSProperties["height"];
 };
 
-export type NodeTypes = Record<string, Component<NodeProps>>;
+export type NodeTypes = {
+  [key: string]: <NodeType extends Node = Node>(props: NodeProps<NodeType>) => JSX.Element;
+};
 
 export type DefaultNodeOptions = Partial<Omit<Node, "id">>;
 

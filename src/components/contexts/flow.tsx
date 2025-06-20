@@ -1,7 +1,7 @@
 import { createContext, useContext } from "solid-js";
 
 import { createSolidFlow } from "@/data/createSolidFlow";
-import type { Edge, Node } from "@/shared/types";
+import type { Edge, Node } from "@/types";
 
 export type SolidFlowContextValue<
   NodeType extends Node = Node,
@@ -10,7 +10,7 @@ export type SolidFlowContextValue<
 
 export const SolidFlowContext = createContext<SolidFlowContextValue>();
 
-export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge = Edge>() {
+export function useInternalSolidFlow<NodeType extends Node = Node, EdgeType extends Edge = Edge>() {
   // Since we cannot pass generic types info at the point of context creation, we need to cast it here
   const ctx = useContext(SolidFlowContext) as unknown as
     | SolidFlowContextValue<NodeType, EdgeType>
@@ -18,9 +18,11 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
 
   if (!ctx) {
     throw new Error(
-      "solid-flow: Your application must be wrapped with <SolidFlow> in order to invoke useFlowStore within your components",
+      "solid-flow: Your application must be wrapped with <SolidFlow> in order to invoke useInternalSolidFlow within your components",
     );
   }
 
   return ctx;
 }
+
+export const useSolidFlow = useInternalSolidFlow;

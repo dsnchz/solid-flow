@@ -1,66 +1,60 @@
 import clsx from "clsx";
-import { type Component, Show } from "solid-js";
+import { mergeProps, type ParentProps, Show, splitProps } from "solid-js";
 
-import type { EdgeProps } from "@/shared/types";
+import type { BaseEdgeProps } from "@/types";
 
-import EdgeLabel from "./EdgeLabel";
+import { EdgeLabel } from "./EdgeLabel";
 
-export type BaseEdgeProps = Pick<
-  EdgeProps,
-  "interactionWidth" | "label" | "labelStyle" | "style"
-> & {
-  readonly id?: string;
-  /** SVG path of the edge */
-  readonly path: string;
-  /** The x coordinate of the label */
-  readonly labelX?: number;
-  /** The y coordinate of the label */
-  readonly labelY?: number;
-  /** Marker at start of edge
-   * @example 'url(#arrow)'
-   */
-  readonly markerStart?: string;
-  /** Marker at end of edge
-   * @example 'url(#arrow)'
-   */
-  readonly markerEnd?: string;
-  readonly class?: string;
-};
+export const BaseEdge = (props: ParentProps<BaseEdgeProps>) => {
+  const _props = mergeProps(
+    {
+      interactionWidth: 20,
+    },
+    props,
+  );
 
-const BaseEdge: Component<BaseEdgeProps> = (props) => {
-  // In SolidJS, we use a getter function for computed values
-  const interactionWidthValue = () =>
-    props.interactionWidth === undefined ? 20 : props.interactionWidth;
+  const [local, rest] = splitProps(_props, [
+    "id",
+    "class",
+    "style",
+    "path",
+    "interactionWidth",
+    "label",
+    "labelStyle",
+    "labelX",
+    "labelY",
+    "markerStart",
+    "markerEnd",
+  ]);
 
   return (
     <>
       <path
-        id={props.id}
-        d={props.path}
-        class={clsx(["solid-flow__edge-path", props.class])}
-        marker-start={props.markerStart}
-        marker-end={props.markerEnd}
+        id={local.id}
+        d={local.path}
+        class={clsx(["solid-flow__edge-path", local.class])}
+        marker-start={local.markerStart}
+        marker-end={local.markerEnd}
         fill="none"
-        style={props.style}
+        style={local.style}
       />
 
-      <Show when={interactionWidthValue()}>
+      <Show when={local.interactionWidth > 0}>
         <path
-          d={props.path}
+          d={local.path}
           stroke-opacity={0}
-          stroke-width={interactionWidthValue()}
+          stroke-width={local.interactionWidth}
           fill="none"
           class="solid-flow__edge-interaction"
+          {...rest}
         />
       </Show>
 
-      <Show when={props.label}>
-        <EdgeLabel x={props.labelX} y={props.labelY} style={props.labelStyle}>
-          {props.label}
+      <Show when={local.label}>
+        <EdgeLabel x={local.labelX} y={local.labelY} style={local.labelStyle}>
+          {local.label}
         </EdgeLabel>
       </Show>
     </>
   );
 };
-
-export default BaseEdge;

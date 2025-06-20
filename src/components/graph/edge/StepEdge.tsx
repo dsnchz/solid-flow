@@ -1,12 +1,12 @@
 import { getSmoothStepPath } from "@xyflow/system";
-import { type Component } from "solid-js";
+import { createMemo } from "solid-js";
 
-import type { StepEdgeProps } from "@/shared/types";
+import type { StepEdgeProps } from "@/types";
 
-import BaseEdge from "./BaseEdge";
+import { BaseEdge } from "./BaseEdge";
 
-const StepEdge: Component<StepEdgeProps> = (props) => {
-  const pathData = () => {
+export const StepEdge = (props: StepEdgeProps) => {
+  const pathData = createMemo(() => {
     const [path, labelX, labelY] = getSmoothStepPath({
       sourceX: props.sourceX,
       sourceY: props.sourceY,
@@ -19,7 +19,7 @@ const StepEdge: Component<StepEdgeProps> = (props) => {
     });
 
     return { path, labelX, labelY };
-  };
+  });
 
   return (
     <BaseEdge
@@ -36,5 +36,3 @@ const StepEdge: Component<StepEdgeProps> = (props) => {
     />
   );
 };
-
-export default StepEdge;

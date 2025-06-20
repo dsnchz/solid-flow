@@ -1,18 +1,19 @@
-import { Index, onCleanup } from "solid-js";
+import { For, onCleanup } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
-import type { Node, NodeEventCallbacks } from "@/shared/types";
+import { useInternalSolidFlow } from "@/components/contexts";
+import { useVisibleElements } from "@/hooks/useVisibleElements";
+import type { Node, NodeEvents } from "@/types";
 
 import NodeWrapper from "../graph/node/NodeWrapper";
 
-export type NodeRendererProps<NodeType extends Node = Node> = Partial<
-  NodeEventCallbacks<NodeType>
-> & {
+export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
   readonly nodeClickDistance: number;
 };
 
-const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererProps<NodeType>) => {
-  const { store, updateNodeInternals } = useFlowStore<NodeType>();
+export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererProps<NodeType>) => {
+  const { updateNodeInternals } = useInternalSolidFlow<NodeType>();
+
+  const { visibleNodeIds } = useVisibleElements<NodeType>();
 
   const resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
     const updates = new Map();
@@ -36,27 +37,25 @@ const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererProps<Nod
 
   return (
     <div class="solid-flow__container solid-flow__nodes">
-      <Index each={store.visibleNodes}>
-        {(node) => {
+      <For each={visibleNodeIds()}>
+        {(nodeId) => {
           return (
             <NodeWrapper
-              node={node()}
-              nodeClickDistance={props.nodeClickDistance}
+              nodeId={nodeId}
               resizeObserver={resizeObserver}
+              nodeClickDistance={props.nodeClickDistance}
               onNodeClick={props.onNodeClick}
-              onNodeContextMenu={props.onNodeContextMenu}
+              onNodePointerEnter={props.onNodePointerEnter}
+              onNodePointerMove={props.onNodePointerMove}
+              onNodePointerLeave={props.onNodePointerLeave}
               onNodeDrag={props.onNodeDrag}
               onNodeDragStart={props.onNodeDragStart}
               onNodeDragStop={props.onNodeDragStop}
-              onNodeMouseEnter={props.onNodeMouseEnter}
-              onNodeMouseMove={props.onNodeMouseMove}
-              onNodeMouseLeave={props.onNodeMouseLeave}
+              onNodeContextMenu={props.onNodeContextMenu}
             />
           );
         }}
-      </Index>
+      </For>
     </div>
   );
 };
-
-export default NodeRenderer;

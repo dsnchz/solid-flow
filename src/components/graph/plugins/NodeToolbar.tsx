@@ -1,11 +1,13 @@
-import { type Align, getNodeToolbarTransform, Position } from "@xyflow/system";
-import { type ParentComponent, Show } from "solid-js";
+import { type Align, getNodeToolbarTransform, Position as SystemPosition } from "@xyflow/system";
+import { type JSX, mergeProps, type ParentComponent, Show, splitProps, useContext } from "solid-js";
 import { Portal } from "solid-js/web";
 
-import { useFlowStore, useNodeId } from "@/components/contexts";
-import type { InternalNode } from "@/shared/types";
+import { NodeIdContext } from "@/components/contexts/nodeId";
+import { useSolidFlow } from "@/hooks";
+import { useSolidFlowStore } from "@/hooks/useSolidFlowStore";
+import type { InternalNode, Position } from "@/types";
 
-export type NodeToolbarProps = {
+export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
   /** The id of the node, or array of ids the toolbar should be displayed at */
   readonly nodeId: string | string[];
   /** Position of the toolbar relative to the node
@@ -21,75 +23,100 @@ export type NodeToolbarProps = {
   readonly offset: number;
   /** If true, node toolbar is visible even if node is not selected */
   readonly isVisible: boolean;
+  /** Style of the toolbar */
+  readonly style: Omit<JSX.CSSProperties, "z-index" | "position" | "transform">;
 };
 
-const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) => {
-  const { store, getNodesBounds } = useFlowStore();
-  const contextNodeId = useNodeId();
+export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) => {
+  const store = useSolidFlowStore();
+  const { getNodes, getNodesBounds, getInternalNode } = useSolidFlow();
 
-  const getToolbarNodes = () => {
-    const nodeIds = Array.isArray(props.nodeId) ? props.nodeId : [props.nodeId || contextNodeId()];
+  const ctxNodeId = () => {
+    // NodeToolbar can be rendered outside of NodeWrapper, so we need to use the context directly.
+    const id = useContext(NodeIdContext);
+    return id ? id() : "";
+  };
+
+  const _props = mergeProps(
+    {
+      offset: 10,
+      position: "top" as Position,
+      align: "center" as Align,
+      style: {} as Omit<JSX.CSSProperties, "z-index" | "position" | "transform">,
+    },
+    props,
+  );
+
+  const [local, divProps] = splitProps(_props, [
+    "nodeId",
+    "position",
+    "align",
+    "offset",
+    "isVisible",
+    "style",
+    "children",
+  ]);
+
+  const toolbarNodes = () => {
+    const nodeIds = Array.isArray(local.nodeId) ? local.nodeId : [local.nodeId ?? ctxNodeId()];
+
     return nodeIds.reduce<InternalNode[]>((res, nodeId) => {
-      const node = store.nodeLookup?.get(nodeId);
-      if (node) {
-        res.push(node);
-      }
+      const node = getInternalNode(nodeId);
+      if (node) res.push(node);
       return res;
     }, []);
   };
 
-  const getTransform = () => {
-    const toolbarNodes = getToolbarNodes();
-    const nodeRect = getNodesBounds(toolbarNodes);
-    const _offset = props.offset !== undefined ? props.offset : 10;
-    const _position = props.position !== undefined ? props.position : Position.Top;
-    const _align = props.align !== undefined ? props.align : "center";
+  const transform = () => {
+    const nodeRect = getNodesBounds(toolbarNodes());
 
-    if (nodeRect) {
-      return getNodeToolbarTransform(nodeRect, store.viewport, _position, _offset, _align);
-    }
-    return "";
+    return !nodeRect
+      ? ""
+      : getNodeToolbarTransform(
+          nodeRect,
+          store.viewport,
+          local.position as SystemPosition,
+          local.offset,
+          local.align,
+        );
   };
 
-  const getZIndex = () => {
-    const toolbarNodes = getToolbarNodes();
-    return toolbarNodes.length === 0
-      ? 1
-      : Math.max(...toolbarNodes.map((node) => (node.internals.z || 5) + 1));
+  const zIndex = () => {
+    const nodes = toolbarNodes();
+    return nodes.length === 0 ? 1 : Math.max(...nodes.map((node) => (node.internals.z || 5) + 1));
   };
 
-  const getSelectedNodesCount = () => store.nodes.filter((node) => node.selected).length;
+  const selectedNodesCount = () => getNodes().filter((node) => node.selected).length;
 
   const isActive = () => {
-    const toolbarNodes = getToolbarNodes();
-    return typeof props.isVisible === "boolean"
-      ? props.isVisible
-      : toolbarNodes.length === 1 &&
-          Boolean(toolbarNodes[0]!.selected) &&
-          getSelectedNodesCount() === 1;
+    const nodes = toolbarNodes();
+    return typeof local.isVisible === "boolean"
+      ? local.isVisible
+      : nodes.length === 1 && Boolean(nodes[0]!.selected) && selectedNodesCount() === 1;
   };
 
-  const showPortal = () => Boolean(store.domNode && isActive() && getToolbarNodes().length > 0);
+  const showPortal = () => Boolean(store.domNode && isActive() && toolbarNodes().length > 0);
 
   return (
     <Show when={showPortal()}>
       <Portal mount={store.domNode!}>
         <div
-          data-id={getToolbarNodes()
+          class="solid-flow__node-toolbar"
+          data-id={toolbarNodes()
             .reduce((acc, node) => `${acc}${node.id} `, "")
             .trim()}
-          class="solid-flow__node-toolbar"
           style={{
+            // TODO: Add hideOnSSR display style from Svelte implementation
             position: "absolute",
-            transform: getTransform(),
-            "z-index": getZIndex(),
+            transform: transform(),
+            "z-index": zIndex(),
+            ...local.style,
           }}
+          {...divProps}
         >
-          {props.children}
+          {local.children}
         </div>
       </Portal>
     </Show>
   );
 };
-
-export default NodeToolbar;

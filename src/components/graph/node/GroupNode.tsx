@@ -1,15 +1,14 @@
-import type { Component } from "solid-js";
+import type { NodeProps } from "@/types";
+import { toPxString } from "@/utils";
 
-import type { NodeProps } from "@/shared/types";
-
-const GroupNode: Component<NodeProps> = (props) => (
+const GroupNode = (props: NodeProps<Record<string, never>>) => (
   <div
     style={{
-      width: props.width,
-      height: props.height,
       position: "absolute",
       left: 0,
       top: 0,
+      width: toPxString(props.width),
+      height: toPxString(props.height),
     }}
   />
 );

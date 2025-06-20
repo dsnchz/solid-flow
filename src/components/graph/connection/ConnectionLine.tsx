@@ -7,19 +7,22 @@ import {
 import clsx from "clsx";
 import { type JSX, type ParentProps, Show } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
-import type { ConnectionLineComponent, Node } from "@/shared/types";
+import { useInternalSolidFlow } from "@/components/contexts";
+import type { Node } from "@/types";
+
+import type { ConnectionLineComponentProps, ConnectionLineType } from "./types";
 
 type ConnectionLineProps<NodeType extends Node = Node> = {
-  readonly style: string | JSX.CSSProperties;
+  readonly style: JSX.CSSProperties;
+  readonly type: ConnectionLineType;
+  readonly component: (props: ConnectionLineComponentProps<NodeType>) => JSX.Element;
   readonly containerStyle: string | JSX.CSSProperties;
-  readonly component: ConnectionLineComponent<NodeType>;
 };
 
 const ConnectionLine = <NodeType extends Node = Node>(
   props: ParentProps<Partial<ConnectionLineProps<NodeType>>>,
 ) => {
-  const { store } = useFlowStore<NodeType>();
+  const { store } = useInternalSolidFlow<NodeType>();
 
   return (
     <Show when={store.connection.inProgress}>
@@ -67,7 +70,7 @@ type InternalConnectionLineProps<NodeType extends Node = Node> = Pick<
 const InternalConnectionLine = <NodeType extends Node = Node>(
   props: Partial<InternalConnectionLineProps<NodeType>>,
 ) => {
-  const { store } = useFlowStore<NodeType>();
+  const { store } = useInternalSolidFlow<NodeType>();
 
   const path = () => {
     if (!store.connection.inProgress) return undefined;
@@ -82,17 +85,22 @@ const InternalConnectionLine = <NodeType extends Node = Node>(
     } as const;
 
     switch (store.connectionLineType) {
-      case "default":
-        return getBezierPath(pathParams)[0];
+      case "default": {
+        const [path] = getBezierPath(pathParams);
+        return path;
+      }
+      case "straight": {
+        const [path] = getStraightPath(pathParams);
+        return path;
+      }
       case "step":
-        return getSmoothStepPath({
+      case "smoothstep": {
+        const [path] = getSmoothStepPath({
           ...pathParams,
-          borderRadius: 0,
-        })[0];
-      case "smoothstep":
-        return getSmoothStepPath(pathParams)[0];
-      default:
-        return getStraightPath(pathParams)[0];
+          borderRadius: store.connectionLineType === "step" ? 0 : undefined,
+        });
+        return path;
+      }
     }
   };
 

@@ -1,6 +1,6 @@
 import type { UpdateNodeInternals } from "@xyflow/system";
 
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
 /**
  * Hook for updating node internals.
@@ -9,7 +9,7 @@ import { useFlowStore } from "@/components/contexts";
  * @returns function for updating node internals
  */
 export function useUpdateNodeInternals(): UpdateNodeInternals {
-  const { store, updateNodeInternals } = useFlowStore();
+  const { store, updateNodeInternals } = useInternalSolidFlow();
 
   // @todo: do we want to add this to system?
   const updateInternals = (id: string | string[]) => {

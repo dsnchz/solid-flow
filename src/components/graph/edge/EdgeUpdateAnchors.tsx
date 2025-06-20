@@ -1,5 +1,6 @@
 import {
   type Connection,
+  ConnectionMode,
   type EdgePosition,
   type FinalConnectionState,
   type HandleType,
@@ -7,7 +8,7 @@ import {
 } from "@xyflow/system";
 import { Show } from "solid-js";
 
-import { useSolidFlow } from "@/components/contexts/flow";
+import { useInternalSolidFlow } from "@/components/contexts/flow";
 import type { Edge, EdgeConnectionEvents } from "@/shared/types/edge";
 
 import { EdgeAnchor } from "./EdgeAnchor";
@@ -20,10 +21,10 @@ type EdgeUpdateAnchorsProps<EdgeType extends Edge = Edge> = EdgePosition & {
   readonly setReconnecting: (updating: boolean) => void;
 } & EdgeConnectionEvents<EdgeType>;
 
-export function EdgeUpdateAnchors<EdgeType extends Edge = Edge>(
+export const EdgeUpdateAnchors = <EdgeType extends Edge = Edge>(
   props: EdgeUpdateAnchorsProps<EdgeType>,
-) {
-  const { store, panBy, updateConnection, cancelConnection } = useSolidFlow();
+) => {
+  const { store, nodeLookup, panBy, updateConnection, cancelConnection } = useInternalSolidFlow();
 
   const handleEdgeUpdater = (
     event: MouseEvent,
@@ -57,9 +58,9 @@ export function EdgeUpdateAnchors<EdgeType extends Edge = Edge>(
       nodeId: oppositeHandle.nodeId,
       handleId: oppositeHandle.id,
       autoPanOnConnect: store.autoPanOnConnect,
-      connectionMode: store.connectionMode,
+      connectionMode: store.connectionMode as ConnectionMode,
       connectionRadius: store.connectionRadius,
-      nodeLookup: store.nodeLookup,
+      nodeLookup,
       isTarget,
       edgeUpdaterType: oppositeHandle.type,
       cancelConnection,
@@ -75,12 +76,13 @@ export function EdgeUpdateAnchors<EdgeType extends Edge = Edge>(
     });
   };
 
-  const onReconnectSourceMouseDown = (event: MouseEvent): void =>
+  const onReconnectSourceMouseDown = (event: MouseEvent) => {
     handleEdgeUpdater(event, {
       nodeId: props.edge.target,
       id: props.edge.targetHandle ?? null,
       type: "target",
     });
+  };
 
   const onReconnectTargetMouseDown = (event: MouseEvent): void =>
     handleEdgeUpdater(event, {
@@ -120,4 +122,4 @@ export function EdgeUpdateAnchors<EdgeType extends Edge = Edge>(
       </Show>
     </>
   );
-}
+};

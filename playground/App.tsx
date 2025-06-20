@@ -23,16 +23,13 @@ export const App = () => {
 };
 
 const AppContent = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const exampleKey = () => (searchParams.example as keyof typeof SolidFlowExamplesMap) || "Basic";
+  const [searchParams] = useSearchParams();
+  const exampleKey = () =>
+    (searchParams.example as keyof typeof SolidFlowExamplesMap) || "Overview";
 
   return (
     <div style={{ display: "flex", "flex-direction": "column", width: "100vw", height: "100vh" }}>
-      <AppStateBar
-        onChange={(exampleKey) => {
-          setSearchParams({ example: exampleKey });
-        }}
-      />
+      <AppStateBar />
       <Dynamic component={SolidFlowExamplesMap[exampleKey()]} />
     </div>
   );

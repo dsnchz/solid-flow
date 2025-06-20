@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { type JSX, mergeProps, Show } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
 import DotPattern from "./DotPattern";
 import LinePattern from "./LinePattern";
@@ -55,7 +55,7 @@ const Background = (props: Partial<BackgroundProps>) => {
     props,
   );
 
-  const { store } = useFlowStore();
+  const { store } = useInternalSolidFlow();
 
   const patternSize = () => _props.size || DEFAULT_SIZE[_props.variant];
   const isDots = () => _props.variant === "dots";

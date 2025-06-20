@@ -1,14 +1,14 @@
 import { type Context, mergeProps, onCleanup, type ParentProps } from "solid-js";
 
 import { createSolidFlow } from "@/data/createSolidFlow";
-import { getDefaultFlowStateProps } from "@/data/utils";
-import type { Edge, Node } from "@/shared/types";
+import { getDefaultFlowStateProps } from "@/data/defaults";
+import type { Edge, Node } from "@/types";
 
 import { SolidFlowContext, type SolidFlowContextValue } from "../contexts/flow";
 import type { SolidFlowProps } from "./types";
 
-const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
-  props: ParentProps<Partial<SolidFlowProps<NodeType, EdgeType>>>,
+export const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+  props: ParentProps<SolidFlowProps<NodeType, EdgeType>>,
 ) => {
   const _props = mergeProps(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
   const solidFlow = createSolidFlow(_props);
@@ -24,5 +24,3 @@ const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends Edge =
 
   return <ContextProvider value={solidFlow}>{props.children}</ContextProvider>;
 };
-
-export default SolidFlowProvider;

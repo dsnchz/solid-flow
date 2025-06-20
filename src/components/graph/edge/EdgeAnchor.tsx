@@ -13,7 +13,7 @@ export type EdgeAnchorProps = {
   readonly onMouseOut: JSX.EventHandler<SVGCircleElement, MouseEvent>;
 };
 
-export function EdgeAnchor(props: EdgeAnchorProps) {
+export const EdgeAnchor = (props: EdgeAnchorProps) => {
   const _props = mergeProps({ radius: 10 }, props);
 
   const shiftX = (x: number, shift: number, position: Position): number => {
@@ -41,4 +41,4 @@ export function EdgeAnchor(props: EdgeAnchorProps) {
       onMouseOut={(e) => _props.onMouseOut?.(e)}
     />
   );
-}
+};

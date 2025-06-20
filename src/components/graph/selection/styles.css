@@ -1,3 +1,21 @@
+.solid-flow {
+  --xy-selection-background-color-default: rgba(0, 89, 220, 0.08);
+  --xy-selection-border-default: 1px dotted rgba(0, 89, 220, 0.8);
+}
+
+.solid-flow.dark {
+  --xy-selection-background-color-default: rgba(200, 200, 220, 0.08);
+  --xy-selection-border-default: 1px dotted rgba(200, 200, 220, 0.8);
+}
+
+.solid-flow__selection-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2000;
+  pointer-events: all;
+}
+
 .solid-flow__selection {
   background: var(--xy-selection-background-color, var(--xy-selection-background-color-default));
   border: var(--xy-selection-border, var(--xy-selection-border-default));
@@ -11,12 +29,4 @@
   &:focus-visible {
     outline: none;
   }
-}
-
-.selection-wrapper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 7;
-  pointer-events: all;
 }

@@ -1,11 +1,11 @@
 import { type Component, For } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
 import Marker from "./Marker";
 
 const MarkerDefinition: Component = () => {
-  const { store } = useFlowStore();
+  const { store } = useInternalSolidFlow();
 
   return (
     <defs>

@@ -1,3 +1,20 @@
+.solid-flow {
+  --xy-background-color-default: transparent;
+  --xy-background-pattern-dots-color-default: #91919a;
+  --xy-background-pattern-lines-color-default: #eee;
+  --xy-background-pattern-cross-color-default: #e2e2e2;
+
+  --background-color-default: #fff;
+  --background-pattern-color-default: #ddd;
+}
+
+.solid-flow.dark {
+  --xy-background-color-default: #141414;
+  --xy-background-pattern-dots-color-default: #777;
+  --xy-background-pattern-lines-color-default: #777;
+  --xy-background-pattern-cross-color-default: #777;
+}
+
 .solid-flow__background {
   pointer-events: none;
   z-index: -1;

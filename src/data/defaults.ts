@@ -1,18 +1,13 @@
-import {
-  type ConnectionMode,
-  infiniteExtent,
-  type NodeOrigin,
-  type SnapGrid,
-} from "@xyflow/system";
+import { type ColorMode, infiniteExtent, type NodeOrigin } from "@xyflow/system";
+import type { JSX } from "solid-js";
 
 import type {
   ConnectionLineType,
   DefaultEdgeOptions,
   DefaultNodeOptions,
-  Edge,
-  Node,
   SelectionMode,
 } from "@/shared/types";
+import type { ConnectionMode, Edge, Node } from "@/types";
 
 export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends Edge>() =>
   ({
@@ -23,25 +18,34 @@ export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends
     nodeExtent: infiniteExtent,
     defaultNodeOptions: {} as DefaultNodeOptions,
     defaultEdgeOptions: {} as DefaultEdgeOptions,
+    colorMode: "system" as ColorMode,
+    colorModeSSR: "light" as Omit<ColorMode, "system">,
     connectionMode: "strict" as ConnectionMode,
     connectionLineType: "default" as ConnectionLineType,
     connectionRadius: 20,
     nodeDragThreshold: 1,
     minZoom: 0.5,
     maxZoom: 2,
-    height: 500,
-    width: 500,
-    selectionMode: "full" as SelectionMode,
-    snapGrid: [15, 15] as SnapGrid,
-    snapToGrid: false,
+    selectionMode: "partial" as SelectionMode,
+    fitViewQueued: false,
+    noPanClass: "nopan",
+    noDragClass: "nodrag",
+    noWheelClass: "nowheel",
     autoPanOnNodeDrag: true,
     autoPanOnConnect: true,
+    autoPanOnNodeFocus: true,
+    autoPanSpeed: 15,
+    elevateEdgesOnSelect: true,
     nodesDraggable: true,
     nodesConnectable: true,
+    nodesFocusable: true,
+    edgesFocusable: true,
     elementsSelectable: true,
     selectNodesOnDrag: true,
-    elevateNodesOnSelect: false,
-    fitView: false,
+    elevateNodesOnSelect: true,
     onlyRenderVisibleElements: false,
+    disableKeyboardA11y: false,
     defaultMarkerColor: "#b1b1b7",
+    ariaLiveMessage: "" as string,
+    style: {} as JSX.CSSProperties,
   }) as const;

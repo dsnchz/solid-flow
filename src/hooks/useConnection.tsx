@@ -1,6 +1,7 @@
 import type { ConnectionState } from "@xyflow/system";
+import type { Accessor } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
 /**
  * Hook for receiving the current connection.
@@ -8,8 +9,8 @@ import { useFlowStore } from "@/components/contexts";
  * @public
  * @returns current connection as a readable store
  */
-export function useConnection(): ConnectionState {
-  const { store } = useFlowStore();
+export function useConnection(): Accessor<ConnectionState> {
+  const { store } = useInternalSolidFlow();
 
-  return store.connection;
+  return () => store.connection;
 }

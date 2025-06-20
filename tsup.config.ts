@@ -35,7 +35,7 @@ export default defineConfig((config) => {
     const packageFields = preset.generatePackageExports(parsedOptions);
     // console.log(`\npackage.json: \n${JSON.stringify(packageFields, null, 2)}\n\n`);
     /* will update ./package.json with the correct export fields */
-    preset.writePackageJson(packageFields);
+    void preset.writePackageJson(packageFields);
   }
 
   const tsupOptions = preset

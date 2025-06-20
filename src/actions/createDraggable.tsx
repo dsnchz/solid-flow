@@ -2,7 +2,7 @@ import { type OnDrag, XYDrag } from "@xyflow/system";
 import type { Accessor } from "solid-js";
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 
-import { useSolidFlow } from "@/components/contexts/flow";
+import { useInternalSolidFlow } from "@/components/contexts/flow";
 import type { Node } from "@/shared/types";
 
 export type CreateDraggableParams = {
@@ -28,7 +28,8 @@ const createDraggable = <NodeType extends Node>(
   elem: Accessor<HTMLElement | undefined>,
   params: Accessor<Partial<CreateDraggableParams>>,
 ) => {
-  const { store, panBy, updateNodePositions, unselectNodesAndEdges } = useSolidFlow();
+  const { store, nodeLookup, panBy, updateNodePositions, unselectNodesAndEdges } =
+    useInternalSolidFlow();
   const [dragging, setDragging] = createSignal(false);
 
   onMount(() => {
@@ -48,11 +49,12 @@ const createDraggable = <NodeType extends Node>(
       getStoreItems: () => {
         return {
           nodes: store.nodes,
-          nodeLookup: store.nodeLookup,
+          nodeLookup,
           edges: store.edges,
           nodeExtent: store.nodeExtent,
-          snapGrid: store.snapGrid,
-          snapToGrid: store.snapToGrid,
+          snapGrid: store.snapGrid ?? [0, 0],
+          snapToGrid: !!store.snapGrid,
+          autoPanSpeed: store.autoPanSpeed,
           nodeOrigin: store.nodeOrigin,
           multiSelectionActive: store.multiselectionKeyPressed,
           domNode: store.domNode,
@@ -76,9 +78,9 @@ const createDraggable = <NodeType extends Node>(
 
       dragInstance.update({
         domNode: elem,
+        nodeId: params.nodeId,
         noDragClassName: params.noDragClass,
         handleSelector: params.handleSelector,
-        nodeId: params.nodeId,
         isSelectable: params.isSelectable,
         nodeClickDistance: params.nodeClickDistance,
       });

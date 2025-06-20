@@ -12,7 +12,7 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  For,
+  Index,
   type JSX,
   mergeProps,
   onCleanup,
@@ -22,63 +22,67 @@ import {
 } from "solid-js";
 
 import { Panel } from "@/components/container";
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 import type { Node } from "@/shared/types";
 
 import MinimapNode from "./MinimapNode";
 
 export type GetMiniMapNodeAttribute<NodeType extends Node> = (node: NodeType) => string;
 
-export type MiniMapProps<NodeType extends Node> = {
+export type MiniMapProps<NodeType extends Node> = Omit<
+  JSX.HTMLAttributes<HTMLDivElement>,
+  "style"
+> & {
   /** Background color of minimap */
-  readonly bgColor: string;
+  readonly bgColor?: string;
   /** Color of nodes on the minimap */
-  readonly nodeColor: string | GetMiniMapNodeAttribute<NodeType>;
+  readonly nodeColor?: string | GetMiniMapNodeAttribute<NodeType>;
   /** Stroke color of nodes on the minimap */
-  readonly nodeStrokeColor: string | GetMiniMapNodeAttribute<NodeType>;
+  readonly nodeStrokeColor?: string | GetMiniMapNodeAttribute<NodeType>;
   /** Class applied to nodes on the minimap */
-  readonly nodeClass: string | GetMiniMapNodeAttribute<NodeType>;
+  readonly nodeClass?: string | GetMiniMapNodeAttribute<NodeType>;
   /** Border radius of nodes on the minimap */
-  readonly nodeBorderRadius: number;
+  readonly nodeBorderRadius?: number;
   /** Stroke width of nodes on the minimap */
-  readonly nodeStrokeWidth: number;
+  readonly nodeStrokeWidth?: number;
   /** Color of the mask representing viewport */
-  readonly maskColor: string;
+  readonly maskColor?: string;
   /** Stroke color of the mask representing viewport */
-  readonly maskStrokeColor: string;
+  readonly maskStrokeColor?: string;
   /** Stroke width of the mask representing viewport */
-  readonly maskStrokeWidth: number;
+  readonly maskStrokeWidth?: number;
   /** Position of the minimap on the pane
    * @example PanelPosition.TopLeft, PanelPosition.TopRight,
    * PanelPosition.BottomLeft, PanelPosition.BottomRight
    */
-  readonly position: PanelPosition;
-  /** Class applied to container */
-  readonly class: string;
+  readonly position?: PanelPosition;
   /** Style applied to container */
-  readonly style: JSX.CSSProperties;
+  readonly style?: JSX.CSSProperties;
   /** The aria-label applied to container */
-  readonly ariaLabel: string | null;
+  readonly ariaLabel?: string | null;
   /** Width of minimap */
-  readonly width: number;
+  readonly width?: number;
   /** Height of minimap */
-  readonly height: number;
+  readonly height?: number;
   // onClick: (event: MouseEvent, position: XYPosition) => void;
   // onNodeClick: (event: MouseEvent, node: Node) => void;
-  readonly pannable: boolean;
-  readonly zoomable: boolean;
+  readonly pannable?: boolean;
+  readonly zoomable?: boolean;
   /** Invert the direction when panning the minimap viewport */
-  readonly inversePan: boolean;
+  readonly inversePan?: boolean;
   /** Step size for zooming in/out */
-  readonly zoomStep: number;
+  readonly zoomStep?: number;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getAttrFunction = <NodeType extends Node>(func: any): GetMiniMapNodeAttribute<NodeType> =>
   func instanceof Function ? func : () => func;
 
-const Minimap = <NodeType extends Node>(props: ParentProps<Partial<MiniMapProps<NodeType>>>) => {
-  const { store } = useFlowStore<NodeType>();
+export const Minimap = <NodeType extends Node>(
+  props: ParentProps<Partial<MiniMapProps<NodeType>>>,
+) => {
+  const { store, nodeLookup } = useInternalSolidFlow<NodeType>();
+
   const _props = mergeProps(
     {
       position: "bottom-right" as PanelPosition,
@@ -95,11 +99,11 @@ const Minimap = <NodeType extends Node>(props: ParentProps<Partial<MiniMapProps<
     props,
   );
 
-  const getNodeColorFunc = () =>
+  const nodeColorFunc = () =>
     _props.nodeColor === undefined ? undefined : getAttrFunction(_props.nodeColor);
 
-  const getNodeStrokeColorFunc = () => getAttrFunction(_props.nodeStrokeColor);
-  const getNodeClassFunc = () => getAttrFunction(_props.nodeClass);
+  const nodeStrokeColorFunc = () => getAttrFunction(_props.nodeStrokeColor);
+  const nodeClassFunc = () => getAttrFunction(_props.nodeClass);
 
   const shapeRendering = () =>
     // @ts-expect-error - TS doesn't know about chrome
@@ -116,8 +120,8 @@ const Minimap = <NodeType extends Node>(props: ParentProps<Partial<MiniMapProps<
 
   const getBoundingRect = () => {
     const viewBB = getViewBB();
-    return store.nodeLookup.size > 0
-      ? getBoundsOfRects(getInternalNodesBounds(store.nodeLookup), viewBB)
+    return nodeLookup.size > 0
+      ? getBoundsOfRects(getInternalNodesBounds(nodeLookup), viewBB)
       : viewBB;
   };
 
@@ -150,17 +154,30 @@ const Minimap = <NodeType extends Node>(props: ParentProps<Partial<MiniMapProps<
   const strokeWidth = () =>
     _props.maskStrokeWidth ? _props.maskStrokeWidth * getViewScale() : undefined;
 
-  const getStyle = () => {
-    const bgColor = _props.bgColor ? { "--xy-minimap-background-color-props": _props.bgColor } : {};
-    return { ..._props.style, ...bgColor };
+  let prevNodeIds: string[] = [];
+  const nodeIds = () => {
+    const currentNodeIds = store.nodes.map((node) => node.id);
+    const currentSet = new Set(currentNodeIds);
+
+    if (
+      prevNodeIds.length !== currentNodeIds.length ||
+      !prevNodeIds.every((id) => currentSet.has(id))
+    ) {
+      prevNodeIds = currentNodeIds;
+    }
+
+    return prevNodeIds;
   };
 
   return (
     <Panel
       position={_props.position}
-      style={getStyle()}
-      class={clsx(["solid-flow__minimap", _props.class])}
       data-testid="solid-flow__minimap"
+      class={clsx(["solid-flow__minimap", _props.class])}
+      style={{
+        "--xy-minimap-background-color-props": _props.bgColor,
+        ..._props.style,
+      }}
     >
       <Show when={store.panZoom}>
         {(panZoom) => {
@@ -206,34 +223,35 @@ const Minimap = <NodeType extends Node>(props: ParentProps<Partial<MiniMapProps<
                 "--xy-minimap-mask-stroke-width-props": strokeWidth(),
               }}
             >
-              <Show when={_props.ariaLabel}>
-                {(ariaLabel) => <title id={labelledBy()}>{ariaLabel()}</title>}
-              </Show>
-              <For each={store.nodes}>
-                {(userNode) => {
-                  const node = () => store.nodeLookup.get(userNode.id)!;
+              <title id={labelledBy()}>{store.ariaLabelConfig["minimap.ariaLabel"]}</title>
+              <Index each={nodeIds()}>
+                {(nodeId) => {
+                  const node = createMemo(() => nodeLookup.get(nodeId()));
+
+                  const nodeVisible = () =>
+                    Boolean(node() && nodeHasDimensions(node()!) && !node()!.hidden);
 
                   return (
-                    <Show when={nodeHasDimensions(node()) && getNodeDimensions(node())}>
+                    <Show when={nodeVisible() && getNodeDimensions(node()!)}>
                       {(nodeDimensions) => (
                         <MinimapNode
-                          x={node().internals.positionAbsolute.x}
-                          y={node().internals.positionAbsolute.y}
+                          x={node()!.internals.positionAbsolute.x}
+                          y={node()!.internals.positionAbsolute.y}
                           borderRadius={_props.nodeBorderRadius}
                           strokeWidth={_props.nodeStrokeWidth}
                           shapeRendering={shapeRendering()}
                           width={nodeDimensions().width}
                           height={nodeDimensions().height}
-                          selected={node().selected}
-                          color={getNodeColorFunc()?.call(null, node())}
-                          strokeColor={getNodeStrokeColorFunc().call(null, node())}
-                          class={getNodeClassFunc().call(null, node()!)}
+                          selected={node()!.selected}
+                          color={nodeColorFunc()?.call(null, node()!)}
+                          strokeColor={nodeStrokeColorFunc().call(null, node()!)}
+                          class={nodeClassFunc().call(null, node()!)}
                         />
                       )}
                     </Show>
                   );
                 }}
-              </For>
+              </Index>
               <path
                 class="solid-flow__minimap-mask"
                 d={`M${getX() - getOffset()},${getY() - getOffset()}h${getViewboxWidth() + getOffset() * 2}v${
@@ -250,5 +268,3 @@ const Minimap = <NodeType extends Node>(props: ParentProps<Partial<MiniMapProps<
     </Panel>
   );
 };
-
-export default Minimap;

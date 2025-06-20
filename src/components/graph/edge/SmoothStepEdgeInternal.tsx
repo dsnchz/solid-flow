@@ -1,11 +1,10 @@
 import { getSmoothStepPath } from "@xyflow/system";
-import { type Component } from "solid-js";
 
-import type { EdgeProps } from "@/shared/types";
+import type { SmoothStepEdgeProps } from "@/types";
 
-import BaseEdge from "./BaseEdge";
+import { BaseEdge } from "./BaseEdge";
 
-const SmoothStepEdgeInternal: Component<EdgeProps> = (props) => {
+export const SmoothStepEdgeInternal = (props: SmoothStepEdgeProps) => {
   const pathData = () => {
     const [path, labelX, labelY] = getSmoothStepPath({
       sourceX: props.sourceX,
@@ -33,5 +32,3 @@ const SmoothStepEdgeInternal: Component<EdgeProps> = (props) => {
     />
   );
 };
-
-export default SmoothStepEdgeInternal;

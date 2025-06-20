@@ -1,2 +1,2 @@
-export { default as SolidFlow } from "./component";
-export { default as SolidFlowProvider } from "./provider";
+export { SolidFlow } from "./component";
+export { SolidFlowProvider } from "./provider";

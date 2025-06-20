@@ -1,7 +1,8 @@
+import { shallowNodeData } from "@xyflow/system";
 import { type Accessor, createMemo } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
-import type { Node } from "@/shared/types";
+import { useInternalSolidFlow } from "@/components/contexts";
+import type { Node } from "@/types";
 
 type NodeData<NodeType extends Node> = Pick<NodeType, "id" | "data" | "type">;
 
@@ -12,22 +13,29 @@ type NodeData<NodeType extends Node> = Pick<NodeType, "id" | "data" | "type">;
  * @returns A memo with an array of data objects
  */
 export function useNodesData<NodeType extends Node = Node>(
-  nodeId: string,
-): Accessor<NodeData<NodeType> | null>;
+  nodeId: Accessor<string | undefined | null>,
+): Accessor<NodeData<NodeType> | undefined>;
 export function useNodesData<NodeType extends Node = Node>(
-  nodeIds: string[],
+  nodeIds: Accessor<string[] | undefined | null>,
 ): Accessor<NodeData<NodeType>[]>;
-export function useNodesData(nodeIds: string | string[]) {
-  const { store } = useFlowStore();
+export function useNodesData<NodeType extends Node = Node>(
+  nodeIds: Accessor<string | string[] | undefined | null>,
+) {
+  const { nodeLookup } = useInternalSolidFlow();
+
+  let prevNodesData = [] as NodeData<NodeType>[];
 
   const result = createMemo(() => {
-    const isArrayOfIds = Array.isArray(nodeIds);
+    const nodesData = [] as NodeData<NodeType>[];
 
-    const _nodeIds = isArrayOfIds ? nodeIds : [nodeIds];
-    const nodesData = [];
+    const idValues = nodeIds();
 
-    for (const nodeId of _nodeIds) {
-      const node = store.nodeLookup.get(nodeId)?.internals.userNode;
+    if (!idValues) return undefined;
+
+    const ids = Array.isArray(idValues) ? idValues : [idValues];
+
+    for (const nodeId of ids) {
+      const node = nodeLookup.get(nodeId)?.internals.userNode;
 
       if (!node) continue;
 
@@ -38,7 +46,11 @@ export function useNodesData(nodeIds: string | string[]) {
       });
     }
 
-    return isArrayOfIds ? nodesData : (nodesData[0] ?? null);
+    if (!shallowNodeData(nodesData, prevNodesData)) {
+      prevNodesData = nodesData;
+    }
+
+    return Array.isArray(idValues) ? nodesData : nodesData[0];
   });
 
   return result;

@@ -1,12 +1,12 @@
 import type { PanelPosition } from "@xyflow/system";
 import clsx from "clsx";
-import { type JSX, mergeProps, type ParentComponent, Show } from "solid-js";
+import { type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
 
 import { Panel } from "@/components/container";
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 import type { FitViewOptions } from "@/shared/types";
 
-import ControlButton from "./ControlButton";
+import { ControlButton } from "./ControlButton";
 import { Fit, Lock, Minus, Plus, Unlock } from "./icons";
 
 type ControlsOrientation = "horizontal" | "vertical";
@@ -16,29 +16,29 @@ type ControlsProps = {
    * @example PanelPosition.TopLeft, PanelPosition.TopRight,
    * PanelPosition.BottomLeft, PanelPosition.BottomRight
    */
-  readonly position: PanelPosition;
+  readonly position?: PanelPosition;
   /** Show button for zoom in/out */
-  readonly showZoom: boolean;
+  readonly showZoom?: boolean;
   /** Show button for fit view */
-  readonly showFitView: boolean;
+  readonly showFitView?: boolean;
   /** Show button for toggling interactivity */
-  readonly showLock: boolean;
-  readonly buttonBgColor: string;
-  readonly buttonBgColorHover: string;
-  readonly buttonColor: string;
-  readonly buttonColorHover: string;
-  readonly "aria-label": string;
-  readonly style: JSX.CSSProperties;
-  readonly class: string;
-  readonly orientation: ControlsOrientation;
-  readonly fitViewOptions: FitViewOptions;
+  readonly showLock?: boolean;
+  readonly buttonBgColor?: string;
+  readonly buttonBgColorHover?: string;
+  readonly buttonColor?: string;
+  readonly buttonColorHover?: string;
+  readonly buttonBorderColor?: string;
+  readonly style?: JSX.CSSProperties;
+  readonly orientation?: ControlsOrientation;
+  readonly fitViewOptions?: FitViewOptions;
 
-  readonly beforeControls: JSX.Element;
-  readonly afterControls: JSX.Element;
-};
+  readonly beforeControls?: JSX.Element;
+  readonly afterControls?: JSX.Element;
+} & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
-const Controls: ParentComponent<Partial<ControlsProps>> = (props) => {
-  const { store, setStore, fitView, zoomIn, zoomOut } = useFlowStore();
+export const Controls = (props: ParentProps<ControlsProps>) => {
+  const { store, setStore, fitView, zoomIn, zoomOut } = useInternalSolidFlow();
+
   const _props = mergeProps(
     {
       position: "bottom-left" as PanelPosition,
@@ -50,21 +50,40 @@ const Controls: ParentComponent<Partial<ControlsProps>> = (props) => {
     props,
   );
 
+  const [local, rest] = splitProps(_props, [
+    "class",
+    "position",
+    "showZoom",
+    "showFitView",
+    "showLock",
+    "orientation",
+    "fitViewOptions",
+    "beforeControls",
+    "afterControls",
+    "buttonBgColor",
+    "buttonBgColorHover",
+    "buttonColor",
+    "buttonColorHover",
+    "buttonBorderColor",
+    "style",
+    "children",
+  ]);
+
   const getMinZoomReached = () => store.viewport.zoom <= store.minZoom;
   const getMaxZoomReached = () => store.viewport.zoom >= store.maxZoom;
   const getIsInteractive = () =>
     store.nodesDraggable || store.nodesConnectable || store.elementsSelectable;
 
   const onZoomInHandler = () => {
-    zoomIn();
+    void zoomIn();
   };
 
   const onZoomOutHandler = () => {
-    zoomOut();
+    void zoomOut();
   };
 
   const onFitViewHandler = () => {
-    fitView(_props.fitViewOptions);
+    void fitView(local.fitViewOptions);
   };
 
   const onToggleInteractivity = () => {
@@ -78,29 +97,30 @@ const Controls: ParentComponent<Partial<ControlsProps>> = (props) => {
   };
 
   const buttonProps = () => ({
-    bgColor: _props.buttonBgColor,
-    bgColorHover: _props.buttonBgColorHover,
-    color: _props.buttonColor,
-    colorHover: _props.buttonColorHover,
-    borderColor: _props.buttonColorHover,
+    bgColor: local.buttonBgColor,
+    bgColorHover: local.buttonBgColorHover,
+    color: local.buttonColor,
+    colorHover: local.buttonColorHover,
+    borderColor: local.buttonBorderColor,
   });
 
   return (
     <Panel
-      class={clsx(["solid-flow__controls", _props.orientation, _props.class])}
-      position={_props.position}
+      class={clsx(["solid-flow__controls", local.orientation, local.class])}
+      position={local.position}
       data-testid="solid-flow__controls"
-      aria-label={_props["aria-label"] ?? "Solid Flow controls"}
-      style={_props.style}
+      aria-label={store.ariaLabelConfig["controls.ariaLabel"]}
+      style={local.style}
+      {...rest}
     >
-      {_props.beforeControls}
-      <Show when={_props.showZoom}>
+      {local.beforeControls}
+      <Show when={local.showZoom}>
         <>
           <ControlButton
             onClick={onZoomInHandler}
             class="solid-flow__controls-zoomin"
-            title="zoom in"
-            aria-label="zoom in"
+            title={store.ariaLabelConfig["controls.zoomIn.ariaLabel"]}
+            aria-label={store.ariaLabelConfig["controls.zoomIn.ariaLabel"]}
             disabled={getMaxZoomReached()}
             {...buttonProps()}
           >
@@ -109,8 +129,8 @@ const Controls: ParentComponent<Partial<ControlsProps>> = (props) => {
           <ControlButton
             onClick={onZoomOutHandler}
             class="solid-flow__controls-zoomout"
-            title="zoom out"
-            aria-label="zoom out"
+            title={store.ariaLabelConfig["controls.zoomOut.ariaLabel"]}
+            aria-label={store.ariaLabelConfig["controls.zoomOut.ariaLabel"]}
             disabled={getMinZoomReached()}
             {...buttonProps()}
           >
@@ -118,23 +138,23 @@ const Controls: ParentComponent<Partial<ControlsProps>> = (props) => {
           </ControlButton>
         </>
       </Show>
-      <Show when={_props.showFitView}>
+      <Show when={local.showFitView}>
         <ControlButton
           class="solid-flow__controls-fitview"
           onClick={onFitViewHandler}
-          title="fit view"
-          aria-label="fit view"
+          title={store.ariaLabelConfig["controls.fitView.ariaLabel"]}
+          aria-label={store.ariaLabelConfig["controls.fitView.ariaLabel"]}
           {...buttonProps()}
         >
           <Fit />
         </ControlButton>
       </Show>
-      <Show when={_props.showLock}>
+      <Show when={local.showLock}>
         <ControlButton
           class="solid-flow__controls-interactive"
           onClick={onToggleInteractivity}
-          title="toggle interactivity"
-          aria-label="toggle interactivity"
+          title={store.ariaLabelConfig["controls.interactive.ariaLabel"]}
+          aria-label={store.ariaLabelConfig["controls.interactive.ariaLabel"]}
           {...buttonProps()}
         >
           <Show when={getIsInteractive()} fallback={<Lock />}>
@@ -142,10 +162,8 @@ const Controls: ParentComponent<Partial<ControlsProps>> = (props) => {
           </Show>
         </ControlButton>
       </Show>
-      {_props.children}
-      {_props.afterControls}
+      {local.children}
+      {local.afterControls}
     </Panel>
   );
 };
-
-export default Controls;

@@ -1,12 +1,12 @@
 import { getStraightPath } from "@xyflow/system";
-import { type Component } from "solid-js";
+import { createMemo } from "solid-js";
 
-import type { StraightEdgeProps } from "@/shared/types";
+import type { StraightEdgeProps } from "@/types";
 
-import BaseEdge from "./BaseEdge";
+import { BaseEdge } from "./BaseEdge";
 
-const StraightEdge: Component<StraightEdgeProps> = (props) => {
-  const pathData = () => {
+export const StraightEdge = (props: StraightEdgeProps) => {
+  const pathData = createMemo(() => {
     const [path, labelX, labelY] = getStraightPath({
       sourceX: props.sourceX,
       sourceY: props.sourceY,
@@ -15,7 +15,7 @@ const StraightEdge: Component<StraightEdgeProps> = (props) => {
     });
 
     return { path, labelX, labelY };
-  };
+  });
 
   return (
     <BaseEdge
@@ -32,5 +32,3 @@ const StraightEdge: Component<StraightEdgeProps> = (props) => {
     />
   );
 };
-
-export default StraightEdge;

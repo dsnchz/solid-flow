@@ -1,4 +1,4 @@
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
 /**
  * Hook for getting the current nodes from the store.
@@ -7,8 +7,8 @@ import { useFlowStore } from "@/components/contexts";
  * @returns store with an array of nodes
  */
 export function useNodes() {
-  const { store } = useFlowStore();
-  return store.nodes;
+  const { store } = useInternalSolidFlow();
+  return () => store.nodes;
 }
 
 /**
@@ -18,6 +18,17 @@ export function useNodes() {
  * @returns store with an array of edges
  */
 export function useEdges() {
-  const { store } = useFlowStore();
-  return store.edges;
+  const { store } = useInternalSolidFlow();
+  return () => store.edges;
+}
+
+/**
+ * Hook for getting the current viewport from the store.
+ *
+ * @public
+ * @returns store with the viewport object
+ */
+export function useViewport() {
+  const { store } = useInternalSolidFlow();
+  return () => store.viewport;
 }

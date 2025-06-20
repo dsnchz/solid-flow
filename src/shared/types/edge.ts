@@ -13,9 +13,10 @@ import type {
 } from "@xyflow/system";
 import type { Component, JSX } from "solid-js";
 
+import type { InternalNode, Node } from "@/types";
+
 import type { GraphTargetContextHandler, GraphTargetHandler, MouseOrTouchEvent } from "./events";
 import type { ConnectionLineType } from "./general";
-import type { InternalNode, Node } from "./node";
 
 /**
  * An `Edge` is the complete description with everything Solid Flow needs
@@ -122,41 +123,17 @@ export type StepEdgeProps = EdgeComponentWithPathOptions<StepPathOptions>;
  */
 export type StraightEdgeProps = Omit<EdgeComponentProps, "sourcePosition" | "targetPosition">;
 
-export type EdgeTypes = Record<string, Component<EdgeProps>>;
+export type EdgeTypes = Record<string, (props: EdgeProps) => JSX.Element>;
 
 export type DefaultEdgeOptions = DefaultEdgeOptionsBase<Edge>;
 
-export type EdgeLayouted = Pick<
-  Edge,
-  | "animated"
-  | "ariaLabel"
-  | "class"
-  | "data"
-  | "deletable"
-  | "focusable"
-  | "hidden"
-  | "id"
-  | "interactionWidth"
-  | "label"
-  | "labelStyle"
-  | "markerEnd"
-  | "markerStart"
-  | "reconnectable"
-  | "selected"
-  | "selectable"
-  | "source"
-  | "sourceHandle"
-  | "style"
-  | "target"
-  | "targetHandle"
-  | "type"
-  | "zIndex"
-> &
+export type EdgeLayouted<EdgeType extends Edge = Edge> = EdgeType &
   EdgePosition & {
     readonly sourceNode?: Node;
     readonly targetNode?: Node;
     readonly sourceHandleId?: string | null;
     readonly targetHandleId?: string | null;
+    readonly edge: EdgeType;
   };
 
 export type EdgeEventHandler = (edge: Edge, event: MouseOrTouchEvent) => void;

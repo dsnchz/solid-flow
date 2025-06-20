@@ -1,1 +1,1 @@
-export { default as MiniMap } from "./Minimap";
+export { Minimap as MiniMap } from "./Minimap";

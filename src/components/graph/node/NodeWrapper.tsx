@@ -1,136 +1,86 @@
-import { errorMessages, nodeHasDimensions, Position } from "@xyflow/system";
+import {
+  elementSelectionKeys,
+  errorMessages,
+  getNodesInside,
+  isInputDOMNode,
+  nodeHasDimensions,
+  Position,
+} from "@xyflow/system";
 import clsx from "clsx";
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import createDraggable from "@/actions/createDraggable";
-import { useFlowStore } from "@/components/contexts";
+import { ARIA_NODE_DESC_KEY } from "@/components/accessibility";
+import { useInternalSolidFlow } from "@/components/contexts";
+import { NodeConnectableContext } from "@/components/contexts/nodeConnectable";
 import { NodeIdContext } from "@/components/contexts/nodeId";
-import type { InternalNode, Node, NodeEventCallbacks } from "@/shared/types";
-import type { MouseOrTouchEvent } from "@/shared/types/events";
+import type { Node, NodeEvents } from "@/types";
+import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
-import DefaultNode from "./DefaultNode";
-
-function getNodeInlineStyleDimensions({
-  width,
-  height,
-  initialWidth,
-  initialHeight,
-  measuredWidth,
-  measuredHeight,
-}: {
-  width?: number;
-  height?: number;
-  initialWidth?: number;
-  initialHeight?: number;
-  measuredWidth?: number;
-  measuredHeight?: number;
-}): {
-  width: string | undefined;
-  height: string | undefined;
-} {
-  if (measuredWidth === undefined && measuredHeight === undefined) {
-    const styleWidth = width ?? initialWidth;
-    const styleHeight = height ?? initialHeight;
-
-    return {
-      width: styleWidth ? `width:${styleWidth}px;` : "",
-      height: styleHeight ? `height:${styleHeight}px;` : "",
-    };
-  }
-
-  return {
-    width: width ? `width:${width}px;` : "",
-    height: height ? `height:${height}px;` : "",
-  };
-}
-
-export type NodeWrapperProps<NodeType extends Node = Node> = {
-  readonly node: InternalNode<NodeType>;
+export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
+  readonly nodeId: string;
   readonly resizeObserver: ResizeObserver;
   readonly nodeClickDistance: number;
-} & Partial<NodeEventCallbacks<NodeType>>;
+};
 
 const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeType>) => {
-  const { store, updateNodeInternals, handleNodeSelection } = useFlowStore<NodeType>();
+  const {
+    store,
+    nodeLookup,
+    parentLookup,
+    setStore,
+    updateNodeInternals,
+    handleNodeSelection,
+    setCenter,
+    moveSelectedNodes,
+  } = useInternalSolidFlow<NodeType>();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
+
+  const node = () => nodeLookup.get(props.nodeId)!;
 
   let prevNodeRef: HTMLDivElement | undefined = undefined;
   let prevType: string | undefined = undefined;
   let prevSourcePosition: Position | undefined = undefined;
   let prevTargetPosition: Position | undefined = undefined;
 
-  const nodeId = () => props.node.id;
-  const nodeInternals = () => props.node.internals;
+  const nodeId = () => node().id;
+  const nodeType = () => node().type ?? "default";
+  const deletable = () => node().deletable ?? true;
+  const selectable = () => node().selectable ?? store.elementsSelectable;
+  const focusable = () => node().focusable ?? store.nodesFocusable;
+  const draggable = () => node().draggable ?? store.nodesDraggable;
+  const connectable = () => node().connectable ?? store.nodesConnectable;
+  const userNode = () => node().internals.userNode;
 
-  const nodeStyle = () =>
-    props.node.style && typeof props.node.style === "object" ? props.node.style : {};
-  const nodeType = () => props.node.type ?? "default";
-  const nodeZIndex = () => nodeInternals().z ?? 0;
   const nodeTypeValid = () => nodeType() in store.nodeTypes;
-  const nodeComponent = () => store.nodeTypes[nodeType()] || DefaultNode;
+  const nodeComponent = () => store.nodeTypes[nodeType()];
+  const isParentNode = () => parentLookup.has(node().id);
 
-  const isParentNode = () => store.parentLookup.has(props.node.id);
-  const isNodeDelatable = () => props.node.deletable ?? true;
-  const isNodeInitialized = () => nodeHasDimensions(props.node);
+  const transform = () => {
+    const { x, y } = node().internals.positionAbsolute;
+    return `translate(${x}px, ${y}px)`;
+  };
 
-  const isNodeSelectable = () =>
-    Boolean(
-      props.node.selectable ||
-        (store.elementsSelectable && typeof props.node.selectable === "undefined"),
-    );
+  const sizeStyle = () => {
+    const w = node().width ?? node().initialWidth;
+    const h = node().height ?? node().initialHeight;
 
-  const isNodeDraggable = () =>
-    Boolean(
-      props.node.draggable || (store.nodesDraggable && typeof props.node.draggable === "undefined"),
-    );
-
-  const isNodeConnectable = () =>
-    Boolean(
-      props.node.connectable ||
-        (store.nodesConnectable && typeof props.node.connectable === "undefined"),
-    );
-
-  const dragging = createDraggable(nodeRef, () => ({
-    nodeId: props.node.id,
-    isSelectable: isNodeSelectable(),
-    disabled: false,
-    handleSelector: props.node.dragHandle,
-    noDragClass: "nodrag",
-    nodeClickDistance: props.nodeClickDistance,
-    onNodeMouseDown: handleNodeSelection,
-    onDrag: (event, _, targetNode, nodes) => {
-      props.onNodeDrag?.(targetNode, nodes, event);
-    },
-    onDragStart: (event, _, targetNode, nodes) => {
-      props.onNodeDragStart?.(targetNode, nodes, event);
-    },
-    onDragStop: (event, _, targetNode, nodes) => {
-      props.onNodeDragStop?.(targetNode, nodes, event);
-    },
-  }));
-
-  const inlineStyleDimensions = () =>
-    getNodeInlineStyleDimensions({
-      width: props.node.width,
-      height: props.node.height,
-      initialWidth: props.node.initialWidth,
-      initialHeight: props.node.initialHeight,
-      measuredWidth: props.node.measured.width,
-      measuredHeight: props.node.measured.height,
-    });
-
-  const transform = () =>
-    `translate(${nodeInternals().positionAbsolute.x}px, ${nodeInternals().positionAbsolute.y}px)`;
+    return {
+      ...node().style,
+      ...(w ? { width: toPxString(w) } : {}),
+      ...(h ? { height: toPxString(h) } : {}),
+    };
+  };
 
   const style = () =>
     ({
-      "z-index": nodeZIndex(),
+      "z-index": node().internals.z,
       transform: transform(),
-      visibility: isNodeInitialized() ? "visible" : "hidden",
-      ...nodeStyle(),
-      ...inlineStyleDimensions(),
+      visibility: nodeHasDimensions(node()) ? "visible" : "hidden",
+      ...sizeStyle(),
+      ...(node().style ?? {}),
     }) as const;
 
   createEffect(() => {
@@ -144,8 +94,8 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     // we need to re-calculate the handle positions
     const doUpdate = Boolean(
       (prevType && nodeType() !== prevType) ||
-        (prevSourcePosition && props.node.sourcePosition !== prevSourcePosition) ||
-        (prevTargetPosition && props.node.targetPosition !== prevTargetPosition),
+        (prevSourcePosition && node().sourcePosition !== prevSourcePosition) ||
+        (prevTargetPosition && node().targetPosition !== prevTargetPosition),
     );
 
     if (doUpdate) {
@@ -153,9 +103,9 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
         updateNodeInternals(
           new Map([
             [
-              props.node.id,
+              node().id,
               {
-                id: props.node.id,
+                id: node().id,
                 nodeElement: nodeRef()!,
                 force: true,
               },
@@ -166,87 +116,183 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     }
 
     prevType = nodeType();
-    prevSourcePosition = props.node.sourcePosition;
-    prevTargetPosition = props.node.targetPosition;
+    prevSourcePosition = node().sourcePosition;
+    prevTargetPosition = node().targetPosition;
   });
 
   createEffect(() => {
-    if (nodeRef() !== prevNodeRef || !isNodeInitialized()) {
+    const currentNodeRef = nodeRef();
+
+    if (currentNodeRef !== prevNodeRef || !nodeHasDimensions(node())) {
       if (prevNodeRef) {
         props.resizeObserver.unobserve(prevNodeRef);
       }
-      props.resizeObserver.observe(nodeRef()!);
-      prevNodeRef = nodeRef();
+      if (currentNodeRef) {
+        props.resizeObserver.observe(currentNodeRef);
+      }
+      prevNodeRef = currentNodeRef;
     }
+
+    onCleanup(() => {
+      if (prevNodeRef) {
+        props.resizeObserver.unobserve(prevNodeRef);
+      }
+    });
   });
 
-  onCleanup(() => {
-    if (prevNodeRef) {
-      props.resizeObserver.unobserve(prevNodeRef);
-    }
-  });
-
-  const onSelectNodeHandler = (event: MouseOrTouchEvent) => {
-    if (
-      isNodeSelectable() &&
-      (!store.selectNodesOnDrag || !isNodeDraggable() || store.nodeDragThreshold > 0)
-    ) {
+  const onSelectNodeHandler = (event: MouseEvent) => {
+    if (selectable() && (!store.selectNodesOnDrag || !draggable() || store.nodeDragThreshold > 0)) {
       // this handler gets called by XYDrag on drag start when selectNodesOnDrag=true
       // here we only need to call it when selectNodesOnDrag=false
-      handleNodeSelection(props.node.id);
+      handleNodeSelection(node().id);
     }
 
-    props.onNodeClick?.(props.node, event);
+    props.onNodeClick?.({ node: userNode(), event });
   };
 
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (isInputDOMNode(event) || store.disableKeyboardA11y) {
+      return;
+    }
+
+    if (elementSelectionKeys.includes(event.key) && selectable()) {
+      handleNodeSelection(node().id, event.key === "Escape", nodeRef());
+      return;
+    }
+
+    const arrowKeyDiff = ARROW_KEY_DIFFS[event.key];
+
+    if (draggable() && node().selected && arrowKeyDiff) {
+      // prevent default scrolling behavior on arrow key press when node is moved
+      event.preventDefault();
+
+      setStore(
+        "ariaLiveMessage",
+        store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
+          direction: event.key.replace("Arrow", "").toLowerCase(),
+          x: ~~node().internals.positionAbsolute.x,
+          y: ~~node().internals.positionAbsolute.y,
+        }),
+      );
+
+      moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
+    }
+  };
+
+  const onFocus = () => {
+    if (
+      store.disableKeyboardA11y ||
+      !store.autoPanOnNodeFocus ||
+      !nodeRef()?.matches(":focus-visible")
+    ) {
+      return;
+    }
+
+    const { width, height, viewport } = store;
+
+    const withinViewport =
+      getNodesInside(
+        new Map([[node().id, node()]]),
+        { x: 0, y: 0, width, height },
+        [viewport.x, viewport.y, viewport.zoom],
+        true,
+      ).length > 0;
+
+    if (withinViewport) return;
+
+    void setCenter(
+      node().position.x + (node().measured.width ?? 0) / 2,
+      node().position.y + (node().measured.height ?? 0) / 2,
+      { zoom: viewport.zoom },
+    );
+  };
+
+  const dragging = createDraggable(nodeRef, () => ({
+    nodeId: node().id,
+    isSelectable: selectable(),
+    disabled: !draggable(),
+    handleSelector: node().dragHandle,
+    noDragClass: store.noDragClass,
+    nodeClickDistance: props.nodeClickDistance,
+    onNodeMouseDown: handleNodeSelection,
+    onDrag: (event, _, targetNode, nodes) => {
+      props.onNodeDrag?.({ event, targetNode: targetNode as NodeType, nodes: nodes as NodeType[] });
+    },
+    onDragStart: (event, _, targetNode, nodes) => {
+      props.onNodeDragStart?.({
+        event,
+        targetNode: targetNode as NodeType,
+        nodes: nodes as NodeType[],
+      });
+    },
+    onDragStop: (event, _, targetNode, nodes) => {
+      props.onNodeDragStop?.({
+        event,
+        targetNode: targetNode as NodeType,
+        nodes: nodes as NodeType[],
+      });
+    },
+  }));
+
   return (
-    <Show when={!props.node.hidden}>
+    <Show when={!node().hidden}>
       <div
         ref={setNodeRef}
-        data-id={props.node.id}
-        onClick={onSelectNodeHandler}
-        onMouseEnter={(event) => props.onNodeMouseEnter?.(props.node, event)}
-        onMouseLeave={(event) => props.onNodeMouseLeave?.(props.node, event)}
-        onMouseMove={(event) => props.onNodeMouseMove?.(props.node, event)}
-        onContextMenu={(event) => props.onNodeContextMenu?.(props.node, event)}
-        style={style()}
+        data-id={node().id}
         class={clsx(
           "solid-flow__node",
           nodeType(),
           {
+            connectable: connectable(),
+            draggable: draggable(),
             dragging: dragging(),
-            selected: props.node.selected,
-            draggable: isNodeDraggable(),
-            connectable: isNodeConnectable(),
-            selectable: isNodeSelectable(),
-            nopan: isNodeDraggable(),
+            nopan: draggable(),
             parent: isParentNode(),
+            selectable: selectable(),
+            selected: node().selected,
           },
-          props.node.class,
+          node().class,
         )}
+        style={style()}
+        onClick={onSelectNodeHandler}
+        onPointerEnter={(event) => props.onNodePointerEnter?.({ node: userNode(), event })}
+        onPointerLeave={(event) => props.onNodePointerLeave?.({ node: userNode(), event })}
+        onPointerMove={(event) => props.onNodePointerMove?.({ node: userNode(), event })}
+        onContextMenu={(event) => props.onNodeContextMenu?.({ node: userNode(), event })}
+        onKeyDown={(e) => focusable() && onKeyDown(e)}
+        onFocus={() => focusable() && onFocus()}
+        tabIndex={focusable() ? 0 : undefined}
+        role={node().ariaRole ?? (focusable() ? "group" : undefined)}
+        aria-roledescription="node"
+        aria-describedby={
+          store.disableKeyboardA11y ? undefined : `${ARIA_NODE_DESC_KEY}-${store.id}`
+        }
+        {...node().domAttributes}
       >
         <NodeIdContext.Provider value={nodeId}>
-          <Dynamic
-            component={nodeComponent()}
-            type={nodeType()}
-            id={props.node.id}
-            parentId={props.node.parentId}
-            data={props.node.data}
-            width={`${props.node.width}px`}
-            height={`${props.node.height}px`}
-            dragHandle={props.node.dragHandle}
-            selected={Boolean(props.node.selected)}
-            dragging={dragging()}
-            zIndex={nodeZIndex()}
-            draggable={isNodeDraggable()}
-            deletable={isNodeDelatable()}
-            selectable={isNodeSelectable()}
-            isConnectable={isNodeConnectable()}
-            sourcePosition={props.node.sourcePosition}
-            targetPosition={props.node.targetPosition}
-            positionAbsoluteX={nodeInternals().positionAbsolute.x}
-            positionAbsoluteY={nodeInternals().positionAbsolute.y}
-          />
+          <NodeConnectableContext.Provider value={connectable}>
+            <Dynamic
+              component={nodeComponent()}
+              data={node().data}
+              id={node().id}
+              selected={Boolean(node().selected)}
+              selectable={selectable()}
+              deletable={deletable()}
+              sourcePosition={node().sourcePosition}
+              targetPosition={node().targetPosition}
+              zIndex={node().internals.z}
+              dragging={dragging()}
+              draggable={draggable()}
+              dragHandle={node().dragHandle}
+              parentId={node().parentId}
+              type={nodeType()}
+              isConnectable={connectable()}
+              positionAbsoluteX={node().internals.positionAbsolute.x}
+              positionAbsoluteY={node().internals.positionAbsolute.y}
+              width={node().width}
+              height={node().height}
+            />
+          </NodeConnectableContext.Provider>
         </NodeIdContext.Provider>
       </div>
     </Show>

@@ -1,78 +1,111 @@
 import {
   areConnectionMapsEqual,
+  type Connection,
+  ConnectionMode,
+  type ConnectionState,
+  getHostForElement,
   type HandleConnection,
   handleConnectionChange,
-  isMouseEvent,
+  type HandleProps as SystemHandleProps,
+  type HandleType,
+  type InternalNodeBase,
+  type Optional,
+  type UpdateConnection,
   XYHandle,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, type ParentProps } from "solid-js";
+import { createEffect, type JSX, mergeProps, type ParentProps, splitProps } from "solid-js";
+import { unwrap } from "solid-js/store";
 
-import { useFlowStore, useNodeId } from "@/components/contexts";
-import type { HandleProps } from "@/shared/types";
+import { useInternalSolidFlow, useNodeId } from "@/components/contexts";
+import { useNodeConnectable } from "@/components/contexts/nodeConnectable";
+import type { Edge, Node, Position } from "@/types";
 
-const Handle = (props: ParentProps<HandleProps>) => {
-  const nodeId = useNodeId();
-  const { store, updateConnection, cancelConnection, panBy, addEdge } = useFlowStore();
+type HandleProps = Omit<SystemHandleProps, "position"> & {
+  readonly position: Position;
+  readonly class?: string;
+  readonly style?: JSX.CSSProperties;
+  readonly onConnect?: (connections: Connection[]) => void;
+  readonly onDisconnect?: (connections: Connection[]) => void;
+} & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
+
+export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+  props: ParentProps<HandleProps>,
+) => {
+  const _props = mergeProps(
+    {
+      id: null,
+      type: "source" as HandleType,
+      position: "top" as Position,
+      isConnectableStart: true,
+      isConnectableEnd: true,
+    },
+    props,
+  );
+
+  const {
+    store,
+    nodeLookup,
+    connectionLookup,
+    setStore,
+    updateConnection,
+    cancelConnection,
+    panBy,
+    addEdge,
+  } = useInternalSolidFlow<NodeType, EdgeType>();
+
+  const [local, rest] = splitProps(_props, [
+    "id",
+    "type",
+    "position",
+    "isConnectable",
+    "isConnectableStart",
+    "isConnectableEnd",
+    "isValidConnection",
+    "onConnect",
+    "onDisconnect",
+    "children",
+    "class",
+    "style",
+  ]);
 
   // Computed values
-  const isTarget = () => props.type === "target";
-  const handleId = () => props.id || null;
+  const nodeId = useNodeId();
+  const nodeConnectable = useNodeConnectable();
+  const connectable = () => local.isConnectable ?? nodeConnectable();
+  const isTarget = () => local.type === "target";
+  const handleId = () => local.id ?? null;
 
-  const onPointerDown = (event: MouseEvent | TouchEvent) => {
-    const isMouseTriggered = isMouseEvent(event);
+  const connectionInProcess = () => Boolean(store.connection.fromHandle);
 
-    if ((isMouseTriggered && event.button === 0) || !isMouseTriggered) {
-      XYHandle.onPointerDown(event, {
-        handleId: handleId(),
-        nodeId: nodeId(),
-        isTarget: isTarget(),
-        connectionRadius: store.connectionRadius,
-        domNode: store.domNode,
-        nodeLookup: store.nodeLookup,
-        connectionMode: store.connectionMode,
-        lib: store.lib,
-        autoPanOnConnect: store.autoPanOnConnect,
-        flowId: store.id,
-        isValidConnection: props.isValidConnection ?? store.isValidConnection,
-        updateConnection,
-        cancelConnection,
-        panBy,
-        onConnect: (connection) => {
-          const edge = store.onEdgeCreate ? store.onEdgeCreate(connection) : connection;
+  const connectingFrom = () =>
+    store.connection.fromHandle &&
+    store.connection.fromHandle.nodeId === nodeId() &&
+    store.connection.fromHandle.type === local.type &&
+    store.connection.fromHandle.id === handleId();
 
-          if (!edge) {
-            return;
-          }
+  const connectingTo = () =>
+    store.connection.toHandle &&
+    store.connection.toHandle.nodeId === nodeId() &&
+    store.connection.toHandle.type === local.type &&
+    store.connection.toHandle.id === handleId();
 
-          addEdge(edge);
-          store.onConnect?.(connection);
-        },
-        onConnectStart: (event, startParams) => {
-          store.onConnectStart?.(event, {
-            nodeId: startParams.nodeId,
-            handleId: startParams.handleId,
-            handleType: startParams.handleType,
-          });
-        },
-        onConnectEnd: (event, connectionState) => {
-          store.onConnectEnd?.(event, connectionState);
-        },
-        getTransform: () => store.transform,
-        getFromHandle: () => store.connection.fromHandle,
-      });
-    }
-  };
+  const isPossibleTargetHandle = () =>
+    store.connectionMode === "strict"
+      ? store.connection.fromHandle?.type !== local.type
+      : nodeId() !== store.connection.fromHandle?.nodeId ||
+        handleId() !== store.connection.fromHandle?.id;
+
+  const valid = () => Boolean(connectingTo() && store.connection.isValid);
 
   let prevConnections: Map<string, HandleConnection> | null = null;
   let connections: Map<string, HandleConnection> | undefined;
 
   createEffect(() => {
-    if (props.onConnect || props.onDisconnect) {
-      connections = store.connectionLookup.get(
-        `${nodeId()}-${props.type}${props.id ? `-${props.id}` : ""}`,
-      );
-    }
+    if (!local.onConnect && !local.onDisconnect) return;
+
+    const conectionKey = `${nodeId()}-${local.type}${local.id ? `-${local.id}` : ""}`;
+    connections = connectionLookup.get(conectionKey);
 
     if (prevConnections && !areConnectionMapsEqual(connections, prevConnections)) {
       const _connections = connections ?? new Map();
@@ -84,59 +117,139 @@ const Handle = (props: ParentProps<HandleProps>) => {
     prevConnections = connections ?? new Map();
   });
 
-  const connectionInProcess = () => !!store.connection.fromHandle;
-  const connectingFrom = () =>
-    store.connection.fromHandle?.nodeId === nodeId() &&
-    store.connection.fromHandle?.type === props.type &&
-    store.connection.fromHandle?.id === handleId();
+  const onConnectExtended = (connection: Connection) => {
+    const edge = store.onBeforeConnect?.(connection) ?? connection;
 
-  const connectingTo = () =>
-    store.connection.toHandle?.nodeId === nodeId() &&
-    store.connection.toHandle?.type === props.type &&
-    store.connection.toHandle?.id === handleId();
+    if (!edge) return;
 
-  const isPossibleEndHandle = () =>
-    store.connectionMode === "strict"
-      ? store.connection.fromHandle?.type !== props.type
-      : nodeId() !== store.connection.fromHandle?.nodeId ||
-        handleId() !== store.connection.fromHandle?.id;
+    addEdge(edge);
+    store.onConnect?.(connection);
+  };
 
-  const valid = () => Boolean(connectingTo() && store.connection.isValid);
+  const onPointerDown = (event: PointerEvent) => {
+    XYHandle.onPointerDown(event, {
+      handleId: handleId(),
+      nodeId: nodeId(),
+      isTarget: isTarget(),
+      connectionRadius: store.connectionRadius,
+      domNode: store.domNode,
+      nodeLookup,
+      connectionMode: store.connectionMode as ConnectionMode,
+      lib: store.lib,
+      autoPanOnConnect: store.autoPanOnConnect,
+      flowId: store.id,
+      isValidConnection: local.isValidConnection ?? store.isValidConnection,
+      updateConnection: updateConnection as UpdateConnection<InternalNodeBase>,
+      cancelConnection,
+      panBy,
+      onConnect: onConnectExtended,
+      onConnectStart: (event, startParams) => {
+        store.onConnectStart?.(event, {
+          nodeId: startParams.nodeId,
+          handleId: startParams.handleId,
+          handleType: startParams.handleType,
+        });
+      },
+      onConnectEnd: store.onConnectEnd,
+      getTransform: () => store.transform,
+      getFromHandle: () => store.connection.fromHandle,
+    });
+  };
+
+  const onClick = (event: MouseEvent) => {
+    if (!nodeId() || (!store.clickConnectStartHandle && !local.isConnectableStart)) {
+      return;
+    }
+    if (!store.clickConnectStartHandle) {
+      store.onClickConnectStart?.(event, {
+        nodeId: nodeId(),
+        handleId: handleId(),
+        handleType: local.type,
+      });
+      setStore("clickConnectStartHandle", { nodeId: nodeId(), type: local.type, id: handleId() });
+      return;
+    }
+
+    const doc = getHostForElement(event.target);
+    const isValidConnectionHandler = local.isValidConnection ?? store.isValidConnection;
+
+    const { connection, isValid } = XYHandle.isValid(event, {
+      handle: {
+        nodeId: nodeId(),
+        id: handleId(),
+        type: local.type,
+      },
+      connectionMode: store.connectionMode as ConnectionMode,
+      fromNodeId: store.clickConnectStartHandle.nodeId,
+      fromHandleId: store.clickConnectStartHandle.id ?? null,
+      fromType: store.clickConnectStartHandle.type,
+      isValidConnection: isValidConnectionHandler,
+      flowId: store.id,
+      doc,
+      lib: store.lib,
+      nodeLookup,
+    });
+
+    if (isValid && connection) {
+      onConnectExtended(connection);
+    }
+
+    const connectionClone = structuredClone(unwrap(store.connection)) as Optional<
+      ConnectionState,
+      "inProgress"
+    >;
+
+    delete connectionClone.inProgress;
+
+    connectionClone.toPosition = connectionClone.toHandle
+      ? connectionClone.toHandle.position
+      : null;
+
+    store.onClickConnectEnd?.(event, connectionClone);
+
+    setStore("clickConnectStartHandle", undefined);
+  };
+
+  const connectionIndicator = () =>
+    connectable() &&
+    (!connectionInProcess() || isPossibleTargetHandle()) &&
+    (connectionInProcess() || store.clickConnectStartHandle
+      ? local.isConnectableEnd
+      : local.isConnectableStart);
 
   return (
     <div
+      role="button"
+      aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
+      tabIndex={-1}
       data-handleid={handleId()}
       data-nodeid={nodeId()}
-      data-handlepos={props.position}
-      data-id={`${store.id}-${nodeId()}-${props.id || null}-${props.type}`}
-      role="button"
-      tabIndex={-1}
-      onMouseDown={onPointerDown}
-      onTouchStart={onPointerDown}
-      style={props.style}
+      data-handlepos={local.position}
+      data-id={`${store.id}-${nodeId()}-${local.id || null}-${local.type}`}
+      onClick={store.clickConnect ? onClick : undefined}
+      onPointerDown={onPointerDown}
+      style={local.style}
       class={clsx(
         "solid-flow__handle",
-        "nodrag",
-        "nopan",
-        props.position,
+        store.noDragClass,
+        store.noPanClass,
+        local.position,
         {
           valid: valid(),
           connectingto: connectingTo(),
           connectingfrom: connectingFrom(),
           source: !isTarget(),
           target: isTarget(),
-          connectablestart: props.isConnectable,
-          connectableend: props.isConnectable,
-          connectable: props.isConnectable,
-          connectionindicator:
-            props.isConnectable && (!connectionInProcess() || isPossibleEndHandle()),
+          connectablestart: _props.isConnectableStart,
+          connectableend: _props.isConnectableEnd,
+          connectable: connectable(),
+          connectionindicator: connectionIndicator(),
         },
-        props.class,
+        local.class,
       )}
+      {...rest}
     >
-      {props.children}
+      {local.children}
     </div>
   );
 };
-
-export default Handle;

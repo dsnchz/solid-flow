@@ -1,24 +1,35 @@
 import clsx from "clsx";
-import type { JSX, ParentComponent } from "solid-js";
+import { type JSX, type ParentProps, splitProps } from "solid-js";
 
 export type ControlButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
-  readonly class: string;
-  readonly bgColor: string;
-  readonly bgColorHover: string;
-  readonly color: string;
-  readonly colorHover: string;
-  readonly borderColor: string;
-  readonly onClick: JSX.EventHandler<HTMLButtonElement, MouseEvent>;
+  readonly class?: string;
+  readonly bgColor?: string;
+  readonly bgColorHover?: string;
+  readonly color?: string;
+  readonly colorHover?: string;
+  readonly borderColor?: string;
+  readonly onClick?: JSX.EventHandler<HTMLButtonElement, MouseEvent>;
 };
 
-const ControlButton: ParentComponent<Partial<ControlButtonProps>> = (props) => {
+export const ControlButton = (props: ParentProps<ControlButtonProps>) => {
+  const [local, rest] = splitProps(props, [
+    "class",
+    "bgColor",
+    "bgColorHover",
+    "color",
+    "colorHover",
+    "borderColor",
+    "onClick",
+    "children",
+  ]);
+
   const style = () =>
     Object.entries({
-      "--xy-controls-button-background-color-props": props.bgColor,
-      "--xy-controls-button-background-color-hover-props": props.bgColorHover,
-      "--xy-controls-button-color-props": props.color,
-      "--xy-controls-button-color-hover-props": props.colorHover,
-      "--xy-controls-button-border-color-props": props.borderColor,
+      "--xy-controls-button-background-color-props": local.bgColor,
+      "--xy-controls-button-background-color-hover-props": local.bgColorHover,
+      "--xy-controls-button-color-props": local.color,
+      "--xy-controls-button-color-hover-props": local.colorHover,
+      "--xy-controls-button-border-color-props": local.borderColor,
     })
       .filter(([_, value]) => value !== undefined)
       .reduce<Record<string, string>>((acc, [key, value]) => {
@@ -29,14 +40,12 @@ const ControlButton: ParentComponent<Partial<ControlButtonProps>> = (props) => {
   return (
     <button
       type="button"
-      onClick={(e) => props.onClick?.(e)}
-      class={clsx("solid-flow__controls-button", props.class)}
+      class={clsx("solid-flow__controls-button", local.class)}
+      onClick={(e) => local.onClick?.(e)}
       style={style()}
-      {...props}
+      {...rest}
     >
-      {props.children}
+      {local.children}
     </button>
   );
 };
-
-export default ControlButton;

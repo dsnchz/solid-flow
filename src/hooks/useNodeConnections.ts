@@ -1,7 +1,8 @@
 import { areConnectionMapsEqual, type HandleType, type NodeConnection } from "@xyflow/system";
-import { createEffect, createSignal } from "solid-js";
+import { type Accessor, createEffect, createSignal, useContext } from "solid-js";
 
-import { useFlowStore, useNodeId } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
+import { NodeIdContext } from "@/components/contexts/nodeId";
 
 type UseNodeConnectionsParams = {
   id?: string;
@@ -23,20 +24,27 @@ type UseNodeConnectionsParams = {
  * @todo @param param.onDisconnect - gets called when a connection is removed
  * @returns an array with connections
  */
-export function useNodeConnections({ id, handleType, handleId }: UseNodeConnectionsParams = {}) {
-  const { store } = useFlowStore();
-  const contextNodeId = useNodeId();
+export const useNodeConnections = (params: Accessor<UseNodeConnectionsParams>) => {
+  const { connectionLookup } = useInternalSolidFlow();
+
+  const ctxNodeId = () => {
+    // useNodeConnections can be rendered outside of NodeWrapper, so we need to use the context directly.
+    const id = useContext(NodeIdContext);
+    return id ? id() : "";
+  };
+
+  const id = () => params().handleId;
+  const type = () => params().handleType;
+  const nodeId = () => params().id ?? ctxNodeId();
+
   const [connections, setConnections] = createSignal<NodeConnection[]>([]);
-
-  const nodeId = () => id ?? contextNodeId();
-
   let prevConnections: Map<string, NodeConnection> | undefined = undefined;
 
   const lookupKey = () =>
-    `${nodeId()}${handleType ? (handleId ? `-${handleType}-${handleId}` : `-${handleType}`) : ""}`;
+    `${nodeId()}${type() ? (id() ? `-${type()}-${id()}` : `-${type()}`) : ""}`;
 
   createEffect(() => {
-    const nextConnections = store.connectionLookup.get(lookupKey());
+    const nextConnections = connectionLookup.get(lookupKey());
 
     if (!areConnectionMapsEqual(nextConnections, prevConnections)) {
       prevConnections = nextConnections;
@@ -45,4 +53,4 @@ export function useNodeConnections({ id, handleType, handleId }: UseNodeConnecti
   });
 
   return connections;
-}
+};

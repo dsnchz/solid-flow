@@ -1,7 +1,6 @@
-@import "./init.css";
-
 /* Container Styles */
 @import "../components/container/styles.css";
+@import "../components/accessibility/styles.css";
 
 /* Graph Styles */
 @import "../components/graph/connection/styles.css";
@@ -17,6 +16,14 @@
 /* Utility Styles */
 @import "../components/utility/styles.css";
 
+.solid-flow__container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
 .solid-flow {
   width: 100%;
   height: 100%;
@@ -24,5 +31,11 @@
   position: relative;
   z-index: 0;
 
-  background-color: var(--background-color, var(--background-color-default));
+  background-color: var(--xy-background-color, var(--xy-background-color-default));
+}
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 10;
+  }
 }

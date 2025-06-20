@@ -1,9 +1,9 @@
-import type { ParentComponent } from "solid-js";
+import type { ParentProps } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
-const Viewport: ParentComponent = (props) => {
-  const { store } = useFlowStore();
+export const Viewport = (props: ParentProps) => {
+  const { store } = useInternalSolidFlow();
 
   return (
     <div

@@ -1,57 +1,41 @@
-import { Index, Show } from "solid-js";
+import { For } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
-import CallOnMount from "@/components/utility/CallOnMount";
-import type { DefaultEdgeOptions, Edge, EdgeEventCallbacks, Node } from "@/shared/types";
+import { useVisibleElements } from "@/hooks/useVisibleElements";
+import type { DefaultEdgeOptions } from "@/shared/types";
+import type { Edge, EdgeEvents, Node } from "@/types";
 
-import EdgeWrapper from "../graph/edge/EdgeWrapper";
+import { EdgeWrapper } from "../graph/edge";
 import { MarkerDefinition } from "../graph/marker";
 
-type EdgeRendererProps<EdgeType extends Edge = Edge> = Partial<EdgeEventCallbacks<EdgeType>> & {
+type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
   readonly defaultEdgeOptions?: DefaultEdgeOptions;
   readonly reconnectRadius: number;
 };
 
-const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: EdgeRendererProps<EdgeType>,
 ) => {
-  const { store, setStore } = useFlowStore<NodeType, EdgeType>();
+  const { visibleEdgeIds } = useVisibleElements<NodeType, EdgeType>();
 
   return (
     <div class="solid-flow__edges">
-      <Show when={store.nodesInitialized}>
-        <svg class="solid-flow__marker">
-          <MarkerDefinition />
-        </svg>
+      <svg class="solid-flow__marker">
+        <MarkerDefinition />
+      </svg>
 
-        <Index each={store.visibleEdges}>
-          {(edge) => {
-            return (
-              <EdgeWrapper<NodeType, EdgeType>
-                edge={edge()}
-                reconnectRadius={props.reconnectRadius}
-                onEdgeClick={props.onEdgeClick}
-                onEdgeContextMenu={props.onEdgeContextMenu}
-                onEdgeMouseEnter={props.onEdgeMouseEnter}
-                onEdgeMouseLeave={props.onEdgeMouseLeave}
-              />
-            );
-          }}
-        </Index>
-
-        <Show when={store.visibleEdges.length > 0}>
-          <CallOnMount
-            onMount={() => {
-              setStore("edgesInitialized", true);
-            }}
-            onCleanup={() => {
-              setStore("edgesInitialized", false);
-            }}
-          />
-        </Show>
-      </Show>
+      <For each={visibleEdgeIds()}>
+        {(edgeId) => {
+          return (
+            <EdgeWrapper<NodeType, EdgeType>
+              edgeId={edgeId}
+              onEdgeClick={props.onEdgeClick}
+              onEdgeContextMenu={props.onEdgeContextMenu}
+              onEdgePointerEnter={props.onEdgePointerEnter}
+              onEdgePointerLeave={props.onEdgePointerLeave}
+            />
+          );
+        }}
+      </For>
     </div>
   );
 };
-
-export default EdgeRenderer;

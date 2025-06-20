@@ -1,24 +1,14 @@
-import { type Component, type JSX, Show } from "solid-js";
+import { type ParentProps, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
-interface EdgeLabelRendererProps {
-  children: JSX.Element;
-}
+export const EdgeLabelRenderer = (props: ParentProps) => {
+  const { store } = useInternalSolidFlow();
 
-const EdgeLabelRenderer: Component<EdgeLabelRendererProps> = (props) => {
-  const { store } = useFlowStore();
+  const labelNode = () => store.domNode?.querySelector(".solid-flow__edge-labels");
 
   return (
-    <Show when={store.domNode}>
-      {(domNode) => (
-        <Portal mount={domNode().querySelector(".solid-flow__edgelabel-renderer") ?? undefined}>
-          {props.children}
-        </Portal>
-      )}
-    </Show>
+    <Show when={labelNode()}>{(root) => <Portal mount={root()}>{props.children}</Portal>}</Show>
   );
 };
-
-export default EdgeLabelRenderer;

@@ -1,1 +1,1 @@
-export { default as Handle } from "./Handle";
+export { Handle } from "./Handle";

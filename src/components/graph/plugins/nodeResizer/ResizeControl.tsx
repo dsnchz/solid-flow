@@ -5,118 +5,150 @@ import {
   type XYResizerChildChange,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, onCleanup, onMount, type ParentComponent } from "solid-js";
+import {
+  createEffect,
+  type JSX,
+  mergeProps,
+  onCleanup,
+  onMount,
+  type ParentProps,
+  splitProps,
+} from "solid-js";
+import { produce } from "solid-js/store";
 
-import { useFlowStore, useNodeId } from "@/components/contexts";
-import type { ResizeControlVariant } from "@/shared/types";
+import { useInternalSolidFlow, useNodeId } from "@/components/contexts";
+import type { Node, ResizeControlVariant } from "@/shared/types";
 
 import type { NodeResizerProps } from "./NodeResizer";
 
-type ResizeControlProps = Pick<
+export type NodeResizerSubProps = Pick<
   NodeResizerProps,
   | "nodeId"
-  | "color"
   | "minWidth"
   | "minHeight"
   | "maxWidth"
   | "maxHeight"
+  | "autoScale"
   | "keepAspectRatio"
   | "shouldResize"
   | "onResizeStart"
   | "onResize"
   | "onResizeEnd"
-> & {
+>;
+
+type ResizeControlProps = NodeResizerSubProps & {
   /** Position of control
    * @example ControlPosition.TopLeft, ControlPosition.TopRight,
    * ControlPosition.BottomLeft, ControlPosition.BottomRight
    */
-  readonly position: ControlPosition;
+  readonly position?: ControlPosition;
   /** Variant of control
    * @example ResizeControlVariant.Handle, ResizeControlVariant.Line
    */
-  readonly variant: ResizeControlVariant;
-  readonly class: string;
-  readonly style: string;
-};
+  readonly variant?: ResizeControlVariant;
+  readonly style?: JSX.CSSProperties;
+} & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
-const ResizeControl: ParentComponent<Partial<ResizeControlProps>> = (props) => {
-  const { store, setNodes } = useFlowStore();
-  const contextNodeId = useNodeId();
+const ResizeControl = <NodeType extends Node = Node>(props: ParentProps<ResizeControlProps>) => {
+  const _props = mergeProps(
+    {
+      variant: "handle" as ResizeControlVariant,
+      minWidth: 10,
+      minHeight: 10,
+      maxWidth: Number.MAX_VALUE,
+      maxHeight: Number.MAX_VALUE,
+      keepAspectRatio: false,
+      autoScale: true,
+      style: {} as JSX.CSSProperties,
+    },
+    props,
+  );
+
+  const [local, rest] = splitProps(_props, [
+    "nodeId",
+    "variant",
+    "position",
+    "minWidth",
+    "minHeight",
+    "maxWidth",
+    "maxHeight",
+    "keepAspectRatio",
+    "autoScale",
+    "onResizeStart",
+    "onResize",
+    "onResizeEnd",
+    "shouldResize",
+    "class",
+    "children",
+    "color",
+    "style",
+  ]);
 
   let resizeControlRef!: HTMLDivElement;
+  const { store, nodeLookup, setNodes } = useInternalSolidFlow<NodeType>();
 
-  const getId = () => (typeof props.nodeId === "string" ? props.nodeId : contextNodeId());
+  const ctxNodeId = useNodeId();
+  const nodeId = () => local.nodeId ?? ctxNodeId();
+  const isLineVariant = () => local.variant === "line";
 
-  const getDefaultPosition = () =>
-    (props.variant === "line" ? "right" : "bottom-right") as ControlPosition;
+  const controlPosition = () =>
+    local.position ?? ((isLineVariant() ? "right" : "bottom-right") as ControlPosition);
 
-  const getControlPosition = () => props.position ?? getDefaultPosition();
-  const getPositionClassNames = () => getControlPosition().split("-");
-
-  const getColorStyleProp = () => (props.variant === "line" ? "border-color" : "background-color");
-  const getStyle = () => props.style ?? "";
-  const getControlStyle = () =>
-    props.color ? `${getStyle()} ${getColorStyleProp()}: ${props.color};` : getStyle();
-
-  const getMinWidth = () => props.minWidth ?? 10;
-  const getMinHeight = () => props.minHeight ?? 10;
-  const getMaxWidth = () => props.maxWidth ?? Number.MAX_VALUE;
-  const getMaxHeight = () => props.maxHeight ?? Number.MAX_VALUE;
+  const positionClassNames = () => controlPosition().split("-");
 
   onMount(() => {
     const resizer = XYResizer({
       domNode: resizeControlRef,
-      nodeId: getId(),
-      getStoreItems: () => {
-        return {
-          nodeLookup: store.nodeLookup,
-          transform: store.transform,
-          snapGrid: store.snapGrid,
-          snapToGrid: store.snapToGrid,
-          nodeOrigin: store.nodeOrigin,
-          paneDomNode: store.domNode,
-        };
-      },
+      nodeId: nodeId(),
+      getStoreItems: () => ({
+        nodeLookup,
+        transform: store.transform,
+        snapGrid: store.snapGrid,
+        snapToGrid: !!store.snapGrid,
+        nodeOrigin: store.nodeOrigin,
+        paneDomNode: store.domNode,
+      }),
       onChange: (change: XYResizerChange, childChanges: XYResizerChildChange[]) => {
-        const node = store.nodeLookup.get(getId())?.internals.userNode;
-        if (!node) {
-          return;
-        }
-
-        if (change.x !== undefined && change.y !== undefined) {
-          node.position = { x: change.x, y: change.y };
-        }
-
-        if (change.width !== undefined && change.height !== undefined) {
-          node.width = change.width;
-          node.height = change.height;
-        }
+        const changes = new Map<string, Partial<Node>>();
+        const position = change.x && change.y ? { x: change.x, y: change.y } : undefined;
+        changes.set(nodeId(), { ...change, position });
 
         for (const childChange of childChanges) {
-          const childNode = store.nodeLookup.get(childChange.id)?.internals.userNode;
-          if (childNode) {
-            childNode.position = childChange.position;
-          }
+          changes.set(childChange.id, {
+            position: childChange.position,
+          });
         }
 
-        setNodes((nodes) => nodes);
+        setNodes(
+          (node) => changes.has(node.id),
+          produce((node) => {
+            const nodeChange = changes.get(node.id)!;
+
+            node.width = nodeChange.width;
+            node.height = nodeChange.height;
+            node.position = {
+              x: nodeChange.position?.x ?? node.position.x,
+              y: nodeChange.position?.y ?? node.position.y,
+            };
+          }),
+        );
       },
     });
 
     createEffect(() => {
       resizer.update({
-        controlPosition: getControlPosition(),
+        controlPosition: controlPosition(),
         boundaries: {
-          minWidth: getMinWidth(),
-          minHeight: getMinHeight(),
-          maxWidth: getMaxWidth(),
-          maxHeight: getMaxHeight(),
+          minWidth: local.minWidth,
+          minHeight: local.minHeight,
+          maxWidth: local.maxWidth,
+          maxHeight: local.maxHeight,
         },
-        keepAspectRatio: !!props.keepAspectRatio,
-        onResizeStart: props.onResizeStart,
-        onResize: props.onResize,
-        onResizeEnd: props.onResizeEnd,
-        shouldResize: props.shouldResize,
+        keepAspectRatio: !!local.keepAspectRatio,
+        onResizeStart: local.onResizeStart,
+        onResize: local.onResize,
+        onResizeEnd: local.onResizeEnd,
+        shouldResize: local.shouldResize,
       });
     });
 
@@ -127,17 +159,24 @@ const ResizeControl: ParentComponent<Partial<ResizeControlProps>> = (props) => {
 
   return (
     <div
+      ref={resizeControlRef}
       class={clsx([
         "solid-flow__resize-control",
-        "nodrag",
-        ...getPositionClassNames(),
-        props.variant,
-        props.class,
+        local.variant,
+        store.noDragClass,
+        ...positionClassNames(),
+        local.class,
       ])}
-      ref={resizeControlRef}
-      style={getControlStyle()}
+      style={{
+        "border-color": isLineVariant() ? local.color : undefined,
+        "background-color": isLineVariant() ? undefined : local.color,
+        scale:
+          isLineVariant() || !local.autoScale ? undefined : Math.max(1 / store.viewport.zoom, 1),
+        ...local.style,
+      }}
+      {...rest}
     >
-      {props.children}
+      {local.children}
     </div>
   );
 };

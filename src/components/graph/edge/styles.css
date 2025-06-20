@@ -1,6 +1,31 @@
+.solid-flow {
+  --xy-edge-label-background-color-default: #ffffff;
+  --xy-edge-label-color-default: inherit;
+
+  --xy-edge-stroke-default: #b1b1b7;
+  --xy-edge-stroke-width-default: 1;
+  --xy-edge-stroke-selected-default: #555;
+}
+
+.solid-flow.dark {
+  --xy-edge-stroke-default: #3e3e3e;
+  --xy-edge-stroke-width-default: 1;
+  --xy-edge-stroke-selected-default: #727272;
+}
+
+.solid-flow__edgeupdater {
+  cursor: move;
+  pointer-events: all;
+}
+
 .solid-flow__edgelabel-renderer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   user-select: none;
+  left: 0;
+  top: 0;
   z-index: 0;
 }
 

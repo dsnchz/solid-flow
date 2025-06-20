@@ -8,6 +8,7 @@ import type {
   NodeChange,
   OnBeforeDeleteBase,
   PanOnScrollMode as SystemPanOnScrollMode,
+  Position as SystemPosition,
   ResizeControlVariant as SystemResizeControlVariant,
   SelectionMode as SystemSelectionMode,
   XYPosition,
@@ -15,6 +16,13 @@ import type {
 
 import type { Edge } from "./edge";
 import type { Node } from "./node";
+
+// Convert system enum types to string union types
+export type Position = `${SystemPosition}`;
+export type ConnectionLineType = `${SystemConnectionLineType}`;
+export type SelectionMode = `${SystemSelectionMode}`;
+export type PanOnScrollMode = `${SystemPanOnScrollMode}`;
+export type ResizeControlVariant = `${SystemResizeControlVariant}`;
 
 /**
  * This type can be used to type the `onNodesChange` function with a custom node type.
@@ -71,7 +79,8 @@ export type ConnectionData = {
   readonly connectionStatus: string | null;
 };
 
-export type HandleProps = HandlePropsSystem & {
+export type HandleProps = Omit<HandlePropsSystem, "position"> & {
+  readonly position: Position;
   readonly class?: string;
   readonly style?: string;
   readonly onConnect?: (connections: Connection[]) => void;
@@ -97,11 +106,3 @@ export type OnBeforeDelete<
 export type IsValidConnection<EdgeType extends Edge = Edge> = (
   edge: EdgeType | Connection,
 ) => boolean;
-
-export type ConnectionLineType = `${SystemConnectionLineType}`;
-
-export type SelectionMode = `${SystemSelectionMode}`;
-
-export type PanOnScrollMode = `${SystemPanOnScrollMode}`;
-
-export type ResizeControlVariant = `${SystemResizeControlVariant}`;

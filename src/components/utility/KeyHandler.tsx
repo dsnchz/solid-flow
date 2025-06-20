@@ -1,15 +1,16 @@
 import { isInputDOMNode, isMacOs } from "@xyflow/system";
-import { type Component, mergeProps, onCleanup, onMount } from "solid-js";
+import { mergeProps, onCleanup, onMount } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
-import type { KeyDefinition, KeyDefinitionObject } from "@/shared/types";
+import { useInternalSolidFlow } from "@/components/contexts";
+import { useSolidFlow } from "@/hooks/useSolidFlow";
+import type { KeyDefinition, KeyDefinitionObject } from "@/types";
 
 export type KeyHandlerProps = {
-  readonly selectionKey: KeyDefinition;
-  readonly multiSelectionKey: KeyDefinition;
-  readonly deleteKey: KeyDefinition;
-  readonly panActivationKey: KeyDefinition;
-  readonly zoomActivationKey: KeyDefinition;
+  readonly selectionKey?: KeyDefinition | KeyDefinition[] | null;
+  readonly multiSelectionKey?: KeyDefinition | KeyDefinition[] | null;
+  readonly deleteKey?: KeyDefinition | KeyDefinition[] | null;
+  readonly panActivationKey?: KeyDefinition | KeyDefinition[] | null;
+  readonly zoomActivationKey?: KeyDefinition | KeyDefinition[] | null;
 };
 
 function isKeyObject(key?: KeyDefinition | null): key is KeyDefinitionObject {
@@ -59,8 +60,19 @@ function matchesKey(event: KeyboardEvent, keyDef?: KeyDefinition | null): boolea
   return event.key === keyString;
 }
 
-const KeyHandler: Component<Partial<KeyHandlerProps>> = (props) => {
-  const { setStore } = useFlowStore();
+function matchesKeyArray(
+  event: KeyboardEvent,
+  keyDefs: KeyDefinition | KeyDefinition[] | null | undefined,
+): boolean {
+  if (!keyDefs) return false;
+
+  const keys = Array.isArray(keyDefs) ? keyDefs : [keyDefs];
+  return keys.some((keyDef) => matchesKey(event, keyDef));
+}
+
+const KeyHandler = (props: KeyHandlerProps) => {
+  const { store, setStore } = useInternalSolidFlow();
+  const { deleteElements } = useSolidFlow();
 
   const _props = mergeProps(
     {
@@ -73,8 +85,9 @@ const KeyHandler: Component<Partial<KeyHandlerProps>> = (props) => {
     props,
   );
 
-  const resetKeys = () => {
+  const resetKeysAndSelection = () => {
     setStore({
+      selectionRect: undefined,
       selectionKeyPressed: false,
       multiselectionKeyPressed: false,
       deleteKeyPressed: false,
@@ -83,38 +96,60 @@ const KeyHandler: Component<Partial<KeyHandlerProps>> = (props) => {
     });
   };
 
+  const handleDelete = async () => {
+    const selectedNodes = store.nodes.filter((node) => node.selected);
+    const selectedEdges = store.edges.filter((edge) => edge.selected);
+
+    const { deletedNodes, deletedEdges } = await deleteElements({
+      nodes: selectedNodes,
+      edges: selectedEdges,
+    });
+
+    if (deletedNodes.length > 0 || deletedEdges.length > 0) {
+      store.onDelete?.({
+        nodes: deletedNodes,
+        edges: deletedEdges,
+      });
+    }
+  };
+
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (matchesKey(event, _props.selectionKey)) {
+    if (matchesKeyArray(event, _props.selectionKey)) {
       setStore({ selectionKeyPressed: true });
     }
-    if (matchesKey(event, _props.multiSelectionKey)) {
+    if (matchesKeyArray(event, _props.multiSelectionKey)) {
       setStore({ multiselectionKeyPressed: true });
     }
-    if (matchesKey(event, _props.deleteKey) && !isInputDOMNode(event)) {
-      setStore({ deleteKeyPressed: true });
+    if (matchesKeyArray(event, _props.deleteKey) && !isInputDOMNode(event)) {
+      // Add safety check for modifier keys to prevent accidental deletions
+      const isModifierKey = event.ctrlKey || event.metaKey || event.shiftKey;
+      if (!isModifierKey) {
+        setStore({ deleteKeyPressed: true });
+        void handleDelete();
+      }
     }
-    if (matchesKey(event, _props.panActivationKey)) {
+    if (matchesKeyArray(event, _props.panActivationKey)) {
       setStore({ panActivationKeyPressed: true });
     }
-    if (matchesKey(event, _props.zoomActivationKey)) {
+    if (matchesKeyArray(event, _props.zoomActivationKey)) {
       setStore({ zoomActivationKeyPressed: true });
     }
   };
 
   const handleKeyUp = (event: KeyboardEvent) => {
-    if (matchesKey(event, _props.selectionKey)) {
+    if (matchesKeyArray(event, _props.selectionKey)) {
       setStore({ selectionKeyPressed: false });
     }
-    if (matchesKey(event, _props.multiSelectionKey)) {
+    if (matchesKeyArray(event, _props.multiSelectionKey)) {
       setStore({ multiselectionKeyPressed: false });
     }
-    if (matchesKey(event, _props.deleteKey)) {
+    if (matchesKeyArray(event, _props.deleteKey)) {
       setStore({ deleteKeyPressed: false });
     }
-    if (matchesKey(event, _props.panActivationKey)) {
+    if (matchesKeyArray(event, _props.panActivationKey)) {
       setStore({ panActivationKeyPressed: false });
     }
-    if (matchesKey(event, _props.zoomActivationKey)) {
+    if (matchesKeyArray(event, _props.zoomActivationKey)) {
       setStore({ zoomActivationKeyPressed: false });
     }
   };
@@ -122,14 +157,14 @@ const KeyHandler: Component<Partial<KeyHandlerProps>> = (props) => {
   onMount(() => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", resetKeys);
-    window.addEventListener("contextmenu", resetKeys);
+    window.addEventListener("blur", resetKeysAndSelection);
+    window.addEventListener("contextmenu", resetKeysAndSelection);
 
     onCleanup(() => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", resetKeys);
-      window.removeEventListener("contextmenu", resetKeys);
+      window.removeEventListener("blur", resetKeysAndSelection);
+      window.removeEventListener("contextmenu", resetKeysAndSelection);
     });
   });
 

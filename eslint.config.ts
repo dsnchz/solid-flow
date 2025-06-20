@@ -39,6 +39,7 @@ export default tseslint.config(
     plugins: solid.plugins,
     rules: {
       ...solid.rules,
+      "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-namespace": "off",
       "no-unused-vars": "off",

@@ -1,12 +1,13 @@
 import { errorMessages } from "@xyflow/system";
 
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
 export function useHandleEdgeSelect() {
-  const { store, addSelectedEdges, unselectNodesAndEdges, setStore } = useFlowStore();
+  const { store, edgeLookup, addSelectedEdges, unselectNodesAndEdges, setStore } =
+    useInternalSolidFlow();
 
   return (id: string) => {
-    const edge = store.edgeLookup.get(id);
+    const edge = edgeLookup.get(id);
 
     if (!edge) {
       console.warn("012", errorMessages["error012"](id));

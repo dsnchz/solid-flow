@@ -1,11 +1,11 @@
-import type { ParentComponent } from "solid-js";
+import type { ParentProps } from "solid-js";
 import { Show } from "solid-js";
 import { Portal } from "solid-js/web";
 
-import { useFlowStore } from "@/components/contexts";
+import { useInternalSolidFlow } from "@/components/contexts";
 
-const ViewportPortal: ParentComponent = (props) => {
-  const { store } = useFlowStore();
+export const ViewportPortal = (props: ParentProps) => {
+  const { store } = useInternalSolidFlow();
 
   return (
     <Show when={store.domNode}>
@@ -17,5 +17,3 @@ const ViewportPortal: ParentComponent = (props) => {
     </Show>
   );
 };
-
-export default ViewportPortal;

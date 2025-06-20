@@ -1,17 +1,20 @@
-import { Position } from "@xyflow/system";
-import { type Component } from "solid-js";
+import { mergeProps } from "solid-js";
 
 import { Handle } from "@/components/graph/handle";
-import type { NodeProps } from "@/shared/types";
+import type { Position } from "@/shared/types";
+import type { NodeProps } from "@/types";
 
-const OutputNode: Component<NodeProps> = (props) => {
+const OutputNode = (props: NodeProps<{ label: string }>) => {
+  const _props = mergeProps(
+    {
+      targetPosition: "top" as Position,
+    },
+    props,
+  );
+
   return (
     <>
-      <Handle
-        type="target"
-        position={props.targetPosition ?? Position.Top}
-        isConnectable={props.isConnectable}
-      />
+      <Handle type="target" position={_props.targetPosition} isConnectable={_props.isConnectable} />
       {props.data?.label}
     </>
   );

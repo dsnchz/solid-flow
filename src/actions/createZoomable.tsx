@@ -4,7 +4,7 @@ import type { Accessor } from "solid-js";
 import { createEffect, onMount } from "solid-js";
 import { produce } from "solid-js/store";
 
-import { useSolidFlow } from "@/components/contexts/flow";
+import { useInternalSolidFlow } from "@/components/contexts/flow";
 
 export type ZoomDirectiveParams = {
   readonly initialViewport: Viewport;
@@ -14,14 +14,9 @@ export type ZoomDirectiveParams = {
   readonly panOnScrollMode: PanOnScrollMode;
   readonly panOnScrollSpeed: number;
   readonly paneClickDistance: number;
-  readonly userSelectionActive: boolean;
   readonly zoomOnPinch: boolean;
   readonly zoomOnScroll: boolean;
   readonly zoomOnDoubleClick: boolean;
-  // last two instances of 'classname' being used
-  // changing it to class would require object restructuring for use with panZoomInstance.update
-  readonly noWheelClassName: string;
-  readonly noPanClassName: string;
   readonly onPanZoomStart?: OnPanZoom;
   readonly onPanZoom?: OnPanZoom;
   readonly onPanZoomEnd?: OnPanZoom;
@@ -32,7 +27,7 @@ const createZoomable = (
   elem: Accessor<HTMLElement | undefined>,
   params: Accessor<ZoomDirectiveParams>,
 ) => {
-  const { store, setStore } = useSolidFlow();
+  const { store, setStore } = useInternalSolidFlow();
 
   const onDraggingChange = (dragging: boolean) => {
     setStore("dragging", dragging);
@@ -57,9 +52,19 @@ const createZoomable = (
       onPanZoomEnd: params().onPanZoomEnd,
     });
 
+    const vp = panZoomInstance.getViewport();
+
+    if (
+      params().initialViewport.x !== vp.x ||
+      params().initialViewport.y !== vp.y ||
+      params().initialViewport.zoom !== vp.zoom
+    ) {
+      onTransformChange([vp.x, vp.y, vp.zoom]);
+    }
+
     setStore(
       produce((store) => {
-        store.viewport = panZoomInstance.getViewport();
+        store.viewport = vp;
         store.panZoom = panZoomInstance;
       }),
     );
@@ -68,6 +73,9 @@ const createZoomable = (
       panZoomInstance.update({
         lib: store.lib,
         zoomActivationKeyPressed: store.zoomActivationKeyPressed,
+        noPanClassName: store.noPanClass,
+        noWheelClassName: store.noWheelClass,
+        userSelectionActive: !!store.selectionRect,
         onTransformChange,
         ...params(),
       });

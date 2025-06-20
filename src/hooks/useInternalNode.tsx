@@ -1,7 +1,7 @@
 import type { Accessor } from "solid-js";
 
-import { useFlowStore } from "@/components/contexts";
-import type { InternalNode } from "@/shared/types";
+import { useInternalSolidFlow } from "@/components/contexts";
+import type { InternalNode } from "@/types";
 
 /**
  * Hook to get an internal node by id.
@@ -11,6 +11,6 @@ import type { InternalNode } from "@/shared/types";
  * @returns an accessor with an internal node or undefined
  */
 export function useInternalNode(id: string): Accessor<InternalNode | undefined> {
-  const { store } = useFlowStore();
-  return () => store.nodeLookup.get(id);
+  const { nodeLookup } = useInternalSolidFlow();
+  return () => nodeLookup.get(id);
 }

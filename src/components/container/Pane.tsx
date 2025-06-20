@@ -1,69 +1,73 @@
-import { getConnectedEdges, getEventPosition, getNodesInside, SelectionMode } from "@xyflow/system";
+import { getEventPosition, getNodesInside, SelectionMode } from "@xyflow/system";
 import clsx from "clsx";
-import { type ParentComponent } from "solid-js";
+import type { JSX, ParentProps } from "solid-js";
 import { produce } from "solid-js/store";
 
-import { useFlowStore } from "@/components/contexts";
-import type { Edge, InternalNode, Node } from "@/shared/types";
-import type { MouseOrTouchEventHandler } from "@/shared/types/events";
+import { useInternalSolidFlow } from "@/components/contexts";
+import type { Edge, Node } from "@/shared/types";
+import type { PaneEvents } from "@/types";
 
-const wrapHandler = (
-  handler: (evt: MouseEvent) => void,
-  container: HTMLDivElement,
-): ((evt: MouseEvent) => void) => {
-  return (event: MouseEvent) => {
-    if (event.target !== container) {
-      return;
+const isSetEqual = (a: Set<string>, b: Set<string>) => {
+  if (a.size !== b.size) return false;
+
+  for (const item of a) {
+    if (!b.has(item)) {
+      return false;
     }
+  }
 
-    handler?.(event);
-  };
+  return true;
 };
 
-const toggleSelected = <Item extends Node | Edge>(ids: string[]) => {
-  return (item: Item) => {
-    const isSelected = ids.includes(item.id);
-
-    if (item.selected !== isSelected) {
-      item.selected = isSelected;
-    }
-
-    return item;
-  };
-};
-
-export type PaneProps = {
-  readonly onPaneClick?: MouseOrTouchEventHandler;
-  readonly onPaneContextMenu?: MouseOrTouchEventHandler;
+export type PaneProps = PaneEvents & {
   readonly panOnDrag?: boolean | number[];
   readonly selectionOnDrag?: boolean;
+  readonly onSelectionStart?: (event: PointerEvent) => void;
+  readonly onSelectionEnd?: (event: PointerEvent) => void;
 };
 
-const Pane: ParentComponent<PaneProps> = (props) => {
-  const { store, unselectNodesAndEdges, setNodes, setEdges, setStore } = useFlowStore();
+export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+  props: ParentProps<PaneProps>,
+): JSX.Element => {
+  const {
+    store,
+    nodeLookup,
+    edgeLookup,
+    connectionLookup,
+    unselectNodesAndEdges,
+    setStore,
+    setNodes,
+    setEdges,
+  } = useInternalSolidFlow<NodeType, EdgeType>();
+
   let container: HTMLDivElement | undefined;
   let containerBounds: DOMRect | null = null;
-  let selectedNodes: InternalNode[] = [];
+
+  // Used to prevent click events when the user lets go of the selectionKey during a selection
+  let selectionInProgress = false;
+  let selectedNodeIds: Set<string> = new Set();
+  let selectedEdgeIds: Set<string> = new Set();
 
   const _panOnDrag = () => store.panActivationKeyPressed || props.panOnDrag;
+
   const isSelecting = () =>
     store.selectionKeyPressed ||
     store.selectionRect ||
     (props.selectionOnDrag && _panOnDrag() !== true);
+
   const hasActiveSelection = () =>
     store.elementsSelectable && (isSelecting() || store.selectionRectMode === "user");
 
-  // Used to prevent click events when the user lets go of the selectionKey during a selection
-  let selectionInProgress = false;
+  const onClick = (event: MouseEvent) => {
+    if (event.target !== container) return;
 
-  const onClick = (event: MouseEvent | TouchEvent) => {
     // We prevent click events when the user let go of the selectionKey during a selection
     if (selectionInProgress) {
       selectionInProgress = false;
       return;
     }
 
-    props.onPaneClick?.(event);
+    props.onPaneClick?.({ event });
 
     unselectNodesAndEdges();
     setStore("selectionRectMode", undefined);
@@ -106,43 +110,74 @@ const Pane: ParentComponent<PaneProps> = (props) => {
     selectionInProgress = true;
 
     const mousePos = getEventPosition(event, containerBounds);
-    const startX = store.selectionRect?.startX ?? 0;
-    const startY = store.selectionRect?.startY ?? 0;
+    const { startX = 0, startY = 0 } = store.selectionRect;
+
     const nextUserSelectRect = {
-      ...store.selectionRect!,
+      ...store.selectionRect,
       x: mousePos.x < startX ? mousePos.x : startX,
       y: mousePos.y < startY ? mousePos.y : startY,
       width: Math.abs(mousePos.x - startX),
       height: Math.abs(mousePos.y - startY),
     };
 
-    const prevSelectedNodeIds = selectedNodes.map((n) => n.id);
-    const prevSelectedEdgeIds = getConnectedEdges(selectedNodes, store.edges).map((e) => e.id);
+    const prevSelectedNodeIds = selectedNodeIds;
+    const prevSelectedEdgeIds = selectedEdgeIds;
 
-    selectedNodes = getNodesInside(
-      store.nodeLookup,
-      nextUserSelectRect,
-      store.transform,
-      store.selectionMode === SelectionMode.Partial,
-      true,
+    selectedNodeIds = new Set(
+      getNodesInside(
+        nodeLookup,
+        nextUserSelectRect,
+        store.transform,
+        store.selectionMode === SelectionMode.Partial,
+        true,
+      ).map((n) => n.id),
     );
 
-    const selectedEdgeIds = getConnectedEdges(selectedNodes, store.edges).map((e) => e.id);
-    const selectedNodeIds = selectedNodes.map((n) => n.id);
+    const edgesSelectable = store.defaultEdgeOptions.selectable ?? true;
+    selectedEdgeIds = new Set();
 
-    // this prevents unnecessary updates while updating the selection rectangle
-    if (
-      prevSelectedNodeIds.length !== selectedNodeIds.length ||
-      selectedNodeIds.some((id) => !prevSelectedNodeIds.includes(id))
-    ) {
-      setNodes((nodes) => nodes.map(toggleSelected(selectedNodeIds)));
+    // We look for all edges connected to the selected nodes
+    for (const nodeId of selectedNodeIds) {
+      const connections = connectionLookup.get(nodeId);
+      if (!connections) continue;
+
+      for (const { edgeId } of connections.values()) {
+        const edge = edgeLookup.get(edgeId);
+        if (edge && (edge.selectable ?? edgesSelectable)) {
+          selectedEdgeIds.add(edgeId);
+        }
+      }
     }
 
-    if (
-      prevSelectedEdgeIds.length !== selectedEdgeIds.length ||
-      selectedEdgeIds.some((id) => !prevSelectedEdgeIds.includes(id))
-    ) {
-      setEdges((edges) => edges.map(toggleSelected(selectedEdgeIds)));
+    // this prevents unnecessary updates while updating the selection rectangle
+    if (!isSetEqual(prevSelectedNodeIds, selectedNodeIds)) {
+      const selectionMap = new Map<string, boolean>();
+
+      setNodes(
+        (node) => {
+          const isSelected = selectedNodeIds.has(node.id);
+          selectionMap.set(node.id, isSelected);
+          return !!node.selected !== isSelected;
+        },
+        produce((node) => {
+          node.selected = selectionMap.get(node.id);
+        }),
+      );
+    }
+
+    if (!isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)) {
+      const selectionMap = new Map<string, boolean>();
+
+      setEdges(
+        (edge) => {
+          const isSelected = selectedEdgeIds.has(edge.id);
+          selectionMap.set(edge.id, isSelected);
+          return !!edge.selected !== isSelected;
+        },
+        produce((edge) => {
+          edge.selected = selectionMap.get(edge.id);
+        }),
+      );
     }
 
     setStore(
@@ -154,21 +189,19 @@ const Pane: ParentComponent<PaneProps> = (props) => {
   };
 
   const onPointerUp = (event: PointerEvent) => {
-    if (event.button !== 0) {
-      return;
-    }
+    if (event.button !== 0) return;
 
     (event.target as Partial<Element> | null)?.releasePointerCapture?.(event.pointerId);
 
     // We only want to trigger click functions when in selection mode if
     // the user did not move the mouse.
     if (!isSelecting() && store.selectionRectMode === "user" && event.target === container) {
-      onClick?.(event);
+      onClick(event);
     }
 
     setStore("selectionRect", undefined);
 
-    if (selectedNodes.length > 0) {
+    if (selectedNodeIds.size > 0) {
       setStore("selectionRectMode", "nodes");
     }
 
@@ -177,9 +210,13 @@ const Pane: ParentComponent<PaneProps> = (props) => {
     if (store.selectionKeyPressed) {
       selectionInProgress = false;
     }
+
+    props.onSelectionEnd?.(event);
   };
 
-  const onContextMenu = (event: MouseEvent) => {
+  const onContextMenu = (event: PointerEvent) => {
+    if (event.target !== container) return;
+
     const result = _panOnDrag();
 
     if (Array.isArray(result) && result.includes(2)) {
@@ -187,7 +224,7 @@ const Pane: ParentComponent<PaneProps> = (props) => {
       return;
     }
 
-    props.onPaneContextMenu?.(event);
+    props.onPaneContextMenu?.({ event });
   };
 
   return (
@@ -200,15 +237,13 @@ const Pane: ParentComponent<PaneProps> = (props) => {
           props.panOnDrag === true ||
           (Array.isArray(props.panOnDrag) && props.panOnDrag.includes(0)),
       })}
-      onClick={(e) => (hasActiveSelection() ? undefined : wrapHandler(onClick, container!)(e))}
+      onClick={(e) => (hasActiveSelection() ? undefined : onClick(e))}
       onPointerDown={(e) => (hasActiveSelection() ? onPointerDown(e) : undefined)}
       onPointerMove={(e) => (hasActiveSelection() ? onPointerMove(e) : undefined)}
       onPointerUp={(e) => (hasActiveSelection() ? onPointerUp(e) : undefined)}
-      onContextMenu={(e) => wrapHandler(onContextMenu, container!)(e)}
+      onContextMenu={onContextMenu}
     >
       {props.children}
     </div>
   );
 };
-
-export default Pane;
