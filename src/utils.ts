@@ -31,3 +31,9 @@ export const ARROW_KEY_DIFFS: Record<string, XYPosition> = {
   ArrowLeft: { x: -1, y: 0 },
   ArrowRight: { x: 1, y: 0 },
 };
+
+export function deepTrack(value: unknown) {
+  if (typeof value === "object" && value !== null) {
+    Object.values(value).forEach(deepTrack);
+  }
+}
