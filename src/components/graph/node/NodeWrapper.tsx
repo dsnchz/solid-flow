@@ -100,12 +100,6 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
       return prev;
     }
 
-    const current = {
-      nodeType: nodeType(),
-      sourcePosition: node().sourcePosition,
-      targetPosition: node().targetPosition,
-    };
-
     updateNodeInternals(
       new Map([
         [
@@ -119,7 +113,11 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
       ]),
     );
 
-    return current;
+    return {
+      nodeType: nodeType(),
+      sourcePosition: node().sourcePosition,
+      targetPosition: node().targetPosition,
+    };
   });
 
   createEffect(() => {
