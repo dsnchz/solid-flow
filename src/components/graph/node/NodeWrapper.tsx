@@ -7,7 +7,7 @@ import {
   Position,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import createDraggable from "@/actions/createDraggable";
@@ -39,8 +39,6 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
   const node = () => nodeLookup.get(props.nodeId)!;
-
-  let prevNodeRef: HTMLDivElement | undefined = undefined;
 
   const nodeId = () => node().id;
   const nodeType = () => node().type ?? "default";
@@ -120,24 +118,22 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     };
   });
 
-  createEffect(() => {
+  createEffect<HTMLDivElement | undefined>((prevNodeRef) => {
     const currentNodeRef = nodeRef();
 
-    if (currentNodeRef !== prevNodeRef || !nodeHasDimensions(node())) {
-      if (prevNodeRef) {
-        props.resizeObserver.unobserve(prevNodeRef);
-      }
-      if (currentNodeRef) {
-        props.resizeObserver.observe(currentNodeRef);
-      }
-      prevNodeRef = currentNodeRef;
+    if (currentNodeRef === prevNodeRef && nodeHasDimensions(node())) {
+      return prevNodeRef;
     }
 
-    onCleanup(() => {
-      if (prevNodeRef) {
-        props.resizeObserver.unobserve(prevNodeRef);
-      }
-    });
+    if (prevNodeRef) {
+      props.resizeObserver.unobserve(prevNodeRef);
+    }
+
+    if (currentNodeRef) {
+      props.resizeObserver.observe(currentNodeRef);
+    }
+
+    return currentNodeRef;
   });
 
   const onSelectNodeHandler = (event: MouseEvent) => {
