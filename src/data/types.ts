@@ -14,8 +14,6 @@ import type { SetStoreFunction, Store } from "solid-js/store";
 import type { FitViewOptions } from "@/shared/types";
 import type { Edge, Node } from "@/types";
 
-import type { initializeSolidFlowStore } from "./initializeSolidFlowStore";
-
 export type RequireProps<TSource extends object, TRequiredProps extends keyof TSource> = Omit<
   TSource,
   TRequiredProps
@@ -28,20 +26,6 @@ type Graph<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
 };
 
 export type SolidStore<T> = [get: Store<T>, set: SetStoreFunction<T>];
-
-type InitializedFlowStore<NodeType extends Node, EdgeType extends Edge> = ReturnType<
-  typeof initializeSolidFlowStore<NodeType, EdgeType>
->;
-
-export type SolidFlowStoreState<
-  NodeType extends Node,
-  EdgeType extends Edge,
-> = InitializedFlowStore<NodeType, EdgeType>["store"];
-
-export type SolidFlowStoreSetter<
-  NodeType extends Node,
-  EdgeType extends Edge,
-> = InitializedFlowStore<NodeType, EdgeType>["setStore"];
 
 export type FlowStoreActions<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   readonly addEdge: (edge: EdgeType | Connection) => void;
@@ -72,9 +56,4 @@ export type FlowStoreActions<NodeType extends Node = Node, EdgeType extends Edge
   readonly updateConnection: UpdateConnection;
   readonly cancelConnection: () => void;
   readonly reset: () => void;
-};
-
-export type SolidFlowStore<NodeType extends Node, EdgeType extends Edge> = {
-  readonly store: SolidFlowStoreState<NodeType, EdgeType>;
-  readonly setStore: SolidFlowStoreSetter<NodeType, EdgeType>;
 };
