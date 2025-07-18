@@ -232,11 +232,11 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
 
   onMount(() => {
     batch(() => {
-      actions.setDomNode(domNode);
+      actions.setConfig(_props);
       // NOTE: should we check here if we have explicitly provided a width/height via props?
       actions.setWidth(domNode.clientWidth);
       actions.setHeight(domNode.clientHeight);
-      actions.setConfig(_props);
+      actions.setDomNode(domNode);
     });
 
     createEffect(() => {
