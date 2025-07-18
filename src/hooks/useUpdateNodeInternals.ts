@@ -9,7 +9,7 @@ import { useInternalSolidFlow } from "@/components/contexts";
  * @returns function for updating node internals
  */
 export function useUpdateNodeInternals(): UpdateNodeInternals {
-  const { store, updateNodeInternals } = useInternalSolidFlow();
+  const { store, actions } = useInternalSolidFlow();
 
   // @todo: do we want to add this to system?
   const updateInternals = (id: string | string[]) => {
@@ -26,7 +26,7 @@ export function useUpdateNodeInternals(): UpdateNodeInternals {
       }
     });
 
-    requestAnimationFrame(() => updateNodeInternals(updates));
+    requestAnimationFrame(() => actions.updateNodeInternals(updates));
   };
 
   return updateInternals;

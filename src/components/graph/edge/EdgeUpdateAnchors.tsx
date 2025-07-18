@@ -24,13 +24,7 @@ type EdgeUpdateAnchorsProps<EdgeType extends Edge = Edge> = EdgePosition & {
 export const EdgeUpdateAnchors = <EdgeType extends Edge = Edge>(
   props: EdgeUpdateAnchorsProps<EdgeType>,
 ) => {
-  const {
-    store,
-    nodeLookup,
-    panBy,
-    setConnection: updateConnection,
-    cancelConnection,
-  } = useInternalSolidFlow();
+  const { store, nodeLookup, actions } = useInternalSolidFlow();
 
   const handleEdgeUpdater = (
     event: MouseEvent,
@@ -69,9 +63,9 @@ export const EdgeUpdateAnchors = <EdgeType extends Edge = Edge>(
       nodeLookup,
       isTarget,
       edgeUpdaterType: oppositeHandle.type,
-      cancelConnection,
-      panBy,
-      updateConnection,
+      cancelConnection: actions.cancelConnection,
+      panBy: actions.panBy,
+      updateConnection: actions.setConnection,
       isValidConnection: store.isValidConnection,
       onConnect: onConnectEdge,
       onConnectStart: store.onConnectStart,

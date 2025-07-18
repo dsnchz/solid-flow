@@ -15,7 +15,7 @@ export type NodeSelectionProps<NodeType extends Node = Node> = NodeSelectionEven
 export const NodeSelection = <NodeType extends Node = Node>(
   props: NodeSelectionProps<NodeType>,
 ) => {
-  const { store, nodeLookup, moveSelectedNodes } = useInternalSolidFlow<NodeType>();
+  const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
   const [ref, setRef] = createSignal<HTMLDivElement>();
 
   const bounds = () => {
@@ -62,7 +62,7 @@ export const NodeSelection = <NodeType extends Node = Node>(
     if (!diff) return;
 
     event.preventDefault();
-    moveSelectedNodes(diff, event.shiftKey ? 4 : 1);
+    actions.moveSelectedNodes(diff, event.shiftKey ? 4 : 1);
   };
 
   return (

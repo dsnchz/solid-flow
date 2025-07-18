@@ -53,7 +53,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
       isValidConnection: () => true,
       multiSelectionKeyCode: isMacOs() ? "Meta" : "Control",
       nodeClickDistance: 0,
-      onError: devWarn as OnError,
+      onFlowError: devWarn as OnError,
       panOnScroll: false,
       panActivationKeyCode: "Space",
       preventScrolling: true,

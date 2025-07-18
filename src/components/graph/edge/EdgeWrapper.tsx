@@ -17,8 +17,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   props: EdgeWrapperProps<EdgeType>,
 ) => {
   let edgeRef!: SVGGElement;
-  const { store, handleEdgeSelection, unselectNodesAndEdges, addSelectedEdges } =
-    useInternalSolidFlow<NodeType, EdgeType>();
+  const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
 
   const { layoutedEdgesMap } = useVisibleElements<NodeType, EdgeType>();
 
@@ -39,7 +38,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
 
   const onClick = (event: MouseEvent) => {
     if (selectable()) {
-      handleEdgeSelection(edgeId());
+      actions.handleEdgeSelection(edgeId());
     }
     props.onEdgeClick?.({ edge: edge(), event });
   };
@@ -66,9 +65,9 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
 
     if (unselect) {
       edgeRef?.blur();
-      unselectNodesAndEdges({ edges: [edge()] });
+      actions.unselectNodesAndEdges({ edges: [edge()] });
     } else {
-      addSelectedEdges([edge().id]);
+      actions.addSelectedEdges([edge().id]);
     }
   };
 

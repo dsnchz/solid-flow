@@ -2,9 +2,7 @@ import type { Connection } from "@xyflow/system";
 import { createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 
-import { Background, Controls } from "@/components";
-import { Panel } from "@/components";
-import { SolidFlow } from "@/components";
+import { Background, Controls, Panel, SolidFlow } from "@/components";
 import { useInternalSolidFlow } from "@/components/contexts";
 import type { Edge, Node } from "@/types";
 
@@ -165,13 +163,13 @@ const initialNodes: Node[] = [
 ];
 
 export const NodeResizer = () => {
-  const { addEdge } = useInternalSolidFlow();
+  const { actions } = useInternalSolidFlow();
   const [snapToGrid, setSnapToGrid] = createSignal(false);
   const [nodes] = createStore(initialNodes);
   const [edges] = createStore(initialEdges);
 
   const onConnect = (connection: Connection) => {
-    if (connection) addEdge(connection);
+    if (connection) actions.addEdge(connection);
   };
 
   return (

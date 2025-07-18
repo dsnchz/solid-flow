@@ -13,6 +13,7 @@ import type { SetStoreFunction, Store } from "solid-js/store";
 
 import type { FitViewOptions } from "@/shared/types";
 import type { Edge, Node } from "@/types";
+import type { createSolidFlow } from "./createSolidFlow";
 
 export type RequireProps<TSource extends object, TRequiredProps extends keyof TSource> = Omit<
   TSource,
@@ -57,3 +58,7 @@ export type FlowStoreActions<NodeType extends Node = Node, EdgeType extends Edge
   readonly cancelConnection: () => void;
   readonly reset: () => void;
 };
+
+export type SolidFlowStore<TNode extends Node, TEdge extends Edge> = ReturnType<
+  typeof createSolidFlow<TNode, TEdge>
+>;

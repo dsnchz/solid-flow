@@ -1,7 +1,6 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createMediaQuery } from "@solid-primitives/media";
 import {
-  addEdge as systemAddEdge,
   adoptUserNodes,
   calculateNodePosition,
   type Connection,
@@ -33,10 +32,11 @@ import {
   type SelectionRect,
   type SetCenterOptions,
   snapPosition,
+  addEdge as systemAddEdge,
+  updateNodeInternals as systemUpdateNodeInternals,
   type Transform,
   updateAbsolutePositions,
   updateConnectionLookup,
-  updateNodeInternals as systemUpdateNodeInternals,
   type Viewport,
   type ViewportHelperFunctionOptions,
   type XYPosition,
@@ -153,7 +153,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   >(undefined);
   const [connection, setConnection] =
     createSignal<ConnectionState<InternalNode<NodeType>>>(initialConnection);
-  const [domNode, setDomNode] = createSignal<HTMLElement | null>(null);
+  const [domNode, setDomNode] = createSignal<HTMLDivElement | null>(null);
   const [dragging, setDragging] = createSignal(false);
   const [fitViewResolver, setFitViewResolver] = createSignal<
     PromiseWithResolvers<boolean> | undefined

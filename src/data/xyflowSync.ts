@@ -1,6 +1,5 @@
 import { adoptUserNodes, updateConnectionLookup } from "@xyflow/system";
 import { batch } from "solid-js";
-import { produce } from "solid-js/store";
 
 import type { Edge, Node } from "@/types";
 
@@ -13,25 +12,27 @@ type SyncArgs<NodeType extends Node, EdgeType extends Edge> = SolidFlowStore<Nod
 
 export const xyflowSync = <NodeType extends Node, EdgeType extends Edge>({
   store,
-  setStore,
+  actions,
+  nodeLookup,
+  parentLookup,
+  connectionLookup,
+  edgeLookup,
   nodes,
   edges,
 }: SyncArgs<NodeType, EdgeType>) => {
-  setStore(
-    produce((store) => {
-      store.nodes = nodes;
-      store.edges = edges;
-    }),
-  );
+  batch(() => {
+    actions.setNodes(nodes);
+    actions.setEdges(edges);
+  });
 
   batch(() => {
-    adoptUserNodes(store.nodes, store.nodeLookup, store.parentLookup, {
+    adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
       nodeExtent: store.nodeExtent,
       nodeOrigin: store.nodeOrigin,
       elevateNodesOnSelect: store.elevateNodesOnSelect,
       checkEquality: false,
     });
 
-    updateConnectionLookup(store.connectionLookup, store.edgeLookup, store.edges);
+    updateConnectionLookup(connectionLookup, edgeLookup, store.edges);
   });
 };
