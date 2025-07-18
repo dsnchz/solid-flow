@@ -185,17 +185,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [panActivationKeyPressed, setPanActivationKeyPressed] = createSignal(false);
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
-  createEffect(() => {
-    const _panZoom = panZoom();
-    if (!_panZoom) return;
-    createEffect(() => {
-      _panZoom.setScaleExtent([store.minZoom, store.maxZoom]);
-    });
-    createEffect(() => {
-      _panZoom.setTranslateExtent(store.translateExtent);
-    });
-  });
-
   const store = mergeProps({ width: 0, height: 0 }, config, {
     get _colorMode() {
       return config().colorMode;
@@ -343,6 +332,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
   });
 
+  const setNodes = createStoreSetter(() => store.nodes);
+  const setEdges = createStoreSetter(() => store.edges);
+
   const resolveFitView = async () => {
     if (!store.panZoom) return;
 
@@ -412,36 +404,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setAriaLiveMessage("");
     setSnapGrid(undefined);
   };
-
-  const setNodes = createStoreSetter(() => store.nodes);
-  const setEdges = createStoreSetter(() => store.edges);
-
-  createEffect(
-    on(
-      () => deepTrack(store.nodes),
-      () => {
-        batch(() => {
-          adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
-            nodeExtent: store.nodeExtent,
-            nodeOrigin: store.nodeOrigin,
-            elevateNodesOnSelect: store.elevateNodesOnSelect,
-            checkEquality: false,
-          });
-        });
-      },
-    ),
-  );
-
-  createEffect(
-    on(
-      () => deepTrack(store.edges),
-      () => {
-        batch(() => {
-          updateConnectionLookup(connectionLookup, edgeLookup, store.edges);
-        });
-      },
-    ),
-  );
 
   const fitView = async (options?: FitViewOptions) => {
     // We either create a new Promise or reuse the existing one
@@ -755,6 +717,44 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     resetStoreValues();
     unselectNodesAndEdges();
   };
+
+  createEffect(() => {
+    const _panZoom = panZoom();
+    if (!_panZoom) return;
+    createEffect(() => {
+      _panZoom.setScaleExtent([store.minZoom, store.maxZoom]);
+    });
+    createEffect(() => {
+      _panZoom.setTranslateExtent(store.translateExtent);
+    });
+  });
+
+  createEffect(
+    on(
+      () => deepTrack(store.nodes),
+      () => {
+        batch(() => {
+          adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
+            nodeExtent: store.nodeExtent,
+            nodeOrigin: store.nodeOrigin,
+            elevateNodesOnSelect: store.elevateNodesOnSelect,
+            checkEquality: false,
+          });
+        });
+      },
+    ),
+  );
+
+  createEffect(
+    on(
+      () => deepTrack(store.edges),
+      () => {
+        batch(() => {
+          updateConnectionLookup(connectionLookup, edgeLookup, store.edges);
+        });
+      },
+    ),
+  );
 
   // TODO: Add viewportInitialized to store
   return {
