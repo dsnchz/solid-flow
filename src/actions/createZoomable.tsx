@@ -2,7 +2,6 @@ import type { OnPanZoom, PanOnScrollMode, Transform, Viewport } from "@xyflow/sy
 import { XYPanZoom } from "@xyflow/system";
 import type { Accessor } from "solid-js";
 import { createEffect, onMount } from "solid-js";
-import { produce } from "solid-js/store";
 
 import { useInternalSolidFlow } from "@/components/contexts/flow";
 
@@ -27,15 +26,11 @@ const createZoomable = (
   elem: Accessor<HTMLElement | undefined>,
   params: Accessor<ZoomDirectiveParams>,
 ) => {
-  const { store, setStore } = useInternalSolidFlow();
-
-  const onDraggingChange = (dragging: boolean) => {
-    setStore("dragging", dragging);
-  };
+  const { store, actions } = useInternalSolidFlow();
 
   const onTransformChange = (transform: Transform) => {
     const [x, y, zoom] = transform;
-    setStore("viewport", { x, y, zoom });
+    actions.setViewport({ x, y, zoom });
   };
 
   onMount(() => {
@@ -46,7 +41,7 @@ const createZoomable = (
       translateExtent: store.translateExtent,
       viewport: params().initialViewport,
       paneClickDistance: params().paneClickDistance,
-      onDraggingChange,
+      onDraggingChange: actions.setDragging,
       onPanZoomStart: params().onPanZoomStart,
       onPanZoom: params().onPanZoom,
       onPanZoomEnd: params().onPanZoomEnd,
@@ -62,12 +57,8 @@ const createZoomable = (
       onTransformChange([vp.x, vp.y, vp.zoom]);
     }
 
-    setStore(
-      produce((store) => {
-        store.viewport = vp;
-        store.panZoom = panZoomInstance;
-      }),
-    );
+    actions.setViewport(vp);
+    actions.setPanZoom(panZoomInstance);
 
     createEffect(() => {
       panZoomInstance.update({

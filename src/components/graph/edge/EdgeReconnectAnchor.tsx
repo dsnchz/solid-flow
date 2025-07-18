@@ -37,8 +37,15 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     "children",
   ]);
 
-  const { store, nodeLookup, edgeLookup, setEdges, panBy, updateConnection, cancelConnection } =
-    useInternalSolidFlow();
+  const {
+    store,
+    nodeLookup,
+    edgeLookup,
+    setEdges,
+    panBy,
+    setConnection: updateConnection,
+    cancelConnection,
+  } = useInternalSolidFlow();
 
   const edgeId = useEdgeId();
   const [reconnecting, setReconnecting] = createSignal(false);

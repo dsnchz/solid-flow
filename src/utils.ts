@@ -1,6 +1,7 @@
 import { isEdgeBase, isNodeBase, type XYPosition } from "@xyflow/system";
 
 import type { Edge, Node } from "@/types";
+import { createMemo, createSignal } from "solid-js";
 
 /**
  * Test whether an object is usable as a Node
@@ -36,4 +37,11 @@ export function deepTrack(value: unknown) {
   if (typeof value === "object" && value !== null) {
     Object.values(value).forEach(deepTrack);
   }
+}
+
+export function createWritable<T>(fn: () => T) {
+  const signal = createMemo(() => createSignal(fn()));
+  const get = () => signal()[0]();
+  const set = (v: any) => signal()[1](v);
+  return [get, set] as ReturnType<typeof createSignal<T>>;
 }

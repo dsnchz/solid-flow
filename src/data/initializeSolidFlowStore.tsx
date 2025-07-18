@@ -26,8 +26,7 @@ import {
   updateConnectionLookup,
   type Viewport,
 } from "@xyflow/system";
-import { batch, mergeProps } from "solid-js";
-import { createStore, produce } from "solid-js/store";
+import { batch, createEffect, createSignal, mergeProps } from "solid-js";
 
 import {
   BezierEdgeInternal,
@@ -42,11 +41,13 @@ import type {
   BuiltInNodeTypes,
   Edge,
   EdgeTypes,
+  FitViewOptions,
   InternalNode,
   Node,
   NodeTypes,
 } from "@/types";
 
+import { createWritable } from "@/utils";
 import { getDefaultFlowStateProps } from "./defaults";
 
 type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
@@ -127,125 +128,89 @@ export const initializeSolidFlowStore = <
     _props.colorModeSSR === "dark",
   );
 
-  const [store, setStore] = createStore({
-    id: _props.id,
+  const [config, setConfig] = createSignal(_props);
 
-    // "Pseduo-private" props
-    _colorMode: _props.colorMode,
-    _colorModeSSR: _props.colorModeSSR,
-    _connection: { ...initialConnection } as ConnectionState<InternalNode<NodeType>>,
-    _nodeTypes: _props.nodeTypes,
-    _edgeTypes: _props.edgeTypes,
+  const [ariaLabelConfig, setAriaLabelConfig] = createWritable(() =>
+    mergeAriaLabelConfig(_props.ariaLabelConfig),
+  );
+  const [ariaLiveMessage, setAriaLiveMessage] = createWritable(() => _props.ariaLiveMessage);
+  const [clickConnectStartHandle, setClickConnectStartHandle] = createSignal<
+    Pick<Handle, "id" | "nodeId" | "type"> | undefined
+  >(undefined);
+  const [connection, setConnection] =
+    createSignal<ConnectionState<InternalNode<NodeType>>>(initialConnection);
+  const [domNode, setDomNode] = createSignal<HTMLElement | null>(null);
+  const [dragging, setDragging] = createSignal(false);
+  const [fitViewResolver, setFitViewResolver] = createSignal<
+    PromiseWithResolvers<boolean> | undefined
+  >();
+  const [fitViewQueued, setFitViewQueued] = createWritable<boolean>(() => _props.fitViewQueued);
+  const [fitViewOptions, setFitViewOptions] = createWritable<FitViewOptions<NodeType> | undefined>(
+    () => _props.fitViewOptions,
+  );
+  const [minZoom, _setMinZoom] = createWritable<number>(() => _props.minZoom);
+  const [maxZoom, _setMaxZoom] = createWritable<number>(() => _props.maxZoom);
+  const [panZoom, setPanZoom] = createSignal<PanZoomInstance | null>(null);
+  const [selectionRect, setSelectionRect] = createSignal<SelectionRect | undefined>();
+  const [selectionRectMode, setSelectionRectMode] = createSignal<string | undefined>();
+  const [translateExtent, _setTranslateExtent] = createWritable(
+    () => _props.translateExtent ?? infiniteExtent,
+  );
+  const [viewport, setViewport] = createSignal<Viewport>(_viewport);
+  const [width, setWidth] = createWritable(() => _props.width);
+  const [height, setHeight] = createWritable(() => _props.height);
 
-    nodes: _props.nodes,
-    edges: _props.edges,
+  // const
 
-    height: _props.height ?? 0,
-    width: _props.width ?? 0,
-    minZoom: _props.minZoom,
-    maxZoom: _props.maxZoom,
-    viewport: _props.viewport ?? _viewport,
+  //
+  const [nodesDraggable, setNodesDraggable] = createWritable(() => _props.nodesDraggable);
+  const [nodesConnectable, setNodesConnectable] = createWritable(() => _props.nodesDraggable);
+  const [elementsSelectable, setElementsSelectable] = createWritable(
+    () => _props.elementsSelectable,
+  );
 
-    autoPanSpeed: _props.autoPanSpeed,
-    elevateNodesOnSelect: _props.elevateNodesOnSelect,
-    defaultEdgeOptions: _props.defaultEdgeOptions,
-    defaultNodeOptions: _props.defaultNodeOptions,
-    nodeOrigin: _props.nodeOrigin,
-    nodeDragThreshold: _props.nodeDragThreshold,
-    nodeExtent: _props.nodeExtent,
-    translateExtent: infiniteExtent,
+  // Key flags
+  const [selectionKeyPressed, setSelectionKeyPressed] = createSignal(false);
+  const [multiselectionKeyPressed, setMultiselectionKeyPressed] = createSignal(false);
+  const [deleteKeyPressed, setDeleteKeyPressed] = createSignal(false);
+  const [panActivationKeyPressed, setPanActivationKeyPressed] = createSignal(false);
+  const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
-    fitViewResolver: undefined as PromiseWithResolvers<boolean> | undefined,
-    snapGrid: _props.snapGrid,
-    selectionMode: _props.selectionMode,
-    nodesDraggable: _props.nodesDraggable,
-    nodesFocusable: _props.nodesFocusable,
-    nodesConnectable: _props.nodesConnectable,
-    edgesFocusable: _props.edgesFocusable,
-    elementsSelectable: _props.elementsSelectable,
-    selectNodesOnDrag: _props.selectNodesOnDrag,
-    onlyRenderVisibleElements: _props.onlyRenderVisibleElements,
-    defaultMarkerColor: _props.defaultMarkerColor,
-    connectionMode: _props.connectionMode,
-    connectionLineType: _props.connectionLineType,
-    connectionRadius: _props.connectionRadius,
-    selectionRect: undefined as SelectionRect | undefined,
-    selectionRectMode: undefined as string | undefined,
-    domNode: null as HTMLDivElement | null,
-    panZoom: null as PanZoomInstance | null,
-    fitViewQueued: _props.fitView,
-    fitViewOptions: _props.fitViewOptions,
-    fitViewOnInit: false,
-    fitViewOnInitDone: false,
-    dragging: false,
-    selectionKeyPressed: false,
-    multiselectionKeyPressed: false,
-    deleteKeyPressed: false,
-    panActivationKeyPressed: false,
-    zoomActivationKeyPressed: false,
-    elevateEdgesOnSelect: _props.elevateEdgesOnSelect,
-    disableKeyboardA11y: _props.disableKeyboardA11y,
-    autoPanOnNodeDrag: _props.autoPanOnNodeDrag,
-    autoPanOnConnect: _props.autoPanOnConnect,
-    autoPanOnNodeFocus: _props.autoPanOnNodeFocus,
-    noPanClass: _props.noPanClass,
-    noDragClass: _props.noDragClass,
-    noWheelClass: _props.noWheelClass,
-    ariaLiveMessage: _props.ariaLiveMessage,
-    ariaLabelConfig: mergeAriaLabelConfig(_props.ariaLabelConfig),
+  createEffect(() => {
+    const _panZoom = panZoom();
+    if (!_panZoom) return;
+    createEffect(() => {
+      _panZoom.setScaleExtent([store.minZoom, store.maxZoom]);
+    });
+    createEffect(() => {
+      _panZoom.setTranslateExtent(store.translateExtent);
+    });
+  });
 
-    isValidConnection: _props.isValidConnection ?? (() => true),
-
-    onError: _props.onFlowError ?? (devWarn as OnError),
-
-    onDelete: _props.onDelete,
-    onBeforeDelete: _props.onBeforeDelete,
-
-    onBeforeConnect: _props.onBeforeConnect,
-    onConnect: _props.onConnect,
-    onConnectStart: _props.onConnectStart,
-    onConnectEnd: _props.onConnectEnd,
-
-    onBeforeReconnect: _props.onBeforeReconnect,
-    onReconnect: _props.onReconnect,
-    onReconnectStart: _props.onReconnectStart,
-    onReconnectEnd: _props.onReconnectEnd,
-
-    clickConnect: _props.clickConnect ?? true,
-    onClickConnectStart: _props.onClickConnectStart,
-    onClickConnectEnd: _props.onClickConnectEnd,
-    clickConnectStartHandle: undefined as Pick<Handle, "id" | "nodeId" | "type"> | undefined,
-
-    onSelectionDrag: _props.onSelectionDrag,
-    onSelectionDragStart: _props.onSelectionDragStart,
-    onSelectionDragStop: _props.onSelectionDragStop,
-
-    // derived store values
-    get lib() {
-      /*
-       * Made this a derived store get value to prevent overwriting the value. This value is crucial
-       * for the underlying @xyflow/system library to identify elements as this is the prefix we use
-       * for all the CSS class names across the library.
-       */
-      return "solid" as const;
+  const store = mergeProps({ width: 0, height: 0 }, config, {
+    get _colorMode() {
+      return config().colorMode;
     },
-    get selectedNodes() {
-      return this.nodes.filter((node) => node.selected);
+    get _colorModeSSR() {
+      return config().colorModeSSR;
     },
-    get selectedEdges() {
-      return this.edges.filter((edge) => edge.selected);
+    get _connection() {
+      return connection();
     },
-    get viewportInitialized() {
-      return this.panZoom !== null;
+    get _nodeTypes() {
+      return config().nodeTypes;
     },
-    get transform() {
-      return [this.viewport.x, this.viewport.y, this.viewport.zoom] as Transform;
+    get _edgeTypes() {
+      return config().edgeTypes;
     },
-    get nodeTypes() {
-      return { ...InitialNodeTypesMap, ...this._nodeTypes } as NodeTypes;
+    get ariaLabelConfig() {
+      return ariaLabelConfig();
     },
-    get edgeTypes() {
-      return { ...InitialEdgeTypesMap, ...this._edgeTypes } as EdgeTypes;
+    get ariaLiveMessage() {
+      return ariaLiveMessage();
+    },
+    get clickConnectStartHandle() {
+      return clickConnectStartHandle();
     },
     get colorMode() {
       return this._colorMode === "system"
@@ -255,20 +220,259 @@ export const initializeSolidFlowStore = <
         : this._colorMode;
     },
     get connection() {
-      const state = this._connection;
-
+      const state = connection();
       return {
         ...state,
         to: state.inProgress ? pointToRendererPoint(state.to, this.transform) : state.to,
       } as ConnectionState<InternalNode<NodeType>>;
     },
+    get domNode() {
+      return domNode();
+    },
+    get dragging() {
+      return dragging();
+    },
+    get edgeTypes() {
+      return { ...InitialEdgeTypesMap, ...this._edgeTypes } as EdgeTypes;
+    },
+    get elementsSelectable() {
+      return elementsSelectable();
+    },
+    get fitViewResolver() {
+      return fitViewResolver();
+    },
+    get fitViewQueued() {
+      return fitViewQueued();
+    },
+    get fitViewOptions() {
+      return fitViewOptions();
+    },
+    get height() {
+      return height();
+    },
+    get lib() {
+      /*
+       * Made this a derived store get value to prevent overwriting the value. This value is crucial
+       * for the underlying @xyflow/system library to identify elements as this is the prefix we use
+       * for all the CSS class names across the library.
+       */
+      return "solid" as const;
+    },
+    get onError() {
+      return config().onFlowError ?? (devWarn as OnError);
+    },
     get markers() {
-      return createMarkerIds(this.edges, {
-        defaultColor: this.defaultMarkerColor,
-        id: this.id,
+      return createMarkerIds(config().edges, {
+        defaultColor: config().defaultMarkerColor,
+        id: config().id,
       }) as RefinedMarkerProps[];
     },
+    get maxZoom() {
+      return maxZoom();
+    },
+    get minZoom() {
+      return minZoom();
+    },
+    get nodesConnectable() {
+      return nodesConnectable();
+    },
+    get nodesDraggable() {
+      return nodesDraggable();
+    },
+    get nodeTypes() {
+      return { ...InitialNodeTypesMap, ...this._nodeTypes } as NodeTypes;
+    },
+    get panZoom() {
+      return panZoom();
+    },
+    get selectedNodes() {
+      return config().nodes.filter((node) => node.selected);
+    },
+    get selectedEdges() {
+      return config().edges.filter((edge) => edge.selected);
+    },
+    get selectionRect() {
+      return selectionRect();
+    },
+    get selectionRectMode() {
+      return selectionRectMode();
+    },
+    get viewport() {
+      return viewport();
+    },
+    get viewportInitialized() {
+      return panZoom() !== null;
+    },
+    get transform() {
+      return [viewport().x, viewport().y, viewport().zoom] as Transform;
+    },
+    get translateExtent() {
+      return translateExtent();
+    },
+    get width() {
+      return width();
+    },
+
+    // key press flags
+    get selectionKeyPressed() {
+      return selectionKeyPressed();
+    },
+    get multiselectionKeyPressed() {
+      return multiselectionKeyPressed();
+    },
+    get deleteKeyPressed() {
+      return deleteKeyPressed();
+    },
+    get panActivationKeyPressed() {
+      return panActivationKeyPressed();
+    },
+    get zoomActivationKeyPressed() {
+      return zoomActivationKeyPressed();
+    },
   });
+
+  // const [store, setStore] = createStore({
+  //   id: _props.id,
+
+  //   // "Pseduo-private" props
+  //   _colorMode: _props.colorMode,
+  //   _colorModeSSR: _props.colorModeSSR,
+  //   _connection: { ...initialConnection } as ConnectionState<InternalNode<NodeType>>,
+  //   _nodeTypes: _props.nodeTypes,
+  //   _edgeTypes: _props.edgeTypes,
+
+  //   nodes: _props.nodes,
+  //   edges: _props.edges,
+
+  //   height: _props.height ?? 0,
+  //   width: _props.width ?? 0,
+  //   minZoom: _props.minZoom,
+  //   maxZoom: _props.maxZoom,
+  //   viewport: _props.viewport ?? _viewport,
+
+  //   autoPanSpeed: _props.autoPanSpeed,
+  //   elevateNodesOnSelect: _props.elevateNodesOnSelect,
+  //   defaultEdgeOptions: _props.defaultEdgeOptions,
+  //   defaultNodeOptions: _props.defaultNodeOptions,
+  //   nodeOrigin: _props.nodeOrigin,
+  //   nodeDragThreshold: _props.nodeDragThreshold,
+  //   nodeExtent: _props.nodeExtent,
+  //   translateExtent: infiniteExtent,
+
+  //   fitViewResolver: undefined as PromiseWithResolvers<boolean> | undefined,
+  //   snapGrid: _props.snapGrid,
+  //   selectionMode: _props.selectionMode,
+  //   nodesDraggable: _props.nodesDraggable,
+  //   nodesFocusable: _props.nodesFocusable,
+  //   nodesConnectable: _props.nodesConnectable,
+  //   edgesFocusable: _props.edgesFocusable,
+  //   elementsSelectable: _props.elementsSelectable,
+  //   selectNodesOnDrag: _props.selectNodesOnDrag,
+  //   onlyRenderVisibleElements: _props.onlyRenderVisibleElements,
+  //   defaultMarkerColor: _props.defaultMarkerColor,
+  //   connectionMode: _props.connectionMode,
+  //   connectionLineType: _props.connectionLineType,
+  //   connectionRadius: _props.connectionRadius,
+  //   selectionRect: undefined as SelectionRect | undefined,
+  //   selectionRectMode: undefined as string | undefined,
+  //   domNode: null as HTMLDivElement | null,
+  //   panZoom: null as PanZoomInstance | null,
+  //   fitViewQueued: _props.fitView,
+  //   fitViewOptions: _props.fitViewOptions,
+  //   fitViewOnInit: false,
+  //   fitViewOnInitDone: false,
+  //   dragging: false,
+  //   selectionKeyPressed: false,
+  //   multiselectionKeyPressed: false,
+  //   deleteKeyPressed: false,
+  //   panActivationKeyPressed: false,
+  //   zoomActivationKeyPressed: false,
+  //   elevateEdgesOnSelect: _props.elevateEdgesOnSelect,
+  //   disableKeyboardA11y: _props.disableKeyboardA11y,
+  //   autoPanOnNodeDrag: _props.autoPanOnNodeDrag,
+  //   autoPanOnConnect: _props.autoPanOnConnect,
+  //   autoPanOnNodeFocus: _props.autoPanOnNodeFocus,
+  //   noPanClass: _props.noPanClass,
+  //   noDragClass: _props.noDragClass,
+  //   noWheelClass: _props.noWheelClass,
+  //   ariaLiveMessage: _props.ariaLiveMessage,
+  //   ariaLabelConfig: mergeAriaLabelConfig(_props.ariaLabelConfig),
+
+  //   isValidConnection: _props.isValidConnection ?? (() => true),
+
+  //   onError: _props.onFlowError ?? (devWarn as OnError),
+
+  //   onDelete: _props.onDelete,
+  //   onBeforeDelete: _props.onBeforeDelete,
+
+  //   onBeforeConnect: _props.onBeforeConnect,
+  //   onConnect: _props.onConnect,
+  //   onConnectStart: _props.onConnectStart,
+  //   onConnectEnd: _props.onConnectEnd,
+
+  //   onBeforeReconnect: _props.onBeforeReconnect,
+  //   onReconnect: _props.onReconnect,
+  //   onReconnectStart: _props.onReconnectStart,
+  //   onReconnectEnd: _props.onReconnectEnd,
+
+  //   clickConnect: _props.clickConnect ?? true,
+  //   onClickConnectStart: _props.onClickConnectStart,
+  //   onClickConnectEnd: _props.onClickConnectEnd,
+  //   clickConnectStartHandle: undefined as Pick<Handle, "id" | "nodeId" | "type"> | undefined,
+
+  //   onSelectionDrag: _props.onSelectionDrag,
+  //   onSelectionDragStart: _props.onSelectionDragStart,
+  //   onSelectionDragStop: _props.onSelectionDragStop,
+
+  //   // derived store values
+  //   get lib() {
+  //     /*
+  //      * Made this a derived store get value to prevent overwriting the value. This value is crucial
+  //      * for the underlying @xyflow/system library to identify elements as this is the prefix we use
+  //      * for all the CSS class names across the library.
+  //      */
+  //     return "solid" as const;
+  //   },
+  //   get selectedNodes() {
+  //     return this.nodes.filter((node) => node.selected);
+  //   },
+  //   get selectedEdges() {
+  //     return this.edges.filter((edge) => edge.selected);
+  //   },
+  //   get viewportInitialized() {
+  //     return this.panZoom !== null;
+  //   },
+  //   get transform() {
+  //     return [this.viewport.x, this.viewport.y, this.viewport.zoom] as Transform;
+  //   },
+  //   get nodeTypes() {
+  //     return { ...InitialNodeTypesMap, ...this._nodeTypes } as NodeTypes;
+  //   },
+  //   get edgeTypes() {
+  //     return { ...InitialEdgeTypesMap, ...this._edgeTypes } as EdgeTypes;
+  //   },
+  //   get colorMode() {
+  //     return this._colorMode === "system"
+  //       ? mediaPrefersDark()
+  //         ? "dark"
+  //         : "light"
+  //       : this._colorMode;
+  //   },
+  //   get connection() {
+  //     const state = this._connection;
+
+  //     return {
+  //       ...state,
+  //       to: state.inProgress ? pointToRendererPoint(state.to, this.transform) : state.to,
+  //     } as ConnectionState<InternalNode<NodeType>>;
+  //   },
+  //   get markers() {
+  //     return createMarkerIds(this.edges, {
+  //       defaultColor: this.defaultMarkerColor,
+  //       id: this.id,
+  //     }) as RefinedMarkerProps[];
+  //   },
+  // });
 
   const resolveFitView = async () => {
     if (!store.panZoom) return;
@@ -282,7 +486,7 @@ export const initializeSolidFlowStore = <
         minZoom: store.minZoom,
         maxZoom: store.maxZoom,
       },
-      store.fitViewOptions,
+      fitViewOptions(),
     );
 
     store.fitViewResolver?.resolve(true);
@@ -291,13 +495,9 @@ export const initializeSolidFlowStore = <
      * wait for the fitViewport to resolve before deleting the resolver,
      * we want to reuse the old resolver if the user calls fitView again in the mean time
      */
-    setStore(
-      produce((store) => {
-        store.fitViewQueued = false;
-        store.fitViewOptions = undefined;
-        store.fitViewResolver = undefined;
-      }),
-    );
+    setFitViewQueued(false);
+    setFitViewResolver(undefined);
+    setFitViewOptions(undefined);
   };
 
   const updateSystemNodes = () => {
@@ -328,23 +528,35 @@ export const initializeSolidFlowStore = <
   };
 
   const resetStoreValues = () => {
-    setStore(
-      produce((store) => {
-        store.dragging = false;
-        store.selectionRect = undefined;
-        store.selectionRectMode = undefined;
-        store.selectionKeyPressed = false;
-        store.multiselectionKeyPressed = false;
-        store.deleteKeyPressed = false;
-        store.panActivationKeyPressed = false;
-        store.zoomActivationKeyPressed = false;
-        store._connection = { ...initialConnection };
-        store.clickConnectStartHandle = undefined;
-        store.viewport = _props.initialViewport ?? { x: 0, y: 0, zoom: 1 };
-        store.ariaLiveMessage = "";
-        store.snapGrid = undefined;
-      }),
-    );
+    setDragging(false);
+    setSelectionRect(undefined);
+    setSelectionRectMode(undefined);
+    setSelectionKeyPressed(false);
+    setMultiselectionKeyPressed(false);
+    setDeleteKeyPressed(false);
+    setPanActivationKeyPressed(false);
+    setZoomActivationKeyPressed(false);
+    setConnection({ ...initialConnection });
+    setClickConnectStartHandle(undefined);
+    setViewport(config().initialViewport ?? { x: 0, y: 0, zoom: 1 });
+    // setSnapGrid(undefined)
+    // setStore(
+    //   produce((store) => {
+    //     store.dragging = false;
+    //     store.selectionRect = undefined;
+    //     store.selectionRectMode = undefined;
+    //     store.selectionKeyPressed = false;
+    //     store.multiselectionKeyPressed = false;
+    //     store.deleteKeyPressed = false;
+    //     store.panActivationKeyPressed = false;
+    //     store.zoomActivationKeyPressed = false;
+    //     store._connection = { ...initialConnection };
+    //     store.clickConnectStartHandle = undefined;
+    //     store.viewport = _props.initialViewport ?? { x: 0, y: 0, zoom: 1 };
+    //     store.ariaLiveMessage = "";
+    //     store.snapGrid = undefined;
+    //   }),
+    // );
   };
 
   return {
@@ -353,10 +565,35 @@ export const initializeSolidFlowStore = <
     parentLookup,
     edgeLookup,
     connectionLookup,
-    setStore,
-    nodesInitialized,
-    resolveFitView,
-    updateSystemNodes,
-    resetStoreValues,
+    actions: {
+      nodesInitialized,
+      resetStoreValues,
+      resolveFitView,
+      setAriaLabelConfig,
+      setAriaLiveMessage,
+      setClickConnectStartHandle,
+      setConfig,
+      setConnection,
+      setDeleteKeyPressed,
+      setDomNode,
+      setDragging,
+      setElementsSelectable,
+      setFitViewOptions,
+      setFitViewQueued,
+      setFitViewResolver,
+      setHeight,
+      setMultiselectionKeyPressed,
+      setNodesConnectable,
+      setNodesDraggable,
+      setPanActivationKeyPressed,
+      setPanZoom,
+      setSelectionKeyPressed,
+      setSelectionRect,
+      setSelectionRectMode,
+      setViewport,
+      setWidth,
+      setZoomActivationKeyPressed,
+      updateSystemNodes,
+    },
   } as const;
 };

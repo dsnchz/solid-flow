@@ -288,18 +288,10 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     id?: string | null;
   }) => HandleConnection[];
 } {
-  const {
-    store,
-    setNodes,
-    setEdges,
-    zoomIn,
-    zoomOut,
-    setCenter,
-    fitView,
-    nodeLookup,
-    edgeLookup,
-    connectionLookup,
-  } = useInternalSolidFlow<NodeType, EdgeType>();
+  const { store, actions, nodeLookup, edgeLookup, connectionLookup } = useInternalSolidFlow<
+    NodeType,
+    EdgeType
+  >();
 
   const getNodeRect = (node: NodeType | { id: NodeType["id"] }): Rect | null => {
     const nodeToUse = isNode(node) ? node : nodeLookup.get(node.id)!;
@@ -328,7 +320,7 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     nodeUpdate: Partial<NodeType> | ((node: NodeType) => Partial<NodeType>),
     options: { replace: boolean } = { replace: false },
   ) => {
-    setNodes(
+    actions.setNodes(
       (node) => node.id === id,
       (node) => {
         const nextNode = typeof nodeUpdate === "function" ? nodeUpdate(node) : nodeUpdate;
@@ -342,7 +334,7 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     edgeUpdate: Partial<EdgeType> | ((edge: EdgeType) => Partial<EdgeType>),
     options: { replace: boolean } = { replace: false },
   ) => {
-    setEdges(
+    actions.setEdges(
       (edge) => edge.id === id,
       (edge) => {
         const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
@@ -355,7 +347,7 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
 
   const addNodes = (payload: NodeType[] | NodeType) => {
     const newNodes = Array.isArray(payload) ? payload : [payload];
-    setNodes((nodes) => {
+    actions.setNodes((nodes) => {
       console.log("ADD NODES >>>>", nodes, newNodes);
       return [...nodes, ...newNodes];
     });
@@ -363,15 +355,15 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
 
   const addEdges = (payload: EdgeType[] | EdgeType) => {
     const newEdges = Array.isArray(payload) ? payload : [payload];
-    setEdges((edges) => [...edges, ...newEdges]);
+    actions.setEdges((edges) => [...edges, ...newEdges]);
   };
 
   return {
-    zoomIn,
-    zoomOut,
+    zoomIn: actions.zoomIn,
+    zoomOut: actions.zoomOut,
     getInternalNode,
-    setCenter,
-    fitView,
+    setCenter: actions.setCenter,
+    fitView: actions.fitView,
     getNode: (id) => getInternalNode(id)?.internals.userNode,
     getNodes: (ids) => (!ids ? store.nodes : getElements(nodeLookup, ids)),
     getEdge: (id) => edgeLookup.get(id),
@@ -481,13 +473,13 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
       });
 
       if (matchingNodes) {
-        setNodes((nodes) =>
+        actions.setNodes((nodes) =>
           nodes.filter((node) => !matchingNodes.some(({ id }) => id === node.id)),
         );
       }
 
       if (matchingEdges) {
-        setEdges((edges) =>
+        actions.setEdges((edges) =>
           edges.filter((edge) => !matchingEdges.some(({ id }) => id === edge.id)),
         );
       }

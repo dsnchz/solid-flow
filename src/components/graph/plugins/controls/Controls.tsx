@@ -37,7 +37,7 @@ type ControlsProps = {
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
 export const Controls = (props: ParentProps<ControlsProps>) => {
-  const { store, setStore, fitView, zoomIn, zoomOut } = useInternalSolidFlow();
+  const { store, actions } = useInternalSolidFlow();
 
   const _props = mergeProps(
     {
@@ -75,25 +75,23 @@ export const Controls = (props: ParentProps<ControlsProps>) => {
     store.nodesDraggable || store.nodesConnectable || store.elementsSelectable;
 
   const onZoomInHandler = () => {
-    void zoomIn();
+    void actions.zoomIn();
   };
 
   const onZoomOutHandler = () => {
-    void zoomOut();
+    void actions.zoomOut();
   };
 
   const onFitViewHandler = () => {
-    void fitView(local.fitViewOptions);
+    void actions.fitView(local.fitViewOptions);
   };
 
   const onToggleInteractivity = () => {
     const newValue = !getIsInteractive();
 
-    setStore({
-      nodesDraggable: newValue,
-      nodesConnectable: newValue,
-      elementsSelectable: newValue,
-    });
+    actions.setNodesDraggable(newValue);
+    actions.setNodesConnectable(newValue);
+    actions.setElementsSelectable(newValue);
   };
 
   const buttonProps = () => ({

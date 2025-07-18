@@ -16,6 +16,12 @@ import type { Edge, Node } from "@/types";
 
 import type { initializeSolidFlowStore } from "./initializeSolidFlowStore";
 
+export type RequireProps<TSource extends object, TRequiredProps extends keyof TSource> = Omit<
+  TSource,
+  TRequiredProps
+> &
+  Required<Pick<TSource, TRequiredProps>>;
+
 type Graph<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   readonly nodes?: NodeType[];
   readonly edges?: EdgeType[];

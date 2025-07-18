@@ -11,7 +11,7 @@ export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeTyp
 };
 
 export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererProps<NodeType>) => {
-  const { updateNodeInternals } = useInternalSolidFlow<NodeType>();
+  const { actions } = useInternalSolidFlow<NodeType>();
 
   const { visibleNodeIds } = useVisibleElements<NodeType>();
 
@@ -28,7 +28,7 @@ export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererPr
       });
     });
 
-    updateNodeInternals(updates);
+    actions.updateNodeInternals(updates);
   });
 
   onCleanup(() => {

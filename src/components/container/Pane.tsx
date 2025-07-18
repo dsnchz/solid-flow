@@ -29,16 +29,10 @@ export type PaneProps = PaneEvents & {
 export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<PaneProps>,
 ): JSX.Element => {
-  const {
-    store,
-    nodeLookup,
-    edgeLookup,
-    connectionLookup,
-    unselectNodesAndEdges,
-    setStore,
-    setNodes,
-    setEdges,
-  } = useInternalSolidFlow<NodeType, EdgeType>();
+  const { store, nodeLookup, edgeLookup, connectionLookup, actions } = useInternalSolidFlow<
+    NodeType,
+    EdgeType
+  >();
 
   let container: HTMLDivElement | undefined;
   let containerBounds: DOMRect | null = null;
@@ -69,8 +63,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     props.onPaneClick?.({ event });
 
-    unselectNodesAndEdges();
-    setStore("selectionRectMode", undefined);
+    actions.unselectNodesAndEdges();
   };
 
   const onPointerDown = (event: PointerEvent) => {
@@ -90,9 +83,9 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     const { x, y } = getEventPosition(event, containerBounds);
 
-    unselectNodesAndEdges();
+    actions.unselectNodesAndEdges();
 
-    setStore("selectionRect", {
+    actions.setSelectionRect({
       width: 0,
       height: 0,
       startX: x,
@@ -153,7 +146,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     if (!isSetEqual(prevSelectedNodeIds, selectedNodeIds)) {
       const selectionMap = new Map<string, boolean>();
 
-      setNodes(
+      actions.setNodes(
         (node) => {
           const isSelected = selectedNodeIds.has(node.id);
           selectionMap.set(node.id, isSelected);
@@ -168,7 +161,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     if (!isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)) {
       const selectionMap = new Map<string, boolean>();
 
-      setEdges(
+      actions.setEdges(
         (edge) => {
           const isSelected = selectedEdgeIds.has(edge.id);
           selectionMap.set(edge.id, isSelected);
@@ -180,12 +173,8 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       );
     }
 
-    setStore(
-      produce((store) => {
-        store.selectionRectMode = "user";
-        store.selectionRect = nextUserSelectRect;
-      }),
-    );
+    actions.setSelectionRectMode("user");
+    actions.setSelectionRect(nextUserSelectRect);
   };
 
   const onPointerUp = (event: PointerEvent) => {
@@ -199,10 +188,10 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       onClick(event);
     }
 
-    setStore("selectionRect", undefined);
+    actions.setSelectionRect(undefined);
 
     if (selectedNodeIds.size > 0) {
-      setStore("selectionRectMode", "nodes");
+      actions.setSelectionRectMode("nodes");
     }
 
     // If the user kept holding the selectionKey during the selection,

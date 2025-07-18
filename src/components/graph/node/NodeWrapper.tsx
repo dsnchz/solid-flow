@@ -25,16 +25,7 @@ export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType
 };
 
 const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeType>) => {
-  const {
-    store,
-    nodeLookup,
-    parentLookup,
-    setStore,
-    updateNodeInternals,
-    handleNodeSelection,
-    setCenter,
-    moveSelectedNodes,
-  } = useInternalSolidFlow<NodeType>();
+  const { store, nodeLookup, parentLookup, actions } = useInternalSolidFlow<NodeType>();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
@@ -98,7 +89,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
       return prev;
     }
 
-    updateNodeInternals(
+    actions.updateNodeInternals(
       new Map([
         [
           node().id,
@@ -140,7 +131,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     if (selectable() && (!store.selectNodesOnDrag || !draggable() || store.nodeDragThreshold > 0)) {
       // this handler gets called by XYDrag on drag start when selectNodesOnDrag=true
       // here we only need to call it when selectNodesOnDrag=false
-      handleNodeSelection(node().id);
+      actions.handleNodeSelection(node().id);
     }
 
     props.onNodeClick?.({ node: userNode(), event });
@@ -152,7 +143,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     }
 
     if (elementSelectionKeys.includes(event.key) && selectable()) {
-      handleNodeSelection(node().id, event.key === "Escape", nodeRef());
+      actions.handleNodeSelection(node().id, event.key === "Escape", nodeRef());
       return;
     }
 
@@ -161,9 +152,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     if (draggable() && node().selected && arrowKeyDiff) {
       // prevent default scrolling behavior on arrow key press when node is moved
       event.preventDefault();
-
-      setStore(
-        "ariaLiveMessage",
+      actions.setAriaLiveMessage(
         store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
           direction: event.key.replace("Arrow", "").toLowerCase(),
           x: ~~node().internals.positionAbsolute.x,
@@ -171,7 +160,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
         }),
       );
 
-      moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
+      actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
     }
   };
 
@@ -196,7 +185,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
 
     if (withinViewport) return;
 
-    void setCenter(
+    void actions.setCenter(
       node().position.x + (node().measured.width ?? 0) / 2,
       node().position.y + (node().measured.height ?? 0) / 2,
       { zoom: viewport.zoom },
@@ -210,7 +199,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     handleSelector: node().dragHandle,
     noDragClass: store.noDragClass,
     nodeClickDistance: props.nodeClickDistance,
-    onNodeMouseDown: handleNodeSelection,
+    onNodeMouseDown: actions.handleNodeSelection,
     onDrag: (event, _, targetNode, nodes) => {
       props.onNodeDrag?.({ event, targetNode: targetNode as NodeType, nodes: nodes as NodeType[] });
     },

@@ -3,7 +3,6 @@ import {
   devWarn,
   infiniteExtent,
   isMacOs,
-  mergeAriaLabelConfig,
   type OnError,
 } from "@xyflow/system";
 import clsx from "clsx";
@@ -223,59 +222,29 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "children",
   ]);
 
-  const [indirectFlowProps, directFlowProps] = splitProps(flowProps, [
-    "colorMode",
-    "colorModeSSR",
-    "nodeTypes",
-    "edgeTypes",
-    "ariaLabelConfig",
-    "paneClickDistance",
-  ]);
-
   // Since we cannot pass generic types info at the point of context creation, we need to cast it here
   const TypedSolidFlowContext = SolidFlowContext as unknown as Context<
     SolidFlowContextValue<NodeType, EdgeType>
   >;
 
   const solidFlow = useContext(TypedSolidFlowContext) ?? createSolidFlow(_props);
-  const { store, reset, setStore, setPaneClickDistance } = solidFlow;
+  const { store, actions } = solidFlow;
 
   onMount(() => {
     batch(() => {
-      setStore("domNode", domNode);
-      setStore("width", domNode.clientWidth);
-      setStore("height", domNode.clientHeight);
-
-      // Shallow merge direct-flow-props
-      setStore(directFlowProps);
-
-      // Shallow merge indirect-flow-props as semi-private properties
-      setStore({
-        get _colorMode() {
-          return indirectFlowProps.colorMode;
-        },
-        get _colorModeSSR() {
-          return indirectFlowProps.colorModeSSR;
-        },
-        get _nodeTypes() {
-          return indirectFlowProps.nodeTypes;
-        },
-        get _edgeTypes() {
-          return indirectFlowProps.edgeTypes;
-        },
-      });
+      actions.setDomNode(domNode);
+      // NOTE: should we check here if we have explicitly provided a width/height via props?
+      actions.setWidth(domNode.clientWidth);
+      actions.setHeight(domNode.clientHeight);
+      actions.setConfig(_props);
     });
 
     createEffect(() => {
-      setPaneClickDistance(indirectFlowProps.paneClickDistance);
-    });
-
-    createEffect(() => {
-      setStore("ariaLabelConfig", mergeAriaLabelConfig(indirectFlowProps.ariaLabelConfig));
+      actions.setPaneClickDistance(flowProps.paneClickDistance);
     });
 
     onCleanup(() => {
-      reset();
+      actions.reset();
     });
   });
 
