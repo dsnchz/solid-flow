@@ -91,6 +91,6 @@ export function createStoreSetter<T extends object>(accessor: Accessor<T>): SetS
     const [_, set] = createStore(accessor());
     return set;
   });
-  // @ts-expect-error
+  // @ts-expect-error - SetStoreFunction's parameters are too painful to type
   return (...args) => setStoreMemo()(...args);
 }
