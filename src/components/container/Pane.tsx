@@ -64,6 +64,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     props.onPaneClick?.({ event });
 
     actions.unselectNodesAndEdges();
+    actions.setSelectionRectMode(undefined);
   };
 
   const onPointerDown = (event: PointerEvent) => {
