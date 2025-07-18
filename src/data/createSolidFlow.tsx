@@ -420,11 +420,24 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     on(
       () => deepTrack(store.nodes),
       () => {
-        adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
-          nodeExtent: store.nodeExtent,
-          nodeOrigin: store.nodeOrigin,
-          elevateNodesOnSelect: store.elevateNodesOnSelect,
-          checkEquality: false,
+        batch(() => {
+          adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
+            nodeExtent: store.nodeExtent,
+            nodeOrigin: store.nodeOrigin,
+            elevateNodesOnSelect: store.elevateNodesOnSelect,
+            checkEquality: false,
+          });
+        });
+      },
+    ),
+  );
+
+  createEffect(
+    on(
+      () => deepTrack(store.edges),
+      () => {
+        batch(() => {
+          updateConnectionLookup(connectionLookup, edgeLookup, store.edges);
         });
       },
     ),
