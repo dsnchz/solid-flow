@@ -1,7 +1,8 @@
 import { isEdgeBase, isNodeBase, type XYPosition } from "@xyflow/system";
 
 import type { Edge, Node } from "@/types";
-import { createMemo, createSignal } from "solid-js";
+import { createMemo, createSignal, type Accessor } from "solid-js";
+import { createStore, type SetStoreFunction } from "solid-js/store";
 
 /**
  * Test whether an object is usable as a Node
@@ -39,9 +40,18 @@ export function deepTrack(value: unknown) {
   }
 }
 
-export function createWritable<T>(fn: () => T) {
-  const signal = createMemo(() => createSignal(fn()));
+export function createWritable<T>(accessor: Accessor<T>) {
+  const signal = createMemo(() => createSignal(accessor()));
   const get = () => signal()[0]();
   const set = (v: any) => signal()[1](v);
   return [get, set] as ReturnType<typeof createSignal<T>>;
+}
+
+export function createStoreSetter<T extends object>(accessor: Accessor<T>): SetStoreFunction<T> {
+  const setStoreMemo = createMemo(() => {
+    const [_, set] = createStore(accessor());
+    return set;
+  });
+  // @ts-expect-error
+  return (...args) => setStoreMemo()(...args);
 }

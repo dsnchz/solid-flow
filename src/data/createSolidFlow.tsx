@@ -48,8 +48,8 @@ import {
   type ViewportHelperFunctionOptions,
   type XYPosition,
 } from "@xyflow/system";
-import { batch, createEffect, createMemo, createSignal, mergeProps, on } from "solid-js";
-import { createStore, produce, type SetStoreFunction } from "solid-js/store";
+import { batch, createEffect, createSignal, mergeProps, on } from "solid-js";
+import { produce } from "solid-js/store";
 
 import type { SolidFlowProps } from "@/components/SolidFlow/types";
 import type { FitViewOptions } from "@/shared/types";
@@ -63,7 +63,7 @@ import type {
   NodeGraph,
   NodeTypes,
 } from "@/types";
-import { createWritable, deepTrack } from "@/utils";
+import { createStoreSetter, createWritable, deepTrack } from "@/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 
@@ -161,7 +161,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [elementsSelectable, setElementsSelectable] = createWritable(
     () => config().elementsSelectable,
   );
-  const [fitViewQueued, setFitViewQueued] = createWritable(() => config().fitViewQueued);
+  const [fitViewQueued, setFitViewQueued] = createWritable<boolean>(() => config().fitViewQueued);
   const [fitViewOptions, setFitViewOptions] = createWritable(() => config().fitViewOptions);
   const [height, setHeight] = createWritable(() => config().height);
   const [minZoom, _setMinZoom] = createWritable<number>(() => config().minZoom);
@@ -413,16 +413,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setSnapGrid(undefined);
   };
 
-  const _setNodes = createMemo(() => {
-    const [_, set] = createStore(store.nodes);
-    return set;
-  });
-  const _setEdges = createMemo(() => {
-    const [_, set] = createStore(store.edges);
-    return set;
-  });
-  const setNodes: SetStoreFunction<NodeType[]> = (...args) => _setNodes()(...args);
-  const setEdges: SetStoreFunction<Edge[]> = (...args) => _setEdges()(...args);
+  const setNodes = createStoreSetter(() => store.nodes);
+  const setEdges = createStoreSetter(() => store.edges);
 
   createEffect(
     on(
