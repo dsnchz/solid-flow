@@ -7,7 +7,7 @@ import {
   type Viewport,
   XYPanZoom,
 } from "@xyflow/system";
-import { createEffect, onMount, type ParentProps } from "solid-js";
+import { batch, createEffect, onMount, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts";
 import type { PanOnScrollMode } from "@/shared/types";
@@ -61,8 +61,10 @@ export const Zoom = (props: ParentProps<ZoomProps>) => {
       onTransformChange([vp.x, vp.y, vp.zoom]);
     }
 
-    actions.setViewport(vp);
-    actions.setPanZoom(panZoomInstance);
+    batch(() => {
+      actions.setViewport(vp);
+      actions.setPanZoom(panZoomInstance);
+    });
 
     props.onViewportInitialized?.();
 

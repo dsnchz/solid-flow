@@ -7,7 +7,7 @@ import {
   Position,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, createSignal, Show } from "solid-js";
+import { batch, createEffect, createSignal, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import createDraggable from "@/actions/createDraggable";
@@ -150,17 +150,19 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     const arrowKeyDiff = ARROW_KEY_DIFFS[event.key];
 
     if (draggable() && node().selected && arrowKeyDiff) {
-      // prevent default scrolling behavior on arrow key press when node is moved
-      event.preventDefault();
-      actions.setAriaLiveMessage(
-        store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
-          direction: event.key.replace("Arrow", "").toLowerCase(),
-          x: ~~node().internals.positionAbsolute.x,
-          y: ~~node().internals.positionAbsolute.y,
-        }),
-      );
+      batch(() => {
+        // prevent default scrolling behavior on arrow key press when node is moved
+        event.preventDefault();
+        actions.setAriaLiveMessage(
+          store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
+            direction: event.key.replace("Arrow", "").toLowerCase(),
+            x: ~~node().internals.positionAbsolute.x,
+            y: ~~node().internals.positionAbsolute.y,
+          }),
+        );
 
-      actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
+        actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
+      });
     }
   };
 

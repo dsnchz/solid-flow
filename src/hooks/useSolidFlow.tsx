@@ -23,6 +23,7 @@ import { unwrap } from "solid-js/store";
 import { useInternalSolidFlow } from "@/components/contexts";
 import type { Edge, FitViewOptions, InternalNode, Node } from "@/types";
 import { isEdge, isNode } from "@/utils";
+import { batch } from "solid-js/types/server/reactive.js";
 
 /**
  * Hook for accessing the SvelteFlow instance.
@@ -472,17 +473,19 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
         onBeforeDelete: store.onBeforeDelete,
       });
 
-      if (matchingNodes) {
-        actions.setNodes((nodes) =>
-          nodes.filter((node) => !matchingNodes.some(({ id }) => id === node.id)),
-        );
-      }
+      batch(() => {
+        if (matchingNodes) {
+          actions.setNodes((nodes) =>
+            nodes.filter((node) => !matchingNodes.some(({ id }) => id === node.id)),
+          );
+        }
 
-      if (matchingEdges) {
-        actions.setEdges((edges) =>
-          edges.filter((edge) => !matchingEdges.some(({ id }) => id === edge.id)),
-        );
-      }
+        if (matchingEdges) {
+          actions.setEdges((edges) =>
+            edges.filter((edge) => !matchingEdges.some(({ id }) => id === edge.id)),
+          );
+        }
+      });
 
       return {
         deletedNodes: matchingNodes,

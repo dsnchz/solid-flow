@@ -1,6 +1,6 @@
 import type { PanelPosition } from "@xyflow/system";
 import clsx from "clsx";
-import { type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
+import { batch, type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
 
 import { Panel } from "@/components/container";
 import { useInternalSolidFlow } from "@/components/contexts";
@@ -89,9 +89,11 @@ export const Controls = (props: ParentProps<ControlsProps>) => {
   const onToggleInteractivity = () => {
     const newValue = !getIsInteractive();
 
-    actions.setNodesDraggable(newValue);
-    actions.setNodesConnectable(newValue);
-    actions.setElementsSelectable(newValue);
+    batch(() => {
+      actions.setNodesDraggable(newValue);
+      actions.setNodesConnectable(newValue);
+      actions.setElementsSelectable(newValue);
+    });
   };
 
   const buttonProps = () => ({

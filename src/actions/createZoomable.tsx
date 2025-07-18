@@ -1,7 +1,7 @@
 import type { OnPanZoom, PanOnScrollMode, Transform, Viewport } from "@xyflow/system";
 import { XYPanZoom } from "@xyflow/system";
 import type { Accessor } from "solid-js";
-import { createEffect, onMount } from "solid-js";
+import { batch, createEffect, onMount } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts/flow";
 
@@ -57,8 +57,10 @@ const createZoomable = (
       onTransformChange([vp.x, vp.y, vp.zoom]);
     }
 
-    actions.setViewport(vp);
-    actions.setPanZoom(panZoomInstance);
+    batch(() => {
+      actions.setViewport(vp);
+      actions.setPanZoom(panZoomInstance);
+    });
 
     createEffect(() => {
       panZoomInstance.update({
