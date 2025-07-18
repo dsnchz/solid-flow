@@ -6,10 +6,10 @@ import {
   getHostForElement,
   type HandleConnection,
   handleConnectionChange,
+  type HandleProps as SystemHandleProps,
   type HandleType,
   type InternalNodeBase,
   type Optional,
-  type HandleProps as SystemHandleProps,
   type UpdateConnection,
   XYHandle,
 } from "@xyflow/system";

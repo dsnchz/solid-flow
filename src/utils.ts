@@ -1,8 +1,8 @@
 import { isEdgeBase, isNodeBase, type XYPosition } from "@xyflow/system";
+import { type Accessor,createMemo, createSignal } from "solid-js";
+import { createStore, type SetStoreFunction } from "solid-js/store";
 
 import type { Edge, Node } from "@/types";
-import { createMemo, createSignal, type Accessor } from "solid-js";
-import { createStore, type SetStoreFunction } from "solid-js/store";
 
 /**
  * Test whether an object is usable as a Node

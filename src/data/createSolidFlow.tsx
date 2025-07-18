@@ -1,13 +1,7 @@
-import {
-  BezierEdgeInternal,
-  SmoothStepEdgeInternal,
-  StepEdgeInternal,
-  StraightEdgeInternal,
-} from "@/components/graph/edge";
-import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/graph/node";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createMediaQuery } from "@solid-primitives/media";
 import {
+  addEdge as systemAddEdge,
   adoptUserNodes,
   calculateNodePosition,
   type Connection,
@@ -39,11 +33,10 @@ import {
   type SelectionRect,
   type SetCenterOptions,
   snapPosition,
-  addEdge as systemAddEdge,
-  updateNodeInternals as systemUpdateNodeInternals,
   type Transform,
   updateAbsolutePositions,
   updateConnectionLookup,
+  updateNodeInternals as systemUpdateNodeInternals,
   type Viewport,
   type ViewportHelperFunctionOptions,
   type XYPosition,
@@ -51,6 +44,13 @@ import {
 import { batch, createEffect, createSignal, mergeProps, on } from "solid-js";
 import { produce } from "solid-js/store";
 
+import {
+  BezierEdgeInternal,
+  SmoothStepEdgeInternal,
+  StepEdgeInternal,
+  StraightEdgeInternal,
+} from "@/components/graph/edge";
+import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/graph/node";
 import type { SolidFlowProps } from "@/components/SolidFlow/types";
 import type { FitViewOptions } from "@/shared/types";
 import type {
