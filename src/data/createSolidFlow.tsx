@@ -1,5 +1,4 @@
 import {
-  addEdge as systemAddEdge,
   adoptUserNodes,
   calculateNodePosition,
   type Connection,
@@ -15,18 +14,20 @@ import {
   panBy as panBySystem,
   type SetCenterOptions,
   snapPosition,
+  addEdge as systemAddEdge,
+  updateNodeInternals as systemUpdateNodeInternals,
   updateAbsolutePositions,
   updateConnectionLookup,
-  updateNodeInternals as systemUpdateNodeInternals,
   type ViewportHelperFunctionOptions,
   type XYPosition,
 } from "@xyflow/system";
-import { batch, createEffect } from "solid-js";
+import { batch, createEffect, on } from "solid-js";
 import { type ArrayFilterFn, produce, reconcile, type StoreSetter } from "solid-js/store";
 
 import type { SolidFlowProps } from "@/components/SolidFlow/types";
 import type { FitViewOptions } from "@/shared/types";
 import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
+import { deepTrack } from "@/utils";
 
 import { initializeSolidFlowStore } from "./initializeSolidFlowStore";
 
@@ -45,9 +46,19 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     resetStoreValues,
   } = initializeSolidFlowStore(props);
 
-  createEffect(() => {
-    console.log("NODE PROPS >>>>", props.nodes);
-  });
+  createEffect(
+    on(
+      () => deepTrack(store.nodes),
+      () => {
+        adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
+          nodeExtent: store.nodeExtent,
+          nodeOrigin: store.nodeOrigin,
+          elevateNodesOnSelect: store.elevateNodesOnSelect,
+          checkEquality: false,
+        });
+      },
+    ),
+  );
 
   function setNodes(nodes: NodeType[]): void;
   function setNodes(prev: (nodes: NodeType[]) => NodeType[]): void;
@@ -64,15 +75,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     } else {
       setStore("nodes", arg1 as StoreSetter<NodeType[], ["nodes"]>);
     }
-
-    batch(() => {
-      adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
-        nodeExtent: store.nodeExtent,
-        nodeOrigin: store.nodeOrigin,
-        elevateNodesOnSelect: store.elevateNodesOnSelect,
-        checkEquality: false,
-      });
-    });
   }
 
   function setEdges(edges: EdgeType[]): void;

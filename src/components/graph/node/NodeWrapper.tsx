@@ -41,9 +41,6 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
   const node = () => nodeLookup.get(props.nodeId)!;
 
   let prevNodeRef: HTMLDivElement | undefined = undefined;
-  let prevType: string | undefined = undefined;
-  let prevSourcePosition: Position | undefined = undefined;
-  let prevTargetPosition: Position | undefined = undefined;
 
   const nodeId = () => node().id;
   const nodeType = () => node().type ?? "default";
@@ -89,35 +86,38 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     }
   });
 
-  createEffect(() => {
-    // if type, sourcePosition or targetPosition changes,
-    // we need to re-calculate the handle positions
-    const doUpdate = Boolean(
-      (prevType && nodeType() !== prevType) ||
-        (prevSourcePosition && node().sourcePosition !== prevSourcePosition) ||
-        (prevTargetPosition && node().targetPosition !== prevTargetPosition),
-    );
-
-    if (doUpdate) {
-      requestAnimationFrame(() =>
-        updateNodeInternals(
-          new Map([
-            [
-              node().id,
-              {
-                id: node().id,
-                nodeElement: nodeRef()!,
-                force: true,
-              },
-            ],
-          ]),
-        ),
-      );
+  createEffect<{
+    sourcePosition: Position | undefined;
+    targetPosition: Position | undefined;
+    nodeType: string;
+  }>((prev) => {
+    if (
+      prev &&
+      prev.sourcePosition === node().sourcePosition &&
+      prev.targetPosition === node().targetPosition &&
+      prev.nodeType === nodeType()
+    ) {
+      return prev;
     }
 
-    prevType = nodeType();
-    prevSourcePosition = node().sourcePosition;
-    prevTargetPosition = node().targetPosition;
+    updateNodeInternals(
+      new Map([
+        [
+          node().id,
+          {
+            id: node().id,
+            nodeElement: nodeRef()!,
+            force: true,
+          },
+        ],
+      ]),
+    );
+
+    return {
+      nodeType: nodeType(),
+      sourcePosition: node().sourcePosition,
+      targetPosition: node().targetPosition,
+    };
   });
 
   createEffect(() => {
