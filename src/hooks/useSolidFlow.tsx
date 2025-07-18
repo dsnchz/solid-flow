@@ -23,7 +23,7 @@ import { unwrap } from "solid-js/store";
 import { useInternalSolidFlow } from "@/components/contexts";
 import type { Edge, FitViewOptions, InternalNode, Node } from "@/types";
 import { isEdge, isNode } from "@/utils";
-import { batch } from "solid-js/types/server/reactive.js";
+import { batch } from "solid-js";
 
 /**
  * Hook for accessing the SvelteFlow instance.
