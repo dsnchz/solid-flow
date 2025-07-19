@@ -10,7 +10,7 @@ export const StressTest = () => {
   const nodeItems: Node[] = [];
   const edgeItems: Edge[] = [];
 
-  // let source: Node | null = null;
+  let source: Node | null = null;
 
   for (let y = 0; y < yNodes; y++) {
     for (let x = 0; x < xNodes; x++) {
@@ -27,16 +27,16 @@ export const StressTest = () => {
       nodeItems.push(node);
 
       // Edges removed for performance testing
-      // if (source) {
-      //   const edge: Edge = {
-      //     id: `${source.id}-${id}`,
-      //     source: source.id,
-      //     target: id,
-      //   };
-      //   edgeItems.push(edge);
-      // }
+      if (source) {
+        const edge: Edge = {
+          id: `${source.id}-${id}`,
+          source: source.id,
+          target: id,
+        };
+        edgeItems.push(edge);
+      }
 
-      // source = node;
+      source = node;
     }
   }
 
