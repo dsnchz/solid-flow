@@ -18,7 +18,6 @@ import {
   infiniteExtent,
   initialConnection,
   type InternalNodeBase,
-  type InternalNodeUpdate,
   type MarkerProps,
   mergeAriaLabelConfig,
   type NodeDimensionChange,
@@ -66,6 +65,7 @@ import type {
 import { createStoreSetter, createWritable, deepTrack } from "@/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
+import type { InternalUpdateEntry } from "./types";
 import { type EdgeLayoutAllOptions, getLayoutedEdges, getVisibleNodes } from "./visibleElements";
 
 type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
@@ -272,9 +272,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     get height() {
       return height();
     },
-    get layoutedEdgesMap() {
-      return layoutedEdgesMap();
-    },
     get lib() {
       /*
        * Made this a derived store get value to prevent overwriting the value. This value is crucial
@@ -337,14 +334,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     get visibleEdgesMap() {
       return visibleEdgesMap();
     },
-    get visibleNodesMap() {
-      return visibleNodesMap();
-    },
-    get visibleInternalNodesMap() {
-      return visibleInternalNodesMap();
-    },
     get visibleNodeIds() {
       return visibleNodeIds();
+    },
+    get visibleNodesMap() {
+      return visibleNodesMap();
     },
     get transform() {
       return transform();
@@ -380,36 +374,15 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const userNodeMap = createMemo(() => {
-    const map = new Map<string, NodeType>();
-    for (const node of config().nodes) {
-      map.set(node.id, node);
-    }
-    return map;
-  });
-
-  const visibleInternalNodesMap = createMemo(() => {
+  const visibleNodesMap = createMemo<Map<string, InternalNode>>(() => {
     if (store.onlyRenderVisibleElements) {
       return getVisibleNodes(nodeLookup, transform(), store.width ?? 0, store.height ?? 0);
     }
     return nodeLookup;
-  }, nodeLookup);
-
-  const visibleNodeIds = createMemo(() => {
-    return Array.from(visibleInternalNodesMap()?.values()).map((node) => node.id);
   });
 
-  const visibleNodesMap = createMemo(() => {
-    const nodeMap = userNodeMap();
-    const visibleIds = visibleNodeIds();
-    const map = new Map<string, NodeType>();
-    for (const nodeId of visibleIds) {
-      const node = nodeMap.get(nodeId);
-      if (node) {
-        map.set(nodeId, node);
-      }
-    }
-    return map;
+  const visibleNodeIds = createMemo(() => {
+    return Array.from(visibleNodesMap().values()).map((edge) => edge.id);
   });
 
   const visibleEdgesMap = createMemo<Map<string, EdgeLayouted<EdgeType>>>((previousEdges) => {
@@ -427,7 +400,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       return getLayoutedEdges({
         ...options,
         onlyRenderVisible: true,
-        visibleNodes: visibleInternalNodesMap(),
+        visibleNodes: visibleNodesMap(),
         transform: transform(),
         width: store.width ?? 0,
         height: store.height ?? 0,
@@ -439,15 +412,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   const visibleEdgeIds = createMemo(() => {
     return Array.from(visibleEdgesMap().values()).map((edge) => edge.id);
-  });
-
-  const layoutedEdgesMap = createMemo(() => {
-    const edges = visibleEdgesMap();
-    const map = new Map<string, EdgeLayouted<EdgeType>>();
-    for (const edge of edges.values()) {
-      map.set(edge.id, edge);
-    }
-    return map;
   });
 
   /**********************************************************************************/
@@ -558,62 +522,73 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     );
   };
 
-  const updateNodeInternals = (updates: Map<string, InternalNodeUpdate>) => {
-    const { changes, updatedInternals } = systemUpdateNodeInternals(
-      updates,
-      nodeLookup,
-      parentLookup,
-      store.domNode,
-      store.nodeOrigin,
-    );
-
-    if (!updatedInternals) return;
-
-    batch(() => {
-      updateAbsolutePositions(nodeLookup, parentLookup, {
-        nodeOrigin: store.nodeOrigin,
-        nodeExtent: store.nodeExtent,
-      });
-    });
-
-    if (store.fitViewQueued) {
-      void resolveFitView();
+  let pendingEntries: InternalUpdateEntry[] | undefined = undefined;
+  const requestUpdateNodeInternals = (updateEntries: InternalUpdateEntry[]) => {
+    if (pendingEntries) {
+      pendingEntries.push(...updateEntries);
+      return;
     }
 
-    const nodeToChange = changes.reduce<Map<string, NodeDimensionChange | NodePositionChange>>(
-      (acc, change) => {
-        const node = nodeLookup.get(change.id)?.internals.userNode;
+    pendingEntries = updateEntries;
 
-        if (!node) return acc;
+    requestIdleCallback(() => {
+      batch(() => {
+        const updates = new Map(pendingEntries);
+        pendingEntries = undefined;
+        const { changes, updatedInternals } = systemUpdateNodeInternals(
+          updates,
+          nodeLookup,
+          parentLookup,
+          store.domNode,
+          store.nodeOrigin,
+        );
 
-        acc.set(node.id, change);
+        if (!updatedInternals) return;
 
-        return acc;
-      },
-      new Map(),
-    );
-
-    setNodes(
-      (node) => nodeToChange.has(node.id),
-      produce((node) => {
-        const change = nodeToChange.get(node.id)!;
-
-        switch (change.type) {
-          case "dimensions": {
-            if (change.setAttributes) {
-              node.width = change.dimensions?.width ?? node.width;
-              node.height = change.dimensions?.height ?? node.height;
-            }
-
-            node.measured = { ...node.measured, ...change.dimensions };
-            break;
-          }
-          case "position":
-            node.position = change.position ?? node.position;
-            break;
+        updateAbsolutePositions(nodeLookup, parentLookup, {
+          nodeOrigin: store.nodeOrigin,
+          nodeExtent: store.nodeExtent,
+        });
+        if (store.fitViewQueued) {
+          void resolveFitView();
         }
-      }),
-    );
+
+        const nodeToChange = changes.reduce<Map<string, NodeDimensionChange | NodePositionChange>>(
+          (acc, change) => {
+            const node = nodeLookup.get(change.id)?.internals.userNode;
+
+            if (!node) return acc;
+
+            acc.set(node.id, change);
+
+            return acc;
+          },
+          new Map(),
+        );
+
+        setNodes(
+          (node) => nodeToChange.has(node.id),
+          produce((node) => {
+            const change = nodeToChange.get(node.id)!;
+
+            switch (change.type) {
+              case "dimensions": {
+                if (change.setAttributes) {
+                  node.width = change.dimensions?.width ?? node.width;
+                  node.height = change.dimensions?.height ?? node.height;
+                }
+
+                node.measured = { ...node.measured, ...change.dimensions };
+                break;
+              }
+              case "position":
+                node.position = change.position ?? node.position;
+                break;
+            }
+          }),
+        );
+      });
+    });
   };
 
   const zoomBy = async (factor: number, options?: ViewportHelperFunctionOptions) => {
@@ -821,12 +796,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const panBy = (delta: XYPosition) => {
-    const viewport = store.viewport;
-
     return panBySystem({
       delta,
       panZoom: store.panZoom,
-      transform: [viewport.x, viewport.y, viewport.zoom],
+      transform: store.transform,
       translateExtent: store.translateExtent,
       width: store.width,
       height: store.height,
@@ -862,16 +835,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   createEffect(
     on(
       () => deepTrack(store.nodes),
-      () => {
-        batch(() => {
-          adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
-            nodeExtent: store.nodeExtent,
-            nodeOrigin: store.nodeOrigin,
-            elevateNodesOnSelect: store.elevateNodesOnSelect,
-            checkEquality: false,
-          });
-        });
-      },
+      () => updateSystemNodes(),
     ),
   );
 
@@ -897,6 +861,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       nodesInitialized,
       resetStoreValues,
       resolveFitView,
+      requestUpdateNodeInternals,
       setAriaLabelConfig,
       setAriaLiveMessage,
       setClickConnectStartHandle,
@@ -928,7 +893,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       // Port Svelte Flow Actions to Solid Flow
       addEdge,
       updateNodePositions,
-      updateNodeInternals,
       zoomIn,
       zoomOut,
       fitView,

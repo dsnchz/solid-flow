@@ -13,19 +13,19 @@ export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererPr
   const { actions, store } = useInternalSolidFlow<NodeType>();
 
   const resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
-    const updates = new Map();
-
-    entries.forEach((entry: ResizeObserverEntry) => {
-      const id = entry.target.getAttribute("data-id") as string;
-
-      updates.set(id, {
-        id,
-        nodeElement: entry.target as HTMLDivElement,
-        force: true,
-      });
-    });
-
-    actions.updateNodeInternals(updates);
+    actions.requestUpdateNodeInternals(
+      entries.map((entry: ResizeObserverEntry) => {
+        const id = entry.target.getAttribute("data-id") as string;
+        return [
+          id,
+          {
+            id,
+            nodeElement: entry.target as HTMLDivElement,
+            force: true,
+          },
+        ];
+      }),
+    );
   });
 
   onCleanup(() => {

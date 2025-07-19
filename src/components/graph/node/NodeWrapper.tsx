@@ -89,18 +89,16 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
       return prev;
     }
 
-    actions.updateNodeInternals(
-      new Map([
-        [
-          node().id,
-          {
-            id: node().id,
-            nodeElement: nodeRef()!,
-            force: true,
-          },
-        ],
-      ]),
-    );
+    actions.requestUpdateNodeInternals([
+      [
+        node().id,
+        {
+          id: node().id,
+          nodeElement: nodeRef()!,
+          force: true,
+        },
+      ],
+    ]);
 
     return {
       nodeType: nodeType(),
