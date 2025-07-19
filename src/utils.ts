@@ -1,5 +1,5 @@
 import { isEdgeBase, isNodeBase, type XYPosition } from "@xyflow/system";
-import { type Accessor,createMemo, createSignal } from "solid-js";
+import { type Accessor, createMemo, createSignal } from "solid-js";
 import { createStore, type SetStoreFunction } from "solid-js/store";
 
 import type { Edge, Node } from "@/types";
@@ -66,8 +66,10 @@ export function deepTrack(value: unknown) {
  * ```
  */
 export function createWritable<T>(accessor: Accessor<T>) {
+  // eslint-disable-next-line solid/reactivity
   const signal = createMemo(() => createSignal(accessor()));
   const get = () => signal()[0]();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const set = (v: any) => signal()[1](v);
   return [get, set] as ReturnType<typeof createSignal<T>>;
 }
@@ -91,6 +93,9 @@ export function createStoreSetter<T extends object>(accessor: Accessor<T>): SetS
     const [_, set] = createStore(accessor());
     return set;
   });
+
   // @ts-expect-error - SetStoreFunction's parameters are too painful to type
-  return (...args) => setStoreMemo()(...args);
+  const storeSetter = (...args) => setStoreMemo()(...args);
+
+  return storeSetter;
 }

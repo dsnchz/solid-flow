@@ -1,6 +1,7 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createMediaQuery } from "@solid-primitives/media";
 import {
+  addEdge as systemAddEdge,
   adoptUserNodes,
   calculateNodePosition,
   type Connection,
@@ -32,11 +33,10 @@ import {
   type SelectionRect,
   type SetCenterOptions,
   snapPosition,
-  addEdge as systemAddEdge,
-  updateNodeInternals as systemUpdateNodeInternals,
   type Transform,
   updateAbsolutePositions,
   updateConnectionLookup,
+  updateNodeInternals as systemUpdateNodeInternals,
   type Viewport,
   type ViewportHelperFunctionOptions,
   type XYPosition,
