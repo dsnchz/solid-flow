@@ -8,7 +8,6 @@ import {
   type ConnectionLookup,
   type ConnectionState,
   createMarkerIds,
-  devWarn,
   type EdgeLookup,
   errorMessages,
   fitViewport,
@@ -25,7 +24,6 @@ import {
   type NodeDragItem,
   type NodeLookup,
   type NodePositionChange,
-  type OnError,
   panBy as panBySystem,
   type PanZoomInstance,
   type ParentLookup,
@@ -257,7 +255,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       return "solid" as const;
     },
     get onError() {
-      return config().onFlowError ?? (devWarn as OnError);
+      return config().onFlowError;
     },
     get markers() {
       return createMarkerIds(config().edges, {

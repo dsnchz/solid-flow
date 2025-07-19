@@ -1,5 +1,5 @@
 import { getBezierPath, Position } from "@xyflow/system";
-import { produce, reconcile } from "solid-js/store";
+import { produce } from "solid-js/store";
 
 import {
   Background,
@@ -242,12 +242,11 @@ export const Overview = () => {
   const setLeftRight = () => {
     const updatedNodes = nodes.map((node) => ({
       ...node,
-      sourcePosition: Position.Right,
-      targetPosition: Position.Left,
+      sourcePosition: node.sourcePosition === Position.Right ? Position.Bottom : Position.Right,
+      targetPosition: node.targetPosition === Position.Left ? Position.Top : Position.Left,
     }));
 
-    console.log("UPDATED NODES >>>>", updatedNodes);
-    setNodes(reconcile(updatedNodes));
+    setNodes(updatedNodes);
   };
 
   return (
@@ -305,7 +304,7 @@ export const Overview = () => {
           <button onClick={moveNode}>update node pos</button>
           <button onClick={changeEdgeType}>update edge type</button>
           <button onClick={hideUnhide}>hide/unhide</button>
-          <button onClick={setLeftRight}>left-right</button>
+          <button onClick={setLeftRight}>toggle handle pos</button>
         </Panel>
       </SolidFlow>
     </>

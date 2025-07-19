@@ -1,5 +1,3 @@
-import { createEffect } from "solid-js";
-
 import { Background, Controls, MiniMap, SolidFlow } from "@/components";
 import { createNodeStore } from "@/index";
 
@@ -7,7 +5,6 @@ export const Reset = () => {
   const [nodes, setNodes] = createNodeStore([]);
 
   const resetNodesArray = () => {
-    console.log("RESET NODES >>>>");
     setNodes([
       {
         id: "c1",
@@ -26,18 +23,16 @@ export const Reset = () => {
     ]);
   };
 
-  createEffect(() => {
-    console.log("USER NODES CHANGED >>>>", nodes);
-  });
-
   return (
-    <div style={{ height: "100vh" }}>
-      <button onClick={resetNodesArray}>Reset</button>
+    <>
+      <div>
+        <button onClick={resetNodesArray}>Reset</button>
+      </div>
       <SolidFlow nodes={nodes} fitView>
         <Controls />
         <Background />
         <MiniMap />
       </SolidFlow>
-    </div>
+    </>
   );
 };

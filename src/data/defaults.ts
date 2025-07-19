@@ -1,4 +1,11 @@
-import { type ColorMode, infiniteExtent, type NodeOrigin } from "@xyflow/system";
+import {
+  type ColorMode,
+  devWarn,
+  infiniteExtent,
+  type IsValidConnection,
+  type NodeOrigin,
+  type OnError,
+} from "@xyflow/system";
 import type { JSX } from "solid-js";
 
 import type {
@@ -48,4 +55,6 @@ export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends
     defaultMarkerColor: "#b1b1b7",
     ariaLiveMessage: "" as string,
     style: {} as JSX.CSSProperties,
+    isValidConnection: (() => true) as IsValidConnection,
+    onFlowError: devWarn as OnError,
   }) as const;

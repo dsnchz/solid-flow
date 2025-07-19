@@ -1,10 +1,4 @@
-import {
-  type ColorModeClass,
-  devWarn,
-  infiniteExtent,
-  isMacOs,
-  type OnError,
-} from "@xyflow/system";
+import { type ColorModeClass, infiniteExtent, isMacOs } from "@xyflow/system";
 import clsx from "clsx";
 import {
   batch,
@@ -50,10 +44,8 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
       colorMode: "light" as ColorModeClass,
       deleteKeyCode: "Backspace",
       defaultViewport: { x: 0, y: 0, zoom: 1 },
-      isValidConnection: () => true,
       multiSelectionKeyCode: isMacOs() ? "Meta" : "Control",
       nodeClickDistance: 0,
-      onFlowError: devWarn as OnError,
       panOnScroll: false,
       panActivationKeyCode: "Space",
       preventScrolling: true,
@@ -248,10 +240,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     });
   });
 
-  const onScroll = (e: Event & { currentTarget: EventTarget & HTMLDivElement }) => {
-    e.currentTarget.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  };
-
   const rootStyle = (): JSX.CSSProperties => ({
     width: toPxString(flowProps.width),
     height: toPxString(flowProps.height),
@@ -259,16 +247,18 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   });
 
   return (
-    <TypedSolidFlowContext.Provider value={solidFlow}>
-      <div
-        role="application"
-        data-testid="solid-flow__wrapper"
-        ref={domNode}
-        class={clsx(["solid-flow", "solid-flow__container", flowProps.class, store.colorMode])}
-        style={rootStyle()}
-        onScroll={onScroll}
-        {...htmlProps}
-      >
+    <div
+      role="application"
+      data-testid="solid-flow__wrapper"
+      ref={domNode}
+      class={clsx(["solid-flow", "solid-flow__container", flowProps.class, store.colorMode])}
+      style={rootStyle()}
+      onScroll={(e) => {
+        e.currentTarget.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      }}
+      {...htmlProps}
+    >
+      <TypedSolidFlowContext.Provider value={solidFlow}>
         <KeyHandler
           selectionKey={flowProps.selectionKey}
           deleteKey={flowProps.deleteKey}
@@ -347,7 +337,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
         <Attribution proOptions={flowProps.proOptions} position={flowProps.attributionPosition} />
         <A11yDescriptions />
         {flowProps.children}
-      </div>
-    </TypedSolidFlowContext.Provider>
+      </TypedSolidFlowContext.Provider>
+    </div>
   );
 };
