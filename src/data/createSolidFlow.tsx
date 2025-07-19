@@ -116,9 +116,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const edgeLookup: EdgeLookup<EdgeType> = new ReactiveMap();
   const connectionLookup: ConnectionLookup = new ReactiveMap();
 
-  batch(() => {
-    updateConnectionLookup(connectionLookup, edgeLookup, _props.edges);
-  });
+  batch(() => updateConnectionLookup(connectionLookup, edgeLookup, _props.edges));
 
   const startNodesInitialized = batch(() => {
     return adoptUserNodes(_props.nodes, nodeLookup, parentLookup, {
@@ -143,6 +141,13 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     _props.colorModeSSR === "dark",
   );
 
+  /**********************************************************************************/
+  /*                                                                                */
+  /*                                 Declare Signals                                */
+  /*                                                                                */
+  /**********************************************************************************/
+
+  // The config-signal is set by SolidFlow to its props.
   const [config, setConfig] = createSignal(_props);
 
   const [ariaLabelConfig, setAriaLabelConfig] = createWritable(() =>
@@ -187,6 +192,12 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
   const transform = createMemo(() => [viewport().x, viewport().y, viewport().zoom] as Transform);
+
+  /**********************************************************************************/
+  /*                                                                                */
+  /*                                  Declare Store                                 */
+  /*                                                                                */
+  /**********************************************************************************/
 
   const store = mergeProps({ width: 0, height: 0 }, config, {
     get _colorMode() {
@@ -820,6 +831,12 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     resetStoreValues();
     unselectNodesAndEdges();
   };
+
+  /**********************************************************************************/
+  /*                                                                                */
+  /*                                     Effects                                    */
+  /*                                                                                */
+  /**********************************************************************************/
 
   createEffect(() => {
     const _panZoom = panZoom();
