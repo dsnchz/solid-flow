@@ -1,5 +1,5 @@
 import { isInputDOMNode, isMacOs } from "@xyflow/system";
-import { mergeProps, onCleanup, onMount } from "solid-js";
+import { batch, mergeProps, onCleanup, onMount } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
@@ -71,7 +71,7 @@ function matchesKeyArray(
 }
 
 const KeyHandler = (props: KeyHandlerProps) => {
-  const { store, setStore } = useInternalSolidFlow();
+  const { store, actions } = useInternalSolidFlow();
   const { deleteElements } = useSolidFlow();
 
   const _props = mergeProps(
@@ -86,13 +86,13 @@ const KeyHandler = (props: KeyHandlerProps) => {
   );
 
   const resetKeysAndSelection = () => {
-    setStore({
-      selectionRect: undefined,
-      selectionKeyPressed: false,
-      multiselectionKeyPressed: false,
-      deleteKeyPressed: false,
-      panActivationKeyPressed: false,
-      zoomActivationKeyPressed: false,
+    batch(() => {
+      actions.setSelectionRect(undefined);
+      actions.setSelectionKeyPressed(false);
+      actions.setMultiselectionKeyPressed(false);
+      actions.setDeleteKeyPressed(false);
+      actions.setPanActivationKeyPressed(false);
+      actions.setZoomActivationKeyPressed(false);
     });
   };
 
@@ -114,44 +114,48 @@ const KeyHandler = (props: KeyHandlerProps) => {
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (matchesKeyArray(event, _props.selectionKey)) {
-      setStore({ selectionKeyPressed: true });
-    }
-    if (matchesKeyArray(event, _props.multiSelectionKey)) {
-      setStore({ multiselectionKeyPressed: true });
-    }
-    if (matchesKeyArray(event, _props.deleteKey) && !isInputDOMNode(event)) {
-      // Add safety check for modifier keys to prevent accidental deletions
-      const isModifierKey = event.ctrlKey || event.metaKey || event.shiftKey;
-      if (!isModifierKey) {
-        setStore({ deleteKeyPressed: true });
-        void handleDelete();
+    batch(() => {
+      if (matchesKeyArray(event, _props.selectionKey)) {
+        actions.setSelectionKeyPressed(true);
       }
-    }
-    if (matchesKeyArray(event, _props.panActivationKey)) {
-      setStore({ panActivationKeyPressed: true });
-    }
-    if (matchesKeyArray(event, _props.zoomActivationKey)) {
-      setStore({ zoomActivationKeyPressed: true });
-    }
+      if (matchesKeyArray(event, _props.multiSelectionKey)) {
+        actions.setMultiselectionKeyPressed(true);
+      }
+      if (matchesKeyArray(event, _props.deleteKey) && !isInputDOMNode(event)) {
+        // Add safety check for modifier keys to prevent accidental deletions
+        const isModifierKey = event.ctrlKey || event.metaKey || event.shiftKey;
+        if (!isModifierKey) {
+          actions.setDeleteKeyPressed(true);
+          void handleDelete();
+        }
+      }
+      if (matchesKeyArray(event, _props.panActivationKey)) {
+        actions.setPanActivationKeyPressed(true);
+      }
+      if (matchesKeyArray(event, _props.zoomActivationKey)) {
+        actions.setZoomActivationKeyPressed(true);
+      }
+    });
   };
 
   const handleKeyUp = (event: KeyboardEvent) => {
-    if (matchesKeyArray(event, _props.selectionKey)) {
-      setStore({ selectionKeyPressed: false });
-    }
-    if (matchesKeyArray(event, _props.multiSelectionKey)) {
-      setStore({ multiselectionKeyPressed: false });
-    }
-    if (matchesKeyArray(event, _props.deleteKey)) {
-      setStore({ deleteKeyPressed: false });
-    }
-    if (matchesKeyArray(event, _props.panActivationKey)) {
-      setStore({ panActivationKeyPressed: false });
-    }
-    if (matchesKeyArray(event, _props.zoomActivationKey)) {
-      setStore({ zoomActivationKeyPressed: false });
-    }
+    batch(() => {
+      if (matchesKeyArray(event, _props.selectionKey)) {
+        actions.setSelectionKeyPressed(false);
+      }
+      if (matchesKeyArray(event, _props.multiSelectionKey)) {
+        actions.setMultiselectionKeyPressed(false);
+      }
+      if (matchesKeyArray(event, _props.deleteKey)) {
+        actions.setDeleteKeyPressed(false);
+      }
+      if (matchesKeyArray(event, _props.panActivationKey)) {
+        actions.setPanActivationKeyPressed(false);
+      }
+      if (matchesKeyArray(event, _props.zoomActivationKey)) {
+        actions.setZoomActivationKeyPressed(false);
+      }
+    });
   };
 
   onMount(() => {

@@ -28,8 +28,7 @@ const createDraggable = <NodeType extends Node>(
   elem: Accessor<HTMLElement | undefined>,
   params: Accessor<Partial<CreateDraggableParams>>,
 ) => {
-  const { store, nodeLookup, panBy, updateNodePositions, unselectNodesAndEdges } =
-    useInternalSolidFlow();
+  const { store, nodeLookup, actions } = useInternalSolidFlow();
   const [dragging, setDragging] = createSignal(false);
 
   onMount(() => {
@@ -63,9 +62,9 @@ const createDraggable = <NodeType extends Node>(
           nodesDraggable: store.nodesDraggable,
           selectNodesOnDrag: store.selectNodesOnDrag,
           nodeDragThreshold: store.nodeDragThreshold,
-          unselectNodesAndEdges,
-          updateNodePositions,
-          panBy,
+          unselectNodesAndEdges: actions.unselectNodesAndEdges,
+          updateNodePositions: actions.updateNodePositions,
+          panBy: actions.panBy,
         };
       },
     });

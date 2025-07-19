@@ -6,10 +6,10 @@ import {
   getHostForElement,
   type HandleConnection,
   handleConnectionChange,
-  type HandleProps as SystemHandleProps,
   type HandleType,
   type InternalNodeBase,
   type Optional,
+  type HandleProps as SystemHandleProps,
   type UpdateConnection,
   XYHandle,
 } from "@xyflow/system";
@@ -43,16 +43,10 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     props,
   );
 
-  const {
-    store,
-    nodeLookup,
-    connectionLookup,
-    setStore,
-    updateConnection,
-    cancelConnection,
-    panBy,
-    addEdge,
-  } = useInternalSolidFlow<NodeType, EdgeType>();
+  const { store, nodeLookup, connectionLookup, actions } = useInternalSolidFlow<
+    NodeType,
+    EdgeType
+  >();
 
   const [local, rest] = splitProps(_props, [
     "id",
@@ -122,7 +116,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
 
     if (!edge) return;
 
-    addEdge(edge);
+    actions.addEdge(edge);
     store.onConnect?.(connection);
   };
 
@@ -139,9 +133,9 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       autoPanOnConnect: store.autoPanOnConnect,
       flowId: store.id,
       isValidConnection: local.isValidConnection ?? store.isValidConnection,
-      updateConnection: updateConnection as UpdateConnection<InternalNodeBase>,
-      cancelConnection,
-      panBy,
+      updateConnection: actions.setConnection as UpdateConnection<InternalNodeBase>,
+      cancelConnection: actions.cancelConnection,
+      panBy: actions.panBy,
       onConnect: onConnectExtended,
       onConnectStart: (event, startParams) => {
         store.onConnectStart?.(event, {
@@ -166,7 +160,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
         handleId: handleId(),
         handleType: local.type,
       });
-      setStore("clickConnectStartHandle", { nodeId: nodeId(), type: local.type, id: handleId() });
+      actions.setClickConnectStartHandle({ nodeId: nodeId(), type: local.type, id: handleId() });
       return;
     }
 
@@ -206,8 +200,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       : null;
 
     store.onClickConnectEnd?.(event, connectionClone);
-
-    setStore("clickConnectStartHandle", undefined);
+    actions.setClickConnectStartHandle(undefined);
   };
 
   const connectionIndicator = () =>

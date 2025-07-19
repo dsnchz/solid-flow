@@ -1,6 +1,6 @@
 import { getEventPosition, getNodesInside, SelectionMode } from "@xyflow/system";
 import clsx from "clsx";
-import type { JSX, ParentProps } from "solid-js";
+import { batch, type JSX, type ParentProps } from "solid-js";
 import { produce } from "solid-js/store";
 
 import { useInternalSolidFlow } from "@/components/contexts";
@@ -29,16 +29,10 @@ export type PaneProps = PaneEvents & {
 export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<PaneProps>,
 ): JSX.Element => {
-  const {
-    store,
-    nodeLookup,
-    edgeLookup,
-    connectionLookup,
-    unselectNodesAndEdges,
-    setStore,
-    setNodes,
-    setEdges,
-  } = useInternalSolidFlow<NodeType, EdgeType>();
+  const { store, nodeLookup, edgeLookup, connectionLookup, actions } = useInternalSolidFlow<
+    NodeType,
+    EdgeType
+  >();
 
   let container: HTMLDivElement | undefined;
   let containerBounds: DOMRect | null = null;
@@ -69,8 +63,10 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     props.onPaneClick?.({ event });
 
-    unselectNodesAndEdges();
-    setStore("selectionRectMode", undefined);
+    batch(() => {
+      actions.unselectNodesAndEdges();
+      actions.setSelectionRectMode(undefined);
+    });
   };
 
   const onPointerDown = (event: PointerEvent) => {
@@ -90,15 +86,16 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     const { x, y } = getEventPosition(event, containerBounds);
 
-    unselectNodesAndEdges();
-
-    setStore("selectionRect", {
-      width: 0,
-      height: 0,
-      startX: x,
-      startY: y,
-      x,
-      y,
+    batch(() => {
+      actions.unselectNodesAndEdges();
+      actions.setSelectionRect({
+        width: 0,
+        height: 0,
+        startX: x,
+        startY: y,
+        x,
+        y,
+      });
     });
   };
 
@@ -149,43 +146,41 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       }
     }
 
-    // this prevents unnecessary updates while updating the selection rectangle
-    if (!isSetEqual(prevSelectedNodeIds, selectedNodeIds)) {
-      const selectionMap = new Map<string, boolean>();
+    batch(() => {
+      // this prevents unnecessary updates while updating the selection rectangle
+      if (!isSetEqual(prevSelectedNodeIds, selectedNodeIds)) {
+        const selectionMap = new Map<string, boolean>();
 
-      setNodes(
-        (node) => {
-          const isSelected = selectedNodeIds.has(node.id);
-          selectionMap.set(node.id, isSelected);
-          return !!node.selected !== isSelected;
-        },
-        produce((node) => {
-          node.selected = selectionMap.get(node.id);
-        }),
-      );
-    }
+        actions.setNodes(
+          (node) => {
+            const isSelected = selectedNodeIds.has(node.id);
+            selectionMap.set(node.id, isSelected);
+            return !!node.selected !== isSelected;
+          },
+          produce((node) => {
+            node.selected = selectionMap.get(node.id);
+          }),
+        );
+      }
 
-    if (!isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)) {
-      const selectionMap = new Map<string, boolean>();
+      if (!isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)) {
+        const selectionMap = new Map<string, boolean>();
 
-      setEdges(
-        (edge) => {
-          const isSelected = selectedEdgeIds.has(edge.id);
-          selectionMap.set(edge.id, isSelected);
-          return !!edge.selected !== isSelected;
-        },
-        produce((edge) => {
-          edge.selected = selectionMap.get(edge.id);
-        }),
-      );
-    }
+        actions.setEdges(
+          (edge) => {
+            const isSelected = selectedEdgeIds.has(edge.id);
+            selectionMap.set(edge.id, isSelected);
+            return !!edge.selected !== isSelected;
+          },
+          produce((edge) => {
+            edge.selected = selectionMap.get(edge.id);
+          }),
+        );
+      }
 
-    setStore(
-      produce((store) => {
-        store.selectionRectMode = "user";
-        store.selectionRect = nextUserSelectRect;
-      }),
-    );
+      actions.setSelectionRectMode("user");
+      actions.setSelectionRect(nextUserSelectRect);
+    });
   };
 
   const onPointerUp = (event: PointerEvent) => {
@@ -199,11 +194,13 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       onClick(event);
     }
 
-    setStore("selectionRect", undefined);
+    batch(() => {
+      actions.setSelectionRect(undefined);
 
-    if (selectedNodeIds.size > 0) {
-      setStore("selectionRectMode", "nodes");
-    }
+      if (selectedNodeIds.size > 0) {
+        actions.setSelectionRectMode("nodes");
+      }
+    });
 
     // If the user kept holding the selectionKey during the selection,
     // we need to reset the selectionInProgress, so the next click event is not prevented

@@ -37,8 +37,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     "children",
   ]);
 
-  const { store, nodeLookup, edgeLookup, setEdges, panBy, updateConnection, cancelConnection } =
-    useInternalSolidFlow();
+  const { store, nodeLookup, edgeLookup, actions } = useInternalSolidFlow();
 
   const edgeId = useEdgeId();
   const [reconnecting, setReconnecting] = createSignal(false);
@@ -82,9 +81,9 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
       nodeLookup,
       isTarget: opposite.type === "target",
       edgeUpdaterType: opposite.type,
-      cancelConnection,
-      panBy,
-      updateConnection,
+      cancelConnection: actions.cancelConnection,
+      panBy: actions.panBy,
+      updateConnection: actions.setConnection,
       isValidConnection: store.isValidConnection,
       onConnectStart: store.onConnectStart,
       onConnectEnd: store.onConnectEnd,
@@ -93,7 +92,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
         newEdge = store.onBeforeReconnect?.(newEdge, edge()) ?? newEdge;
 
         if (newEdge) {
-          setEdges((edges) => edges.map((e) => (e.id === edge().id ? newEdge : e)));
+          actions.setEdges((edges) => edges.map((e) => (e.id === edge().id ? newEdge : e)));
         }
 
         store.onReconnect?.(edge(), connection);

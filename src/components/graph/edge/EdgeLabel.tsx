@@ -42,7 +42,7 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>) => {
     "style",
   ]);
 
-  const { handleEdgeSelection } = useInternalSolidFlow();
+  const { actions } = useInternalSolidFlow();
   const { visibleEdgesMap } = useVisibleElements();
 
   const id = useEdgeId();
@@ -66,7 +66,7 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>) => {
           ...local.style,
         }}
         onClick={() => {
-          if (local.selectEdgeOnClick) handleEdgeSelection(id());
+          if (local.selectEdgeOnClick) actions.handleEdgeSelection(id());
         }}
         {...rest}
       >

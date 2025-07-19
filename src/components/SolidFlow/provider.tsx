@@ -14,7 +14,7 @@ export const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends
   const solidFlow = createSolidFlow(_props);
 
   onCleanup(() => {
-    solidFlow.reset();
+    solidFlow.actions.reset();
   });
 
   // Since we cannot pass generic type info at the point of context creation, we need to cast it here

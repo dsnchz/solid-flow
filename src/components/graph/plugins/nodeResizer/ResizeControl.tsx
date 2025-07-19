@@ -85,7 +85,7 @@ const ResizeControl = <NodeType extends Node = Node>(props: ParentProps<ResizeCo
   ]);
 
   let resizeControlRef!: HTMLDivElement;
-  const { store, nodeLookup, setNodes } = useInternalSolidFlow<NodeType>();
+  const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
 
   const ctxNodeId = useNodeId();
   const nodeId = () => local.nodeId ?? ctxNodeId();
@@ -119,7 +119,7 @@ const ResizeControl = <NodeType extends Node = Node>(props: ParentProps<ResizeCo
           });
         }
 
-        setNodes(
+        actions.setNodes(
           (node) => changes.has(node.id),
           produce((node) => {
             const nodeChange = changes.get(node.id)!;

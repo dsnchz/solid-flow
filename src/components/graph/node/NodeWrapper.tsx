@@ -7,7 +7,7 @@ import {
   Position,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { batch, createEffect, createSignal, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import createDraggable from "@/actions/createDraggable";
@@ -25,22 +25,11 @@ export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType
 };
 
 const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeType>) => {
-  const {
-    store,
-    nodeLookup,
-    parentLookup,
-    setStore,
-    updateNodeInternals,
-    handleNodeSelection,
-    setCenter,
-    moveSelectedNodes,
-  } = useInternalSolidFlow<NodeType>();
+  const { store, nodeLookup, parentLookup, actions } = useInternalSolidFlow<NodeType>();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
   const node = () => nodeLookup.get(props.nodeId)!;
-
-  let prevNodeRef: HTMLDivElement | undefined = undefined;
 
   const nodeId = () => node().id;
   const nodeType = () => node().type ?? "default";
@@ -100,7 +89,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
       return prev;
     }
 
-    updateNodeInternals(
+    actions.updateNodeInternals(
       new Map([
         [
           node().id,
@@ -120,31 +109,29 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     };
   });
 
-  createEffect(() => {
+  createEffect<HTMLDivElement | undefined>((prevNodeRef) => {
     const currentNodeRef = nodeRef();
 
-    if (currentNodeRef !== prevNodeRef || !nodeHasDimensions(node())) {
-      if (prevNodeRef) {
-        props.resizeObserver.unobserve(prevNodeRef);
-      }
-      if (currentNodeRef) {
-        props.resizeObserver.observe(currentNodeRef);
-      }
-      prevNodeRef = currentNodeRef;
+    if (currentNodeRef === prevNodeRef && nodeHasDimensions(node())) {
+      return prevNodeRef;
     }
 
-    onCleanup(() => {
-      if (prevNodeRef) {
-        props.resizeObserver.unobserve(prevNodeRef);
-      }
-    });
+    if (prevNodeRef) {
+      props.resizeObserver.unobserve(prevNodeRef);
+    }
+
+    if (currentNodeRef) {
+      props.resizeObserver.observe(currentNodeRef);
+    }
+
+    return currentNodeRef;
   });
 
   const onSelectNodeHandler = (event: MouseEvent) => {
     if (selectable() && (!store.selectNodesOnDrag || !draggable() || store.nodeDragThreshold > 0)) {
       // this handler gets called by XYDrag on drag start when selectNodesOnDrag=true
       // here we only need to call it when selectNodesOnDrag=false
-      handleNodeSelection(node().id);
+      actions.handleNodeSelection(node().id);
     }
 
     props.onNodeClick?.({ node: userNode(), event });
@@ -156,26 +143,26 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     }
 
     if (elementSelectionKeys.includes(event.key) && selectable()) {
-      handleNodeSelection(node().id, event.key === "Escape", nodeRef());
+      actions.handleNodeSelection(node().id, event.key === "Escape", nodeRef());
       return;
     }
 
     const arrowKeyDiff = ARROW_KEY_DIFFS[event.key];
 
     if (draggable() && node().selected && arrowKeyDiff) {
-      // prevent default scrolling behavior on arrow key press when node is moved
-      event.preventDefault();
+      batch(() => {
+        // prevent default scrolling behavior on arrow key press when node is moved
+        event.preventDefault();
+        actions.setAriaLiveMessage(
+          store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
+            direction: event.key.replace("Arrow", "").toLowerCase(),
+            x: ~~node().internals.positionAbsolute.x,
+            y: ~~node().internals.positionAbsolute.y,
+          }),
+        );
 
-      setStore(
-        "ariaLiveMessage",
-        store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
-          direction: event.key.replace("Arrow", "").toLowerCase(),
-          x: ~~node().internals.positionAbsolute.x,
-          y: ~~node().internals.positionAbsolute.y,
-        }),
-      );
-
-      moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
+        actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
+      });
     }
   };
 
@@ -200,7 +187,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
 
     if (withinViewport) return;
 
-    void setCenter(
+    void actions.setCenter(
       node().position.x + (node().measured.width ?? 0) / 2,
       node().position.y + (node().measured.height ?? 0) / 2,
       { zoom: viewport.zoom },
@@ -214,7 +201,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     handleSelector: node().dragHandle,
     noDragClass: store.noDragClass,
     nodeClickDistance: props.nodeClickDistance,
-    onNodeMouseDown: handleNodeSelection,
+    onNodeMouseDown: actions.handleNodeSelection,
     onDrag: (event, _, targetNode, nodes) => {
       props.onNodeDrag?.({ event, targetNode: targetNode as NodeType, nodes: nodes as NodeType[] });
     },

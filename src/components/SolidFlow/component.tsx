@@ -3,11 +3,11 @@ import {
   devWarn,
   infiniteExtent,
   isMacOs,
-  mergeAriaLabelConfig,
   type OnError,
 } from "@xyflow/system";
 import clsx from "clsx";
 import {
+  batch,
   type Context,
   createEffect,
   type JSX,
@@ -18,7 +18,6 @@ import {
   splitProps,
   useContext,
 } from "solid-js";
-import { produce } from "solid-js/store";
 
 import { EdgeRenderer, NodeRenderer, Pane, Viewport, Zoom } from "@/components/container";
 import { ConnectionLine } from "@/components/graph/connection";
@@ -51,8 +50,10 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
       colorMode: "light" as ColorModeClass,
       deleteKeyCode: "Backspace",
       defaultViewport: { x: 0, y: 0, zoom: 1 },
+      isValidConnection: () => true,
       multiSelectionKeyCode: isMacOs() ? "Meta" : "Control",
       nodeClickDistance: 0,
+      onFlowError: devWarn as OnError,
       panOnScroll: false,
       panActivationKeyCode: "Space",
       preventScrolling: true,
@@ -227,90 +228,23 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   >;
 
   const solidFlow = useContext(TypedSolidFlowContext) ?? createSolidFlow(_props);
-  const { store, reset, setStore, setNodes, setEdges, setPaneClickDistance } = solidFlow;
+  const { store, actions } = solidFlow;
 
   onMount(() => {
-    setStore(
-      produce((store) => {
-        store.domNode = domNode;
-        store.width = domNode.clientWidth;
-        store.height = domNode.clientHeight;
-      }),
-    );
-
-    setNodes(flowProps.nodes);
-    setEdges(flowProps.edges);
+    batch(() => {
+      actions.setConfig(_props);
+      // NOTE: should we check here if we have explicitly provided a width/height via props?
+      actions.setWidth(domNode.clientWidth);
+      actions.setHeight(domNode.clientHeight);
+      actions.setDomNode(domNode);
+    });
 
     createEffect(() => {
-      setStore(
-        produce((store) => {
-          store._colorMode = flowProps.colorMode;
-          store._colorModeSSR = flowProps.colorModeSSR;
-          store._nodeTypes = flowProps.nodeTypes;
-          store._edgeTypes = flowProps.edgeTypes;
-
-          store.minZoom = flowProps.minZoom;
-          store.maxZoom = flowProps.maxZoom;
-          // store.viewport = flowProps.viewport ?? flowProps.initialViewport;
-
-          store.autoPanSpeed = flowProps.autoPanSpeed;
-          store.elevateNodesOnSelect = flowProps.elevateNodesOnSelect;
-          store.defaultEdgeOptions = flowProps.defaultEdgeOptions;
-          store.nodeOrigin = flowProps.nodeOrigin;
-          store.nodeDragThreshold = flowProps.nodeDragThreshold;
-          store.nodeExtent = flowProps.nodeExtent;
-          store.translateExtent = flowProps.translateExtent;
-
-          store.snapGrid = flowProps.snapGrid;
-          store.selectionMode = flowProps.selectionMode;
-          store.nodesDraggable = flowProps.nodesDraggable;
-          store.nodesFocusable = flowProps.nodesFocusable;
-          store.nodesConnectable = flowProps.nodesConnectable;
-          store.edgesFocusable = flowProps.edgesFocusable;
-          store.elementsSelectable = flowProps.elementsSelectable;
-          store.selectNodesOnDrag = flowProps.selectNodesOnDrag;
-          store.onlyRenderVisibleElements = flowProps.onlyRenderVisibleElements;
-          store.defaultMarkerColor = flowProps.defaultMarkerColor;
-          store.connectionMode = flowProps.connectionMode;
-          store.connectionLineType = flowProps.connectionLineType;
-          store.connectionRadius = flowProps.connectionRadius;
-          store.elevateEdgesOnSelect = flowProps.elevateEdgesOnSelect;
-          store.disableKeyboardA11y = flowProps.disableKeyboardA11y;
-          store.autoPanOnNodeDrag = flowProps.autoPanOnNodeDrag;
-          store.autoPanOnConnect = flowProps.autoPanOnConnect;
-          store.autoPanOnNodeFocus = flowProps.autoPanOnNodeFocus;
-          store.noPanClass = flowProps.noPanClass;
-          store.noDragClass = flowProps.noDragClass;
-          store.noWheelClass = flowProps.noWheelClass;
-          store.ariaLiveMessage = flowProps.ariaLiveMessage;
-          store.ariaLabelConfig = mergeAriaLabelConfig(flowProps.ariaLabelConfig);
-
-          store.isValidConnection = flowProps.isValidConnection ?? (() => true);
-          store.onError = flowProps.onFlowError ?? (devWarn as OnError);
-          store.onDelete = flowProps.onDelete;
-          store.onBeforeDelete = flowProps.onBeforeDelete;
-          store.onBeforeConnect = flowProps.onBeforeConnect;
-          store.onConnect = flowProps.onConnect;
-          store.onConnectStart = flowProps.onConnectStart;
-          store.onConnectEnd = flowProps.onConnectEnd;
-          store.onBeforeReconnect = flowProps.onBeforeReconnect;
-          store.onReconnect = flowProps.onReconnect;
-          store.onReconnectStart = flowProps.onReconnectStart;
-          store.onReconnectEnd = flowProps.onReconnectEnd;
-          store.clickConnect = flowProps.clickConnect ?? true;
-          store.onClickConnectStart = flowProps.onClickConnectStart;
-          store.onClickConnectEnd = flowProps.onClickConnectEnd;
-          store.onSelectionDrag = flowProps.onSelectionDrag;
-          store.onSelectionDragStart = flowProps.onSelectionDragStart;
-          store.onSelectionDragStop = flowProps.onSelectionDragStop;
-        }),
-      );
-
-      setPaneClickDistance(flowProps.paneClickDistance);
+      actions.setPaneClickDistance(flowProps.paneClickDistance);
     });
 
     onCleanup(() => {
-      reset();
+      actions.reset();
     });
   });
 

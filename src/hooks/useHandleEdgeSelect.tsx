@@ -1,10 +1,10 @@
 import { errorMessages } from "@xyflow/system";
+import { batch } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts";
 
 export function useHandleEdgeSelect() {
-  const { store, edgeLookup, addSelectedEdges, unselectNodesAndEdges, setStore } =
-    useInternalSolidFlow();
+  const { store, edgeLookup, actions } = useInternalSolidFlow();
 
   return (id: string) => {
     const edge = edgeLookup.get(id);
@@ -18,13 +18,16 @@ export function useHandleEdgeSelect() {
       edge.selectable || (store.elementsSelectable && typeof edge.selectable === "undefined");
 
     if (selectable) {
-      setStore({ selectionRect: undefined, selectionRectMode: undefined });
+      batch(() => {
+        actions.setSelectionRect(undefined);
+        actions.setSelectionRectMode(undefined);
 
-      if (!edge.selected) {
-        addSelectedEdges([id]);
-      } else if (edge.selected && store.multiselectionKeyPressed) {
-        unselectNodesAndEdges({ nodes: [], edges: [edge] });
-      }
+        if (!edge.selected) {
+          actions.addSelectedEdges([id]);
+        } else if (edge.selected && store.multiselectionKeyPressed) {
+          actions.unselectNodesAndEdges({ nodes: [], edges: [edge] });
+        }
+      });
     }
   };
 }

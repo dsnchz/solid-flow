@@ -7,8 +7,7 @@ import {
   type Viewport,
   XYPanZoom,
 } from "@xyflow/system";
-import { createEffect, onMount, type ParentProps } from "solid-js";
-import { produce } from "solid-js/store";
+import { batch, createEffect, onMount, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts";
 import type { PanOnScrollMode } from "@/shared/types";
@@ -31,19 +30,15 @@ export type ZoomProps = {
 
 export const Zoom = (props: ParentProps<ZoomProps>) => {
   let ref!: HTMLDivElement;
-  const { store, setStore } = useInternalSolidFlow();
+  const { store, actions } = useInternalSolidFlow();
 
   const viewPort = () => props.initialViewport || { x: 0, y: 0, zoom: 1 };
   const panOnDrag = () => store.panActivationKeyPressed || props.panOnDrag;
   const panOnScroll = () => store.panActivationKeyPressed || props.panOnScroll;
 
-  const onDraggingChange = (dragging: boolean) => {
-    setStore("dragging", dragging);
-  };
-
   const onTransformChange = (transform: Transform) => {
     const [x, y, zoom] = transform;
-    setStore("viewport", { x, y, zoom });
+    actions.setViewport({ x, y, zoom });
   };
 
   onMount(() => {
@@ -54,7 +49,7 @@ export const Zoom = (props: ParentProps<ZoomProps>) => {
       translateExtent: store.translateExtent,
       viewport: viewPort(),
       paneClickDistance: props.paneClickDistance,
-      onDraggingChange,
+      onDraggingChange: actions.setDragging,
       onPanZoomStart: props.onMoveStart,
       onPanZoom: props.onMove,
       onPanZoomEnd: props.onMoveEnd,
@@ -66,12 +61,10 @@ export const Zoom = (props: ParentProps<ZoomProps>) => {
       onTransformChange([vp.x, vp.y, vp.zoom]);
     }
 
-    setStore(
-      produce((store) => {
-        store.viewport = vp;
-        store.panZoom = panZoomInstance;
-      }),
-    );
+    batch(() => {
+      actions.setViewport(vp);
+      actions.setPanZoom(panZoomInstance);
+    });
 
     props.onViewportInitialized?.();
 
