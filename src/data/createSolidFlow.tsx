@@ -116,28 +116,37 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const edgeLookup: EdgeLookup<EdgeType> = new ReactiveMap();
   const connectionLookup: ConnectionLookup = new ReactiveMap();
 
+  // eslint-disable-next-line solid/reactivity
   batch(() => updateConnectionLookup(connectionLookup, edgeLookup, _props.edges));
 
   const startNodesInitialized = batch(() => {
+    // eslint-disable-next-line solid/reactivity
     return adoptUserNodes(_props.nodes, nodeLookup, parentLookup, {
+      // eslint-disable-next-line solid/reactivity
       nodeExtent: _props.nodeExtent,
+      // eslint-disable-next-line solid/reactivity
       nodeOrigin: _props.nodeOrigin,
+      // eslint-disable-next-line solid/reactivity
       elevateNodesOnSelect: _props.elevateNodesOnSelect,
       checkEquality: true,
     });
   });
 
-  const _viewport = getInitialViewport(
+  const initialViewport = getInitialViewport(
     startNodesInitialized,
+    // eslint-disable-next-line solid/reactivity
     _props.fitView,
     _props.initialViewport,
+    // eslint-disable-next-line solid/reactivity
     _props.width ?? 0,
+    // eslint-disable-next-line solid/reactivity
     _props.height ?? 0,
     nodeLookup,
   );
 
   const mediaPrefersDark = createMediaQuery(
     "(prefers-color-scheme: dark)",
+    // NOTE:  should mediaPrefersDark be reactive to config-changes?
     _props.colorModeSSR === "dark",
   );
 
@@ -181,7 +190,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [translateExtent, _setTranslateExtent] = createWritable(
     () => config().translateExtent ?? infiniteExtent,
   );
-  const [viewport, setViewport] = createSignal<Viewport>(_viewport);
+  const [viewport, setViewport] = createSignal<Viewport>(initialViewport);
   const [width, setWidth] = createWritable(() => config().width);
 
   // Key flags
@@ -199,6 +208,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
+  // eslint-disable-next-line solid/reactivity
   const store = mergeProps({ width: 0, height: 0 }, config, {
     get _colorMode() {
       return config().colorMode;
