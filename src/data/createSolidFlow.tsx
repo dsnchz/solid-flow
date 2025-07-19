@@ -6,6 +6,7 @@ import {
   calculateNodePosition,
   type Connection,
   type ConnectionLookup,
+  ConnectionMode,
   type ConnectionState,
   createMarkerIds,
   type EdgeLookup,
@@ -39,7 +40,7 @@ import {
   type ViewportHelperFunctionOptions,
   type XYPosition,
 } from "@xyflow/system";
-import { batch, createEffect, createSignal, mergeProps, on } from "solid-js";
+import { batch, createEffect, createMemo, createSignal, mergeProps, on } from "solid-js";
 import { produce } from "solid-js/store";
 
 import {
@@ -55,6 +56,7 @@ import type {
   BuiltInEdgeTypes,
   BuiltInNodeTypes,
   Edge,
+  EdgeLayouted,
   EdgeTypes,
   InternalNode,
   Node,
@@ -64,6 +66,7 @@ import type {
 import { createStoreSetter, createWritable, deepTrack } from "@/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
+import { type EdgeLayoutAllOptions, getLayoutedEdges, getVisibleNodes } from "./visibleElements";
 
 type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse" | undefined;
@@ -183,6 +186,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [panActivationKeyPressed, setPanActivationKeyPressed] = createSignal(false);
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
+  const transform = createMemo(() => [viewport().x, viewport().y, viewport().zoom] as Transform);
+
   const store = mergeProps({ width: 0, height: 0 }, config, {
     get _colorMode() {
       return config().colorMode;
@@ -246,6 +251,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     get height() {
       return height();
     },
+    get layoutedEdgesMap() {
+      return layoutedEdgesMap();
+    },
     get lib() {
       /*
        * Made this a derived store get value to prevent overwriting the value. This value is crucial
@@ -302,8 +310,23 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     get viewportInitialized() {
       return panZoom() !== null;
     },
+    get visibleEdgeIds() {
+      return visibleEdgeIds();
+    },
+    get visibleEdgesMap() {
+      return visibleEdgesMap();
+    },
+    get visibleNodesMap() {
+      return visibleNodesMap();
+    },
+    get visibleInternalNodesMap() {
+      return visibleInternalNodesMap();
+    },
+    get visibleNodeIds() {
+      return visibleNodeIds();
+    },
     get transform() {
-      return [viewport().x, viewport().y, viewport().zoom] as Transform;
+      return transform();
     },
     get translateExtent() {
       return translateExtent();
@@ -329,6 +352,88 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       return zoomActivationKeyPressed();
     },
   });
+
+  /**********************************************************************************/
+  /*                                                                                */
+  /*                               Visible Nodes/Edges                              */
+  /*                                                                                */
+  /**********************************************************************************/
+
+  const userNodeMap = createMemo(() => {
+    const map = new Map<string, NodeType>();
+    for (const node of config().nodes) {
+      map.set(node.id, node);
+    }
+    return map;
+  });
+
+  const visibleInternalNodesMap = createMemo(() => {
+    if (store.onlyRenderVisibleElements) {
+      return getVisibleNodes(nodeLookup, transform(), store.width ?? 0, store.height ?? 0);
+    }
+    return nodeLookup;
+  }, nodeLookup);
+
+  const visibleNodeIds = createMemo(() => {
+    return Array.from(visibleInternalNodesMap()?.values()).map((node) => node.id);
+  });
+
+  const visibleNodesMap = createMemo(() => {
+    const nodeMap = userNodeMap();
+    const visibleIds = visibleNodeIds();
+    const map = new Map<string, NodeType>();
+    for (const nodeId of visibleIds) {
+      const node = nodeMap.get(nodeId);
+      if (node) {
+        map.set(nodeId, node);
+      }
+    }
+    return map;
+  });
+
+  const visibleEdgesMap = createMemo<Map<string, EdgeLayouted<EdgeType>>>((previousEdges) => {
+    const options = {
+      edges: store.edges,
+      defaultEdgeOptions: store.defaultEdgeOptions,
+      previousEdges,
+      nodeLookup,
+      connectionMode: store.connectionMode as ConnectionMode,
+      elevateEdgesOnSelect: store.elevateEdgesOnSelect,
+      onerror: store.onError,
+    };
+
+    if (store.onlyRenderVisibleElements) {
+      return getLayoutedEdges({
+        ...options,
+        onlyRenderVisible: true,
+        visibleNodes: visibleInternalNodesMap(),
+        transform: transform(),
+        width: store.width ?? 0,
+        height: store.height ?? 0,
+      });
+    }
+
+    return getLayoutedEdges(options as EdgeLayoutAllOptions<NodeType, EdgeType>);
+  }, new Map<string, EdgeLayouted<EdgeType>>());
+
+  const visibleEdgeIds = createMemo(() => {
+    return Array.from(visibleEdgesMap().values()).map((edge) => edge.id);
+  });
+
+  const layoutedEdgesMap = createMemo(() => {
+    const edges = visibleEdgesMap();
+    const map = new Map<string, EdgeLayouted<EdgeType>>();
+    for (const edge of edges.values()) {
+      map.set(edge.id, edge);
+    }
+    return map;
+  });
+
+  /**********************************************************************************/
+  /*                                                                                */
+  /*                                     Methods                                    */
+  /*                                                                                */
+  /**********************************************************************************/
 
   const setNodes = createStoreSetter(() => store.nodes);
   const setEdges = createStoreSetter(() => store.edges);

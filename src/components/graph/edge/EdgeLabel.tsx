@@ -3,7 +3,6 @@ import type { JSX, ParentProps } from "solid-js";
 import { mergeProps, splitProps } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "@/components/contexts";
-import { useVisibleElements } from "@/hooks/useVisibleElements";
 import { toPxString } from "@/utils";
 
 import { EdgeLabelRenderer } from "./EdgeLabelRenderer";
@@ -42,12 +41,11 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>) => {
     "style",
   ]);
 
-  const { actions } = useInternalSolidFlow();
-  const { visibleEdgesMap } = useVisibleElements();
+  const { actions, store } = useInternalSolidFlow();
 
   const id = useEdgeId();
 
-  const zIndex = () => visibleEdgesMap().get(id())?.zIndex;
+  const zIndex = () => store.visibleEdgesMap.get(id())?.zIndex;
 
   return (
     <EdgeLabelRenderer>
