@@ -22,7 +22,6 @@ export const StressTest = () => {
         data,
         position,
         type: "default",
-        selected: true,
       };
       nodeItems.push(node);
 

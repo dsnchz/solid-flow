@@ -74,28 +74,17 @@ export function createWritable<T>(accessor: Accessor<T>) {
   return [get, set] as ReturnType<typeof createSignal<T>>;
 }
 
-/**
- * Creates a store setter function that operates on a reactive store value
- * @param accessor - A function that returns the store object to create a setter for
- * @returns A SetStoreFunction that can be used to update the store
- * @remarks This utility creates a memoized store setter that recreates when the accessor's value changes.
- * @example
- * ```ts
- * const setNodes = createStoreSetter(() => store.nodes);
- * // Can be used with all store setter patterns:
- * setNodes(0, "selected", true); // Update specific property
- * setNodes((node) => node.id === "1", "position", { x: 100, y: 100 }); // Update with filter
- * setNodes(produce((nodes) => { ... })); // Update with produce
- * ```
- */
-export function createStoreSetter<T extends object>(accessor: Accessor<T>): SetStoreFunction<T> {
-  const setStoreMemo = createMemo(() => {
-    const [_, set] = createStore(accessor());
-    return set;
+export function createWritableStore<T extends object>(accessor: Accessor<T>) {
+  const storeMemo = createMemo(() => {
+    const [get, set] = createStore(accessor());
+    return { get, set };
   });
-
-  // @ts-expect-error - SetStoreFunction's parameters are too painful to type
-  const storeSetter = (...args) => setStoreMemo()(...args);
-
-  return storeSetter;
+  return {
+    get() {
+      return storeMemo().get;
+    },
+    get set() {
+      return storeMemo().set;
+    },
+  };
 }

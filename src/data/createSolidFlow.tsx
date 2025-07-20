@@ -62,7 +62,7 @@ import type {
   NodeGraph,
   NodeTypes,
 } from "@/types";
-import { createStoreSetter, createWritable, deepTrack } from "@/utils";
+import { createWritable, createWritableStore, deepTrack } from "@/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
@@ -202,6 +202,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   const transform = createMemo(() => [viewport().x, viewport().y, viewport().zoom] as Transform);
 
+  const nodesMemo = createWritableStore(() => config().nodes);
+  const edgesMemo = createWritableStore(() => config().edges);
+
   /**********************************************************************************/
   /*                                                                                */
   /*                                  Declare Store                                 */
@@ -294,6 +297,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
     get minZoom() {
       return minZoom();
+    },
+    get nodes() {
+      return nodesMemo.get();
     },
     get nodesConnectable() {
       return nodesConnectable();
@@ -420,9 +426,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const setNodes = createStoreSetter(() => store.nodes);
-  const setEdges = createStoreSetter(() => store.edges);
-
   const resolveFitView = async () => {
     if (!store.panZoom) return;
 
@@ -506,14 +509,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const addEdge = (edgeParams: EdgeType | Connection) => {
-    setEdges((edges) => systemAddEdge(edgeParams, edges));
+    edgesMemo.set((edges) => systemAddEdge(edgeParams, edges));
   };
 
   const updateNodePositions = (
     nodeDragItems: Map<string, NodeDragItem | InternalNodeBase<NodeType>>,
     dragging = false,
   ) => {
-    setNodes(
+    nodesMemo.set(
       (node) => nodeDragItems.has(node.id),
       produce((node) => {
         node.dragging = dragging;
@@ -566,7 +569,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           new Map(),
         );
 
-        setNodes(
+        nodesMemo.set(
           (node) => nodeToChange.has(node.id),
           produce((node) => {
             const change = nodeToChange.get(node.id)!;
@@ -622,11 +625,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     store.panZoom?.setClickDistance(distance);
   };
 
-  const unselectNodesAndEdges = ({ nodes, edges }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
-    const nodesToUnselect = new Set((nodes ? nodes : store.nodes).map(({ id }) => id));
+  const unselectNodesAndEdges = ({
+    nodes: _nodes,
+    edges,
+  }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
+    const nodesToUnselect = new Set((_nodes ? _nodes : store.nodes).map(({ id }) => id));
 
     if (nodesToUnselect.size) {
-      setNodes(
+      nodesMemo.set(
         (node) => nodesToUnselect.has(node.id),
         produce((node) => {
           node.selected = false;
@@ -637,7 +643,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     const edgesToUnselect = new Set((edges ? edges : store.edges).map(({ id }) => id));
 
     if (edgesToUnselect.size) {
-      setEdges(
+      edgesMemo.set(
         (edge) => edgesToUnselect.has(edge.id),
         produce((edge) => {
           edge.selected = false;
@@ -650,7 +656,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     const isMultiSelection = store.multiselectionKeyPressed;
     const selectState = new Map<string, boolean>();
 
-    setNodes(
+    nodesMemo.set(
       (node) => {
         const nodeWillBeSelected = ids.includes(node.id);
 
@@ -679,7 +685,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     const isMultiSelection = store.multiselectionKeyPressed;
     const edgeSelectState = new Map<string, boolean>();
 
-    setEdges(
+    edgesMemo.set(
       (edge) => {
         const edgeWillBeSelected = ids.includes(edge.id);
         const selected = isMultiSelection
@@ -870,14 +876,18 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       setDeleteKeyPressed,
       setDomNode,
       setDragging,
-      setEdges,
+      get setEdges() {
+        return edgesMemo.set;
+      },
       setElementsSelectable,
       setFitViewOptions,
       setFitViewQueued,
       setFitViewResolver,
       setHeight,
       setMultiselectionKeyPressed,
-      setNodes,
+      get setNodes() {
+        return nodesMemo.set;
+      },
       setNodesConnectable,
       setNodesDraggable,
       setPanActivationKeyPressed,
