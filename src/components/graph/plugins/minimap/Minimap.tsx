@@ -4,7 +4,6 @@ import {
   getNodeDimensions,
   nodeHasDimensions,
   type PanelPosition,
-  type Transform,
   XYMinimap,
 } from "@xyflow/system";
 import clsx from "clsx";
