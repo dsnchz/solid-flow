@@ -16,8 +16,7 @@ const DEFAULT_SIZE: Record<BackgroundVariant, number> = {
 type BackgroundProps = {
   readonly id: string;
   /** Variant of the pattern
-   * @example BackgroundVariant.Lines, BackgroundVariant.Dots, BackgroundVariant.Cross
-   * 'lines', 'dots', 'cross'
+   * @example 'lines', 'dots', 'cross'
    */
   readonly variant: BackgroundVariant;
   /** Color of the background */
@@ -86,9 +85,9 @@ const Background = (props: Partial<BackgroundProps>) => {
       data-testid="solid-flow__background"
       class={clsx("solid-flow__container solid-flow__background", _props.class)}
       style={{
-        ..._props.style,
         "--xy-background-color-props": _props.bgColor,
         "--xy-background-pattern-color-props": _props.patternColor,
+        ..._props.style,
       }}
     >
       <pattern
