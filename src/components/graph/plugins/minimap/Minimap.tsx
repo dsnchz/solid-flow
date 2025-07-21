@@ -125,11 +125,6 @@ export const Minimap = <NodeType extends Node>(
       : viewBB;
   };
 
-  const getTransform = () => {
-    const viewport = store.viewport;
-    return [viewport.x, viewport.y, viewport.zoom] as Transform;
-  };
-
   const getScaledWidth = () => getBoundingRect().width / _props.width;
   const getScaledHeight = () => getBoundingRect().height / _props.height;
   const getViewScale = () => Math.max(getScaledWidth(), getScaledHeight());
@@ -187,7 +182,7 @@ export const Minimap = <NodeType extends Node>(
             const minimap = XYMinimap({
               domNode: ref()!,
               panZoom: panZoom(),
-              getTransform,
+              getTransform: () => store.transform,
               getViewScale,
             });
 

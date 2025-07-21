@@ -1,9 +1,9 @@
 import { For } from "solid-js";
 
-import { useVisibleElements } from "@/hooks/useVisibleElements";
 import type { DefaultEdgeOptions } from "@/shared/types";
 import type { Edge, EdgeEvents, Node } from "@/types";
 
+import { useInternalSolidFlow } from "../contexts";
 import { EdgeWrapper } from "../graph/edge";
 import { MarkerDefinition } from "../graph/marker";
 
@@ -15,15 +15,14 @@ type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
 export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: EdgeRendererProps<EdgeType>,
 ) => {
-  const { visibleEdgeIds } = useVisibleElements<NodeType, EdgeType>();
-
+  const { store } = useInternalSolidFlow();
   return (
     <div class="solid-flow__edges">
       <svg class="solid-flow__marker">
         <MarkerDefinition />
       </svg>
 
-      <For each={visibleEdgeIds()}>
+      <For each={store.visibleEdgeIds}>
         {(edgeId) => {
           return (
             <EdgeWrapper<NodeType, EdgeType>

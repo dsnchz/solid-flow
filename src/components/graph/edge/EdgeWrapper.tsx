@@ -6,7 +6,6 @@ import { Dynamic } from "solid-js/web";
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/components/contexts";
 import { EdgeIdContext } from "@/components/contexts/edgeId";
-import { useVisibleElements } from "@/hooks/useVisibleElements";
 import type { Edge, EdgeEvents, Node } from "@/types";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
@@ -19,10 +18,8 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   let edgeRef!: SVGGElement;
   const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
 
-  const { layoutedEdgesMap } = useVisibleElements<NodeType, EdgeType>();
-
   const edgeId = () => props.edgeId;
-  const edge = () => layoutedEdgesMap().get(edgeId())!;
+  const edge = () => store.visibleEdgesMap.get(edgeId())!;
 
   const edgeType = () => edge().type ?? "default";
   const selectable = () => edge().selectable ?? store.elementsSelectable;

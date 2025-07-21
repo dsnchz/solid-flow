@@ -1,7 +1,6 @@
 import { For, onCleanup } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts";
-import { useVisibleElements } from "@/hooks/useVisibleElements";
 import type { Node, NodeEvents } from "@/types";
 
 import NodeWrapper from "../graph/node/NodeWrapper";
@@ -11,24 +10,22 @@ export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeTyp
 };
 
 export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererProps<NodeType>) => {
-  const { actions } = useInternalSolidFlow<NodeType>();
-
-  const { visibleNodeIds } = useVisibleElements<NodeType>();
+  const { actions, store } = useInternalSolidFlow<NodeType>();
 
   const resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
-    const updates = new Map();
-
-    entries.forEach((entry: ResizeObserverEntry) => {
-      const id = entry.target.getAttribute("data-id") as string;
-
-      updates.set(id, {
-        id,
-        nodeElement: entry.target as HTMLDivElement,
-        force: true,
-      });
-    });
-
-    actions.updateNodeInternals(updates);
+    actions.requestUpdateNodeInternals(
+      entries.map((entry: ResizeObserverEntry) => {
+        const id = entry.target.getAttribute("data-id") as string;
+        return [
+          id,
+          {
+            id,
+            nodeElement: entry.target as HTMLDivElement,
+            force: true,
+          },
+        ];
+      }),
+    );
   });
 
   onCleanup(() => {
@@ -37,7 +34,7 @@ export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererPr
 
   return (
     <div class="solid-flow__container solid-flow__nodes">
-      <For each={visibleNodeIds()}>
+      <For each={store.visibleNodeIds}>
         {(nodeId) => {
           return (
             <NodeWrapper

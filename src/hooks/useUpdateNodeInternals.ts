@@ -1,6 +1,7 @@
 import type { UpdateNodeInternals } from "@xyflow/system";
 
 import { useInternalSolidFlow } from "@/components/contexts";
+import type { InternalUpdateEntry } from "@/data/types";
 
 /**
  * Hook for updating node internals.
@@ -14,7 +15,7 @@ export function useUpdateNodeInternals(): UpdateNodeInternals {
   // @todo: do we want to add this to system?
   const updateInternals = (id: string | string[]) => {
     const updateIds = Array.isArray(id) ? id : [id];
-    const updates = new Map();
+    const updates: InternalUpdateEntry[] = [];
 
     updateIds.forEach((updateId) => {
       const nodeElement = store.domNode?.querySelector(
@@ -22,11 +23,11 @@ export function useUpdateNodeInternals(): UpdateNodeInternals {
       ) as HTMLDivElement;
 
       if (nodeElement) {
-        updates.set(updateId, { id: updateId, nodeElement, force: true });
+        updates.push([updateId, { id: updateId, nodeElement, force: true }]);
       }
     });
 
-    requestAnimationFrame(() => actions.updateNodeInternals(updates));
+    actions.requestUpdateNodeInternals(updates);
   };
 
   return updateInternals;
