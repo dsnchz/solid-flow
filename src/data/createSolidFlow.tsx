@@ -170,13 +170,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     createSignal<ConnectionState<InternalNode<NodeType>>>(initialConnection);
   const [domNode, setDomNode] = createSignal<HTMLDivElement | null>(null);
   const [dragging, setDragging] = createSignal(false);
-  const [fitViewResolver, setFitViewResolver] = createSignal<
-    PromiseWithResolvers<boolean> | undefined
-  >();
   const [elementsSelectable, setElementsSelectable] = createWritable(
     () => config().elementsSelectable,
   );
-  const [fitViewQueued, setFitViewQueued] = createWritable<boolean>(() => config().fitViewQueued);
+  const [fitViewPromise, setFitViewPromise] = createSignal<Promise<boolean> | undefined>();
   const [fitViewOptions, setFitViewOptions] = createWritable(() => config().fitViewOptions);
   const [height, setHeight] = createWritable(() => config().height);
   const [minZoom, _setMinZoom] = createWritable<number>(() => config().minZoom);
@@ -263,11 +260,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     get elementsSelectable() {
       return elementsSelectable();
     },
-    get fitViewResolver() {
-      return fitViewResolver();
-    },
-    get fitViewQueued() {
-      return fitViewQueued();
+    get fitViewPromise() {
+      return fitViewPromise();
     },
     get fitViewOptions() {
       return fitViewOptions();
@@ -426,10 +420,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const resolveFitView = async () => {
-    if (!store.panZoom) return;
+  const initiateFitView = async () => {
+    if (!store.panZoom) return false;
 
-    await fitViewport(
+    return fitViewport(
       {
         nodes: nodeLookup,
         width: store.width,
@@ -440,16 +434,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       },
       fitViewOptions(),
     );
-
-    store.fitViewResolver?.resolve(true);
-
-    /**
-     * wait for the fitViewport to resolve before deleting the resolver,
-     * we want to reuse the old resolver if the user calls fitView again in the mean time
-     */
-    setFitViewQueued(false);
-    setFitViewResolver(undefined);
-    setFitViewOptions(undefined);
   };
 
   const updateSystemNodes = () => {
@@ -466,12 +450,12 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const nodesInitialized = () => {
     const result = updateSystemNodes();
 
-    if (store.fitViewQueued) {
+    if (store.fitViewPromise) {
       if (store.fitViewOptions?.duration) {
-        void resolveFitView();
+        void initiateFitView();
       } else {
         queueMicrotask(() => {
-          void resolveFitView();
+          void initiateFitView();
         });
       }
     }
@@ -497,15 +481,28 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const fitView = async (options?: FitViewOptions) => {
-    // We either create a new Promise or reuse the existing one
-    // Even if fitView is called multiple times in a row, we only end up with a single Promise
-    const fitViewResolver = store.fitViewResolver ?? Promise.withResolvers<boolean>();
+    if (!store.panZoom) return false;
 
-    setFitViewQueued(true);
+    if (store.fitViewPromise) {
+      const result = await store.fitViewPromise;
+      return result;
+    }
+
     setFitViewOptions(options);
-    setFitViewResolver(fitViewResolver);
 
-    return fitViewResolver.promise;
+    const fitViewPromise = initiateFitView();
+
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    setFitViewPromise(fitViewPromise);
+
+    const result = await fitViewPromise;
+
+    batch(() => {
+      setFitViewPromise(undefined);
+      setFitViewOptions(undefined);
+    });
+
+    return result;
   };
 
   const addEdge = (edgeParams: EdgeType | Connection) => {
@@ -526,6 +523,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   let pendingEntries: InternalUpdateEntry[] | undefined = undefined;
+
   const requestUpdateNodeInternals = (updateEntries: InternalUpdateEntry[]) => {
     if (pendingEntries) {
       pendingEntries.push(...updateEntries);
@@ -552,8 +550,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           nodeOrigin: store.nodeOrigin,
           nodeExtent: store.nodeExtent,
         });
-        if (store.fitViewQueued) {
-          void resolveFitView();
+
+        if (store.fitViewPromise) {
+          void store.fitViewPromise;
         }
 
         const nodeToChange = changes.reduce<Map<string, NodeDimensionChange | NodePositionChange>>(
@@ -830,9 +829,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   createEffect(() => {
     const _panZoom = panZoom();
     if (!_panZoom) return;
+
     createEffect(() => {
       _panZoom.setScaleExtent([store.minZoom, store.maxZoom]);
     });
+
     createEffect(() => {
       _panZoom.setTranslateExtent(store.translateExtent);
     });
@@ -866,7 +867,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     actions: {
       nodesInitialized,
       resetStoreValues,
-      resolveFitView,
       requestUpdateNodeInternals,
       setAriaLabelConfig,
       setAriaLiveMessage,
@@ -880,9 +880,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         return edgesMemo.set;
       },
       setElementsSelectable,
-      setFitViewOptions,
-      setFitViewQueued,
-      setFitViewResolver,
       setHeight,
       setMultiselectionKeyPressed,
       get setNodes() {
