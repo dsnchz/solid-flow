@@ -43,10 +43,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     props,
   );
 
-  const { store, nodeLookup, connectionLookup, actions } = useInternalSolidFlow<
-    NodeType,
-    EdgeType
-  >();
+  const { store, connectionLookup, actions } = useInternalSolidFlow<NodeType, EdgeType>();
 
   const [local, rest] = splitProps(_props, [
     "id",
@@ -127,7 +124,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       isTarget: isTarget(),
       connectionRadius: store.connectionRadius,
       domNode: store.domNode,
-      nodeLookup,
+      nodeLookup: store.nodeLookup,
       connectionMode: store.connectionMode as ConnectionMode,
       lib: store.lib,
       autoPanOnConnect: store.autoPanOnConnect,
@@ -181,7 +178,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       flowId: store.id,
       doc,
       lib: store.lib,
-      nodeLookup,
+      nodeLookup: store.nodeLookup,
     });
 
     if (isValid && connection) {

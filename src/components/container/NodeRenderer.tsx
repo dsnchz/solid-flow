@@ -10,7 +10,7 @@ export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeTyp
 };
 
 export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererProps<NodeType>) => {
-  const { actions, store } = useInternalSolidFlow<NodeType>();
+  const { store, actions } = useInternalSolidFlow<NodeType>();
 
   const resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
     actions.requestUpdateNodeInternals(
@@ -34,11 +34,11 @@ export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererPr
 
   return (
     <div class="solid-flow__container solid-flow__nodes">
-      <For each={store.visibleNodeIds}>
-        {(nodeId) => {
+      <For each={store.nodes}>
+        {(node) => {
           return (
             <NodeWrapper
-              nodeId={nodeId}
+              nodeId={node.id}
               resizeObserver={resizeObserver}
               nodeClickDistance={props.nodeClickDistance}
               onNodeClick={props.onNodeClick}

@@ -81,7 +81,7 @@ const getAttrFunction = <NodeType extends Node>(func: any): GetMiniMapNodeAttrib
 export const Minimap = <NodeType extends Node>(
   props: ParentProps<Partial<MiniMapProps<NodeType>>>,
 ) => {
-  const { store, nodeLookup } = useInternalSolidFlow<NodeType>();
+  const { store } = useInternalSolidFlow<NodeType>();
 
   const _props = mergeProps(
     {
@@ -141,8 +141,8 @@ export const Minimap = <NodeType extends Node>(
 
   const getBoundingRect = () => {
     const viewBB = getViewBB();
-    return nodeLookup.size > 0
-      ? getBoundsOfRects(getInternalNodesBounds(nodeLookup), viewBB)
+    return store.nodeLookup.size > 0
+      ? getBoundsOfRects(getInternalNodesBounds(store.nodeLookup), viewBB)
       : viewBB;
   };
 
@@ -171,6 +171,7 @@ export const Minimap = <NodeType extends Node>(
     local.maskStrokeWidth ? local.maskStrokeWidth * getViewScale() : undefined;
 
   let prevNodeIds: string[] = [];
+
   const nodeIds = () => {
     const currentNodeIds = store.nodes.map((node) => node.id);
     const currentSet = new Set(currentNodeIds);
@@ -243,7 +244,7 @@ export const Minimap = <NodeType extends Node>(
               <title id={labelledBy()}>{store.ariaLabelConfig["minimap.ariaLabel"]}</title>
               <Index each={nodeIds()}>
                 {(nodeId) => {
-                  const node = createMemo(() => nodeLookup.get(nodeId()));
+                  const node = createMemo(() => store.nodeLookup.get(nodeId()));
 
                   const nodeVisible = () =>
                     Boolean(node() && nodeHasDimensions(node()!) && !node()!.hidden);

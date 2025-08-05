@@ -20,7 +20,6 @@ import type {
   Viewport,
 } from "@xyflow/system";
 import type { JSX } from "solid-js";
-import type { Store } from "solid-js/store";
 
 import type {
   ConnectionLineType,
@@ -86,7 +85,7 @@ export type SolidFlowProps<
      *  }
      * ]);
      */
-    readonly nodes?: Store<NodeType[]>;
+    readonly nodes?: NodeType[];
     /**
      * An store of edges to render in a flow.
      * @example
@@ -98,7 +97,7 @@ export type SolidFlowProps<
      *  }
      * ]);
      */
-    readonly edges?: Store<EdgeType[]>;
+    readonly edges?: EdgeType[];
     /**
      * Custom node types to be available in a flow.
      * Solid Flow matches a node's type to a component in the nodeTypes object.

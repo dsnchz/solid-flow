@@ -1,7 +1,6 @@
 import { getEventPosition, getNodesInside, SelectionMode } from "@xyflow/system";
 import clsx from "clsx";
 import { batch, type JSX, type ParentProps } from "solid-js";
-import { produce } from "solid-js/store";
 
 import { useInternalSolidFlow } from "@/components/contexts";
 import type { Edge, Node } from "@/shared/types";
@@ -29,7 +28,7 @@ export type PaneProps = PaneEvents & {
 export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<PaneProps>,
 ): JSX.Element => {
-  const { store, nodeLookup, edgeLookup, connectionLookup, actions } = useInternalSolidFlow<
+  const { store, edgeLookup, connectionLookup, actions } = useInternalSolidFlow<
     NodeType,
     EdgeType
   >();
@@ -122,7 +121,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     selectedNodeIds = new Set(
       getNodesInside(
-        nodeLookup,
+        store.nodeLookup,
         nextUserSelectRect,
         store.transform,
         store.selectionMode === SelectionMode.Partial,
@@ -149,33 +148,21 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     batch(() => {
       // this prevents unnecessary updates while updating the selection rectangle
       if (!isSetEqual(prevSelectedNodeIds, selectedNodeIds)) {
-        const selectionMap = new Map<string, boolean>();
-
-        actions.setNodes(
-          (node) => {
-            const isSelected = selectedNodeIds.has(node.id);
-            selectionMap.set(node.id, isSelected);
-            return !!node.selected !== isSelected;
-          },
-          produce((node) => {
-            node.selected = selectionMap.get(node.id);
-          }),
-        );
+        actions.setNodes((nodes) => {
+          return nodes.map((node) => {
+            const selected = selectedNodeIds.has(node.id);
+            return node.selected === selected ? node : { ...node, selected };
+          });
+        });
       }
 
       if (!isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)) {
-        const selectionMap = new Map<string, boolean>();
-
-        actions.setEdges(
-          (edge) => {
-            const isSelected = selectedEdgeIds.has(edge.id);
-            selectionMap.set(edge.id, isSelected);
-            return !!edge.selected !== isSelected;
-          },
-          produce((edge) => {
-            edge.selected = selectionMap.get(edge.id);
-          }),
-        );
+        actions.setEdges((edges) => {
+          return edges.map((edge) => {
+            const selected = selectedEdgeIds.has(edge.id);
+            return edge.selected === selected ? edge : { ...edge, selected };
+          });
+        });
       }
 
       actions.setSelectionRectMode("user");

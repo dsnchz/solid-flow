@@ -79,8 +79,8 @@ export function CustomNode() {
 
   return (
     <SolidFlow
-      nodes={nodes}
-      edges={edges}
+      nodes={nodes()}
+      edges={edges()}
       nodeTypes={nodeTypes}
       style={{
         "--xy-background-color": backgroundColor(),

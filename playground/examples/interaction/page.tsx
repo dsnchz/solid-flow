@@ -62,8 +62,8 @@ export const Interaction = () => {
 
   return (
     <SolidFlow
-      nodes={nodes}
-      edges={edges}
+      nodes={nodes()}
+      edges={edges()}
       elementsSelectable={isSelectable()}
       nodesConnectable={isConnectable()}
       nodesDraggable={isDraggable()}

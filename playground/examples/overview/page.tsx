@@ -1,5 +1,4 @@
 import { getBezierPath, Position } from "@xyflow/system";
-import { produce } from "solid-js/store";
 
 import {
   Background,
@@ -11,8 +10,8 @@ import {
   Panel,
   SolidFlow,
 } from "@/components";
-import { createEdgeStore } from "@/data/createEdgeStore";
-import { createNodeStore } from "@/data/createNodeStore";
+import { createEdges } from "@/data/createEdgeStore";
+import { createNodes } from "@/data/createNodeStore";
 import { useSolidFlow } from "@/hooks";
 import type { EdgeProps, NodeProps } from "@/types";
 
@@ -127,9 +126,9 @@ const edgeTypes = {
 };
 
 export const Overview = () => {
-  const { updateNode } = useSolidFlow();
+  const { updateNode, updateEdge } = useSolidFlow();
 
-  const [nodes, setNodes] = createNodeStore<typeof nodeTypes>([
+  const [nodes, setNodes] = createNodes<typeof nodeTypes>([
     {
       id: "1",
       type: "input",
@@ -193,7 +192,7 @@ export const Overview = () => {
     },
   ]);
 
-  const [edges, setEdges] = createEdgeStore<typeof edgeTypes>([
+  const [edges] = createEdges<typeof edgeTypes>([
     {
       id: "1-2",
       type: "default",
@@ -218,21 +217,17 @@ export const Overview = () => {
   ]);
 
   const moveNode = () => {
-    setNodes(
-      (node) => node.id === "1",
-      produce((node) => {
-        node.position.x += 20;
-      }),
-    );
+    updateNode("1", (node) => ({
+      ...node,
+      position: { x: node.position.x + 20, y: node.position.y },
+    }));
   };
 
   const changeEdgeType = () => {
-    setEdges(
-      (edge) => edge.id === "1-2",
-      produce((edge) => {
-        edge.type = edge.type === "default" ? "smoothstep" : "default";
-      }),
-    );
+    updateEdge("1-2", (edge) => ({
+      ...edge,
+      type: edge.type === "default" ? "smoothstep" : "default",
+    }));
   };
 
   const hideUnhide = () => {
@@ -240,13 +235,13 @@ export const Overview = () => {
   };
 
   const setLeftRight = () => {
-    const updatedNodes = nodes.map((node) => ({
-      ...node,
-      sourcePosition: node.sourcePosition === Position.Right ? Position.Bottom : Position.Right,
-      targetPosition: node.targetPosition === Position.Left ? Position.Top : Position.Left,
-    }));
-
-    setNodes(updatedNodes);
+    setNodes((nodes) =>
+      nodes.map((node) => ({
+        ...node,
+        sourcePosition: node.sourcePosition === Position.Right ? Position.Bottom : Position.Right,
+        targetPosition: node.targetPosition === Position.Left ? Position.Top : Position.Left,
+      })),
+    );
   };
 
   return (
@@ -263,8 +258,8 @@ export const Overview = () => {
       }
     `}</style>
       <SolidFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={nodes()}
+        edges={edges()}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView

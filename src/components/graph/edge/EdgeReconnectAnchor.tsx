@@ -37,7 +37,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     "children",
   ]);
 
-  const { store, nodeLookup, edgeLookup, actions } = useInternalSolidFlow();
+  const { store, edgeLookup, actions } = useInternalSolidFlow();
 
   const edgeId = useEdgeId();
   const [reconnecting, setReconnecting] = createSignal(false);
@@ -78,7 +78,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
       autoPanOnConnect: store.autoPanOnConnect,
       connectionMode: store.connectionMode as ConnectionMode,
       connectionRadius: store.connectionRadius,
-      nodeLookup,
+      nodeLookup: store.nodeLookup,
       isTarget: opposite.type === "target",
       edgeUpdaterType: opposite.type,
       cancelConnection: actions.cancelConnection,

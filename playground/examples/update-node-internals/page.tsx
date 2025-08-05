@@ -54,18 +54,21 @@ export const UpdateNodeInternals = () => {
   const { updateNode: _updateNode } = useSolidFlow();
 
   const updateNodePosition = () => {
-    setNodes(
-      (node) => node.id === "1",
-      (node) => ({
-        ...node,
-        position: { x: node.position.x + 10, y: node.position.y },
-      }),
-    );
+    setNodes((nodes) => {
+      return nodes.map((node) => {
+        return node.id !== "1"
+          ? node
+          : {
+              ...node,
+              position: { x: node.position.x + 10, y: node.position.y },
+            };
+      });
+    });
   };
 
   return (
     <div style={{ height: "100vh", display: "flex" }}>
-      <SolidFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView style={{ flex: 1 }}>
+      <SolidFlow nodes={nodes()} edges={edges()} nodeTypes={nodeTypes} fitView style={{ flex: 1 }}>
         <Controls />
         <Background variant="dots" />
         <MiniMap />

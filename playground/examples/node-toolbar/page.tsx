@@ -53,7 +53,7 @@ export function NodeToolbar() {
 
   return (
     <div style={{ height: "100vh" }}>
-      <SolidFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
+      <SolidFlow nodes={nodes()} edges={edges()} nodeTypes={nodeTypes} fitView>
         <Background />
         <SelectedNodesToolbar />
       </SolidFlow>

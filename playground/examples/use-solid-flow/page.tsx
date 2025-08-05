@@ -56,8 +56,8 @@ export function UseSolidFlow() {
   return (
     <div style={{ height: "100vh", display: "flex" }}>
       <SolidFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={nodes()}
+        edges={edges()}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView

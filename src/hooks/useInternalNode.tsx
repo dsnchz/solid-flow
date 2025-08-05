@@ -11,6 +11,6 @@ import type { InternalNode } from "@/types";
  * @returns an accessor with an internal node or undefined
  */
 export function useInternalNode(id: string): Accessor<InternalNode | undefined> {
-  const { nodeLookup } = useInternalSolidFlow();
-  return () => nodeLookup.get(id);
+  const { store } = useInternalSolidFlow();
+  return () => store.nodeLookup.get(id);
 }

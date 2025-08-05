@@ -25,11 +25,11 @@ export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType
 };
 
 const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeType>) => {
-  const { store, nodeLookup, parentLookup, actions } = useInternalSolidFlow<NodeType>();
+  const { store, parentLookup, actions } = useInternalSolidFlow<NodeType>();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
-  const node = () => nodeLookup.get(props.nodeId)!;
+  const node = () => store.nodeLookup.get(props.nodeId)!;
 
   const nodeId = () => node().id;
   const nodeType = () => node().type ?? "default";

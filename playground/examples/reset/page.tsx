@@ -28,7 +28,7 @@ export const Reset = () => {
       <div>
         <button onClick={resetNodesArray}>Reset</button>
       </div>
-      <SolidFlow nodes={nodes} fitView>
+      <SolidFlow nodes={nodes()} fitView>
         <Controls />
         <Background />
         <MiniMap />

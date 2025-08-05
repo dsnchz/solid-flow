@@ -1,5 +1,4 @@
 import { createEffect } from "solid-js";
-import { reconcile } from "solid-js/store";
 
 import { Background, Controls, createNodeStore, SolidFlow, useSolidFlow } from "@/index";
 
@@ -71,7 +70,7 @@ export function Intersections() {
       `}</style>
       <SolidFlow
         class="intersection-flow"
-        nodes={nodes}
+        nodes={nodes()}
         fitView
         onNodeDrag={({ targetNode }) => {
           if (!targetNode) return;
@@ -79,12 +78,12 @@ export function Intersections() {
           const intersections = getIntersectingNodes(targetNode).map((n) => n.id);
 
           // Update node classes based on intersections
-          const newNodes = nodes.map((node) => ({
-            ...node,
-            class: intersections.includes(node.id) ? "highlight" : "",
-          }));
-
-          setNodes(reconcile(newNodes));
+          setNodes((nodes) => {
+            return nodes.map((node) => ({
+              ...node,
+              class: intersections.includes(node.id) ? "highlight" : "",
+            }));
+          });
         }}
         style={{
           "--highlight-bg": "#ff0072",

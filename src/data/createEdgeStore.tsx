@@ -1,4 +1,4 @@
-import { createStore, type SetStoreFunction, type Store } from "solid-js/store";
+import { type Accessor, createSignal, type Setter } from "solid-js";
 
 import type { BuiltInEdgeTypes, Edge, EdgeProps, EdgeTypes } from "../types";
 
@@ -96,12 +96,9 @@ type EdgesInput<TUserEdgeTypes extends EdgeTypes> = {
  * - Works seamlessly with both built-in and custom node types
  * - Type errors prevent invalid type names or incorrect data structures
  */
-export const createEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
+export const createEdges = <TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
   edges: EdgesInput<TUserEdgeTypes>[],
-): readonly [
-  Store<EdgesInput<TUserEdgeTypes>[]>,
-  SetStoreFunction<EdgesInput<TUserEdgeTypes>[]>,
-] => {
-  const [store, setStore] = createStore(edges);
-  return [store, setStore] as const;
+): readonly [Accessor<EdgesInput<TUserEdgeTypes>[]>, Setter<EdgesInput<TUserEdgeTypes>[]>] => {
+  const [_edges, _setEdges] = createSignal(edges);
+  return [_edges, _setEdges] as const;
 };

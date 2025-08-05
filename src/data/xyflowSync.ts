@@ -13,7 +13,6 @@ type SyncArgs<NodeType extends Node, EdgeType extends Edge> = SolidFlowStore<Nod
 export const xyflowSync = <NodeType extends Node, EdgeType extends Edge>({
   store,
   actions,
-  nodeLookup,
   parentLookup,
   connectionLookup,
   edgeLookup,
@@ -26,7 +25,7 @@ export const xyflowSync = <NodeType extends Node, EdgeType extends Edge>({
   });
 
   batch(() => {
-    adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
+    adoptUserNodes(store.nodes, store.nodeLookup, parentLookup, {
       nodeExtent: store.nodeExtent,
       nodeOrigin: store.nodeOrigin,
       elevateNodesOnSelect: store.elevateNodesOnSelect,

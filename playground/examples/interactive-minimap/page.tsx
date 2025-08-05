@@ -131,7 +131,7 @@ const InteractiveMinimapFlow: Component = () => {
         }
       `}</style>
       <SolidFlow
-        nodes={nodes}
+        nodes={nodes()}
         minZoom={0.2}
         maxZoom={4}
         defaultEdgeOptions={defaultEdgeOptions}

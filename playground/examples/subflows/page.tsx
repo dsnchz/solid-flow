@@ -121,8 +121,8 @@ export function Subflows() {
   return (
     <div style={{ height: "100vh" }}>
       <SolidFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={nodes()}
+        edges={edges()}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.1}

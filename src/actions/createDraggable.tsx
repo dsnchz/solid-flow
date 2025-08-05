@@ -28,7 +28,7 @@ const createDraggable = <NodeType extends Node>(
   elem: Accessor<HTMLElement | undefined>,
   params: Accessor<Partial<CreateDraggableParams>>,
 ) => {
-  const { store, nodeLookup, actions } = useInternalSolidFlow();
+  const { store, actions } = useInternalSolidFlow();
   const [dragging, setDragging] = createSignal(false);
 
   onMount(() => {
@@ -48,7 +48,7 @@ const createDraggable = <NodeType extends Node>(
       getStoreItems: () => {
         return {
           nodes: store.nodes,
-          nodeLookup,
+          nodeLookup: store.nodeLookup,
           edges: store.edges,
           nodeExtent: store.nodeExtent,
           snapGrid: store.snapGrid ?? [0, 0],

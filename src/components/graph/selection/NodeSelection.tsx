@@ -15,12 +15,12 @@ export type NodeSelectionProps<NodeType extends Node = Node> = NodeSelectionEven
 export const NodeSelection = <NodeType extends Node = Node>(
   props: NodeSelectionProps<NodeType>,
 ) => {
-  const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
+  const { store, actions } = useInternalSolidFlow<NodeType>();
   const [ref, setRef] = createSignal<HTMLDivElement>();
 
   const bounds = () => {
     if (store.selectionRectMode === "nodes") {
-      return getInternalNodesBounds(nodeLookup, {
+      return getInternalNodesBounds(store.nodeLookup, {
         filter: (node) => !!node.selected,
       });
     }

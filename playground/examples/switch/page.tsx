@@ -82,8 +82,8 @@ const [edgesB] = createEdgeStore([
 ]);
 
 const SwitchFlow: Component = () => {
-  const [nodes, setNodes] = createSignal(nodesA);
-  const [edges, setEdges] = createSignal(edgesA);
+  const [nodes, setNodes] = createSignal(nodesA());
+  const [edges, setEdges] = createSignal(edgesA());
 
   return (
     <SolidFlow nodes={nodes()} edges={edges()} nodeDragThreshold={10}>
@@ -97,8 +97,8 @@ const SwitchFlow: Component = () => {
       >
         <button
           onClick={() => {
-            setNodes(nodesA);
-            setEdges(edgesA);
+            setNodes(nodesA());
+            setEdges(edgesA());
           }}
           style={{ "margin-right": "5px" }}
         >
@@ -106,8 +106,8 @@ const SwitchFlow: Component = () => {
         </button>
         <button
           onClick={() => {
-            setNodes(nodesB);
-            setEdges(edgesB);
+            setNodes(nodesB());
+            setEdges(edgesB());
           }}
         >
           flow b

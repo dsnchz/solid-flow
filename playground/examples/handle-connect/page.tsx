@@ -76,7 +76,7 @@ export const HandleConnect = () => {
   ]);
 
   return (
-    <SolidFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView colorMode="dark">
+    <SolidFlow nodes={nodes()} edges={edges()} nodeTypes={nodeTypes} fitView colorMode="dark">
       <Controls />
       <Background variant="dots" />
       <MiniMap />

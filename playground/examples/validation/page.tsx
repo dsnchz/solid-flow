@@ -63,8 +63,8 @@ export const Validation = () => {
       `}
       </style>
       <SolidFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={nodes()}
+        edges={edges()}
         fitView
         minZoom={0.1}
         maxZoom={2.5}

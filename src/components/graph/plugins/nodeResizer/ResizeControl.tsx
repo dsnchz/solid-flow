@@ -14,7 +14,6 @@ import {
   type ParentProps,
   splitProps,
 } from "solid-js";
-import { produce } from "solid-js/store";
 
 import { useInternalSolidFlow, useNodeId } from "@/components/contexts";
 import type { Node, ResizeControlVariant } from "@/shared/types";
@@ -85,7 +84,7 @@ const ResizeControl = <NodeType extends Node = Node>(props: ParentProps<ResizeCo
   ]);
 
   let resizeControlRef!: HTMLDivElement;
-  const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
+  const { store, actions } = useInternalSolidFlow<NodeType>();
 
   const ctxNodeId = useNodeId();
   const nodeId = () => local.nodeId ?? ctxNodeId();
@@ -101,7 +100,7 @@ const ResizeControl = <NodeType extends Node = Node>(props: ParentProps<ResizeCo
       domNode: resizeControlRef,
       nodeId: nodeId(),
       getStoreItems: () => ({
-        nodeLookup,
+        nodeLookup: store.nodeLookup,
         transform: store.transform,
         snapGrid: store.snapGrid,
         snapToGrid: !!store.snapGrid,
@@ -119,19 +118,23 @@ const ResizeControl = <NodeType extends Node = Node>(props: ParentProps<ResizeCo
           });
         }
 
-        actions.setNodes(
-          (node) => changes.has(node.id),
-          produce((node) => {
-            const nodeChange = changes.get(node.id)!;
+        actions.setNodes((nodes) => {
+          return nodes.map((node) => {
+            if (!changes.has(node.id)) return node;
 
-            node.width = nodeChange.width;
-            node.height = nodeChange.height;
-            node.position = {
-              x: nodeChange.position?.x ?? node.position.x,
-              y: nodeChange.position?.y ?? node.position.y,
+            const change = changes.get(node.id)!;
+
+            return {
+              ...node,
+              width: change.width,
+              height: change.height,
+              position: {
+                x: change.position?.x ?? node.position.x,
+                y: change.position?.y ?? node.position.y,
+              },
             };
-          }),
-        );
+          });
+        });
       },
     });
 

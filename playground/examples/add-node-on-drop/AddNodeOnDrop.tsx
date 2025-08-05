@@ -76,8 +76,8 @@ export const AddNodeOnDropExample = () => {
   return (
     <>
       <SolidFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={nodes()}
+        edges={edges()}
         fitView
         fitViewOptions={{ padding: 2 }}
         onConnectStart={(_, { nodeId }) => {

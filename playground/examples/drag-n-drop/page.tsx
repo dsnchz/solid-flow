@@ -1,7 +1,7 @@
 import { createEffect } from "solid-js";
 
-import { createEdgeStore } from "@/data/createEdgeStore";
-import { createNodeStore } from "@/data/createNodeStore";
+import { createEdges } from "@/data/createEdgeStore";
+import { createNodes } from "@/data/createNodeStore";
 import { useSolidFlow } from "@/hooks";
 import { Background, Controls, MiniMap, SolidFlow } from "@/index";
 import type { BuiltInNodeTypes } from "@/types";
@@ -11,7 +11,7 @@ import { Sidebar } from "./Sidebar";
 export function DragNDrop() {
   const { screenToFlowPosition, addNodes } = useSolidFlow();
 
-  const [nodes] = createNodeStore([
+  const [nodes] = createNodes([
     {
       id: "1",
       type: "input",
@@ -32,7 +32,7 @@ export function DragNDrop() {
     },
   ]);
 
-  const [edges, _setEdges] = createEdgeStore([
+  const [edges, _setEdges] = createEdges([
     {
       id: "1-2",
       type: "default",
@@ -91,7 +91,7 @@ export function DragNDrop() {
 
   return (
     <main style={{ height: "100%", display: "flex" }}>
-      <SolidFlow nodes={nodes} edges={edges} fitView onDragOver={onDragOver} onDrop={onDrop}>
+      <SolidFlow nodes={nodes()} edges={edges()} fitView onDragOver={onDragOver} onDrop={onDrop}>
         <Controls />
         <Background variant="dots" />
         <MiniMap />

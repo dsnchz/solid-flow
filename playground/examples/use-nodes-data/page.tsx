@@ -89,7 +89,7 @@ export function UseNodesData() {
           margin-top: 4px;
         }
       `}</style>
-      <SolidFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
+      <SolidFlow nodes={nodes()} edges={edges()} nodeTypes={nodeTypes} fitView>
         <Controls />
         <Background variant="dots" />
         <MiniMap />

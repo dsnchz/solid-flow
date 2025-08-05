@@ -1,11 +1,11 @@
 import { createSignal } from "solid-js";
 
 import { Background, Controls, MiniMap, Panel, SolidFlow } from "@/components";
-import { createEdgeStore } from "@/data/createEdgeStore";
-import { createNodeStore } from "@/data/createNodeStore";
+import { createEdges } from "@/data/createEdgeStore";
+import { createNodes } from "@/data/createNodeStore";
 
 export const A11y = () => {
-  const [nodes] = createNodeStore([
+  const [nodes] = createNodes([
     {
       id: "A",
       type: "input",
@@ -32,7 +32,7 @@ export const A11y = () => {
     },
   ]);
 
-  const [edges] = createEdgeStore([
+  const [edges] = createEdges([
     { id: "A-B", source: "A", target: "B" },
     { id: "A-C", source: "A", target: "C" },
     { id: "A-D", source: "A", target: "D" },
@@ -62,8 +62,8 @@ export const A11y = () => {
 
   return (
     <SolidFlow
-      nodes={nodes}
-      edges={edges}
+      nodes={nodes()}
+      edges={edges()}
       autoPanOnNodeFocus={autoPanOnNodeFocus()}
       ariaLabelConfig={ariaLabelConfig}
       fitView

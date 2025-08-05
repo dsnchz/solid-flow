@@ -23,8 +23,8 @@ export const CustomConnectionLine = () => {
   return (
     <div style={{ height: "100vh" }}>
       <SolidFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={nodes()}
+        edges={edges()}
         nodeTypes={nodeTypes}
         fitView
         connectionLineComponent={ConnectionLine}

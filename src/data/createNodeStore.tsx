@@ -1,4 +1,4 @@
-import { createStore, type SetStoreFunction, type Store } from "solid-js/store";
+import { type Accessor, createSignal, type Setter } from "solid-js";
 
 import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes } from "../types";
 
@@ -91,13 +91,10 @@ type NodesInput<TUserNodeTypes extends NodeTypes> = {
  * - Works seamlessly with both built-in and custom node types
  * - Type errors prevent invalid type names or incorrect data structures
  */
-export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string, never>>(
+export const createNodes = <TUserNodeTypes extends NodeTypes = Record<string, never>>(
   nodes: NodesInput<TUserNodeTypes>[],
-): readonly [
-  Store<NodesInput<TUserNodeTypes>[]>,
-  SetStoreFunction<NodesInput<TUserNodeTypes>[]>,
-] => {
-  const [store, setStore] = createStore(nodes);
+): readonly [Accessor<NodesInput<TUserNodeTypes>[]>, Setter<NodesInput<TUserNodeTypes>[]>] => {
+  const [_nodes, _setNodes] = createSignal(nodes);
 
-  return [store, setStore] as const;
+  return [_nodes, _setNodes] as const;
 };

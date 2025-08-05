@@ -21,7 +21,7 @@ export function useNodesData<NodeType extends Node = Node>(
 export function useNodesData<NodeType extends Node = Node>(
   nodeIds: Accessor<string | string[] | undefined | null>,
 ) {
-  const { nodeLookup } = useInternalSolidFlow();
+  const { store } = useInternalSolidFlow();
 
   let prevNodesData = [] as NodeData<NodeType>[];
 
@@ -35,7 +35,7 @@ export function useNodesData<NodeType extends Node = Node>(
     const ids = Array.isArray(idValues) ? idValues : [idValues];
 
     for (const nodeId of ids) {
-      const node = nodeLookup.get(nodeId)?.internals.userNode;
+      const node = store.nodeLookup.get(nodeId)?.internals.userNode;
 
       if (!node) continue;
 
