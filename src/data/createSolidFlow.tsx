@@ -1,7 +1,6 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createMediaQuery } from "@solid-primitives/media";
 import {
-  addEdge as systemAddEdge,
   adoptUserNodes,
   calculateNodePosition,
   type Connection,
@@ -31,10 +30,11 @@ import {
   type SelectionRect,
   type SetCenterOptions,
   snapPosition,
+  addEdge as systemAddEdge,
+  updateNodeInternals as systemUpdateNodeInternals,
   type Transform,
   updateAbsolutePositions,
   updateConnectionLookup,
-  updateNodeInternals as systemUpdateNodeInternals,
   type Viewport,
   type ViewportHelperFunctionOptions,
   type XYPosition,
@@ -50,7 +50,6 @@ import {
 } from "@/components/graph/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/graph/node";
 import type { SolidFlowProps } from "@/components/SolidFlow/types";
-import type { FitViewOptions } from "@/shared/types";
 import type {
   BuiltInEdgeTypes,
   BuiltInNodeTypes,
@@ -173,8 +172,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [elementsSelectable, setElementsSelectable] = createWritable(
     () => config().elementsSelectable,
   );
-  const [fitViewPromise, setFitViewPromise] = createSignal<Promise<boolean> | undefined>();
-  const [fitViewOptions, setFitViewOptions] = createWritable(() => config().fitViewOptions);
   const [height, setHeight] = createWritable(() => config().height);
   const [minZoom, _setMinZoom] = createWritable<number>(() => config().minZoom);
   const [maxZoom, _setMaxZoom] = createWritable<number>(() => config().maxZoom);
@@ -259,12 +256,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
     get elementsSelectable() {
       return elementsSelectable();
-    },
-    get fitViewPromise() {
-      return fitViewPromise();
-    },
-    get fitViewOptions() {
-      return fitViewOptions();
     },
     get height() {
       return height();
@@ -420,9 +411,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const initiateFitView = async () => {
+  const fitView = () => {
     if (!store.panZoom) return false;
-
     return fitViewport(
       {
         nodes: nodeLookup,
@@ -432,7 +422,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         minZoom: store.minZoom,
         maxZoom: store.maxZoom,
       },
-      fitViewOptions(),
+      config().fitViewOptions ?? {},
     );
   };
 
@@ -445,22 +435,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         checkEquality: false, // recompute internal nodes
       });
     });
-  };
-
-  const nodesInitialized = () => {
-    const result = updateSystemNodes();
-
-    if (store.fitViewPromise) {
-      if (store.fitViewOptions?.duration) {
-        void initiateFitView();
-      } else {
-        queueMicrotask(() => {
-          void initiateFitView();
-        });
-      }
-    }
-
-    return result;
   };
 
   const resetStoreValues = () => {
@@ -480,35 +454,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setSnapGrid(undefined);
   };
 
-  const fitView = async (options?: FitViewOptions) => {
-    if (!store.panZoom) return false;
-
-    if (store.fitViewPromise) {
-      const result = await store.fitViewPromise;
-      return result;
-    }
-
-    setFitViewOptions(options);
-
-    const fitViewPromise = initiateFitView();
-
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    setFitViewPromise(fitViewPromise);
-
-    const result = await fitViewPromise;
-
-    batch(() => {
-      setFitViewPromise(undefined);
-      setFitViewOptions(undefined);
-    });
-
-    return result;
-  };
-
   const addEdge = (edgeParams: EdgeType | Connection) => {
     edgesMemo.set((edges) => systemAddEdge(edgeParams, edges));
   };
 
+  let initialized = false;
   const updateNodePositions = (
     nodeDragItems: Map<string, NodeDragItem | InternalNodeBase<NodeType>>,
     dragging = false,
@@ -551,10 +501,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           nodeExtent: store.nodeExtent,
         });
 
-        if (store.fitViewPromise) {
-          void store.fitViewPromise;
-        }
-
         const nodeToChange = changes.reduce<Map<string, NodeDimensionChange | NodePositionChange>>(
           (acc, change) => {
             const node = nodeLookup.get(change.id)?.internals.userNode;
@@ -589,6 +535,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
             }
           }),
         );
+
+        if (!initialized) {
+          initialized = true;
+          void fitView();
+        }
       });
     });
   };
@@ -865,7 +816,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     parentLookup,
     connectionLookup,
     actions: {
-      nodesInitialized,
       resetStoreValues,
       requestUpdateNodeInternals,
       setAriaLabelConfig,
