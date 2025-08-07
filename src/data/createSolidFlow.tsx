@@ -1,8 +1,9 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createMediaQuery } from "@solid-primitives/media";
 import {
-  adoptUserNodes,
+  addEdge as systemAddEdge,
   calculateNodePosition,
+  clampPosition,
   type Connection,
   type ConnectionLookup,
   ConnectionMode,
@@ -12,11 +13,14 @@ import {
   errorMessages,
   fitViewport,
   getInternalNodesBounds,
+  getNodeDimensions,
+  getNodePositionWithOrigin,
   getViewportForBounds,
   type Handle,
   infiniteExtent,
   initialConnection,
   type InternalNodeBase,
+  isCoordinateExtent,
   type MarkerProps,
   mergeAriaLabelConfig,
   type NodeDimensionChange,
@@ -30,16 +34,25 @@ import {
   type SelectionRect,
   type SetCenterOptions,
   snapPosition,
-  addEdge as systemAddEdge,
-  updateNodeInternals as systemUpdateNodeInternals,
   type Transform,
   updateAbsolutePositions,
   updateConnectionLookup,
+  updateNodeInternals as systemUpdateNodeInternals,
   type Viewport,
   type ViewportHelperFunctionOptions,
   type XYPosition,
 } from "@xyflow/system";
-import { batch, createEffect, createMemo, createSignal, mergeProps, on } from "solid-js";
+import {
+  batch,
+  createComputed,
+  createEffect,
+  createMemo,
+  createSignal,
+  mapArray,
+  mergeProps,
+  onCleanup,
+  untrack,
+} from "solid-js";
 import { produce } from "solid-js/store";
 
 import {
@@ -61,11 +74,12 @@ import type {
   NodeGraph,
   NodeTypes,
 } from "@/types";
-import { createWritable, createWritableStore, deepTrack } from "@/utils";
+import { createWritable, createWritableStore } from "@/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
 import { type EdgeLayoutAllOptions, getLayoutedEdges, getVisibleNodes } from "./visibleElements";
+import { addConnectionToLookup, adoptUserNodes, calculateZ, updateChildNode } from "./xyflow";
 
 type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse" | undefined;
@@ -426,17 +440,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     );
   };
 
-  const updateSystemNodes = () => {
-    return batch(() => {
-      return adoptUserNodes(store.nodes, nodeLookup, parentLookup, {
-        nodeOrigin: store.nodeOrigin,
-        nodeExtent: store.nodeExtent,
-        elevateNodesOnSelect: store.elevateNodesOnSelect,
-        checkEquality: false, // recompute internal nodes
-      });
-    });
-  };
-
   const resetStoreValues = () => {
     // NOTE: should we reset to the config()-values instead?
     setDragging(false);
@@ -790,19 +793,101 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     });
   });
 
-  createEffect(
-    on(
-      () => deepTrack(store.nodes),
-      () => updateSystemNodes(),
+  createComputed(
+    mapArray(
+      () => store.nodes,
+      (userNode) => {
+        const options = mergeProps({ checkEquality: false }, store);
+
+        createComputed(() => {
+          const selectedNodeZ: number = store.elevateNodesOnSelect ? 1000 : 0;
+          const internalNode = untrack(() => nodeLookup.get(userNode.id));
+
+          if (options.checkEquality && userNode === internalNode?.internals.userNode) {
+            nodeLookup.set(userNode.id, internalNode);
+          } else {
+            const positionWithOrigin = getNodePositionWithOrigin(userNode, store.nodeOrigin);
+            const extent = isCoordinateExtent(userNode.extent) ? userNode.extent : store.nodeExtent;
+            const clampedPosition = clampPosition(
+              positionWithOrigin,
+              extent,
+              getNodeDimensions(userNode),
+            );
+
+            const z = calculateZ(userNode, selectedNodeZ);
+
+            nodeLookup.set(userNode.id, {
+              ...userNode,
+              measured: {
+                width: userNode.measured?.width,
+                height: userNode.measured?.height,
+              },
+              internals: {
+                positionAbsolute: clampedPosition,
+                // if user re-initializes the node or removes `measured` for whatever reason, we reset the handleBounds so that the node gets re-measured
+                handleBounds: !userNode.measured ? undefined : internalNode?.internals.handleBounds,
+                z,
+                userNode,
+              },
+            });
+
+            if (userNode.parentId) {
+              updateChildNode(internalNode, nodeLookup, parentLookup, store);
+            }
+          }
+        });
+
+        onCleanup(() => {
+          nodeLookup.delete(userNode.id);
+        });
+      },
     ),
   );
 
-  createEffect(
-    on(
-      () => deepTrack(store.edges),
-      () => {
-        batch(() => {
-          updateConnectionLookup(connectionLookup, edgeLookup, store.edges);
+  createComputed(
+    mapArray(
+      () => store.edges,
+      (edge) => {
+        createComputed(() => {
+          const {
+            source: sourceNode,
+            target: targetNode,
+            sourceHandle = null,
+            targetHandle = null,
+          } = edge;
+
+          const connection = {
+            edgeId: edge.id,
+            source: sourceNode,
+            target: targetNode,
+            sourceHandle,
+            targetHandle,
+          };
+          const sourceKey = `${sourceNode}-${sourceHandle}--${targetNode}-${targetHandle}`;
+          const targetKey = `${targetNode}-${targetHandle}--${sourceNode}-${sourceHandle}`;
+
+          addConnectionToLookup(
+            "source",
+            connection,
+            targetKey,
+            connectionLookup,
+            sourceNode,
+            sourceHandle,
+          );
+          addConnectionToLookup(
+            "target",
+            connection,
+            sourceKey,
+            connectionLookup,
+            targetNode,
+            targetHandle,
+          );
+
+          edgeLookup.set(edge.id, edge);
+        });
+
+        onCleanup(() => {
+          edgeLookup.delete(edge.id);
         });
       },
     ),
@@ -845,7 +930,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       setViewport,
       setWidth,
       setZoomActivationKeyPressed,
-      updateSystemNodes,
 
       // Port Svelte Flow Actions to Solid Flow
       addEdge,
