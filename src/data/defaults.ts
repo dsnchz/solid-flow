@@ -34,7 +34,7 @@ export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends
     minZoom: 0.5,
     maxZoom: 2,
     selectionMode: "partial" as SelectionMode,
-    fitViewQueued: false,
+    fitView: false,
     noPanClass: "nopan",
     noDragClass: "nodrag",
     noWheelClass: "nowheel",
