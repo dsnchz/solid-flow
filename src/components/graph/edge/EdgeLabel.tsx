@@ -41,11 +41,11 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>) => {
     "style",
   ]);
 
-  const { actions, store } = useInternalSolidFlow();
+  const { actions } = useInternalSolidFlow();
 
   const id = useEdgeId();
 
-  const zIndex = () => store.visibleEdgesMap.get(id())?.zIndex;
+  const zIndex = () => actions.getEdge(id())?.zIndex;
 
   return (
     <EdgeLabelRenderer>

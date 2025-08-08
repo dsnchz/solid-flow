@@ -19,7 +19,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
 
   const edgeId = () => props.edgeId;
-  const edge = () => store.visibleEdgesMap.get(edgeId())!;
+  const edge = () => actions.getEdge(edgeId())!;
 
   const edgeType = () => edge().type ?? "default";
   const selectable = () => edge().selectable ?? store.elementsSelectable;
