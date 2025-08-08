@@ -4,7 +4,6 @@ import {
   getNodeDimensions,
   nodeHasDimensions,
   type PanelPosition,
-  type Transform,
   XYMinimap,
 } from "@xyflow/system";
 import clsx from "clsx";
@@ -19,6 +18,7 @@ import {
   onMount,
   type ParentProps,
   Show,
+  splitProps,
 } from "solid-js";
 
 import { Panel } from "@/components/container";
@@ -99,11 +99,32 @@ export const Minimap = <NodeType extends Node>(
     props,
   );
 
-  const nodeColorFunc = () =>
-    _props.nodeColor === undefined ? undefined : getAttrFunction(_props.nodeColor);
+  const [local, paneProps] = splitProps(_props, [
+    "class",
+    "style",
+    "position",
+    "nodeClass",
+    "nodeStrokeColor",
+    "nodeColor",
+    "pannable",
+    "zoomable",
+    "inversePan",
+    "zoomStep",
+    "bgColor",
+    "width",
+    "height",
+    "maskColor",
+    "maskStrokeColor",
+    "maskStrokeWidth",
+    "nodeBorderRadius",
+    "nodeStrokeWidth",
+  ]);
 
-  const nodeStrokeColorFunc = () => getAttrFunction(_props.nodeStrokeColor);
-  const nodeClassFunc = () => getAttrFunction(_props.nodeClass);
+  const nodeColorFunc = () =>
+    local.nodeColor === undefined ? undefined : getAttrFunction(local.nodeColor);
+
+  const nodeStrokeColorFunc = () => getAttrFunction(local.nodeStrokeColor);
+  const nodeClassFunc = () => getAttrFunction(local.nodeClass);
 
   const shapeRendering = () =>
     // @ts-expect-error - TS doesn't know about chrome
@@ -125,12 +146,12 @@ export const Minimap = <NodeType extends Node>(
       : viewBB;
   };
 
-  const getScaledWidth = () => getBoundingRect().width / _props.width;
-  const getScaledHeight = () => getBoundingRect().height / _props.height;
+  const getScaledWidth = () => getBoundingRect().width / local.width;
+  const getScaledHeight = () => getBoundingRect().height / local.height;
   const getViewScale = () => Math.max(getScaledWidth(), getScaledHeight());
 
-  const getViewWidth = () => getViewScale() * _props.width;
-  const getViewHeight = () => getViewScale() * _props.height;
+  const getViewWidth = () => getViewScale() * local.width;
+  const getViewHeight = () => getViewScale() * local.height;
   const getOffset = () => 5 * getViewScale();
 
   const getX = () => {
@@ -147,7 +168,7 @@ export const Minimap = <NodeType extends Node>(
   const getViewboxHeight = () => getViewHeight() + getOffset() * 2;
 
   const strokeWidth = () =>
-    _props.maskStrokeWidth ? _props.maskStrokeWidth * getViewScale() : undefined;
+    local.maskStrokeWidth ? local.maskStrokeWidth * getViewScale() : undefined;
 
   let prevNodeIds: string[] = [];
   const nodeIds = () => {
@@ -166,13 +187,14 @@ export const Minimap = <NodeType extends Node>(
 
   return (
     <Panel
-      position={_props.position}
+      position={local.position}
       data-testid="solid-flow__minimap"
-      class={clsx(["solid-flow__minimap", _props.class])}
+      class={clsx(["solid-flow__minimap", local.class])}
       style={{
-        "--xy-minimap-background-color-props": _props.bgColor,
-        ..._props.style,
+        "--xy-minimap-background-color-props": local.bgColor,
+        ...local.style,
       }}
+      {...paneProps}
     >
       <Show when={store.panZoom}>
         {(panZoom) => {
@@ -191,10 +213,10 @@ export const Minimap = <NodeType extends Node>(
                 translateExtent: store.translateExtent,
                 width: store.width,
                 height: store.height,
-                inversePan: _props.inversePan,
-                zoomStep: _props.zoomStep,
-                pannable: _props.pannable,
-                zoomable: _props.zoomable,
+                inversePan: local.inversePan,
+                zoomStep: local.zoomStep,
+                pannable: local.pannable,
+                zoomable: local.zoomable,
               });
             });
 
@@ -206,15 +228,15 @@ export const Minimap = <NodeType extends Node>(
           return (
             <svg
               ref={setRef}
-              width={_props.width}
-              height={_props.height}
+              width={local.width}
+              height={local.height}
               viewBox={`${getX()} ${getY()} ${getViewboxWidth()} ${getViewboxHeight()}`}
               class="solid-flow__minimap-svg"
               role="img"
               aria-labelledby={labelledBy()}
               style={{
-                "--xy-minimap-mask-background-color-props": _props.maskColor,
-                "--xy-minimap-mask-stroke-color-props": _props.maskStrokeColor,
+                "--xy-minimap-mask-background-color-props": local.maskColor,
+                "--xy-minimap-mask-stroke-color-props": local.maskStrokeColor,
                 "--xy-minimap-mask-stroke-width-props": strokeWidth(),
               }}
             >
@@ -232,8 +254,8 @@ export const Minimap = <NodeType extends Node>(
                         <MinimapNode
                           x={node()!.internals.positionAbsolute.x}
                           y={node()!.internals.positionAbsolute.y}
-                          borderRadius={_props.nodeBorderRadius}
-                          strokeWidth={_props.nodeStrokeWidth}
+                          borderRadius={local.nodeBorderRadius}
+                          strokeWidth={local.nodeStrokeWidth}
                           shapeRendering={shapeRendering()}
                           width={nodeDimensions().width}
                           height={nodeDimensions().height}
