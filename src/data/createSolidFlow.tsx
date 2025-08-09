@@ -12,6 +12,8 @@ import {
   type EdgeLookup,
   errorMessages,
   fitViewport,
+  getEdgePosition,
+  getElevatedEdgeZIndex,
   getInternalNodesBounds,
   getNodeDimensions,
   getNodePositionWithOrigin,
@@ -21,6 +23,7 @@ import {
   initialConnection,
   type InternalNodeBase,
   isCoordinateExtent,
+  isEdgeVisible,
   type MarkerProps,
   mergeAriaLabelConfig,
   type NodeDimensionChange,
@@ -78,7 +81,7 @@ import { createWritable, createWritableStore } from "@/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
-import { type EdgeLayoutAllOptions, getLayoutedEdges, getVisibleNodes } from "./visibleElements";
+import { getVisibleNodes } from "./visibleElements";
 import { addConnectionToLookup, adoptUserNodes, calculateZ, updateChildNode } from "./xyflow";
 
 type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
@@ -128,6 +131,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const parentLookup: ParentLookup<InternalNode<NodeType>> = new ReactiveMap();
   const edgeLookup: EdgeLookup<EdgeType> = new ReactiveMap();
   const connectionLookup: ConnectionLookup = new ReactiveMap();
+  const layoutedEdgesMap = new ReactiveMap<string, EdgeLayouted<EdgeType>>();
 
   // eslint-disable-next-line solid/reactivity
   batch(() => updateConnectionLookup(connectionLookup, edgeLookup, _props.edges));
@@ -336,9 +340,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     get visibleEdgeIds() {
       return visibleEdgeIds();
     },
-    get visibleEdgesMap() {
-      return visibleEdgesMap();
-    },
     get visibleNodeIds() {
       return visibleNodeIds();
     },
@@ -390,34 +391,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     return Array.from(visibleNodesMap().values()).map((edge) => edge.id);
   });
 
-  const visibleEdgesMap = createMemo<Map<string, EdgeLayouted<EdgeType>>>((previousEdges) => {
-    const options = {
-      edges: store.edges,
-      defaultEdgeOptions: store.defaultEdgeOptions,
-      previousEdges,
-      nodeLookup,
-      connectionMode: store.connectionMode as ConnectionMode,
-      elevateEdgesOnSelect: store.elevateEdgesOnSelect,
-      onerror: store.onError,
-    };
-
-    if (store.onlyRenderVisibleElements) {
-      return getLayoutedEdges({
-        ...options,
-        onlyRenderVisible: true,
-        visibleNodes: visibleNodesMap(),
-        transform: transform(),
-        width: store.width ?? 0,
-        height: store.height ?? 0,
-      });
-    }
-
-    return getLayoutedEdges(options as EdgeLayoutAllOptions<NodeType, EdgeType>);
-  }, new Map<string, EdgeLayouted<EdgeType>>());
-
   const visibleEdgeIds = createMemo(() => {
-    return Array.from(visibleEdgesMap().values()).map((edge) => edge.id);
+    return Array.from(layoutedEdgesMap.values()).map((edge) => edge.id);
   });
+
+  const getEdge = (id: string) => layoutedEdgesMap.get(id);
 
   /**********************************************************************************/
   /*                                                                                */
@@ -801,9 +779,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
         createComputed(() => {
           const selectedNodeZ: number = store.elevateNodesOnSelect ? 1000 : 0;
-          const internalNode = untrack(() => nodeLookup.get(userNode.id));
+          const internalNode = untrack(() => nodeLookup.get(userNode.id)!);
 
-          if (options.checkEquality && userNode === internalNode?.internals.userNode) {
+          if (options.checkEquality && userNode === internalNode.internals.userNode) {
             nodeLookup.set(userNode.id, internalNode);
           } else {
             const positionWithOrigin = getNodePositionWithOrigin(userNode, store.nodeOrigin);
@@ -874,6 +852,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
             sourceNode,
             sourceHandle,
           );
+
           addConnectionToLookup(
             "target",
             connection,
@@ -886,7 +865,58 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           edgeLookup.set(edge.id, edge);
         });
 
+        createComputed(() => {
+          const sourceNode = nodeLookup.get(edge.source);
+          const targetNode = nodeLookup.get(edge.target);
+
+          if (!sourceNode || !targetNode) return;
+
+          if (store.onlyRenderVisibleElements) {
+            const edgeVisible = isEdgeVisible({
+              sourceNode,
+              targetNode,
+              width: store.width ?? 0,
+              height: store.height ?? 0,
+              transform: store.transform,
+            });
+
+            if (!edgeVisible) return;
+
+            store.visibleNodesMap.set(sourceNode.id, sourceNode);
+            store.visibleNodesMap.set(targetNode.id, targetNode);
+          }
+
+          const edgePosition = getEdgePosition({
+            id: edge.id,
+            sourceNode,
+            targetNode,
+            sourceHandle: edge.sourceHandle || null,
+            targetHandle: edge.targetHandle || null,
+            connectionMode: store.connectionMode as ConnectionMode,
+            onError: store.onError,
+          });
+
+          if (!edgePosition) return;
+
+          layoutedEdgesMap.set(edge.id, {
+            ...store.defaultEdgeOptions,
+            ...edge,
+            ...edgePosition,
+            zIndex: getElevatedEdgeZIndex({
+              selected: edge.selected,
+              zIndex: edge.zIndex ?? store.defaultEdgeOptions.zIndex,
+              sourceNode,
+              targetNode,
+              elevateOnSelect: store.elevateEdgesOnSelect,
+            }),
+            sourceNode,
+            targetNode,
+            edge,
+          });
+        });
+
         onCleanup(() => {
+          layoutedEdgesMap.delete(edge.id);
           edgeLookup.delete(edge.id);
         });
       },
@@ -901,6 +931,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     parentLookup,
     connectionLookup,
     actions: {
+      getEdge,
       resetStoreValues,
       requestUpdateNodeInternals,
       setAriaLabelConfig,
