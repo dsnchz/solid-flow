@@ -775,52 +775,67 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     mapArray(
       () => store.nodes,
       (userNode) => {
-        const options = mergeProps({ checkEquality: false }, store);
-
         createComputed(() => {
+          const internalNode = untrack(() => nodeLookup.get(userNode.id));
           const selectedNodeZ: number = store.elevateNodesOnSelect ? 1000 : 0;
-          const internalNode = untrack(() => nodeLookup.get(userNode.id)!);
 
-          if (options.checkEquality && userNode === internalNode.internals.userNode) {
-            nodeLookup.set(userNode.id, internalNode);
-          } else {
-            const positionWithOrigin = getNodePositionWithOrigin(userNode, store.nodeOrigin);
-            const extent = isCoordinateExtent(userNode.extent) ? userNode.extent : store.nodeExtent;
-            const clampedPosition = clampPosition(
-              positionWithOrigin,
-              extent,
-              getNodeDimensions(userNode),
-            );
+          const clampedPosition = clampPosition(
+            getNodePositionWithOrigin(userNode, store.nodeOrigin),
+            isCoordinateExtent(userNode.extent) ? userNode.extent : store.nodeExtent,
+            getNodeDimensions(userNode),
+          );
 
-            const z = calculateZ(userNode, selectedNodeZ);
+          /*
+           * We preserve the measured dimensions of the node if the user has provided them.
+           * If the user has not provided them, we use the previously measured dimensions.
+           * If the user has not provided them and there are no previously measured dimensions,
+           * we reset the handleBounds so that the node gets re-measured.
+           */
+          const preservedMeasured = {
+            width: userNode.measured?.width ?? internalNode?.measured?.width,
+            height: userNode.measured?.height ?? internalNode?.measured?.height,
+          };
 
-            nodeLookup.set(userNode.id, {
-              ...userNode,
-              measured: {
-                width: userNode.measured?.width,
-                height: userNode.measured?.height,
-              },
-              internals: {
-                positionAbsolute: clampedPosition,
-                // if user re-initializes the node or removes `measured` for whatever reason, we reset the handleBounds so that the node gets re-measured
-                handleBounds: !userNode.measured ? undefined : internalNode?.internals.handleBounds,
-                z,
-                userNode,
-              },
-            });
+          const updatedNodeInternals = {
+            ...userNode,
+            measured: preservedMeasured,
+            internals: {
+              positionAbsolute: clampedPosition,
+              // If there is neither a user-provided nor a previously measured size,
+              // reset handleBounds so that the node gets re-measured.
+              handleBounds:
+                !userNode.measured && !internalNode?.measured
+                  ? undefined
+                  : internalNode?.internals.handleBounds,
+              z: calculateZ(userNode, selectedNodeZ),
+              userNode,
+            },
+          } as InternalNode<NodeType>;
 
-            if (userNode.parentId) {
-              updateChildNode(internalNode, nodeLookup, parentLookup, store);
-            }
+          nodeLookup.set(userNode.id, updatedNodeInternals);
+
+          if (userNode.parentId) {
+            updateChildNode(updatedNodeInternals, nodeLookup, parentLookup, store);
           }
         });
 
+        // Do not delete here; we garbage-collect removed nodes in a separate effect
         onCleanup(() => {
-          nodeLookup.delete(userNode.id);
+          /* noop */
         });
       },
     ),
   );
+
+  // Garbage-collect nodeLookup entries for nodes that no longer exist in the store
+  createEffect(() => {
+    const currentIds = new Set(store.nodes.map((n) => n.id));
+    for (const id of Array.from(nodeLookup.keys())) {
+      if (!currentIds.has(id)) {
+        nodeLookup.delete(id);
+      }
+    }
+  });
 
   createComputed(
     mapArray(
