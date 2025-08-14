@@ -8,9 +8,9 @@ import {
 } from "@/index";
 import type { NodeTypes } from "@/types";
 
-import { ResultNode } from "./ResultNode";
-import { TextNode } from "./TextNode";
-import { UppercaseNode } from "./UppercaseNode";
+import { ResultNode } from "./components/ResultNode";
+import { TextNode } from "./components/TextNode";
+import { UppercaseNode } from "./components/UppercaseNode";
 
 const nodeTypes = {
   text: TextNode,

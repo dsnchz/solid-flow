@@ -5,11 +5,9 @@ import {
   calculateNodePosition,
   clampPosition,
   type Connection,
-  type ConnectionLookup,
   ConnectionMode,
   type ConnectionState,
   createMarkerIds,
-  type EdgeLookup,
   errorMessages,
   fitViewport,
   getEdgePosition,
@@ -39,11 +37,11 @@ import {
   snapPosition,
   type Transform,
   updateAbsolutePositions,
-  updateConnectionLookup,
   updateNodeInternals as systemUpdateNodeInternals,
   type Viewport,
   type ViewportHelperFunctionOptions,
   type XYPosition,
+  type HandleConnection,
 } from "@xyflow/system";
 import {
   batch,
@@ -81,8 +79,14 @@ import { createWritable, createWritableStore } from "@/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
-import { getVisibleNodes } from "./visibleElements";
-import { addConnectionToLookup, adoptUserNodes, calculateZ, updateChildNode } from "./xyflow";
+import { getVisibleNodes } from "./utils";
+import {
+  addConnectionToLookup,
+  adoptUserNodes,
+  calculateZ,
+  removeConnectionFromLookup,
+  updateChildNode,
+} from "./xyflow";
 
 type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse" | undefined;
@@ -127,14 +131,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 ) => {
   const _props = mergeProps(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
 
-  const nodeLookup: NodeLookup<InternalNode<NodeType>> = new ReactiveMap();
+  const nodeLookup = new ReactiveMap<string, InternalNode<NodeType>>();
   const parentLookup: ParentLookup<InternalNode<NodeType>> = new ReactiveMap();
-  const edgeLookup: EdgeLookup<EdgeType> = new ReactiveMap();
-  const connectionLookup: ConnectionLookup = new ReactiveMap();
+  const edgeLookup = new ReactiveMap<string, EdgeType>();
+  const connectionLookup = new ReactiveMap<string, Map<string, HandleConnection>>();
   const layoutedEdgesMap = new ReactiveMap<string, EdgeLayouted<EdgeType>>();
-
-  // eslint-disable-next-line solid/reactivity
-  batch(() => updateConnectionLookup(connectionLookup, edgeLookup, _props.edges));
 
   const startNodesInitialized = batch(() => {
     // eslint-disable-next-line solid/reactivity
@@ -841,41 +842,44 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     mapArray(
       () => store.edges,
       (edge) => {
+        const {
+          source: sourceNodeId,
+          target: targetNodeId,
+          sourceHandle = null,
+          targetHandle = null,
+        } = edge;
+
+        const connection = {
+          edgeId: edge.id,
+          source: sourceNodeId,
+          target: targetNodeId,
+          sourceHandle,
+          targetHandle,
+        };
+
+        const sourceKey = `${sourceNodeId}-${sourceHandle}--${targetNodeId}-${targetHandle}`;
+        const targetKey = `${targetNodeId}-${targetHandle}--${sourceNodeId}-${sourceHandle}`;
+
         createComputed(() => {
-          const {
-            source: sourceNode,
-            target: targetNode,
-            sourceHandle = null,
-            targetHandle = null,
-          } = edge;
+          batch(() => {
+            addConnectionToLookup(
+              "source",
+              connection,
+              targetKey,
+              connectionLookup,
+              sourceNodeId,
+              sourceHandle,
+            );
 
-          const connection = {
-            edgeId: edge.id,
-            source: sourceNode,
-            target: targetNode,
-            sourceHandle,
-            targetHandle,
-          };
-          const sourceKey = `${sourceNode}-${sourceHandle}--${targetNode}-${targetHandle}`;
-          const targetKey = `${targetNode}-${targetHandle}--${sourceNode}-${sourceHandle}`;
-
-          addConnectionToLookup(
-            "source",
-            connection,
-            targetKey,
-            connectionLookup,
-            sourceNode,
-            sourceHandle,
-          );
-
-          addConnectionToLookup(
-            "target",
-            connection,
-            sourceKey,
-            connectionLookup,
-            targetNode,
-            targetHandle,
-          );
+            addConnectionToLookup(
+              "target",
+              connection,
+              sourceKey,
+              connectionLookup,
+              targetNodeId,
+              targetHandle,
+            );
+          });
 
           edgeLookup.set(edge.id, edge);
         });
@@ -931,12 +935,41 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         });
 
         onCleanup(() => {
-          layoutedEdgesMap.delete(edge.id);
           edgeLookup.delete(edge.id);
+          layoutedEdgesMap.delete(edge.id);
+
+          batch(() => {
+            removeConnectionFromLookup(
+              "source",
+              targetKey,
+              connectionLookup,
+              sourceNodeId,
+              sourceHandle,
+            );
+
+            removeConnectionFromLookup(
+              "target",
+              sourceKey,
+              connectionLookup,
+              targetNodeId,
+              targetHandle,
+            );
+          });
         });
       },
     ),
   );
+
+  createEffect(() => {
+    const currentIds = new Set(store.edges.map((e) => e.id));
+    for (const id of Array.from(edgeLookup.keys())) {
+      if (!currentIds.has(id)) {
+        edgeLookup.delete(id);
+        connectionLookup.delete(id);
+        layoutedEdgesMap.delete(id);
+      }
+    }
+  });
 
   // TODO: Add viewportInitialized to store
   return {

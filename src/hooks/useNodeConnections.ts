@@ -38,18 +38,19 @@ export const useNodeConnections = (params: Accessor<UseNodeConnectionsParams>) =
   const nodeId = () => params().id ?? ctxNodeId();
 
   const [connections, setConnections] = createSignal<NodeConnection[]>([]);
-  let prevConnections: Map<string, NodeConnection> | undefined = undefined;
 
   const lookupKey = () =>
     `${nodeId()}${type() ? (id() ? `-${type()}-${id()}` : `-${type()}`) : ""}`;
 
-  createEffect(() => {
+  createEffect((prevConnections: Map<string, NodeConnection> | undefined) => {
     const nextConnections = connectionLookup.get(lookupKey());
 
     if (!areConnectionMapsEqual(nextConnections, prevConnections)) {
       prevConnections = nextConnections;
       setConnections(Array.from(prevConnections?.values() ?? []));
     }
+
+    return nextConnections;
   });
 
   return connections;

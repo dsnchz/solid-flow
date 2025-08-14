@@ -3,8 +3,6 @@ import {
   clampPositionToParent,
   type ConnectionLookup,
   type CoordinateExtent,
-  type EdgeBase,
-  type EdgeLookup,
   getBoundsOfRects,
   getDimensions,
   getHandleBounds,
@@ -531,49 +529,36 @@ export function addConnectionToLookup(
   }
 }
 
-export function updateConnectionLookup(
+export function removeConnectionFromLookup(
+  type: "source" | "target",
+  connectionKey: string,
   connectionLookup: ConnectionLookup,
-  edgeLookup: EdgeLookup,
-  edges: EdgeBase[],
+  nodeId: string,
+  handleId: string | null,
 ) {
-  connectionLookup.clear();
-  edgeLookup.clear();
+  // Remove from node-level key
+  let key = nodeId;
+  const nodeMap = connectionLookup.get(key);
+  if (nodeMap) {
+    nodeMap.delete(connectionKey);
+    if (nodeMap.size === 0) connectionLookup.delete(key);
+  }
 
-  for (const edge of edges) {
-    const {
-      source: sourceNode,
-      target: targetNode,
-      sourceHandle = null,
-      targetHandle = null,
-    } = edge;
+  // Remove from type-level key
+  key = `${nodeId}-${type}`;
+  const typeMap = connectionLookup.get(key);
+  if (typeMap) {
+    typeMap.delete(connectionKey);
+    if (typeMap.size === 0) connectionLookup.delete(key);
+  }
 
-    const connection = {
-      edgeId: edge.id,
-      source: sourceNode,
-      target: targetNode,
-      sourceHandle,
-      targetHandle,
-    };
-    const sourceKey = `${sourceNode}-${sourceHandle}--${targetNode}-${targetHandle}`;
-    const targetKey = `${targetNode}-${targetHandle}--${sourceNode}-${sourceHandle}`;
-
-    addConnectionToLookup(
-      "source",
-      connection,
-      targetKey,
-      connectionLookup,
-      sourceNode,
-      sourceHandle,
-    );
-    addConnectionToLookup(
-      "target",
-      connection,
-      sourceKey,
-      connectionLookup,
-      targetNode,
-      targetHandle,
-    );
-
-    edgeLookup.set(edge.id, edge);
+  // Remove from handle-level key
+  if (handleId) {
+    key = `${nodeId}-${type}-${handleId}`;
+    const handleMap = connectionLookup.get(key);
+    if (handleMap) {
+      handleMap.delete(connectionKey);
+      if (handleMap.size === 0) connectionLookup.delete(key);
+    }
   }
 }
