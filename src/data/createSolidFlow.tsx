@@ -70,6 +70,7 @@ import type {
   Edge,
   EdgeLayouted,
   EdgeTypes,
+  FitViewOptions,
   InternalNode,
   Node,
   NodeGraph,
@@ -404,8 +405,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const fitView = () => {
+  const fitView = async (options?: FitViewOptions<NodeType>) => {
     if (!store.panZoom) return false;
+
     return fitViewport(
       {
         nodes: nodeLookup,
@@ -415,7 +417,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         minZoom: store.minZoom,
         maxZoom: store.maxZoom,
       },
-      config().fitViewOptions ?? {},
+      options ?? config().fitViewOptions,
     );
   };
 

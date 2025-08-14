@@ -133,7 +133,7 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
    * @param options.duration - optional duration. If set, a transition will be applied
    * @param options.nodes - optional nodes to fit the view to
    */
-  fitView: (options?: FitViewOptions) => Promise<boolean>;
+  fitView: (options?: FitViewOptions<NodeType>) => Promise<boolean>;
   /**
    * Returns all nodes that intersect with the given node or rect.
    *
