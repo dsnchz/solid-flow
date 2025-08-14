@@ -818,7 +818,12 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           nodeLookup.set(userNode.id, updatedNodeInternals);
 
           if (userNode.parentId) {
-            updateChildNode(updatedNodeInternals, nodeLookup, parentLookup, store);
+            updateChildNode(updatedNodeInternals, nodeLookup, parentLookup, {
+              nodeOrigin: store.nodeOrigin,
+              nodeExtent: store.nodeExtent,
+              elevateNodesOnSelect: store.elevateNodesOnSelect,
+              checkEquality: true,
+            });
           }
         });
 

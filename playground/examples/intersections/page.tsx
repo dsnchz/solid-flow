@@ -1,4 +1,3 @@
-import { createEffect } from "solid-js";
 import { reconcile } from "solid-js/store";
 
 import { Background, Controls, createNodeStore, SolidFlow, useSolidFlow } from "@/index";
@@ -35,10 +34,6 @@ export function Intersections() {
       style: { width: "50px", height: "50px" },
     },
   ]);
-
-  createEffect(() => {
-    console.log("USERLAND NODES >>>>", nodes);
-  });
 
   return (
     <div style={{ height: "100vh" }}>
