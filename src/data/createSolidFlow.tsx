@@ -31,7 +31,6 @@ import {
   type NodePositionChange,
   panBy as panBySystem,
   type PanZoomInstance,
-  type ParentLookup,
   pointToRendererPoint,
   type SelectionRect,
   type SetCenterOptions,
@@ -133,7 +132,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const _props = mergeProps(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
 
   const nodeLookup = new ReactiveMap<string, InternalNode<NodeType>>();
-  const parentLookup: ParentLookup<InternalNode<NodeType>> = new ReactiveMap();
+  const parentLookup = new ReactiveMap<string, Map<string, InternalNode<NodeType>>>();
   const edgeLookup = new ReactiveMap<string, EdgeType>();
   const connectionLookup = new ReactiveMap<string, Map<string, HandleConnection>>();
   const layoutedEdgesMap = new ReactiveMap<string, EdgeLayouted<EdgeType>>();
@@ -886,9 +885,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
               targetNodeId,
               targetHandle,
             );
-          });
 
-          edgeLookup.set(edge.id, edge);
+            edgeLookup.set(edge.id, edge);
+          });
         });
 
         createComputed(() => {
@@ -942,10 +941,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         });
 
         onCleanup(() => {
-          edgeLookup.delete(edge.id);
-          layoutedEdgesMap.delete(edge.id);
-
           batch(() => {
+            edgeLookup.delete(edge.id);
+            layoutedEdgesMap.delete(edge.id);
+
             removeConnectionFromLookup(
               "source",
               targetKey,
