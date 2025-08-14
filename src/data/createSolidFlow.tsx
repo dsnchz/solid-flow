@@ -17,6 +17,7 @@ import {
   getNodePositionWithOrigin,
   getViewportForBounds,
   type Handle,
+  type HandleConnection,
   infiniteExtent,
   initialConnection,
   type InternalNodeBase,
@@ -41,7 +42,6 @@ import {
   type Viewport,
   type ViewportHelperFunctionOptions,
   type XYPosition,
-  type HandleConnection,
 } from "@xyflow/system";
 import {
   batch,
