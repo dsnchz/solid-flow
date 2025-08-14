@@ -1,3 +1,4 @@
+import { createResizeObserver } from "@solid-primitives/resize-observer";
 import { type ColorModeClass, infiniteExtent, isMacOs } from "@xyflow/system";
 import clsx from "clsx";
 import {
@@ -225,10 +226,12 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   onMount(() => {
     batch(() => {
       actions.setConfig(_props);
-      // NOTE: should we check here if we have explicitly provided a width/height via props?
+      actions.setDomNode(domNode);
+    });
+
+    createResizeObserver(domNode, () => {
       actions.setWidth(domNode.clientWidth);
       actions.setHeight(domNode.clientHeight);
-      actions.setDomNode(domNode);
     });
 
     createEffect(() => {
