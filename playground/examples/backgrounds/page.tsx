@@ -8,7 +8,7 @@ const Flow = (props: { id: string; bgProps: BackgroundProps[] }) => {
   return (
     <SolidFlowProvider>
       <SolidFlow
-        colorMode="dark"
+        colorMode="light"
         nodes={[
           {
             id: "1",
