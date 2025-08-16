@@ -24,5 +24,3 @@ export function useInternalSolidFlow<NodeType extends Node = Node, EdgeType exte
 
   return ctx;
 }
-
-export const useSolidFlow = useInternalSolidFlow;

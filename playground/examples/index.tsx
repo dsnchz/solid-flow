@@ -17,6 +17,7 @@ export { Reset } from "./reset/page";
 export { StressTest } from "./stress-test/page";
 export { Subflows } from "./subflows/page";
 export { Switch } from "./switch/page";
+export { TwoWayViewport } from "./two-way-viewport/page";
 export { UpdateNodeInternals } from "./update-node-internals/page";
 export { UseNodesData } from "./use-nodes-data/page";
 export { UseSolidFlow } from "./use-solid-flow/page";

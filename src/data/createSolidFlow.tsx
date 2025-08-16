@@ -203,7 +203,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [translateExtent, _setTranslateExtent] = createWritable(
     () => config().translateExtent ?? infiniteExtent,
   );
-  const [viewport, setViewport] = createSignal<Viewport>(initialViewport);
   const [width, setWidth] = createWritable(() => config().width);
 
   // Key flags
@@ -213,10 +212,13 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [panActivationKeyPressed, setPanActivationKeyPressed] = createSignal(false);
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
-  const transform = createMemo(() => [viewport().x, viewport().y, viewport().zoom] as Transform);
-
   const nodesMemo = createWritableStore(() => config().nodes);
   const edgesMemo = createWritableStore(() => config().edges);
+  const viewportMemo = createWritableStore(() => config().viewport ?? initialViewport);
+
+  const transform = createMemo(
+    () => [viewportMemo.get().x, viewportMemo.get().y, viewportMemo.get().zoom] as Transform,
+  );
 
   /**********************************************************************************/
   /*                                                                                */
@@ -333,7 +335,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       return snapGrid();
     },
     get viewport() {
-      return viewport();
+      return viewportMemo.get();
     },
     get viewportInitialized() {
       return panZoom() !== null;
@@ -432,7 +434,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setZoomActivationKeyPressed(false);
     setConnection({ ...initialConnection });
     setClickConnectStartHandle(undefined);
-    setViewport(config().initialViewport ?? { x: 0, y: 0, zoom: 1 });
+    viewportMemo.set(config().initialViewport ?? { x: 0, y: 0, zoom: 1 });
     setAriaLiveMessage("");
     setSnapGrid(undefined);
   };
@@ -761,6 +763,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /**********************************************************************************/
 
   createEffect(() => {
+    store.panZoom?.syncViewport(store.viewport);
+  });
+
+  createEffect(() => {
     const _panZoom = panZoom();
     if (!_panZoom) return;
 
@@ -1012,7 +1018,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       setSelectionKeyPressed,
       setSelectionRect,
       setSelectionRectMode,
-      setViewport,
+      get setViewport() {
+        return viewportMemo.set;
+      },
       setWidth,
       setZoomActivationKeyPressed,
 

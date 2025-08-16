@@ -200,7 +200,7 @@ export type SolidFlowProps<
      */
     readonly initialViewport?: Viewport;
     /** Custom viewport to be used instead of internal one */
-    readonly viewport?: Viewport;
+    readonly viewport?: Store<Viewport>;
     /**
      * The radius around a handle where you drop a connection line to create a new edge.
      * @default 20
