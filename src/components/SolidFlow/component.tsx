@@ -238,6 +238,10 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
       actions.setPaneClickDistance(flowProps.paneClickDistance);
     });
 
+    createEffect(() => {
+      store.panZoom?.syncViewport(store.viewport);
+    });
+
     onCleanup(() => {
       actions.reset();
     });

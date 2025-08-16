@@ -348,10 +348,7 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
 
   const addNodes = (payload: NodeType[] | NodeType) => {
     const newNodes = Array.isArray(payload) ? payload : [payload];
-    actions.setNodes((nodes) => {
-      console.log("ADD NODES >>>>", nodes, newNodes);
-      return [...nodes, ...newNodes];
-    });
+    actions.setNodes((nodes) => [...nodes, ...newNodes]);
   };
 
   const addEdges = (payload: EdgeType[] | EdgeType) => {
