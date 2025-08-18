@@ -227,9 +227,10 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       style={local.style}
       class={clsx(
         "solid-flow__handle",
+        `solid-flow__handle-${local.position}`,
         store.noDragClass,
         store.noPanClass,
-        local.position,
+        local.class,
         {
           valid: valid(),
           connectingto: connectingTo(),
@@ -241,7 +242,6 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
           connectable: connectable(),
           connectionindicator: connectionIndicator(),
         },
-        local.class,
       )}
       {...rest}
     >

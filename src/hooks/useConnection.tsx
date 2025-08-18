@@ -12,5 +12,7 @@ import { useInternalSolidFlow } from "@/components/contexts";
 export function useConnection(): Accessor<ConnectionState> {
   const { store } = useInternalSolidFlow();
 
-  return () => store.connection;
+  const connection = () => store.connection;
+
+  return connection;
 }
