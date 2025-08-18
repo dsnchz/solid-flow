@@ -13,12 +13,14 @@ type AllNodeTypes<TUserNodeTypes extends NodeTypes> =
     ? BuiltInNodeTypes
     : BuiltInNodeTypes & TUserNodeTypes;
 
-type NodesInput<TUserNodeTypes extends NodeTypes> = {
-  [K in keyof AllNodeTypes<TUserNodeTypes>]: Node<
-    ExtractNodeInfo<AllNodeTypes<TUserNodeTypes>[K]>["data"],
-    ExtractNodeInfo<AllNodeTypes<TUserNodeTypes>[K]>["type"]
-  >;
-}[keyof AllNodeTypes<TUserNodeTypes>];
+type NodesInput<TUserNodeTypes extends NodeTypes> =
+  | {
+      [K in keyof AllNodeTypes<TUserNodeTypes>]: Node<
+        ExtractNodeInfo<AllNodeTypes<TUserNodeTypes>[K]>["data"],
+        ExtractNodeInfo<AllNodeTypes<TUserNodeTypes>[K]>["type"]
+      >;
+    }[keyof AllNodeTypes<TUserNodeTypes>]
+  | (Node<{ label: string }> & { type?: "default" | undefined });
 
 /**
  * Creates a type-safe reactive store of nodes for use in Solid Flow.
