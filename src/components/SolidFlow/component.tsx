@@ -118,6 +118,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "connectionLineComponent",
     "connectionLineStyle",
     "connectionLineContainerStyle",
+    "connectionDragThreshold",
     "isValidConnection",
     "clickConnect",
     "reconnectRadius",

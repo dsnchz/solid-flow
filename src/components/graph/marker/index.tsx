@@ -1,2 +1,2 @@
-export { default as Marker } from "./Marker";
-export { default as MarkerDefinition } from "./MarkerDefinition";
+export { Marker } from "./Marker";
+export { MarkerDefinition } from "./MarkerDefinition";

@@ -103,6 +103,9 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
       },
       getTransform: () => store.transform,
       getFromHandle: () => store.connection.fromHandle,
+      autoPanSpeed: store.autoPanSpeed,
+      dragThreshold: store.connectionDragThreshold,
+      handleDomNode: event.currentTarget as HTMLElement,
     });
   };
 

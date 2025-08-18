@@ -147,6 +147,9 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       onConnectEnd: store.onConnectEnd,
       getTransform: () => store.transform,
       getFromHandle: () => store.connection.fromHandle,
+      autoPanSpeed: store.autoPanSpeed,
+      dragThreshold: store.connectionDragThreshold,
+      handleDomNode: event.currentTarget as HTMLElement,
     });
   };
 

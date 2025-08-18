@@ -1,10 +1,10 @@
-import { type Component, For } from "solid-js";
+import { For } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts";
 
-import Marker from "./Marker";
+import { Marker } from "./Marker";
 
-const MarkerDefinition: Component = () => {
+export const MarkerDefinition = () => {
   const { store } = useInternalSolidFlow();
 
   return (
@@ -13,5 +13,3 @@ const MarkerDefinition: Component = () => {
     </defs>
   );
 };
-
-export default MarkerDefinition;

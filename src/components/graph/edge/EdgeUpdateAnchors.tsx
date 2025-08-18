@@ -73,6 +73,9 @@ export const EdgeUpdateAnchors = <EdgeType extends Edge = Edge>(
       onReconnectEnd: _onReconnectEnd,
       getTransform: () => store.transform,
       getFromHandle: () => store.connection.fromHandle,
+      autoPanSpeed: store.autoPanSpeed,
+      dragThreshold: store.connectionDragThreshold,
+      handleDomNode: event.currentTarget as HTMLElement,
     });
   };
 

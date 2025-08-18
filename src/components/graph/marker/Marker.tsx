@@ -1,48 +1,48 @@
-import { MarkerType } from "@xyflow/system";
-import { type Component, Show } from "solid-js";
+import { type JSX, mergeProps, Show } from "solid-js";
 
-type MarkerProps = {
-  readonly id: string;
-  readonly type: MarkerType;
-  readonly width?: number;
-  readonly height?: number;
-  readonly markerUnits?: "strokeWidth" | "userSpaceOnUse";
-  readonly orient?: string;
-  readonly color?: string;
-  readonly strokeWidth?: number;
-};
+import type { MarkerProps } from "./types";
 
-const Marker: Component<MarkerProps> = (props) => {
+export const Marker = (props: MarkerProps) => {
+  const _props = mergeProps(
+    {
+      markerUnits: "strokeWidth" as JSX.MarkerSVGAttributes<SVGElement>["markerUnits"],
+      orient: "auto-start-reverse",
+      width: 12.5,
+      height: 12.5,
+    },
+    props,
+  );
+
   return (
     <marker
       class="solid-flow__arrowhead"
-      id={props.id}
-      markerWidth={`${props.width ?? 12.5}`}
-      markerHeight={`${props.height ?? 12.5}`}
+      id={_props.id}
+      markerWidth={_props.width}
+      markerHeight={_props.height}
       viewBox="-10 -10 20 20"
-      markerUnits={props.markerUnits ?? "strokeWidth"}
-      orient={props.orient ?? "auto-start-reverse"}
+      markerUnits={_props.markerUnits}
+      orient={_props.orient}
       refX="0"
       refY="0"
     >
       <Show
-        when={props.type === MarkerType.Arrow}
+        when={_props.type === "arrow"}
         fallback={
           <polyline
-            stroke={props.color}
+            stroke={_props.color}
             stroke-linecap="round"
             stroke-linejoin="round"
-            stroke-width={props.strokeWidth}
-            fill={props.color}
+            stroke-width={_props.strokeWidth}
+            fill={_props.color}
             points="-5,-4 0,0 -5,4 -5,-4"
           />
         }
       >
         <polyline
-          stroke={props.color}
+          stroke={_props.color}
           stroke-linecap="round"
           stroke-linejoin="round"
-          stroke-width={props.strokeWidth}
+          stroke-width={_props.strokeWidth}
           fill="none"
           points="-5,-4 0,0 -5,4"
         />
@@ -50,5 +50,3 @@ const Marker: Component<MarkerProps> = (props) => {
     </marker>
   );
 };
-
-export default Marker;

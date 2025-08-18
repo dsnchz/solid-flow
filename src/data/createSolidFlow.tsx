@@ -23,7 +23,6 @@ import {
   type InternalNodeBase,
   isCoordinateExtent,
   isEdgeVisible,
-  type MarkerProps,
   mergeAriaLabelConfig,
   type NodeDimensionChange,
   type NodeDragItem,
@@ -61,6 +60,7 @@ import {
   StepEdgeInternal,
   StraightEdgeInternal,
 } from "@/components/graph/edge";
+import type { MarkerProps } from "@/components/graph/marker/types";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/graph/node";
 import type { SolidFlowProps } from "@/components/SolidFlow/types";
 import type {
@@ -87,10 +87,6 @@ import {
   removeConnectionFromLookup,
   updateChildNode,
 } from "./xyflow";
-
-type RefinedMarkerProps = Omit<MarkerProps, "markerUnits"> & {
-  readonly markerUnits?: "strokeWidth" | "userSpaceOnUse" | undefined;
-};
 
 export const InitialNodeTypesMap = {
   input: InputNode,
@@ -294,9 +290,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
     get markers() {
       return createMarkerIds(config().edges, {
-        defaultColor: config().defaultMarkerColor,
         id: config().id,
-      }) as RefinedMarkerProps[];
+        defaultColor: config().defaultMarkerColor,
+        defaultMarkerStart: config().defaultEdgeOptions.markerStart,
+        defaultMarkerEnd: config().defaultEdgeOptions.markerEnd,
+      }) as MarkerProps[];
     },
     get maxZoom() {
       return maxZoom();

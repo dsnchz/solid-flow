@@ -180,6 +180,12 @@ export type SolidFlowProps<
      * @default 0
      */
     readonly nodeClickDistance?: number;
+    /**
+     * The threshold in pixels that the mouse must move before a connection line starts to drag.
+     * This is useful to prevent accidental connections when clicking on a handle.
+     * @default 1
+     */
+    readonly connectionDragThreshold?: number;
     /** Minimum zoom level
      * @default 0.5
      */
@@ -236,6 +242,7 @@ export type SolidFlowProps<
      */
     readonly snapGrid?: SnapGrid;
     /** Color of edge markers
+     * You can pass `null` to use the CSS variable `--xy-edge-stroke` for the marker color.
      * @example "#b1b1b7"
      */
     readonly defaultMarkerColor?: string;

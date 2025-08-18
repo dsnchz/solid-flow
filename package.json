@@ -46,7 +46,6 @@
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
     "@vitest/coverage-istanbul": "^3.2.4",
-    "@xyflow/system": "^0.0.62",
     "eslint": "^9.32.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-solid": "^0.14.5",
@@ -63,13 +62,13 @@
     "vitest": "^3.2.4"
   },
   "peerDependencies": {
-    "@xyflow/system": ">=0.0.62",
     "solid-js": ">=1.8.0"
   },
   "dependencies": {
     "@solid-primitives/map": "^0.7.2",
     "@solid-primitives/media": "^2.3.3",
     "@solid-primitives/resize-observer": "^2.1.3",
+    "@xyflow/system": "^0.0.67",
     "clsx": "^2.1.1"
   },
   "main": "./dist/index/index.js",
