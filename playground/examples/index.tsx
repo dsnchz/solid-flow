@@ -4,6 +4,7 @@ export { Backgrounds } from "./backgrounds/page";
 export { ColorMode } from "./color-mode/page";
 export { CustomConnectionLine } from "./custom-connection-line/page";
 export { CustomNode } from "./custom-node/page";
+export { Dagre } from "./dagre/page";
 export { DragNDrop } from "./drag-n-drop/page";
 export { Edges } from "./edges/page";
 export { HandleConnect } from "./handle-connect/page";

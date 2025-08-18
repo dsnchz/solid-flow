@@ -38,6 +38,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@dagrejs/dagre": "^1.1.5",
     "@solidjs/router": "^0.15.3",
     "@solidjs/testing-library": "^0.8.10",
     "@testing-library/jest-dom": "^6.6.4",
