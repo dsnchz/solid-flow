@@ -4,7 +4,6 @@ import type {
   CoordinateExtent,
   IsValidConnection,
   NodeOrigin,
-  OnConnect,
   OnConnectEnd,
   OnConnectStart,
   OnError,
@@ -36,10 +35,11 @@ import type {
   NodeEvents,
   NodeSelectionEvents,
   NodeTypes,
-  OnBeforeConnect,
   OnBeforeDelete,
+  OnBeforeEdgeConnect,
   OnBeforeReconnect,
   OnDelete,
+  OnEdgeConnect,
   OnSelectionChange,
   OnSelectionDrag,
   PaneEvents,
@@ -463,9 +463,9 @@ export type SolidFlowProps<
     /** This handler gets called before the user deletes nodes or edges and provides a way to abort the deletion by returning false. */
     readonly onBeforeDelete?: OnBeforeDelete<NodeType, EdgeType>;
     /** This handler gets called when a new edge is created. You can use it to modify the newly created edge. */
-    readonly onBeforeConnect?: OnBeforeConnect<EdgeType>;
+    readonly onBeforeConnect?: OnBeforeEdgeConnect<EdgeType>;
     /** This event gets fired when a connection successfully completes and an edge is created. */
-    readonly onConnect?: OnConnect;
+    readonly onConnect?: OnEdgeConnect;
     /** When a user starts to drag a connection line, this event gets fired. */
     readonly onConnectStart?: OnConnectStart;
     /** When a user stops dragging a connection line, this event gets fired. */

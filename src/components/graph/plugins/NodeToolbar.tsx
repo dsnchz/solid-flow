@@ -2,9 +2,9 @@ import { type Align, getNodeToolbarTransform, Position as SystemPosition } from 
 import { type JSX, mergeProps, type ParentComponent, Show, splitProps, useContext } from "solid-js";
 import { Portal } from "solid-js/web";
 
+import { useInternalSolidFlow } from "@/components/contexts";
 import { NodeIdContext } from "@/components/contexts/nodeId";
 import { useSolidFlow } from "@/hooks";
-import { useSolidFlowStore } from "@/hooks/useSolidFlowStore";
 import type { InternalNode, Position } from "@/types";
 
 export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
@@ -28,14 +28,8 @@ export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">
 };
 
 export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) => {
-  const store = useSolidFlowStore();
+  const { store } = useInternalSolidFlow();
   const { getNodes, getNodesBounds, getInternalNode } = useSolidFlow();
-
-  const ctxNodeId = () => {
-    // NodeToolbar can be rendered outside of NodeWrapper, so we need to use the context directly.
-    const id = useContext(NodeIdContext);
-    return id ? id() : "";
-  };
 
   const _props = mergeProps(
     {
@@ -56,6 +50,12 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
     "style",
     "children",
   ]);
+
+  const ctxNodeId = () => {
+    // NodeToolbar can be rendered outside of NodeWrapper, so we need to use the context directly.
+    const id = useContext(NodeIdContext);
+    return id ? id() : "";
+  };
 
   const toolbarNodes = () => {
     const nodeIds = Array.isArray(local.nodeId) ? local.nodeId : [local.nodeId ?? ctxNodeId()];

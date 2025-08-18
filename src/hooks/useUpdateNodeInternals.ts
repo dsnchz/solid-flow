@@ -17,15 +17,15 @@ export function useUpdateNodeInternals(): UpdateNodeInternals {
     const updateIds = Array.isArray(id) ? id : [id];
     const updates: InternalUpdateEntry[] = [];
 
-    updateIds.forEach((updateId) => {
+    for (const updateId of updateIds) {
       const nodeElement = store.domNode?.querySelector(
         `.solid-flow__node[data-id="${updateId}"]`,
       ) as HTMLDivElement;
 
-      if (nodeElement) {
-        updates.push([updateId, { id: updateId, nodeElement, force: true }]);
-      }
-    });
+      if (!nodeElement) continue;
+
+      updates.push([updateId, { id: updateId, nodeElement, force: true }]);
+    }
 
     actions.requestUpdateNodeInternals(updates);
   };

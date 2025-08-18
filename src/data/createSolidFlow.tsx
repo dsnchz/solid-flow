@@ -257,6 +257,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       const state = connection();
       return {
         ...state,
+        from: state.inProgress ? pointToRendererPoint(state.from, this.transform) : state.from,
         to: state.inProgress ? pointToRendererPoint(state.to, this.transform) : state.to,
       } as ConnectionState<InternalNode<NodeType>>;
     },

@@ -48,9 +48,17 @@ export type OnDelete<NodeType extends Node = Node, EdgeType extends Edge = Edge>
   edges: EdgeType[];
 }) => void;
 
-export type OnBeforeConnect<EdgeType extends Edge = Edge> = (
-  connection: Connection,
-) => EdgeType | Connection | undefined;
+export type EdgeConnection = Connection & {
+  id: string;
+};
+
+/** Callback that gets called before a handle connection is created. */
+export type OnBeforeEdgeConnect<EdgeType extends Edge = Edge> = (
+  connection: EdgeConnection,
+) => EdgeType | EdgeConnection | undefined;
+
+/** Callback that gets called after a handle connection is created. */
+export type OnEdgeConnect = (connection: EdgeConnection) => void;
 
 export type OnBeforeReconnect<EdgeType extends Edge = Edge> = (
   newEdge: EdgeType,

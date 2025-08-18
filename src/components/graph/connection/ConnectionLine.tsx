@@ -23,6 +23,7 @@ const ConnectionLine = <NodeType extends Node = Node>(
   props: ParentProps<Partial<ConnectionLineProps<NodeType>>>,
 ) => {
   const { store } = useInternalSolidFlow<NodeType>();
+  const connectionStatus = () => getConnectionStatus(store.connection.isValid);
 
   return (
     <Show when={store.connection.inProgress}>
@@ -32,7 +33,7 @@ const ConnectionLine = <NodeType extends Node = Node>(
         height={store.height}
         style={props.containerStyle}
       >
-        <g class={clsx(["solid-flow__connection", getConnectionStatus(store.connection.isValid)])}>
+        <g class={clsx(["solid-flow__connection", connectionStatus()])}>
           <Show when={props.component} fallback={<InternalConnectionLine style={props.style} />}>
             {(CustomComponent) => {
               const UserConnectionLine = CustomComponent();
@@ -49,7 +50,7 @@ const ConnectionLine = <NodeType extends Node = Node>(
                   toY={store.connection.to!.y}
                   fromPosition={store.connection.fromPosition!}
                   toPosition={store.connection.toPosition!}
-                  connectionStatus={getConnectionStatus(store.connection.isValid)}
+                  connectionStatus={connectionStatus()}
                   toNode={store.connection.toNode!}
                   toHandle={store.connection.toHandle!}
                 />

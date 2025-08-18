@@ -12,6 +12,7 @@ export { HandleConnect } from "./handle-connect/page";
 export { Interaction } from "./interaction/page";
 export { InteractiveMinimap } from "./interactive-minimap/page";
 export { Intersections } from "./intersections/page";
+export { MovingHandles } from "./moving-handles/page";
 export { NodeResizer } from "./node-resizer/page";
 export { NodeToolbar } from "./node-toolbar/page";
 export { Overview } from "./overview/page";

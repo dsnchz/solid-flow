@@ -19,6 +19,7 @@ import { unwrap } from "solid-js/store";
 
 import { useInternalSolidFlow, useNodeId } from "@/components/contexts";
 import { useNodeConnectable } from "@/components/contexts/nodeConnectable";
+import { getEdgeId } from "@/data/utils";
 import type { Edge, Node, Position } from "@/types";
 
 type HandleProps = Omit<SystemHandleProps, "position"> & {
@@ -112,12 +113,15 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   });
 
   const onConnectExtended = (connection: Connection) => {
-    const edge = store.onBeforeConnect?.(connection) ?? connection;
+    const handleConnection = {
+      ...connection,
+      id: getEdgeId(connection),
+    };
 
-    if (!edge) return;
+    const edge = store.onBeforeConnect?.(handleConnection) ?? handleConnection;
 
     actions.addEdge(edge);
-    store.onConnect?.(connection);
+    store.onConnect?.(handleConnection);
   };
 
   const onPointerDown = (event: PointerEvent) => {

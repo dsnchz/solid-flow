@@ -1,4 +1,5 @@
 import { useInternalSolidFlow } from "@/components/contexts";
+import type { Edge, Node } from "@/types";
 
 /**
  * Hook for getting the current nodes from the store.
@@ -6,8 +7,8 @@ import { useInternalSolidFlow } from "@/components/contexts";
  * @public
  * @returns store with an array of nodes
  */
-export function useNodes() {
-  const { store } = useInternalSolidFlow();
+export function useNodes<NodeType extends Node = Node>() {
+  const { store } = useInternalSolidFlow<NodeType>();
   return () => store.nodes;
 }
 
@@ -17,8 +18,8 @@ export function useNodes() {
  * @public
  * @returns store with an array of edges
  */
-export function useEdges() {
-  const { store } = useInternalSolidFlow();
+export function useEdges<EdgeType extends Edge = Edge>() {
+  const { store } = useInternalSolidFlow<Node, EdgeType>();
   return () => store.edges;
 }
 
