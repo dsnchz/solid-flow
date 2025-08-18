@@ -13,6 +13,7 @@ export { InteractiveMinimap } from "./interactive-minimap/page";
 export { Intersections } from "./intersections/page";
 export { NodeResizer } from "./node-resizer/page";
 export { NodeToolbar } from "./node-toolbar/page";
+export { NodeTypeChange } from "./node-type-change/page";
 export { Overview } from "./overview/page";
 export { Reset } from "./reset/page";
 export { StressTest } from "./stress-test/page";
