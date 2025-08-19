@@ -7,7 +7,6 @@ import {
   type Connection,
   ConnectionMode,
   type ConnectionState,
-  createMarkerIds,
   errorMessages,
   fitViewport,
   getEdgePosition,
@@ -60,7 +59,6 @@ import {
   StepEdgeInternal,
   StraightEdgeInternal,
 } from "@/components/graph/edge";
-import type { MarkerProps } from "@/components/graph/marker/types";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/graph/node";
 import type { SolidFlowProps } from "@/components/SolidFlow/types";
 import type {
@@ -287,14 +285,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
     get onError() {
       return config().onFlowError;
-    },
-    get markers() {
-      return createMarkerIds(config().edges, {
-        id: config().id,
-        defaultColor: config().defaultMarkerColor,
-        defaultMarkerStart: config().defaultEdgeOptions.markerStart,
-        defaultMarkerEnd: config().defaultEdgeOptions.markerEnd,
-      }) as MarkerProps[];
     },
     get maxZoom() {
       return maxZoom();

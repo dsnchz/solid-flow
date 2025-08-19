@@ -1,3 +1,5 @@
+import type { FinalConnectionState, HandleType, OnReconnect } from "@xyflow/system";
+
 import type { Edge } from "./edge";
 import type { Node } from "./node";
 
@@ -74,6 +76,33 @@ export type EdgeEvents<EdgeType extends Edge = Edge> = {
 export type DeleteEvents<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   onNodesDelete?: (nodes: NodeType[]) => void;
   onEdgesDelete?: (edges: EdgeType[]) => void;
+};
+
+export type EdgeReconnectEvents<EdgeType extends Edge = Edge> = {
+  /**
+   * This handler is called when the source or target of a reconnectable edge is dragged from the
+   * current node. It will fire even if the edge's source or target do not end up changing.
+   * You can use the `reconnectEdge` utility to convert the connection to a new edge.
+   */
+  onReconnect?: OnReconnect<EdgeType>;
+  /**
+   * This event fires when the user begins dragging the source or target of an editable edge.
+   */
+  onReconnectStart?: (
+    event: MouseEvent | TouchEvent,
+    edge: EdgeType,
+    handleType: HandleType,
+  ) => void;
+  /**
+   * This event fires when the user releases the source or target of an editable edge. It is called
+   * even if an edge update does not occur.
+   */
+  onReconnectEnd?: (
+    event: MouseEvent | TouchEvent,
+    edge: EdgeType,
+    handleType: HandleType,
+    connectionState: FinalConnectionState,
+  ) => void;
 };
 
 export type OnSelectionDrag<NodeType extends Node = Node> = (

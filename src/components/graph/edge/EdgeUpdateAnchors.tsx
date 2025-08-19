@@ -9,7 +9,7 @@ import {
 import { Show } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts/flow";
-import type { Edge, EdgeConnectionEvents } from "@/types";
+import type { Edge, EdgeReconnectEvents } from "@/types";
 
 import { EdgeAnchor } from "./EdgeAnchor";
 
@@ -19,7 +19,7 @@ type EdgeUpdateAnchorsProps<EdgeType extends Edge = Edge> = EdgePosition & {
   readonly reconnectRadius: number;
   readonly setUpdateHover: (hover: boolean) => void;
   readonly setReconnecting: (updating: boolean) => void;
-} & EdgeConnectionEvents<EdgeType>;
+} & EdgeReconnectEvents<EdgeType>;
 
 export const EdgeUpdateAnchors = <EdgeType extends Edge = Edge>(
   props: EdgeUpdateAnchorsProps<EdgeType>,
@@ -38,18 +38,18 @@ export const EdgeUpdateAnchors = <EdgeType extends Edge = Edge>(
     const isTarget = oppositeHandle.type === "target";
 
     props.setReconnecting(true);
-    props.onEdgeReconnectStart?.(event, props.edge, oppositeHandle.type);
+    props.onReconnectStart?.(event, props.edge, oppositeHandle.type);
 
     const _onReconnectEnd = (
       evt: MouseEvent | TouchEvent,
       connectionState: FinalConnectionState,
     ) => {
       props.setReconnecting(false);
-      props.onEdgeReconnectEnd?.(evt, props.edge, oppositeHandle.type, connectionState);
+      props.onReconnectEnd?.(evt, props.edge, oppositeHandle.type, connectionState);
     };
 
     const onConnectEdge = (connection: Connection) =>
-      props.onEdgeReconnect?.(props.edge, connection);
+      props.onReconnect?.(props.edge, connection);
 
     XYHandle.onPointerDown(event, {
       lib: store.lib,

@@ -1,6 +1,11 @@
+import type { MarkerProps as SystemMarkerProps } from "@xyflow/system";
 import { type JSX, mergeProps, Show } from "solid-js";
 
-import type { MarkerProps } from "./types";
+export type MarkerProps = SystemMarkerProps & {
+  readonly markerUnits?: "strokeWidth" | "userSpaceOnUse";
+  readonly color?: string;
+  readonly strokeWidth?: number;
+};
 
 export const Marker = (props: MarkerProps) => {
   const _props = mergeProps(

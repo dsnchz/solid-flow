@@ -17,9 +17,7 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
   const { store } = useInternalSolidFlow();
   return (
     <div class="solid-flow__edges">
-      <svg class="solid-flow__marker">
-        <MarkerDefinition />
-      </svg>
+      <MarkerDefinition />
 
       <For each={store.visibleEdgeIds}>
         {(edgeId) => {
