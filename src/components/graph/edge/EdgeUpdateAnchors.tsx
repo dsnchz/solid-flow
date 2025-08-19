@@ -48,8 +48,7 @@ export const EdgeUpdateAnchors = <EdgeType extends Edge = Edge>(
       props.onReconnectEnd?.(evt, props.edge, oppositeHandle.type, connectionState);
     };
 
-    const onConnectEdge = (connection: Connection) =>
-      props.onReconnect?.(props.edge, connection);
+    const onConnectEdge = (connection: Connection) => props.onReconnect?.(props.edge, connection);
 
     XYHandle.onPointerDown(event, {
       lib: store.lib,

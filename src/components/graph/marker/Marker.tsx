@@ -3,7 +3,7 @@ import { type JSX, mergeProps, Show } from "solid-js";
 
 export type MarkerProps = SystemMarkerProps & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse";
-  readonly color?: string;
+  // readonly color?: string;
   readonly strokeWidth?: number;
 };
 
@@ -14,6 +14,7 @@ export const Marker = (props: MarkerProps) => {
       orient: "auto-start-reverse",
       width: 12.5,
       height: 12.5,
+      color: "none",
     },
     props,
   );
@@ -34,21 +35,23 @@ export const Marker = (props: MarkerProps) => {
         when={_props.type === "arrow"}
         fallback={
           <polyline
-            stroke={_props.color}
+            class="arrow"
+            stroke={_props.color ?? "--xy-edge-stroke"}
+            fill={_props.color ?? "yellow"}
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width={_props.strokeWidth}
-            fill={_props.color}
             points="-5,-4 0,0 -5,4 -5,-4"
           />
         }
       >
         <polyline
-          stroke={_props.color}
+          class="arrowclosed"
+          stroke={_props.color ?? "--xy-edge-stroke"}
+          fill="none"
           stroke-linecap="round"
           stroke-linejoin="round"
           stroke-width={_props.strokeWidth}
-          fill="none"
           points="-5,-4 0,0 -5,4"
         />
       </Show>

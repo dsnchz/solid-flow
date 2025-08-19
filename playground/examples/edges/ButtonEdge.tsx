@@ -2,10 +2,12 @@ import { getBezierPath } from "@xyflow/system";
 import { createMemo, Show } from "solid-js";
 
 import { BaseEdge } from "@/components/graph/edge";
-import { EdgeLabel, EdgeReconnectAnchor } from "@/index";
+import { EdgeLabel, EdgeReconnectAnchor, useSolidFlow } from "@/index";
 import type { EdgeProps } from "@/types";
 
 export const ButtonEdge = (props: EdgeProps) => {
+  const { updateEdge } = useSolidFlow();
+
   const pathData = createMemo(() => {
     const [edgePath, labelX, labelY] = getBezierPath({
       sourceX: props.sourceX,
@@ -20,7 +22,13 @@ export const ButtonEdge = (props: EdgeProps) => {
   });
 
   const handleClick = () => {
-    alert("Button edge clicked!");
+    // Update the edge to add both markerStart and markerEnd like Svelte Flow does
+    updateEdge("e5-6", {
+      markerStart: { type: "arrowclosed", color: "#ff6b6b" },
+      markerEnd: { type: "arrowclosed", color: "#ff6b6b" },
+      style: { stroke: "#ff6b6b", "stroke-width": "3" },
+      label: "Updated!",
+    });
   };
 
   return (
