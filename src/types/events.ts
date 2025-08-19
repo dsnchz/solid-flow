@@ -71,6 +71,11 @@ export type EdgeEvents<EdgeType extends Edge = Edge> = {
   onEdgePointerLeave?: ({ edge, event }: { edge: EdgeType; event: PointerEvent }) => void;
 };
 
+export type DeleteEvents<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
+  onNodesDelete?: (nodes: NodeType[]) => void;
+  onEdgesDelete?: (edges: EdgeType[]) => void;
+};
+
 export type OnSelectionDrag<NodeType extends Node = Node> = (
   event: MouseEvent,
   nodes: NodeType[],

@@ -471,16 +471,22 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
       });
 
       batch(() => {
-        if (matchingNodes) {
-          actions.setNodes((nodes) =>
-            nodes.filter((node) => !matchingNodes.some(({ id }) => id === node.id)),
+        if (matchingEdges) {
+          const remmainingEdges = store.edges.filter(
+            (edge) => !matchingEdges.some(({ id }) => id === edge.id),
           );
+
+          store.onEdgesDelete?.(matchingEdges);
+          actions.setEdges(remmainingEdges);
         }
 
-        if (matchingEdges) {
-          actions.setEdges((edges) =>
-            edges.filter((edge) => !matchingEdges.some(({ id }) => id === edge.id)),
+        if (matchingNodes) {
+          const remmainingNodes = store.nodes.filter(
+            (node) => !matchingNodes.some(({ id }) => id === node.id),
           );
+
+          store.onNodesDelete?.(matchingNodes);
+          actions.setNodes(remmainingNodes);
         }
       });
 

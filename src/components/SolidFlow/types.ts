@@ -31,6 +31,7 @@ import type {
 } from "@/shared/types";
 import type {
   ConnectionMode,
+  DeleteEvents,
   Edge,
   EdgeEvents,
   FitViewOptions,
@@ -65,6 +66,7 @@ export type SolidFlowProps<
 > = NodeEvents<NodeType> &
   NodeSelectionEvents<NodeType> &
   EdgeEvents<EdgeType> &
+  DeleteEvents<NodeType, EdgeType> &
   PaneEvents & {
     /**
      * The id of the flow. This is necessary if you want to render multiple flows.
