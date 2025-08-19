@@ -24,16 +24,12 @@ import type { Store } from "solid-js/store";
 
 import type {
   ConnectionLineType,
-  DefaultEdgeOptions,
-  EdgeTypes,
-  PanOnScrollMode,
-  SelectionMode,
-} from "@/shared/types";
-import type {
   ConnectionMode,
+  DefaultEdgeOptions,
   DeleteEvents,
   Edge,
   EdgeEvents,
+  EdgeTypes,
   FitViewOptions,
   KeyDefinition,
   Node,
@@ -47,6 +43,8 @@ import type {
   OnSelectionChange,
   OnSelectionDrag,
   PaneEvents,
+  PanOnScrollMode,
+  SelectionMode,
 } from "@/types";
 
 import type { ConnectionLineComponentProps } from "../graph/connection/types";

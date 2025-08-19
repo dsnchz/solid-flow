@@ -35,8 +35,6 @@ export type NodeTypes = {
   [key: string]: <NodeType extends Node = Node>(props: NodeProps<NodeType>) => JSX.Element;
 };
 
-export type DefaultNodeOptions = Partial<Omit<Node, "id">>;
-
 export type NodeEventCallbacks<NodeType extends Node = Node> = {
   readonly onNodeClick: GraphTargetHandler<NodeType>;
   readonly onNodeContextMenu: GraphTargetHandler<NodeType>;

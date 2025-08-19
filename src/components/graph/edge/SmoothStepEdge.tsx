@@ -1,7 +1,7 @@
 import { getSmoothStepPath } from "@xyflow/system";
 import { createMemo } from "solid-js";
 
-import type { SmoothStepEdgeProps } from "@/shared/types";
+import type { SmoothStepEdgeProps } from "@/types";
 
 import { BaseEdge } from "./BaseEdge";
 

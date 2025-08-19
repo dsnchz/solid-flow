@@ -9,7 +9,7 @@ import {
 import { Show } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts/flow";
-import type { Edge, EdgeConnectionEvents } from "@/shared/types/edge";
+import type { Edge, EdgeConnectionEvents } from "@/types";
 
 import { EdgeAnchor } from "./EdgeAnchor";
 

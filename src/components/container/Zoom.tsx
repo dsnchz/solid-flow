@@ -10,7 +10,7 @@ import {
 import { batch, createEffect, onMount, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts";
-import type { PanOnScrollMode } from "@/shared/types";
+import type { PanOnScrollMode } from "@/types";
 
 export type ZoomProps = {
   readonly initialViewport?: Viewport;

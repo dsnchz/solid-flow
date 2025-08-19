@@ -17,7 +17,7 @@ import {
 import { produce } from "solid-js/store";
 
 import { useInternalSolidFlow, useNodeId } from "@/components/contexts";
-import type { Node, ResizeControlVariant } from "@/shared/types";
+import type { Node, ResizeControlVariant } from "@/types";
 
 import type { NodeResizerProps } from "./NodeResizer";
 

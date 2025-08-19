@@ -20,8 +20,7 @@ import { NodeSelection, Selection } from "@/components/graph/selection";
 import { Attribution, KeyHandler } from "@/components/utility";
 import { createSolidFlow } from "@/data/createSolidFlow";
 import { getDefaultFlowStateProps } from "@/data/defaults";
-import type { PanOnScrollMode } from "@/shared/types";
-import type { Edge, Node } from "@/types";
+import type { Edge, Node, PanOnScrollMode } from "@/types";
 import { toPxString } from "@/utils";
 
 import { A11yDescriptions } from "../accessibility";

@@ -4,7 +4,7 @@ import { batch, type JSX, mergeProps, type ParentProps, Show, splitProps } from 
 
 import { Panel } from "@/components/container";
 import { useInternalSolidFlow } from "@/components/contexts";
-import type { FitViewOptions } from "@/shared/types";
+import type { FitViewOptions } from "@/types";
 
 import { ControlButton } from "./ControlButton";
 import { Fit, Lock, Minus, Plus, Unlock } from "./icons";

@@ -1,8 +1,7 @@
 import { mergeProps } from "solid-js";
 
 import { Handle } from "@/components/graph/handle";
-import type { Position } from "@/shared/types";
-import type { NodeProps } from "@/types";
+import type { NodeProps, Position } from "@/types";
 
 const OutputNode = (props: NodeProps<{ label: string }>) => {
   const _props = mergeProps(

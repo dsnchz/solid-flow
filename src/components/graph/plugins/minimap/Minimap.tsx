@@ -23,7 +23,7 @@ import {
 
 import { Panel } from "@/components/container";
 import { useInternalSolidFlow } from "@/components/contexts";
-import type { Node } from "@/shared/types";
+import type { Node } from "@/types";
 
 import MinimapNode from "./MinimapNode";
 

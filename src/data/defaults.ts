@@ -10,11 +10,12 @@ import type { JSX } from "solid-js";
 
 import type {
   ConnectionLineType,
+  ConnectionMode,
   DefaultEdgeOptions,
-  DefaultNodeOptions,
+  Edge,
+  Node,
   SelectionMode,
-} from "@/shared/types";
-import type { ConnectionMode, Edge, Node } from "@/types";
+} from "@/types";
 
 export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends Edge>() =>
   ({
@@ -23,7 +24,6 @@ export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends
     edges: [] as EdgeType[],
     nodeOrigin: [0, 0] as NodeOrigin,
     nodeExtent: infiniteExtent,
-    defaultNodeOptions: {} as DefaultNodeOptions,
     defaultEdgeOptions: {} as DefaultEdgeOptions,
     colorMode: "system" as ColorMode,
     colorModeSSR: "light" as Omit<ColorMode, "system">,

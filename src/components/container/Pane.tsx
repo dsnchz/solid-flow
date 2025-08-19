@@ -4,8 +4,7 @@ import { batch, type JSX, type ParentProps } from "solid-js";
 import { produce } from "solid-js/store";
 
 import { useInternalSolidFlow } from "@/components/contexts";
-import type { Edge, Node } from "@/shared/types";
-import type { PaneEvents } from "@/types";
+import type { Edge, Node, PaneEvents } from "@/types";
 
 const isSetEqual = (a: Set<string>, b: Set<string>) => {
   if (a.size !== b.size) return false;
