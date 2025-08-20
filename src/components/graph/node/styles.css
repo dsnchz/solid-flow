@@ -75,7 +75,7 @@
     );
   }
 
-  // TODO: Verify this class
+  /* TODO: Verify this class */
   &.parent {
     background-color: rgba(220, 220, 255, 0.4);
   }

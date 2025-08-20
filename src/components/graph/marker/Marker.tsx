@@ -19,6 +19,8 @@ export const Marker = (props: MarkerProps) => {
     props,
   );
 
+  const color = () => _props.color ?? "var(--xy-edge-stroke)";
+
   return (
     <marker
       class="solid-flow__arrowhead"
@@ -35,9 +37,9 @@ export const Marker = (props: MarkerProps) => {
         when={_props.type === "arrow"}
         fallback={
           <polyline
-            class="arrow"
-            stroke={_props.color ?? "--xy-edge-stroke"}
-            fill={_props.color ?? "yellow"}
+            class="arrowclosed"
+            stroke={color()}
+            fill={color()}
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width={_props.strokeWidth}
@@ -46,8 +48,8 @@ export const Marker = (props: MarkerProps) => {
         }
       >
         <polyline
-          class="arrowclosed"
-          stroke={_props.color ?? "--xy-edge-stroke"}
+          class="arrow"
+          stroke={color()}
           fill="none"
           stroke-linecap="round"
           stroke-linejoin="round"

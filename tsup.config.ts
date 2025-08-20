@@ -11,12 +11,6 @@ const generateSolidPresetOptions = (watching: boolean): preset.PresetOptions => 
     },
     {
       name: "styles",
-      entry: "src/styles/base.css",
-      dev_entry: false,
-      server_entry: false,
-    },
-    {
-      name: "styles",
       entry: "src/styles/style.css",
       dev_entry: false,
       server_entry: false,
