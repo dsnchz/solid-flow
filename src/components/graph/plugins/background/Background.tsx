@@ -3,8 +3,8 @@ import { type JSX, mergeProps, Show } from "solid-js";
 
 import { useInternalSolidFlow } from "@/components/contexts";
 
-import DotPattern from "./DotPattern";
-import LinePattern from "./LinePattern";
+import { DotPattern } from "./DotPattern";
+import { LinePattern } from "./LinePattern";
 import type { BackgroundVariant } from "./types";
 
 const DEFAULT_SIZE: Record<BackgroundVariant, number> = {
@@ -14,41 +14,36 @@ const DEFAULT_SIZE: Record<BackgroundVariant, number> = {
 };
 
 type BackgroundProps = {
-  readonly id: string;
+  readonly id?: string;
   /** Variant of the pattern
    * @example 'lines', 'dots', 'cross'
    */
-  readonly variant: BackgroundVariant;
+  readonly variant?: BackgroundVariant;
   /** Color of the background */
-  readonly bgColor: string;
+  readonly bgColor?: string;
   /** Color of the pattern */
-  readonly patternColor: string;
+  readonly patternColor?: string;
   /** Class applied to the pattern */
-  readonly patternClass: string;
+  readonly patternClass?: string;
   /** Class applied to the container */
-  readonly class: string;
+  readonly class?: string;
   /** Gap between repetitions of the pattern */
-  readonly gap: number | [number, number];
+  readonly gap?: number | [number, number];
   /** Size of a single pattern element */
-  readonly size: number;
+  readonly size?: number;
   /** Line width of the Line pattern */
-  readonly lineWidth: number;
+  readonly lineWidth?: number;
   /** Style applied to the container */
-  readonly style: JSX.CSSProperties;
+  readonly style?: JSX.CSSProperties;
 };
 
-const Background = (props: Partial<BackgroundProps>) => {
+export const Background = (props: BackgroundProps) => {
   const _props = mergeProps(
     {
-      id: undefined,
       variant: "dots" as BackgroundVariant,
       gap: 20,
       size: 1,
       lineWidth: 1,
-      bgColor: undefined,
-      patternColor: undefined,
-      patternClass: undefined,
-      class: "",
       style: {} as JSX.CSSProperties,
     },
     props,
@@ -56,21 +51,20 @@ const Background = (props: Partial<BackgroundProps>) => {
 
   const { store } = useInternalSolidFlow();
 
-  const patternSize = () => _props.size || DEFAULT_SIZE[_props.variant];
   const isDots = () => _props.variant === "dots";
   const isCross = () => _props.variant === "cross";
+
+  const patternId = () => `background-pattern-${store.id}-${_props.id ?? ""}`;
+  const scaledSize = () => (_props.size ?? DEFAULT_SIZE[_props.variant]) * store.viewport.zoom;
+
   const gapXY = () =>
     Array.isArray(_props.gap) ? _props.gap : ([_props.gap, _props.gap] as [number, number]);
-
-  const patternId = () => `background-pattern-${store.id}-${_props.id ? _props.id : ""}`;
 
   const scaledGap = () =>
     [gapXY()[0] * store.viewport.zoom || 1, gapXY()[1] * store.viewport.zoom || 1] as [
       number,
       number,
     ];
-
-  const scaledSize = () => patternSize() * store.viewport.zoom;
 
   const patternDimensions = () =>
     isCross() ? ([scaledSize(), scaledSize()] as [number, number]) : scaledGap();
@@ -104,9 +98,10 @@ const Background = (props: Partial<BackgroundProps>) => {
           fallback={<DotPattern radius={scaledSize() / 2} class={_props.patternClass} />}
         >
           <LinePattern
-            dimensions={patternDimensions()}
-            lineWidth={_props.lineWidth}
             class={_props.patternClass}
+            dimensions={patternDimensions()}
+            variant={_props.variant}
+            lineWidth={_props.lineWidth}
           />
         </Show>
       </pattern>
@@ -114,5 +109,3 @@ const Background = (props: Partial<BackgroundProps>) => {
     </svg>
   );
 };
-
-export default Background;
