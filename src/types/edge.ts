@@ -58,7 +58,6 @@ export type EdgeProps<
  * Props for built-in edge components that render the actual SVG path.
  */
 export type BaseEdgeProps = {
-  id?: string;
   /** SVG path of the edge */
   path: string;
   /** The x coordinate of the label */

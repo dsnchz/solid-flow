@@ -121,7 +121,7 @@ const getInitialViewport = (
 };
 
 export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
-  props: Partial<SolidFlowProps<NodeType, EdgeType>>,
+  props: SolidFlowProps<NodeType, EdgeType>,
 ) => {
   const _props = mergeProps(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
 

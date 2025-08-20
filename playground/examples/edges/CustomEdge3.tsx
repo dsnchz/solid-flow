@@ -26,6 +26,7 @@ export const CustomEdge3 = (props: EdgeProps<{ text: string }>) => {
       <BaseEdge
         id={props.id}
         path={pathData().edgePath}
+        pathLength={100}
         class="solid-flow__edge-custom3"
         style={{
           "stroke-dasharray": "100",

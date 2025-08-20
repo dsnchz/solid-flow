@@ -14,7 +14,6 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>) => {
   );
 
   const [local, rest] = splitProps(_props, [
-    "id",
     "class",
     "style",
     "path",
@@ -30,13 +29,13 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>) => {
   return (
     <>
       <path
-        id={local.id}
         d={local.path}
         class={clsx(["solid-flow__edge-path", local.class])}
         marker-start={local.markerStart}
         marker-end={local.markerEnd}
         fill="none"
         style={local.style}
+        {...rest}
       />
 
       <Show when={local.interactionWidth > 0}>
@@ -46,7 +45,6 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>) => {
           stroke-width={local.interactionWidth}
           fill="none"
           class="solid-flow__edge-interaction"
-          {...rest}
         />
       </Show>
 
