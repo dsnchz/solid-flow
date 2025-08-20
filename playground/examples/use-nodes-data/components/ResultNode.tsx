@@ -1,5 +1,5 @@
 import { Position } from "@xyflow/system";
-import { createEffect, For } from "solid-js";
+import { For } from "solid-js";
 
 import { Handle, useNodeConnections, useNodesData } from "@/index";
 import type { NodeProps } from "@/types";
@@ -15,13 +15,6 @@ export const ResultNode = (props: NodeProps<Record<string, never>, "result">) =>
   const sources = () => connections().map((connection) => connection.source);
   const nodeData = useNodesData<MyNode>(sources);
   const textNodes = () => nodeData().filter(isTextNode);
-
-  createEffect(() => {
-    console.log("NODE ID >>>>", props.id);
-    console.log("CONNECTIONS >>>>", connections());
-    console.log("SOURCES >>>>", sources());
-    console.log("NODE DATA >>>>", textNodes());
-  });
 
   return (
     <div class="custom">

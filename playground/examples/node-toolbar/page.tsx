@@ -48,8 +48,8 @@ export function NodeToolbar() {
     });
   });
 
-  const [nodes, _setNodes] = createNodeStore<typeof nodeTypes>(initialNodes);
-  const [edges, _setEdges] = createEdgeStore([]);
+  const [nodes] = createNodeStore<typeof nodeTypes>(initialNodes);
+  const [edges] = createEdgeStore([]);
 
   return (
     <div style={{ height: "100vh" }}>

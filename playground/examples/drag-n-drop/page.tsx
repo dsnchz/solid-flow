@@ -1,5 +1,3 @@
-import { createEffect } from "solid-js";
-
 import { createEdgeStore } from "@/data/createEdgeStore";
 import { createNodeStore } from "@/data/createNodeStore";
 import { useSolidFlow } from "@/hooks";
@@ -32,7 +30,7 @@ export function DragNDrop() {
     },
   ]);
 
-  const [edges, _setEdges] = createEdgeStore([
+  const [edges] = createEdgeStore([
     {
       id: "1-2",
       type: "default",
@@ -81,13 +79,8 @@ export function DragNDrop() {
       data: { label: `${type} node` },
     };
 
-    console.log("ADD NODE >>>>", newNode);
     addNodes(newNode);
   };
-
-  createEffect(() => {
-    console.log("DRAG AND DROP NODES UPDATED >>>", nodes);
-  });
 
   return (
     <main style={{ height: "100%", display: "flex" }}>

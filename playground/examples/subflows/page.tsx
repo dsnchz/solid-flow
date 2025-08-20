@@ -10,12 +10,12 @@ import type { NodeTypes } from "@/types";
 
 import { DebugNode } from "./DebugNode";
 
-export function Subflows() {
-  const nodeTypes = {
-    default: DebugNode,
-  } satisfies NodeTypes;
+const nodeTypes = {
+  default: DebugNode,
+} satisfies NodeTypes;
 
-  const initialNodes = [
+export function Subflows() {
+  const [nodes] = createNodeStore<typeof nodeTypes>([
     {
       id: "1",
       type: "input" as const,
@@ -99,24 +99,17 @@ export function Subflows() {
       data: { label: "Node 3" },
       position: { x: 400, y: 100 },
     },
-  ];
+  ]);
 
-  const initialEdges = [
-    {
-      id: "e1-2",
-      source: "1",
-      target: "2",
-    },
+  const [edges] = createEdgeStore([
+    { id: "e1-2", source: "1", target: "2" },
     { id: "e1-3", source: "1", target: "3" },
     { id: "e3-4", source: "3", target: "4" },
     { id: "e3-4b", source: "3", target: "4b", zIndex: 100 },
     { id: "e4a-4b1", source: "4a", target: "4b1" },
     { id: "e4a-4b2", source: "4a", target: "4b2", zIndex: 100 },
     { id: "e4b1-4b2", source: "4b1", target: "4b2" },
-  ];
-
-  const [nodes, _setNodes] = createNodeStore<typeof nodeTypes>(initialNodes);
-  const [edges, _setEdges] = createEdgeStore(initialEdges);
+  ]);
 
   return (
     <div style={{ height: "100vh" }}>

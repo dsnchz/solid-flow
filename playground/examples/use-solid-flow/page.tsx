@@ -10,10 +10,7 @@ import {
 import { Flow } from "./Flow";
 
 export function UseSolidFlow() {
-  const nodeTypes = {};
-  const edgeTypes = {};
-
-  const initialNodes = [
+  const [nodes] = createNodeStore([
     {
       id: "1",
       type: "input" as const,
@@ -32,9 +29,9 @@ export function UseSolidFlow() {
       data: { label: "Output Node" },
       position: { x: 300, y: 150 },
     },
-  ];
+  ]);
 
-  const initialEdges = [
+  const [edges] = createEdgeStore([
     {
       id: "1-2",
       type: "default" as const,
@@ -48,22 +45,11 @@ export function UseSolidFlow() {
       source: "1",
       target: "3",
     },
-  ];
-
-  const [nodes, _setNodes] = createNodeStore(initialNodes);
-  const [edges, _setEdges] = createEdgeStore(initialEdges);
+  ]);
 
   return (
     <div style={{ height: "100vh", display: "flex" }}>
-      <SolidFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        maxZoom={4}
-        style={{ flex: 1 }}
-      >
+      <SolidFlow nodes={nodes} edges={edges} fitView maxZoom={4} style={{ flex: 1 }}>
         <Controls />
         <Background variant="dots" />
         <MiniMap />

@@ -19,7 +19,7 @@ const nodeTypes = {
 } satisfies NodeTypes;
 
 export function UseNodesData() {
-  const [nodes, _setNodes] = createNodeStore<typeof nodeTypes>([
+  const [nodes] = createNodeStore<typeof nodeTypes>([
     {
       id: "1",
       type: "text",
@@ -52,7 +52,7 @@ export function UseNodesData() {
     },
   ]);
 
-  const [edges, _setEdges] = createEdgeStore([
+  const [edges] = createEdgeStore([
     {
       id: "e1-1a",
       source: "1",

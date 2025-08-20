@@ -38,7 +38,7 @@ export const UpdateNodeInternals = () => {
     },
   ]);
 
-  const [edges, _setEdges] = createEdgeStore([
+  const [edges] = createEdgeStore([
     {
       id: "1-2",
       source: "1",

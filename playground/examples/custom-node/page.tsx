@@ -20,7 +20,7 @@ const nodeTypes = {
 export function CustomNode() {
   const [backgroundColor, setBackgroundColor] = createSignal("#1A192B");
 
-  const [nodes, _setNodes] = createNodeStore<typeof nodeTypes>([
+  const [nodes] = createNodeStore<typeof nodeTypes>([
     {
       id: "1",
       type: "input",
@@ -50,7 +50,7 @@ export function CustomNode() {
     },
   ]);
 
-  const [edges, _setEdges] = createEdgeStore([
+  const [edges] = createEdgeStore([
     {
       id: "e1-2",
       source: "1",
