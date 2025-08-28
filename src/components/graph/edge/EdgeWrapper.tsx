@@ -84,7 +84,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
             aria-describedby={focusable() ? `${ARIA_EDGE_DESC_KEY}-${store.id}` : undefined}
             class={clsx(
               "solid-flow__edge",
-              edgeType(),
+              `solid-flow__edge-${edgeType()}`,
               {
                 animated: edge().animated,
                 selected: edge().selected,
