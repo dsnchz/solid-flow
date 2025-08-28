@@ -226,7 +226,7 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
         data-id={node().id}
         class={clsx(
           "solid-flow__node",
-          nodeType(),
+          `solid-flow__node-${nodeType()}`,
           {
             connectable: connectable(),
             draggable: draggable(),

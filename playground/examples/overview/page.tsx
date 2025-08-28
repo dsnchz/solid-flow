@@ -253,13 +253,8 @@ export const Overview = () => {
     <>
       <style>{`
       .custom-style {
-        background: #ffddcc !important;
-        border: 2px solid #ff6b6b !important;
-      }
-      
-      .solid-flow__node.custom-style {
-        background: #ffddcc !important;
-        border: 2px solid #ff6b6b !important;
+        background: #ffddcc;
+        border: 2px solid #ff6b6b;
       }
     `}</style>
       <SolidFlow
