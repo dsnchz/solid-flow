@@ -1,13 +1,20 @@
 {
-  "name": "solid-flow",
+  "name": "@dschz/solid-flow",
   "version": "0.1.0",
-  "description": "Solid Flow: an unofficial port of Svelte Flow for SolidJS -- a highly customizable Solid library for building node-based editors, workflow systems, diagrams and more.",
+  "description": "Solid Flow - A highly customizable Solid library for building node-based editors, workflow systems, diagrams and more.",
   "type": "module",
   "author": "Daniel Sanchez <dsanc89@icloud.com>",
   "license": "MIT",
-  "homepage": "https://github.com/thedanchez/solid-flow#readme",
+  "homepage": "https://github.com/dsnchz/solid-flow#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dsnchz/solid-uplot.git"
+  },
   "bugs": {
-    "url": "https://github.com/thedanchez/solid-flow/issues"
+    "url": "https://github.com/dsnchz/solid-flow/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "diagram",
@@ -41,12 +48,12 @@
     "@dagrejs/dagre": "^1.1.5",
     "@solidjs/router": "^0.15.3",
     "@solidjs/testing-library": "^0.8.10",
-    "@testing-library/jest-dom": "^6.6.4",
-    "@types/bun": "^1.2.19",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@types/bun": "^1.2.21",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
     "@vitest/coverage-istanbul": "^3.2.4",
-    "eslint": "^9.32.0",
+    "eslint": "^9.34.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-solid": "^0.14.5",
     "globals": "^16.3.0",
@@ -56,8 +63,8 @@
     "tsup": "^8.5.0",
     "tsup-preset-solid": "^2.2.0",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.39.0",
-    "vite": "^7.1.1",
+    "typescript-eslint": "^8.41.0",
+    "vite": "^7.1.3",
     "vite-plugin-solid": "^2.11.8",
     "vitest": "^3.2.4"
   },
@@ -68,7 +75,7 @@
     "@solid-primitives/map": "^0.7.2",
     "@solid-primitives/media": "^2.3.3",
     "@solid-primitives/resize-observer": "^2.1.3",
-    "@xyflow/system": "^0.0.67",
+    "@xyflow/system": "^0.0.68",
     "clsx": "^2.1.1"
   },
   "main": "./dist/index/index.js",
