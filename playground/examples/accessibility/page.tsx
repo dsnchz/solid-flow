@@ -1,8 +1,14 @@
 import { createSignal } from "solid-js";
 
-import { Background, Controls, MiniMap, Panel, SolidFlow } from "@/components";
-import { createEdgeStore } from "@/data/createEdgeStore";
-import { createNodeStore } from "@/data/createNodeStore";
+import {
+  Background,
+  Controls,
+  createEdgeStore,
+  createNodeStore,
+  MiniMap,
+  Panel,
+  SolidFlow,
+} from "@/index";
 
 export const A11y = () => {
   const [nodes] = createNodeStore([

@@ -1,5 +1,4 @@
-import { Handle, NodeResizer } from "@/components";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, NodeResizer } from "@/index";
 
 import type { ResizerData } from "./types";
 

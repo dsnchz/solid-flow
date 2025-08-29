@@ -3,6 +3,29 @@ export { createEdgeStore } from "./data/createEdgeStore";
 export { createNodeStore } from "./data/createNodeStore";
 export * from "./hooks";
 
+// types
+export type {
+  BezierEdgeProps,
+  BuiltInEdge,
+  DefaultEdgeOptions,
+  Edge,
+  EdgeProps,
+  EdgeTypes,
+  SmoothStepEdgeProps,
+  StepEdgeProps,
+  StraightEdgeProps,
+} from "./types/edge";
+export * from "./types/events";
+export * from "./types/general";
+export type {
+  BuiltInNode,
+  BuiltInNodeTypes,
+  InternalNode,
+  Node,
+  NodeProps,
+  NodeTypes,
+} from "./types/node";
+
 // system utilities
 export {
   addEdge,

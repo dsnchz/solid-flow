@@ -1,6 +1,12 @@
-import { Background, Controls, MiniMap, SolidFlow } from "@/components";
-import { createEdgeStore, createNodeStore } from "@/index";
-import type { NodeTypes } from "@/types";
+import {
+  Background,
+  Controls,
+  createEdgeStore,
+  createNodeStore,
+  MiniMap,
+  type NodeTypes,
+  SolidFlow,
+} from "@/index";
 
 import { MultiHandleNode } from "./MultiHandleNode";
 import { SingleHandleNode } from "./SingleHandleNode";

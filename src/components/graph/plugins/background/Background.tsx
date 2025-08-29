@@ -13,7 +13,7 @@ const DEFAULT_SIZE: Record<BackgroundVariant, number> = {
   cross: 6,
 };
 
-type BackgroundProps = {
+export type BackgroundProps = {
   readonly id?: string;
   /** Variant of the pattern
    * @example 'lines', 'dots', 'cross'

@@ -1,11 +1,8 @@
 import "./CustomEdge3.css";
 
-import { getSmoothStepPath } from "@xyflow/system";
 import { createMemo } from "solid-js";
 
-import { BaseEdge } from "@/components/graph/edge";
-import { EdgeLabel } from "@/index";
-import type { EdgeProps } from "@/types";
+import { BaseEdge, EdgeLabel, type EdgeProps, getSmoothStepPath } from "@/index";
 
 export const CustomEdge3 = (props: EdgeProps<{ text: string }>) => {
   const pathData = createMemo(() => {

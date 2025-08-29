@@ -1,8 +1,6 @@
-import { Position } from "@xyflow/system";
 import { For } from "solid-js";
 
-import { Handle, useNodeConnections, useNodesData } from "@/index";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, useNodeConnections, useNodesData } from "@/index";
 
 import { isTextNode, type MyNode } from "./types";
 
@@ -18,7 +16,7 @@ export const ResultNode = (props: NodeProps<Record<string, never>, "result">) =>
 
   return (
     <div class="custom">
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position="left" />
       <div>incoming texts:</div>
       <For each={textNodes()}>{(textNode) => <div>{textNode.data.text}</div>}</For>
     </div>

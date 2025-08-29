@@ -13,19 +13,19 @@ export function UseSolidFlow() {
   const [nodes] = createNodeStore([
     {
       id: "1",
-      type: "input" as const,
+      type: "input",
       data: { label: "Input Node" },
       position: { x: 150, y: 5 },
     },
     {
       id: "2",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node" },
       position: { x: 0, y: 150 },
     },
     {
       id: "3",
-      type: "output" as const,
+      type: "output",
       data: { label: "Output Node" },
       position: { x: 300, y: 150 },
     },
@@ -34,14 +34,14 @@ export function UseSolidFlow() {
   const [edges] = createEdgeStore([
     {
       id: "1-2",
-      type: "default" as const,
+      type: "default",
       source: "1",
       target: "2",
       label: "Edge Text",
     },
     {
       id: "1-3",
-      type: "smoothstep" as const,
+      type: "smoothstep",
       source: "1",
       target: "3",
     },

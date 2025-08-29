@@ -1,8 +1,6 @@
 import { For } from "solid-js";
 
-import { Background, SolidFlow, SolidFlowProvider } from "../../../src";
-
-type BackgroundProps = Parameters<typeof Background>[0];
+import { Background, type BackgroundProps, SolidFlow, SolidFlowProvider } from "@/index";
 
 const Flow = (props: { id: string; bgProps: BackgroundProps[] }) => {
   return (

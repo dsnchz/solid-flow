@@ -1,10 +1,7 @@
-import type { Connection } from "@xyflow/system";
 import { createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 
-import { Background, Controls, Panel, SolidFlow } from "@/components";
-import { useInternalSolidFlow } from "@/components/contexts";
-import { createNodeStore } from "@/index";
+import { Background, Controls, createNodeStore, Panel, SolidFlow } from "@/index";
 
 import { CustomResizerNode } from "./components/CustomResizer";
 import { DefaultResizerNode } from "./components/DefaultResizer";
@@ -25,7 +22,6 @@ const nodeStyle = {
 };
 
 export const NodeResizer = () => {
-  const { actions } = useInternalSolidFlow();
   const [snapToGrid, setSnapToGrid] = createSignal(false);
 
   const [nodes] = createNodeStore<typeof nodeTypes>([
@@ -166,15 +162,10 @@ export const NodeResizer = () => {
 
   const [edges] = createStore([]);
 
-  const onConnect = (connection: Connection) => {
-    if (connection) actions.addEdge(connection);
-  };
-
   return (
     <SolidFlow
       nodes={nodes}
       edges={edges}
-      onConnect={onConnect}
       nodeTypes={nodeTypes}
       minZoom={0.2}
       maxZoom={5}

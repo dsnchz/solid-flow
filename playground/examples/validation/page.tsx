@@ -1,7 +1,11 @@
-import { Position } from "@xyflow/system";
-
-import { Background, Controls, SolidFlow } from "@/components";
-import { createEdgeStore, createNodeStore } from "@/index";
+import {
+  Background,
+  Controls,
+  createEdgeStore,
+  createNodeStore,
+  Position,
+  SolidFlow,
+} from "@/index";
 
 export const Validation = () => {
   const [nodes] = createNodeStore([

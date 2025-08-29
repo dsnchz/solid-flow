@@ -3,7 +3,7 @@ import { For, onCleanup } from "solid-js";
 import { useInternalSolidFlow } from "@/components/contexts";
 import type { Node, NodeEvents } from "@/types";
 
-import NodeWrapper from "../graph/node/NodeWrapper";
+import { NodeWrapper } from "../graph/node/NodeWrapper";
 
 export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
   readonly nodeClickDistance: number;

@@ -1,9 +1,13 @@
 import "./style.css";
 
-import { MarkerType } from "@xyflow/system";
-
-import { Background, createEdgeStore, createNodeStore, SolidFlow } from "@/index";
-import type { NodeTypes } from "@/types";
+import {
+  Background,
+  createEdgeStore,
+  createNodeStore,
+  MarkerType,
+  type NodeTypes,
+  SolidFlow,
+} from "@/index";
 
 import CustomConnectionLine from "./CustomConnectionLine";
 import CustomNode from "./CustomNode";

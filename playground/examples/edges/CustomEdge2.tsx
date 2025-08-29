@@ -1,9 +1,6 @@
-import { getBezierPath } from "@xyflow/system";
 import { createMemo } from "solid-js";
 
-import { BaseEdge } from "@/components/graph/edge";
-import { EdgeLabel } from "@/index";
-import type { EdgeProps } from "@/types";
+import { BaseEdge, EdgeLabel, type EdgeProps, getBezierPath } from "@/index";
 
 export const CustomEdge2 = (props: EdgeProps<{ text: string }>) => {
   const pathData = createMemo(() => {

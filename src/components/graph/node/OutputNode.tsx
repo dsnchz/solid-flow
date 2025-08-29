@@ -3,7 +3,7 @@ import { mergeProps } from "solid-js";
 import { Handle } from "@/components/graph/handle";
 import type { NodeProps, Position } from "@/types";
 
-const OutputNode = (props: NodeProps<{ label: string }>) => {
+export const OutputNode = (props: NodeProps<{ label: string }>) => {
   const _props = mergeProps(
     {
       targetPosition: "top" as Position,
@@ -18,5 +18,3 @@ const OutputNode = (props: NodeProps<{ label: string }>) => {
     </>
   );
 };
-
-export default OutputNode;

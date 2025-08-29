@@ -49,7 +49,9 @@ type ResizeControlProps = NodeResizerSubProps & {
   readonly style?: JSX.CSSProperties;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
-const ResizeControl = <NodeType extends Node = Node>(props: ParentProps<ResizeControlProps>) => {
+export const ResizeControl = <NodeType extends Node = Node>(
+  props: ParentProps<ResizeControlProps>,
+) => {
   const _props = mergeProps(
     {
       variant: "handle" as ResizeControlVariant,
@@ -180,5 +182,3 @@ const ResizeControl = <NodeType extends Node = Node>(props: ParentProps<ResizeCo
     </div>
   );
 };
-
-export default ResizeControl;

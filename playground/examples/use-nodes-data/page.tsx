@@ -4,9 +4,9 @@ import {
   createEdgeStore,
   createNodeStore,
   MiniMap,
+  type NodeTypes,
   SolidFlow,
 } from "@/index";
-import type { NodeTypes } from "@/types";
 
 import { ResultNode } from "./components/ResultNode";
 import { TextNode } from "./components/TextNode";

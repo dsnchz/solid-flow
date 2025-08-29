@@ -1,6 +1,4 @@
-import { getStraightPath } from "@xyflow/system";
-
-import type { ConnectionLineComponentProps } from "@/index";
+import { type ConnectionLineComponentProps, getStraightPath } from "@/index";
 
 export default function CustomConnectionLine(props: ConnectionLineComponentProps) {
   const edgePath = () => {

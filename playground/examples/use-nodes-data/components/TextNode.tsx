@@ -1,8 +1,6 @@
-import { Position } from "@xyflow/system";
 import type { JSX } from "solid-js";
 
-import { Handle, useSolidFlow } from "@/index";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, useSolidFlow } from "@/index";
 
 export const TextNode = (props: NodeProps<{ text: string }, "text">) => {
   const { updateNodeData } = useSolidFlow();
@@ -17,7 +15,7 @@ export const TextNode = (props: NodeProps<{ text: string }, "text">) => {
       <div>
         <input value={props.data.text} onInput={handleInput} />
       </div>
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position="right" />
     </div>
   );
 };

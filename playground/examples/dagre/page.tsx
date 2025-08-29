@@ -1,7 +1,14 @@
 import dagre from "@dagrejs/dagre";
-import { ConnectionLineType, Position } from "@xyflow/system";
 
-import { Background, createEdgeStore, createNodeStore, Panel, SolidFlow } from "@/index";
+import {
+  Background,
+  ConnectionLineType,
+  createEdgeStore,
+  createNodeStore,
+  Panel,
+  Position,
+  SolidFlow,
+} from "@/index";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));

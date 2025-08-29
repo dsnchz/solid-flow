@@ -1,7 +1,6 @@
 import { Show } from "solid-js";
 
-import { Handle, useConnection } from "@/index";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, useConnection } from "@/index";
 
 export default function CustomNode(props: NodeProps<Record<string, never>, "custom">) {
   const connection = useConnection();

@@ -4,9 +4,9 @@ import {
   createEdgeStore,
   createNodeStore,
   MiniMap,
+  type NodeTypes,
   SolidFlow,
 } from "@/index";
-import type { NodeTypes } from "@/types";
 
 import { DebugNode } from "./DebugNode";
 
@@ -18,21 +18,21 @@ export function Subflows() {
   const [nodes] = createNodeStore<typeof nodeTypes>([
     {
       id: "1",
-      type: "input" as const,
+      type: "input",
       data: { label: "Node 1" },
       position: { x: 250, y: 5 },
       origin: [0.5, 0.5] as [number, number],
     },
     {
       id: "4",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 4" },
       position: { x: 100, y: 200 },
       style: { width: "500px", height: "300px" },
     },
     {
       id: "4a",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 4a" },
       position: { x: 15, y: 15 },
       parentId: "4",
@@ -43,7 +43,7 @@ export function Subflows() {
     },
     {
       id: "4b",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 4b" },
       position: { x: 100, y: 60 },
       style: { width: "300px", height: "200px" },
@@ -51,21 +51,21 @@ export function Subflows() {
     },
     {
       id: "4b1",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 4b1" },
       position: { x: 40, y: 20 },
       parentId: "4b",
     },
     {
       id: "4b2",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 4b2" },
       position: { x: 20, y: 100 },
       parentId: "4b",
     },
     {
       id: "5",
-      type: "group" as const,
+      type: "group",
       data: { label: "Node 5" },
       position: { x: 650, y: 250 },
       style: { width: "400px", height: "150px" },
@@ -73,7 +73,7 @@ export function Subflows() {
     },
     {
       id: "5a",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 5a" },
       position: { x: 0, y: 0 },
       parentId: "5",
@@ -81,7 +81,7 @@ export function Subflows() {
     },
     {
       id: "5b",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 5b" },
       position: { x: 225, y: 50 },
       parentId: "5",
@@ -89,13 +89,13 @@ export function Subflows() {
     },
     {
       id: "2",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 2" },
       position: { x: 100, y: 100 },
     },
     {
       id: "3",
-      type: "default" as const,
+      type: "default",
       data: { label: "Node 3" },
       position: { x: 400, y: 100 },
     },

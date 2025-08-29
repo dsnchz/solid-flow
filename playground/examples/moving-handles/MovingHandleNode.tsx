@@ -1,8 +1,6 @@
-import { Position } from "@xyflow/system";
 import type { JSX } from "solid-js";
 
-import { Handle, useConnection } from "@/index";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, useConnection } from "@/index";
 
 const sourceHandleStyle: JSX.CSSProperties = {
   position: "relative",
@@ -30,7 +28,7 @@ export const MovingHandleNode = (_props: NodeProps<Record<string, never>, "movin
         <Handle
           type="target"
           id="a"
-          position={Position.Left}
+          position="left"
           style={{
             ...sourceHandleStyle,
             transform: connection().inProgress ? "translate(-20px, 0)" : "translate(-50%, 0)",
@@ -39,7 +37,7 @@ export const MovingHandleNode = (_props: NodeProps<Record<string, never>, "movin
         <Handle
           type="target"
           id="b"
-          position={Position.Left}
+          position="left"
           style={{
             ...sourceHandleStyle,
             transform: connection().inProgress ? "translate(-20px, 0)" : "translate(-50%, 0)",
@@ -53,8 +51,8 @@ export const MovingHandleNode = (_props: NodeProps<Record<string, never>, "movin
         }}
       >
         <div>moving handles</div>
-        <Handle type="source" position={Position.Right} />
-        <Handle type="source" position={Position.Right} />
+        <Handle type="source" position="right" />
+        <Handle type="source" position="right" />
       </div>
     </>
   );

@@ -1,8 +1,6 @@
-import { Position } from "@xyflow/system";
 import { type Accessor, type Setter } from "solid-js";
 
-import { Handle } from "@/components";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps } from "@/index";
 
 type CustomColorNodeData = {
   backgroundColor: Accessor<string>;
@@ -25,7 +23,7 @@ export const CustomColorNode = (props: NodeProps<CustomColorNodeData, "colorNode
         "border-radius": "20px",
       }}
     >
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position="left" />
       <div>
         Custom Color Picker Node: <strong>{props.data.backgroundColor()}</strong>
       </div>
@@ -35,13 +33,8 @@ export const CustomColorNode = (props: NodeProps<CustomColorNodeData, "colorNode
         onInput={handleColorChange}
         value={props.data.backgroundColor()}
       />
-      <Handle type="source" position={Position.Right} id="a" style={{ top: "20px" }} />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="b"
-        style={{ top: "auto", bottom: "10px" }}
-      />
+      <Handle type="source" position="right" id="a" style={{ top: "20px" }} />
+      <Handle type="source" position="right" id="b" style={{ top: "auto", bottom: "10px" }} />
     </div>
   );
 };

@@ -1,8 +1,6 @@
-import { Position } from "@xyflow/system";
 import { createEffect, createMemo, untrack } from "solid-js";
 
-import { Handle, useNodeConnections, useNodesData, useSolidFlow } from "@/index";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, useNodeConnections, useNodesData, useSolidFlow } from "@/index";
 
 import { isTextNode, type MyNode } from "./types";
 
@@ -25,9 +23,9 @@ export const UppercaseNode = (props: NodeProps<{ text: string }, "uppercase">) =
 
   return (
     <div class="custom">
-      <Handle type="target" position={Position.Left} isConnectable={connections().length === 0} />
+      <Handle type="target" position="left" isConnectable={connections().length === 0} />
       <div>uppercase transform</div>
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position="right" />
     </div>
   );
 };

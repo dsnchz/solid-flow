@@ -1,7 +1,6 @@
 import { createStore } from "solid-js/store";
 
-import { Background, Controls, MiniMap, SolidFlow } from "@/components";
-import type { Edge, Node } from "@/types";
+import { Background, Controls, type Edge, MiniMap, type Node, SolidFlow } from "@/index";
 
 const yNodes = 25;
 const xNodes = 25;

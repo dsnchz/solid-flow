@@ -1,15 +1,16 @@
-import { type Connection, Position } from "@xyflow/system";
 import { createSignal } from "solid-js";
 
 import {
   Background,
+  type Connection,
   Controls,
   createEdgeStore,
   createNodeStore,
   MiniMap,
+  type NodeTypes,
+  Position,
   SolidFlow,
 } from "@/index";
-import type { NodeTypes } from "@/types";
 
 import { CustomColorNode } from "./CustomColorNode";
 

@@ -1,9 +1,15 @@
 import type { OnConnectEnd } from "@xyflow/system";
 import { createEffect, createSignal } from "solid-js";
 
-import { SolidFlow } from "@/components";
-import { createEdgeStore, createNodeStore, useNodeConnections, useSolidFlow } from "@/index";
-import type { Edge, Node } from "@/types";
+import {
+  createEdgeStore,
+  createNodeStore,
+  type Edge,
+  type Node,
+  SolidFlow,
+  useNodeConnections,
+  useSolidFlow,
+} from "@/index";
 
 export const AddNodeOnDropExample = () => {
   const [nodes] = createNodeStore([

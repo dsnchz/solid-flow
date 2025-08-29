@@ -15,7 +15,7 @@ type MinimapNodeProps = {
   readonly selected?: boolean;
 };
 
-const MinimapNode = (props: MinimapNodeProps) => {
+export const MiniMapNode = (props: MinimapNodeProps) => {
   const _props = mergeProps(
     {
       borderRadius: 5,
@@ -51,5 +51,3 @@ const MinimapNode = (props: MinimapNodeProps) => {
     />
   );
 };
-
-export default MinimapNode;

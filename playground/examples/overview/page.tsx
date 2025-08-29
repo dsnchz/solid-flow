@@ -1,20 +1,22 @@
-import { getBezierPath, Position } from "@xyflow/system";
 import { produce } from "solid-js/store";
 
 import {
   Background,
   ControlButton,
   Controls,
+  createEdgeStore,
+  createNodeStore,
   EdgeLabel,
+  type EdgeProps,
+  getBezierPath,
   Handle,
   MiniMap,
+  type NodeProps,
   Panel,
+  Position,
   SolidFlow,
-} from "@/components";
-import { createEdgeStore } from "@/data/createEdgeStore";
-import { createNodeStore } from "@/data/createNodeStore";
-import { useSolidFlow } from "@/hooks";
-import type { EdgeProps, NodeProps } from "@/types";
+  useSolidFlow,
+} from "@/index";
 
 // Custom Node Component
 const CustomNode = (props: NodeProps<{ label: string }, "custom">) => {

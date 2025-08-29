@@ -1,8 +1,14 @@
 import { createSignal } from "solid-js";
 
-import { Controls, MiniMap, Panel, SolidFlow } from "@/components";
-import { createEdgeStore, createNodeStore } from "@/index";
-import type { PanOnScrollMode } from "@/types";
+import {
+  Controls,
+  createEdgeStore,
+  createNodeStore,
+  MiniMap,
+  Panel,
+  PanOnScrollMode,
+  SolidFlow,
+} from "@/index";
 
 export const Interaction = () => {
   const [nodes] = createNodeStore([
@@ -53,7 +59,7 @@ export const Interaction = () => {
   const [zoomOnScroll, setZoomOnScroll] = createSignal(false);
   const [zoomOnPinch, setZoomOnPinch] = createSignal(false);
   const [panOnScroll, setPanOnScroll] = createSignal(false);
-  const [panOnScrollMode, setPanOnScrollMode] = createSignal<PanOnScrollMode>("free");
+  const [panOnScrollMode, setPanOnScrollMode] = createSignal<PanOnScrollMode>(PanOnScrollMode.Free);
   const [zoomOnDoubleClick, setZoomOnDoubleClick] = createSignal(false);
   const [panOnDrag, setPanOnDrag] = createSignal(true);
   const [captureZoomClick, setCaptureZoomClick] = createSignal(false);

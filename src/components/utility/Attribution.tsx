@@ -8,7 +8,7 @@ export type AttributionProps = {
   readonly position: PanelPosition;
 };
 
-const Attribution: Component<Partial<AttributionProps>> = (props) => {
+export const Attribution: Component<Partial<AttributionProps>> = (props) => {
   return (
     <Show when={!props.proOptions?.hideAttribution}>
       <Panel
@@ -28,5 +28,3 @@ const Attribution: Component<Partial<AttributionProps>> = (props) => {
     </Show>
   );
 };
-
-export default Attribution;

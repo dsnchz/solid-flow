@@ -1,6 +1,4 @@
-import { Position, type XYPosition } from "@xyflow/system";
-
-import type { InternalNode } from "@/types";
+import { type InternalNode, Position, type XYPosition } from "@/index";
 
 // this helper function returns the intersection point
 // of the line between the center of the intersectionNode and the target node

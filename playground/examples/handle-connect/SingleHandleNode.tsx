@@ -1,7 +1,4 @@
-import type { Connection } from "@xyflow/system";
-
-import { Handle } from "@/components";
-import type { NodeProps } from "@/types";
+import { type Connection, Handle, type NodeProps } from "@/index";
 
 export const SingleHandleNode = (props: NodeProps) => {
   const onConnectTarget = (connection: Connection[]) => {

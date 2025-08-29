@@ -1,8 +1,6 @@
-import { Position } from "@xyflow/system";
 import { createSignal, For } from "solid-js";
 
-import { Handle, useUpdateNodeInternals } from "@/index";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, Position, useUpdateNodeInternals } from "@/index";
 
 export const CustomNode = (props: NodeProps) => {
   const updateNodeInternals = useUpdateNodeInternals();

@@ -1,15 +1,23 @@
-import { Position } from "@xyflow/system";
 import { createSignal } from "solid-js";
 import { produce } from "solid-js/store";
 
-import { createEdgeStore, createNodeStore, Handle, Panel, SolidFlow, useSolidFlow } from "@/index";
-import type { NodeProps, NodeTypes } from "@/types";
+import {
+  createEdgeStore,
+  createNodeStore,
+  Handle,
+  type NodeProps,
+  type NodeTypes,
+  Panel,
+  Position,
+  SolidFlow,
+  useSolidFlow,
+} from "@/index";
 
 // Custom Node Components
 const ProcessNode = (props: NodeProps<{ label: string }, "process">) => {
   return (
     <>
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position="left" />
       <div
         style={{
           background: "#e3f2fd",
@@ -22,7 +30,7 @@ const ProcessNode = (props: NodeProps<{ label: string }, "process">) => {
       >
         {props.data.label}
       </div>
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position="right" />
     </>
   );
 };
@@ -30,7 +38,7 @@ const ProcessNode = (props: NodeProps<{ label: string }, "process">) => {
 const TaskNode = (props: NodeProps<{ label: string }, "task">) => {
   return (
     <>
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position="left" />
       <div
         style={{
           background: "#f3e5f5",
@@ -43,7 +51,7 @@ const TaskNode = (props: NodeProps<{ label: string }, "task">) => {
       >
         {props.data.label}
       </div>
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position="right" />
     </>
   );
 };

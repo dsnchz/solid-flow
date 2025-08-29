@@ -24,7 +24,7 @@ export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType
   readonly nodeClickDistance: number;
 };
 
-const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeType>) => {
+export const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeType>) => {
   const { store, nodeLookup, parentLookup, actions } = useInternalSolidFlow<NodeType>();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
@@ -283,5 +283,3 @@ const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeT
     </Show>
   );
 };
-
-export default NodeWrapper;

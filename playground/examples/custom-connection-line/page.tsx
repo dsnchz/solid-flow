@@ -1,5 +1,4 @@
-import { Background, SolidFlow } from "@/components";
-import { createEdgeStore, createNodeStore } from "@/index";
+import { Background, createEdgeStore, createNodeStore, SolidFlow } from "@/index";
 
 import { ConnectionLine } from "./ConnectionLine";
 import { CustomNode } from "./CustomNode";

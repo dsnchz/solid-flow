@@ -1,4 +1,4 @@
-import { SolidFlowProvider } from "@/components";
+import { SolidFlowProvider } from "@/index";
 
 import { AddNodeOnDropExample } from "./AddNodeOnDrop";
 

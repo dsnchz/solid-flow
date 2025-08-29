@@ -1,4 +1,3 @@
-import type { Viewport } from "@xyflow/system";
 import { createStore } from "solid-js/store";
 
 import {
@@ -10,6 +9,7 @@ import {
   SolidFlow,
   useSolidFlow,
   useViewport,
+  type Viewport,
 } from "@/index";
 
 export const TwoWayViewport = () => {

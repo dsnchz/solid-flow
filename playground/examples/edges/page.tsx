@@ -5,10 +5,12 @@ import {
   Controls,
   createEdgeStore,
   createNodeStore,
+  type Edge,
+  type EdgeTypes,
   MiniMap,
+  type Node,
   SolidFlow,
 } from "@/index";
-import type { Edge, EdgeTypes, Node } from "@/types";
 
 import { ButtonEdge } from "./ButtonEdge";
 import { CustomEdge } from "./CustomEdge";

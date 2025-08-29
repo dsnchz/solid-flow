@@ -8,7 +8,7 @@ import {
   SolidFlow,
   SolidFlowProvider,
   useSolidFlow,
-} from "../../../src";
+} from "@/index";
 
 const defaultEdgeOptions = { zIndex: 0 };
 

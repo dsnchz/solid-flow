@@ -1,12 +1,11 @@
-import { Handle, NodeResizeControl } from "@/components";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, ResizeControl } from "@/index";
 
 import type { ResizerData } from "./types";
 
 export const HorizontalResizerNode = (props: NodeProps<Partial<ResizerData>>) => {
   return (
     <>
-      <NodeResizeControl
+      <ResizeControl
         minWidth={props.data.minWidth}
         maxWidth={props.data.maxWidth}
         minHeight={props.data.minHeight}
@@ -19,7 +18,7 @@ export const HorizontalResizerNode = (props: NodeProps<Partial<ResizerData>>) =>
         color="red"
         position="left"
       />
-      <NodeResizeControl
+      <ResizeControl
         minWidth={props.data.minWidth}
         maxWidth={props.data.maxWidth}
         minHeight={props.data.minHeight}

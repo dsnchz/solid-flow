@@ -3,7 +3,7 @@ import { mergeProps } from "solid-js";
 import { Handle } from "@/components/graph/handle";
 import type { NodeProps, Position } from "@/types";
 
-const InputNode = (props: NodeProps<{ label: string }>) => {
+export const InputNode = (props: NodeProps<{ label: string }>) => {
   const _props = mergeProps(
     {
       sourcePosition: "bottom" as Position,
@@ -18,5 +18,3 @@ const InputNode = (props: NodeProps<{ label: string }>) => {
     </>
   );
 };
-
-export default InputNode;

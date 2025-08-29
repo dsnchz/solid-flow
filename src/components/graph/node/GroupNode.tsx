@@ -1,7 +1,7 @@
 import type { NodeProps } from "@/types";
 import { toPxString } from "@/utils";
 
-const GroupNode = (props: NodeProps<Record<string, never>>) => (
+export const GroupNode = (props: NodeProps<Record<string, never>>) => (
   <div
     style={{
       position: "absolute",
@@ -12,5 +12,3 @@ const GroupNode = (props: NodeProps<Record<string, never>>) => (
     }}
   />
 );
-
-export default GroupNode;

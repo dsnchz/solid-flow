@@ -70,7 +70,7 @@ function matchesKeyArray(
   return keys.some((keyDef) => matchesKey(event, keyDef));
 }
 
-const KeyHandler = (props: KeyHandlerProps) => {
+export const KeyHandler = (props: KeyHandlerProps) => {
   const { store, actions } = useInternalSolidFlow();
   const { deleteElements } = useSolidFlow();
 
@@ -174,5 +174,3 @@ const KeyHandler = (props: KeyHandlerProps) => {
 
   return null;
 };
-
-export default KeyHandler;

@@ -1,7 +1,11 @@
-import { Position } from "@xyflow/system";
-
-import { Background, createEdgeStore, createNodeStore, SolidFlow } from "@/index";
-import type { NodeTypes } from "@/types";
+import {
+  Background,
+  createEdgeStore,
+  createNodeStore,
+  type NodeTypes,
+  Position,
+  SolidFlow,
+} from "@/index";
 
 import { CustomNode, type CustomNodeData } from "./CustomNode";
 import { SelectedNodesToolbar } from "./SelectedNodesToolbar";

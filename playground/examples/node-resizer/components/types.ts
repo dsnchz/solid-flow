@@ -1,4 +1,4 @@
-import type { OnResize, OnResizeEnd, OnResizeStart, ShouldResize } from "@xyflow/system";
+import type { OnResize, OnResizeEnd, OnResizeStart, ShouldResize } from "@/index";
 
 export type ResizerData = {
   readonly label?: string;

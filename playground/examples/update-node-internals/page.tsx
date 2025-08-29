@@ -4,11 +4,11 @@ import {
   createEdgeStore,
   createNodeStore,
   MiniMap,
+  type NodeTypes,
   Panel,
   SolidFlow,
   useSolidFlow,
 } from "@/index";
-import type { NodeTypes } from "@/types";
 
 import { CustomNode } from "./CustomNode";
 

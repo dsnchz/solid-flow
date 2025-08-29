@@ -1,13 +1,13 @@
-const onDragStart = (event: DragEvent, nodeType: string) => {
-  if (!event.dataTransfer) {
-    return null;
-  }
-
-  event.dataTransfer.setData("application/solidflow", nodeType);
-  event.dataTransfer.effectAllowed = "move";
-};
-
 export function Sidebar() {
+  const onDragStart = (event: DragEvent, nodeType: string) => {
+    if (!event.dataTransfer) {
+      return null;
+    }
+
+    event.dataTransfer.setData("application/solidflow", nodeType);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
   return (
     <aside
       style={{

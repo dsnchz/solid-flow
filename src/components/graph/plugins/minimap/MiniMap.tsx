@@ -25,7 +25,7 @@ import { Panel } from "@/components/container";
 import { useInternalSolidFlow } from "@/components/contexts";
 import type { Node } from "@/types";
 
-import MinimapNode from "./MinimapNode";
+import { MiniMapNode } from "./MiniMapNode";
 
 export type GetMiniMapNodeAttribute<NodeType extends Node> = (node: NodeType) => string;
 
@@ -78,7 +78,7 @@ export type MiniMapProps<NodeType extends Node> = Omit<
 const getAttrFunction = <NodeType extends Node>(func: any): GetMiniMapNodeAttribute<NodeType> =>
   func instanceof Function ? func : () => func;
 
-export const Minimap = <NodeType extends Node>(
+export const MiniMap = <NodeType extends Node>(
   props: ParentProps<Partial<MiniMapProps<NodeType>>>,
 ) => {
   const { store, nodeLookup } = useInternalSolidFlow<NodeType>();
@@ -251,7 +251,7 @@ export const Minimap = <NodeType extends Node>(
                   return (
                     <Show when={nodeVisible() && getNodeDimensions(node()!)}>
                       {(nodeDimensions) => (
-                        <MinimapNode
+                        <MiniMapNode
                           x={node()!.internals.positionAbsolute.x}
                           y={node()!.internals.positionAbsolute.y}
                           borderRadius={local.nodeBorderRadius}

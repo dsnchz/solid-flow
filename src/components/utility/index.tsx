@@ -1,2 +1,2 @@
-export { default as Attribution } from "./Attribution";
-export { default as KeyHandler } from "./KeyHandler";
+export { Attribution } from "./Attribution";
+export { KeyHandler } from "./KeyHandler";

@@ -1,9 +1,13 @@
-import { getBezierPath } from "@xyflow/system";
 import { createMemo, Show } from "solid-js";
 
-import { BaseEdge } from "@/components/graph/edge";
-import { EdgeLabel, EdgeReconnectAnchor, useSolidFlow } from "@/index";
-import type { EdgeProps } from "@/types";
+import {
+  BaseEdge,
+  EdgeLabel,
+  type EdgeProps,
+  EdgeReconnectAnchor,
+  getBezierPath,
+  useSolidFlow,
+} from "@/index";
 
 export const ButtonEdge = (props: EdgeProps) => {
   const { updateEdge } = useSolidFlow();

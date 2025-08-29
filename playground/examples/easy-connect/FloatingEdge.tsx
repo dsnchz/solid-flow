@@ -1,8 +1,6 @@
-import { getStraightPath } from "@xyflow/system";
 import { Show } from "solid-js";
 
-import { useInternalNode } from "@/index";
-import type { EdgeProps } from "@/types";
+import { type EdgeProps, getStraightPath, useInternalNode } from "@/index";
 
 import { getEdgeParams } from "./utils";
 

@@ -62,6 +62,10 @@ export type NodeTypes = {
   }["bivarianceHack"];
 };
 
+export type BuiltInNode =
+  | Node<{ label: string }, "input" | "output" | "default">
+  | Node<Record<string, never>, "group">;
+
 export type BuiltInNodeTypes = {
   input: (props: NodeProps<{ label: string }, "input">) => JSX.Element;
   output: (props: NodeProps<{ label: string }, "output">) => JSX.Element;

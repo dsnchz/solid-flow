@@ -1,7 +1,4 @@
-import { Position } from "@xyflow/system";
-
-import { Handle, NodeToolbar } from "@/components";
-import type { NodeProps } from "@/types";
+import { Handle, type NodeProps, NodeToolbar, Position } from "@/index";
 
 export type CustomNodeData = {
   toolbarVisible?: boolean;
@@ -36,8 +33,8 @@ export const CustomNode = (props: NodeProps<CustomNodeData, "custom">) => {
         }}
       >
         <div>{props.data.label}</div>
-        <Handle type="target" position={Position.Left} />
-        <Handle type="source" position={Position.Right} />
+        <Handle type="target" position="left" />
+        <Handle type="source" position="right" />
       </div>
     </>
   );

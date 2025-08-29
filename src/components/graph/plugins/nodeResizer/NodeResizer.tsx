@@ -8,7 +8,7 @@ import {
 } from "@xyflow/system";
 import { For, type JSX, mergeProps, Show, splitProps } from "solid-js";
 
-import ResizeControl from "./ResizeControl";
+import { ResizeControl } from "./ResizeControl";
 
 export type NodeResizerProps = {
   /** Id of the node it is resizing
@@ -47,7 +47,7 @@ export type NodeResizerProps = {
   readonly onResizeEnd?: OnResizeEnd;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
-const NodeResizer = (props: Partial<NodeResizerProps>) => {
+export const NodeResizer = (props: Partial<NodeResizerProps>) => {
   const _props = mergeProps(
     {
       autoScale: true,
@@ -84,5 +84,3 @@ const NodeResizer = (props: Partial<NodeResizerProps>) => {
     </Show>
   );
 };
-
-export default NodeResizer;

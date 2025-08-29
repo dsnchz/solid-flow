@@ -1,8 +1,6 @@
-import type { Connection } from "@xyflow/system";
 import { createEffect } from "solid-js";
 
-import { Handle, useNodeConnections } from "@/index";
-import type { NodeProps } from "@/types";
+import { type Connection, Handle, type NodeProps, useNodeConnections } from "@/index";
 
 export const MultiHandleNode = (props: NodeProps) => {
   const onConnectTarget = (connection: Connection[]) => {
