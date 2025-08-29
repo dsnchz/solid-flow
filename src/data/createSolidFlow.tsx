@@ -77,7 +77,6 @@ import { createWritable, createWritableStore } from "~/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
-import { getVisibleNodes } from "./utils";
 import {
   addConnectionToLookup,
   adoptUserNodes,
@@ -373,9 +372,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /**********************************************************************************/
 
   const visibleNodesMap = createMemo<Map<string, InternalNode>>(() => {
-    if (store.onlyRenderVisibleElements) {
-      return getVisibleNodes(nodeLookup, transform(), store.width ?? 0, store.height ?? 0);
-    }
+    // TODO: Refine onlyRenderVisibleElements implementation
+    // if (store.onlyRenderVisibleElements) {
+    //   return getVisibleNodes(nodeLookup, transform(), store.width ?? 0, store.height ?? 0);
+    // }
     return nodeLookup;
   });
 

@@ -16,6 +16,7 @@
 ## Current Unsupported Features:
 
 - `onlyRenderVisibleElements` prop: the ability to only render visible elements on screen.
+  - Note: The prop is defined as part of `SolidFlow` but it is a no-op. During development and benchmarking, it was revealed that use of it degraded rendering performance due to the amount of work done to actually achieve the outcome of the feature. We need to innovate on the implementation to make the performance comparable (ideally better) to the normal performance of rendering all the nodes/edges on screen. As such it is a no-op prop for now.
 - Custom MiniMap nodes: the ability to render custom node visuals in the minimap
 - Edge Reconnect Anchors: the ability to re-connect already connected edges
 
@@ -44,8 +45,16 @@ npm install @dschz/solid-flow
 This is a basic example to get you started. For more advanced examples and full API documentation, explore the playground examples included in this repository.
 
 ```tsx
-import { addEdge, type EdgeConnection, createEdgeStore, createNodeStore } from "@dschz/solid-flow";
-import { SolidFlow, Controls, Background, MiniMap } from "@dschz/solid-flow";
+import {
+  SolidFlow,
+  Controls,
+  Background,
+  MiniMap,
+  addEdge,
+  type EdgeConnection,
+  createEdgeStore,
+  createNodeStore,
+} from "@dschz/solid-flow";
 import "@dschz/solid-flow/styles"; // Required styles
 
 export default function Flow() {
