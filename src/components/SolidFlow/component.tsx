@@ -224,6 +224,8 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   const { store, actions } = solidFlow;
 
   onMount(() => {
+    actions.applyInitialFitView(flowProps.fitView);
+
     batch(() => {
       actions.setConfig(_props);
       actions.setDomNode(domNode);

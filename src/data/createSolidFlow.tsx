@@ -432,7 +432,12 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     edgesMemo.set((edges) => systemAddEdge(edgeParams, edges));
   };
 
-  let initialized = false;
+  let initialFitViewApplied = false;
+
+  const applyInitialFitView = (initialFitView: boolean) => {
+    initialFitViewApplied = !initialFitView;
+  };
+
   const updateNodePositions = (
     nodeDragItems: Map<string, NodeDragItem | InternalNodeBase<NodeType>>,
     dragging = false,
@@ -510,8 +515,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           }),
         );
 
-        if (!initialized) {
-          initialized = true;
+        if (!initialFitViewApplied) {
+          initialFitViewApplied = true;
           void fitView();
         }
       });
@@ -981,6 +986,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     connectionLookup,
     actions: {
       getEdge,
+      applyInitialFitView,
       resetStoreValues,
       requestUpdateNodeInternals,
       setAriaLabelConfig,
