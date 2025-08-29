@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 
-import { Background, Controls, createNodeStore, Panel, SolidFlow } from "@/index";
+import { Background, Controls, createNodeStore, Panel, SolidFlow } from "~/index";
 
 import { CustomResizerNode } from "./components/CustomResizer";
 import { DefaultResizerNode } from "./components/DefaultResizer";

@@ -9,7 +9,7 @@ import {
   SolidFlow,
   useNodeConnections,
   useSolidFlow,
-} from "@/index";
+} from "~/index";
 
 export const AddNodeOnDropExample = () => {
   const [nodes] = createNodeStore([

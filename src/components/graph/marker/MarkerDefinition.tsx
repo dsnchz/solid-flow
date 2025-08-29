@@ -1,7 +1,7 @@
 import { createMarkerIds } from "@xyflow/system";
 import { createMemo, For, Show } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts";
+import { useInternalSolidFlow } from "~/components/contexts";
 
 import { Marker, type MarkerProps } from "./Marker";
 

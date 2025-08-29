@@ -1,7 +1,6 @@
 import { For } from "solid-js";
 
-import type { DefaultEdgeOptions, Edge, EdgeEvents, Node } from "@/types";
-
+import type { DefaultEdgeOptions, Edge, EdgeEvents, Node } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
 import { EdgeWrapper } from "../graph/edge";
 import { MarkerDefinition } from "../graph/marker";

@@ -7,7 +7,7 @@ import {
   MarkerType,
   type NodeTypes,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 import CustomConnectionLine from "./CustomConnectionLine";
 import CustomNode from "./CustomNode";

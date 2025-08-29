@@ -2,8 +2,8 @@ import clsx from "clsx";
 import type { JSX, ParentProps } from "solid-js";
 import { mergeProps, splitProps } from "solid-js";
 
-import { useEdgeId, useInternalSolidFlow } from "@/components/contexts";
-import { toPxString } from "@/utils";
+import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
+import { toPxString } from "~/utils";
 
 import { EdgeLabelRenderer } from "./EdgeLabelRenderer";
 

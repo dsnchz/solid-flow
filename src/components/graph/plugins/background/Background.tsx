@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { type JSX, mergeProps, Show } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts";
+import { useInternalSolidFlow } from "~/components/contexts";
 
 import { DotPattern } from "./DotPattern";
 import { LinePattern } from "./LinePattern";

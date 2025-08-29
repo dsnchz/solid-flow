@@ -1,8 +1,8 @@
 import { areConnectionMapsEqual, type HandleType, type NodeConnection } from "@xyflow/system";
 import { type Accessor, createEffect, createSignal, useContext } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts";
-import { NodeIdContext } from "@/components/contexts/nodeId";
+import { useInternalSolidFlow } from "~/components/contexts";
+import { NodeIdContext } from "~/components/contexts/nodeId";
 
 type UseNodeConnectionsParams = {
   id?: string;

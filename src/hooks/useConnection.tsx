@@ -1,7 +1,7 @@
 import type { ConnectionState } from "@xyflow/system";
 import type { Accessor } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts";
+import { useInternalSolidFlow } from "~/components/contexts";
 
 /**
  * Hook for receiving the current connection.

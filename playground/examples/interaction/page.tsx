@@ -8,7 +8,7 @@ import {
   Panel,
   PanOnScrollMode,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 export const Interaction = () => {
   const [nodes] = createNodeStore([

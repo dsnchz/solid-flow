@@ -1,4 +1,4 @@
-import { Handle, type NodeProps } from "@/index";
+import { Handle, type NodeProps } from "~/index";
 
 export const DebugNode = (props: NodeProps) => {
   return (

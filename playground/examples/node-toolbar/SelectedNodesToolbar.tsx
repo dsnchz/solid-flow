@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 
-import { NodeToolbar, useNodes } from "@/index";
+import { NodeToolbar, useNodes } from "~/index";
 
 export const SelectedNodesToolbar = () => {
   const nodes = useNodes();

@@ -8,9 +8,8 @@ import {
 } from "@xyflow/system";
 import { Show } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts/flow";
-import type { Edge, EdgeReconnectEvents } from "@/types";
-
+import type { Edge, EdgeReconnectEvents } from "../../../types";
+import { useInternalSolidFlow } from "../../contexts";
 import { EdgeAnchor } from "./EdgeAnchor";
 
 type EdgeUpdateAnchorsProps<EdgeType extends Edge = Edge> = EdgePosition & {

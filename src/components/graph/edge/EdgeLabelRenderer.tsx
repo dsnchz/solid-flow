@@ -1,7 +1,7 @@
 import { type ParentProps, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 
-import { useInternalSolidFlow } from "@/components/contexts";
+import { useInternalSolidFlow } from "~/components/contexts";
 
 export const EdgeLabelRenderer = (props: ParentProps) => {
   const { store } = useInternalSolidFlow();

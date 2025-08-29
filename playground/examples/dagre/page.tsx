@@ -8,7 +8,7 @@ import {
   Panel,
   Position,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));

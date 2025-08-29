@@ -1,6 +1,6 @@
 import { createEffect, createMemo, untrack } from "solid-js";
 
-import { Handle, type NodeProps, useNodeConnections, useNodesData, useSolidFlow } from "@/index";
+import { Handle, type NodeProps, useNodeConnections, useNodesData, useSolidFlow } from "~/index";
 
 import { isTextNode, type MyNode } from "./types";
 

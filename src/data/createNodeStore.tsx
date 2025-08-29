@@ -1,6 +1,6 @@
 import { createStore, type SetStoreFunction, type Store } from "solid-js/store";
 
-import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes } from "../types";
+import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes } from "~/types";
 
 // Extract the data and type from a node component's props
 type ExtractNodeInfo<T> = T extends (props: NodeProps<infer TData, infer TType>) => unknown

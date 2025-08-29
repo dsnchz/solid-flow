@@ -1,4 +1,4 @@
-import { type Connection, Handle, type NodeProps } from "@/index";
+import { type Connection, Handle, type NodeProps } from "~/index";
 
 export const SingleHandleNode = (props: NodeProps) => {
   const onConnectTarget = (connection: Connection[]) => {

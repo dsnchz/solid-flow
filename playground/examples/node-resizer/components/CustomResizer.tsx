@@ -1,4 +1,4 @@
-import { Handle, type NodeProps, ResizeControl } from "@/index";
+import { Handle, type NodeProps, ResizeControl } from "~/index";
 
 import ResizeIcon from "./ResizeIcon";
 import type { ResizerData } from "./types";

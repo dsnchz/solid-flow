@@ -1,9 +1,8 @@
 import { type OnDrag, XYDrag } from "@xyflow/system";
-import type { Accessor } from "solid-js";
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { type Accessor, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts/flow";
-import type { Node } from "@/types";
+import { useInternalSolidFlow } from "../components/contexts/flow";
+import type { Node } from "../types";
 
 export type CreateDraggableParams = {
   readonly disabled: boolean;

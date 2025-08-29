@@ -8,7 +8,7 @@ import {
   Panel,
   SolidFlow,
   useSolidFlow,
-} from "@/index";
+} from "~/index";
 
 import { CustomNode } from "./CustomNode";
 

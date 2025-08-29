@@ -2,10 +2,10 @@ import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
 import clsx from "clsx";
 import { createEffect, createSignal, Show } from "solid-js";
 
-import createDraggable from "@/actions/createDraggable";
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { Node, NodeEvents, NodeSelectionEvents } from "@/types";
-import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
+import createDraggable from "~/actions/createDraggable";
+import { useInternalSolidFlow } from "~/components/contexts";
+import type { Node, NodeEvents, NodeSelectionEvents } from "~/types";
+import { ARROW_KEY_DIFFS, toPxString } from "~/utils";
 
 import { Selection } from "./Selection";
 

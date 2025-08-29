@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
 
-import { Handle, type NodeProps, useConnection } from "@/index";
+import { Handle, type NodeProps, useConnection } from "~/index";
 
 const sourceHandleStyle: JSX.CSSProperties = {
   position: "relative",

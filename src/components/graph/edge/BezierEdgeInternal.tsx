@@ -1,7 +1,6 @@
 import { getBezierPath } from "@xyflow/system";
 
-import type { BezierEdgeProps } from "@/types";
-
+import type { BezierEdgeProps } from "../../../types";
 import { BaseEdge } from "./BaseEdge";
 
 export const BezierEdgeInternal = (props: BezierEdgeProps) => {

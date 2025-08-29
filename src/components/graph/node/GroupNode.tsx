@@ -1,5 +1,5 @@
-import type { NodeProps } from "@/types";
-import { toPxString } from "@/utils";
+import type { NodeProps } from "../../../types";
+import { toPxString } from "../../../utils";
 
 export const GroupNode = (props: NodeProps<Record<string, never>>) => (
   <div

@@ -9,8 +9,8 @@ import {
 } from "@xyflow/system";
 import { batch, createEffect, onMount, type ParentProps } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { PanOnScrollMode } from "@/types";
+import type { PanOnScrollMode } from "../../types";
+import { useInternalSolidFlow } from "../contexts";
 
 export type ZoomProps = {
   readonly initialViewport?: Viewport;

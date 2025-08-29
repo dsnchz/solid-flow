@@ -10,7 +10,7 @@ import {
   useSolidFlow,
   useViewport,
   type Viewport,
-} from "@/index";
+} from "~/index";
 
 export const TwoWayViewport = () => {
   const [nodes] = createNodeStore([

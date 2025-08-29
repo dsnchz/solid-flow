@@ -11,7 +11,7 @@ import {
   Position,
   SolidFlow,
   useSolidFlow,
-} from "@/index";
+} from "~/index";
 
 // Custom Node Components
 const ProcessNode = (props: NodeProps<{ label: string }, "process">) => {

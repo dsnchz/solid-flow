@@ -5,7 +5,7 @@ import {
   createNodeStore,
   MiniMap,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 import { Flow } from "./Flow";
 

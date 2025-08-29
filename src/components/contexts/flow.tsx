@@ -1,7 +1,7 @@
 import { createContext, useContext } from "solid-js";
 
-import { createSolidFlow } from "@/data/createSolidFlow";
-import type { Edge, Node } from "@/types";
+import { createSolidFlow } from "../../data/createSolidFlow";
+import type { Edge, Node } from "../../types";
 
 export type SolidFlowContextValue<
   NodeType extends Node = Node,

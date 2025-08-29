@@ -30,7 +30,7 @@
     /* Types */
     "types": ["vite/client", "bun-types", "@testing-library/jest-dom"],
     "paths": {
-      "@/*": ["./src/*"]
+      "~/*": ["./src/*"]
     }
   },
   "exclude": ["node_modules", "coverage", "dist"]

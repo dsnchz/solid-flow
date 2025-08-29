@@ -58,9 +58,9 @@ import {
   SmoothStepEdgeInternal,
   StepEdgeInternal,
   StraightEdgeInternal,
-} from "@/components/graph/edge";
-import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/graph/node";
-import type { SolidFlowProps } from "@/components/SolidFlow/types";
+} from "~/components/graph/edge";
+import { DefaultNode, GroupNode, InputNode, OutputNode } from "~/components/graph/node";
+import type { SolidFlowProps } from "~/components/SolidFlow/types";
 import type {
   BuiltInEdgeTypes,
   BuiltInNodeTypes,
@@ -72,8 +72,8 @@ import type {
   Node,
   NodeGraph,
   NodeTypes,
-} from "@/types";
-import { createWritable, createWritableStore } from "@/utils";
+} from "~/types";
+import { createWritable, createWritableStore } from "~/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";

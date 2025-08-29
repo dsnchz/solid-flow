@@ -7,7 +7,7 @@ import {
   EdgeReconnectAnchor,
   getBezierPath,
   useSolidFlow,
-} from "@/index";
+} from "~/index";
 
 export const ButtonEdge = (props: EdgeProps) => {
   const { updateEdge } = useSolidFlow();

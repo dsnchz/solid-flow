@@ -1,4 +1,4 @@
-import { Background, Controls, createNodeStore, MiniMap, SolidFlow } from "@/index";
+import { Background, Controls, createNodeStore, MiniMap, SolidFlow } from "~/index";
 
 export const Reset = () => {
   const [nodes, setNodes] = createNodeStore([]);

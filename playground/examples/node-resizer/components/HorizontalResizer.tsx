@@ -1,4 +1,4 @@
-import { Handle, type NodeProps, ResizeControl } from "@/index";
+import { Handle, type NodeProps, ResizeControl } from "~/index";
 
 import type { ResizerData } from "./types";
 

@@ -1,4 +1,4 @@
-import type { OnResize, OnResizeEnd, OnResizeStart, ShouldResize } from "@/index";
+import type { OnResize, OnResizeEnd, OnResizeStart, ShouldResize } from "~/index";
 
 export type ResizerData = {
   readonly label?: string;

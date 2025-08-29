@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 
-import { useEdges, useNodes, useSolidFlow, useViewport } from "@/index";
+import { useEdges, useNodes, useSolidFlow, useViewport } from "~/index";
 
 export const Flow = () => {
   const {

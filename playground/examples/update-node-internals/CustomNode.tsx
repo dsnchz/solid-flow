@@ -1,6 +1,6 @@
 import { createSignal, For } from "solid-js";
 
-import { Handle, type NodeProps, Position, useUpdateNodeInternals } from "@/index";
+import { Handle, type NodeProps, Position, useUpdateNodeInternals } from "~/index";
 
 export const CustomNode = (props: NodeProps) => {
   const updateNodeInternals = useUpdateNodeInternals();

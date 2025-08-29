@@ -10,7 +10,7 @@ import {
   MiniMap,
   type Node,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 import { ButtonEdge } from "./ButtonEdge";
 import { CustomEdge } from "./CustomEdge";

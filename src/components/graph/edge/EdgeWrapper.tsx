@@ -3,10 +3,10 @@ import clsx from "clsx";
 import { Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
-import { useInternalSolidFlow } from "@/components/contexts";
-import { EdgeIdContext } from "@/components/contexts/edgeId";
-import type { Edge, EdgeEvents, Node } from "@/types";
+import type { Edge, EdgeEvents, Node } from "../../../types";
+import { ARIA_EDGE_DESC_KEY } from "../../accessibility";
+import { useInternalSolidFlow } from "../../contexts";
+import { EdgeIdContext } from "../../contexts/edgeId";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
   readonly edgeId: string;

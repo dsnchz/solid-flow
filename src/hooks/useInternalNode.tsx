@@ -1,7 +1,7 @@
 import type { Accessor } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { InternalNode } from "@/types";
+import { useInternalSolidFlow } from "~/components/contexts";
+import type { InternalNode } from "~/types";
 
 /**
  * Hook to get an internal node by id.

@@ -6,7 +6,7 @@ import {
   MiniMap,
   type NodeTypes,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 import { MultiHandleNode } from "./MultiHandleNode";
 import { SingleHandleNode } from "./SingleHandleNode";

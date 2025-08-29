@@ -2,9 +2,9 @@ import { ConnectionMode, type HandleType, XYHandle, type XYPosition } from "@xyf
 import clsx from "clsx";
 import { createSignal, type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
 
-import { useEdgeId, useInternalSolidFlow } from "@/components/contexts";
-import type { Edge } from "@/types";
-import { toPxString } from "@/utils";
+import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
+import type { Edge } from "~/types";
+import { toPxString } from "~/utils";
 
 import { EdgeLabel } from "./EdgeLabel";
 

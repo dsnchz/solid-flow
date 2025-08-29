@@ -1,6 +1,6 @@
 import { type Component, createSignal } from "solid-js";
 
-import { createEdgeStore, createNodeStore, SolidFlow, SolidFlowProvider } from "@/index";
+import { createEdgeStore, createNodeStore, SolidFlow, SolidFlowProvider } from "~/index";
 
 const SwitchFlow: Component = () => {
   const [nodesA] = createNodeStore([

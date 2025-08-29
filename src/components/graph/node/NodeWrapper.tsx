@@ -10,13 +10,13 @@ import clsx from "clsx";
 import { batch, createEffect, createSignal, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import createDraggable from "@/actions/createDraggable";
-import { ARIA_NODE_DESC_KEY } from "@/components/accessibility";
-import { useInternalSolidFlow } from "@/components/contexts";
-import { NodeConnectableContext } from "@/components/contexts/nodeConnectable";
-import { NodeIdContext } from "@/components/contexts/nodeId";
-import type { Node, NodeEvents } from "@/types";
-import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
+import createDraggable from "../../../actions/createDraggable";
+import type { Node, NodeEvents } from "../../../types";
+import { ARROW_KEY_DIFFS, toPxString } from "../../../utils";
+import { ARIA_NODE_DESC_KEY } from "../../accessibility";
+import { useInternalSolidFlow } from "../../contexts";
+import { NodeConnectableContext } from "../../contexts/nodeConnectable";
+import { NodeIdContext } from "../../contexts/nodeId";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
   readonly nodeId: string;

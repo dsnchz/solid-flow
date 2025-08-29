@@ -6,7 +6,7 @@ import {
   Panel,
   SolidFlow,
   useConnection,
-} from "@/index";
+} from "~/index";
 
 export const UseConnection = () => {
   const connection = useConnection();

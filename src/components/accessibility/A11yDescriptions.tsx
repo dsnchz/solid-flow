@@ -1,7 +1,6 @@
 import { Show } from "solid-js";
 
-import type { Edge, Node } from "@/types";
-
+import type { Edge, Node } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
 import { ARIA_EDGE_DESC_KEY, ARIA_LIVE_MESSAGE, ARIA_NODE_DESC_KEY } from "./constants";
 

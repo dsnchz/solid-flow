@@ -2,10 +2,9 @@ import type { PanelPosition } from "@xyflow/system";
 import clsx from "clsx";
 import { batch, type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
 
-import { Panel } from "@/components/container";
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { FitViewOptions } from "@/types";
-
+import type { FitViewOptions } from "../../../../types";
+import { Panel } from "../../../container";
+import { useInternalSolidFlow } from "../../../contexts";
 import { ControlButton } from "./ControlButton";
 import { Fit, Lock, Minus, Plus, Unlock } from "./icons";
 

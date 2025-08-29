@@ -1,7 +1,7 @@
 import type { UpdateNodeInternals } from "@xyflow/system";
 
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { InternalUpdateEntry } from "@/data/types";
+import { useInternalSolidFlow } from "~/components/contexts";
+import type { InternalUpdateEntry } from "~/data/types";
 
 /**
  * Hook for updating node internals.

@@ -1,7 +1,7 @@
 import type { InternalNodeUpdate } from "@xyflow/system";
 import type { SetStoreFunction, Store } from "solid-js/store";
 
-import type { Edge, Node } from "@/types";
+import type { Edge, Node } from "~/types";
 
 import type { createSolidFlow } from "./createSolidFlow";
 

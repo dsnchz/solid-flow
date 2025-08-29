@@ -1,4 +1,4 @@
-import type { Node } from "@/types";
+import type { Node } from "~/index";
 
 export type TextNodeType = Node<{ text: string }, "text">;
 export type UppercaseNodeType = Node<{ text: string }, "uppercase">;

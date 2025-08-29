@@ -23,15 +23,6 @@ const viteConfig = defineViteConfig({
     conditions: ["development", "browser"],
     alias: {
       "~": path.resolve(__dirname, "./src"),
-      "@/index": path.resolve(__dirname, "./src/index.tsx"),
-      "@/actions": path.resolve(__dirname, "./src/actions"),
-      "@/components": path.resolve(__dirname, "./src/components"),
-      "@/data": path.resolve(__dirname, "./src/data"),
-      "@/hooks": path.resolve(__dirname, "./src/hooks"),
-      "@/shared": path.resolve(__dirname, "./src/shared"),
-      "@/styles": path.resolve(__dirname, "./src/styles"),
-      "@/types": path.resolve(__dirname, "./src/types"),
-      "@/utils": path.resolve(__dirname, "./src/utils"),
     },
   },
 });

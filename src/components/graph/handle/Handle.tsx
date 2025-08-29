@@ -17,10 +17,10 @@ import clsx from "clsx";
 import { createEffect, type JSX, mergeProps, type ParentProps, splitProps } from "solid-js";
 import { unwrap } from "solid-js/store";
 
-import { useInternalSolidFlow, useNodeId } from "@/components/contexts";
-import { useNodeConnectable } from "@/components/contexts/nodeConnectable";
-import { getEdgeId } from "@/data/utils";
-import type { Edge, Node, Position } from "@/types";
+import { getEdgeId } from "../../../data/utils";
+import type { Edge, Node, Position } from "../../../types";
+import { useInternalSolidFlow, useNodeId } from "../../contexts";
+import { useNodeConnectable } from "../../contexts/nodeConnectable";
 
 type HandleProps = Omit<SystemHandleProps, "position"> & {
   readonly position: Position;

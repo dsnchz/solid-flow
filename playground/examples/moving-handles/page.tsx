@@ -7,12 +7,12 @@ import {
   Controls,
   createEdgeStore,
   createNodeStore,
+  type EdgeConnection,
   SolidFlow,
   useConnection,
   useSolidFlow,
   useUpdateNodeInternals,
-} from "@/index";
-import type { EdgeConnection } from "@/types";
+} from "~/index";
 
 import { MovingHandleNode } from "./MovingHandleNode";
 

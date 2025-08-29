@@ -1,5 +1,5 @@
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { Edge, Node } from "@/types";
+import { useInternalSolidFlow } from "~/components/contexts";
+import type { Edge, Node } from "~/types";
 
 /**
  * Hook for getting the current nodes from the store.

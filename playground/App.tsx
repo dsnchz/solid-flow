@@ -1,10 +1,10 @@
-import "@/styles/style.css";
+import "~/styles/style.css";
 
 import { Route, Router, useSearchParams } from "@solidjs/router";
 import { ErrorBoundary } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import { SolidFlowProvider } from "@/components";
+import { SolidFlowProvider } from "~/index";
 
 import { AppStateBar } from "./AppStateBar";
 import { SolidFlowExamplesMap } from "./constants";

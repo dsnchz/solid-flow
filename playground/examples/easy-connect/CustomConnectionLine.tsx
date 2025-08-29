@@ -1,4 +1,4 @@
-import { type ConnectionLineComponentProps, getStraightPath } from "@/index";
+import { type ConnectionLineComponentProps, getStraightPath } from "~/index";
 
 export default function CustomConnectionLine(props: ConnectionLineComponentProps) {
   const edgePath = () => {

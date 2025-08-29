@@ -5,7 +5,7 @@ import {
   createNodeStore,
   Position,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 export const Validation = () => {
   const [nodes] = createNodeStore([

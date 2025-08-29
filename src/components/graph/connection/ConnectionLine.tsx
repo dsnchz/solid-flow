@@ -7,9 +7,8 @@ import {
 import clsx from "clsx";
 import { type JSX, type ParentProps, Show } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { Node } from "@/types";
-
+import type { Node } from "../../../types";
+import { useInternalSolidFlow } from "../../contexts";
 import type { ConnectionLineComponentProps, ConnectionLineType } from "./types";
 
 type ConnectionLineProps<NodeType extends Node = Node> = {

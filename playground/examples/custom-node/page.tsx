@@ -10,7 +10,7 @@ import {
   type NodeTypes,
   Position,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 import { CustomColorNode } from "./CustomColorNode";
 

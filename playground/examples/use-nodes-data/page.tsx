@@ -6,7 +6,7 @@ import {
   MiniMap,
   type NodeTypes,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 import { ResultNode } from "./components/ResultNode";
 import { TextNode } from "./components/TextNode";

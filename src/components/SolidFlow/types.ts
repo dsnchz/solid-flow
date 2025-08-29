@@ -21,6 +21,7 @@ import type {
 import type { JSX } from "solid-js";
 import type { Store } from "solid-js/store";
 
+import type { ConnectionLineComponentProps } from "~/components/graph/connection/types";
 import type {
   ConnectionLineType,
   ConnectionMode,
@@ -45,9 +46,7 @@ import type {
   PaneEvents,
   PanOnScrollMode,
   SelectionMode,
-} from "@/types";
-
-import type { ConnectionLineComponentProps } from "../graph/connection/types";
+} from "~/types";
 
 export type SolidFlowInitialProps = {
   readonly initialNodes: Node[];

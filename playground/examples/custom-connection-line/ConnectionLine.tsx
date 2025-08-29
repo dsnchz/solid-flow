@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 
-import { getBezierPath, useConnection } from "@/index";
+import { getBezierPath, useConnection } from "~/index";
 
 export const ConnectionLine = () => {
   const connection = useConnection();

@@ -1,6 +1,6 @@
 import { mergeProps, Show } from "solid-js";
 
-import { toPxString } from "@/utils";
+import { toPxString } from "~/utils";
 
 type SelectionProps = {
   readonly x?: number;

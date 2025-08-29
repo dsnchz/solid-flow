@@ -2,7 +2,7 @@ import "./CustomEdge3.css";
 
 import { createMemo } from "solid-js";
 
-import { BaseEdge, EdgeLabel, type EdgeProps, getSmoothStepPath } from "@/index";
+import { BaseEdge, EdgeLabel, type EdgeProps, getSmoothStepPath } from "~/index";
 
 export const CustomEdge3 = (props: EdgeProps<{ text: string }>) => {
   const pathData = createMemo(() => {

@@ -1,8 +1,7 @@
 import clsx from "clsx";
 import { mergeProps, type ParentProps, Show, splitProps } from "solid-js";
 
-import type { BaseEdgeProps } from "@/types";
-
+import type { BaseEdgeProps } from "../../../types";
 import { EdgeLabel } from "./EdgeLabel";
 
 export const BaseEdge = (props: ParentProps<BaseEdgeProps>) => {

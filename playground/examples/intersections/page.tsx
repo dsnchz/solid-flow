@@ -1,6 +1,6 @@
 import { reconcile } from "solid-js/store";
 
-import { Background, Controls, createNodeStore, SolidFlow, useSolidFlow } from "@/index";
+import { Background, Controls, createNodeStore, SolidFlow, useSolidFlow } from "~/index";
 
 export function Intersections() {
   const { getIntersectingNodes } = useSolidFlow();

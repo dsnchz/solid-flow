@@ -1,4 +1,4 @@
-import { Handle, type NodeProps } from "@/index";
+import { Handle, type NodeProps } from "~/index";
 
 const handleStyle = {
   width: "10px",

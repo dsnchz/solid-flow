@@ -21,9 +21,9 @@ import {
   splitProps,
 } from "solid-js";
 
-import { Panel } from "@/components/container";
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { Node } from "@/types";
+import { Panel } from "~/components/container";
+import { useInternalSolidFlow } from "~/components/contexts";
+import type { Node } from "~/types";
 
 import { MiniMapNode } from "./MiniMapNode";
 

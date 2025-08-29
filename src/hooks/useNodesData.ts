@@ -1,8 +1,8 @@
 import { shallowNodeData } from "@xyflow/system";
 import { type Accessor, createMemo } from "solid-js";
 
-import { useInternalSolidFlow } from "@/components/contexts";
-import type { Node } from "@/types";
+import { useInternalSolidFlow } from "~/components/contexts";
+import type { Node } from "~/types";
 
 type NodeData<NodeType extends Node> = Pick<NodeType, "id" | "data" | "type">;
 

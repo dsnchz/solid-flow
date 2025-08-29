@@ -1,6 +1,6 @@
 import { createEffect } from "solid-js";
 
-import { type Connection, Handle, type NodeProps, useNodeConnections } from "@/index";
+import { type Connection, Handle, type NodeProps, useNodeConnections } from "~/index";
 
 export const MultiHandleNode = (props: NodeProps) => {
   const onConnectTarget = (connection: Connection[]) => {

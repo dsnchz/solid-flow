@@ -16,7 +16,7 @@ import {
   Position,
   SolidFlow,
   useSolidFlow,
-} from "@/index";
+} from "~/index";
 
 // Custom Node Component
 const CustomNode = (props: NodeProps<{ label: string }, "custom">) => {

@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 
-import { Background, type ColorMode, Controls, MiniMap, Panel, SolidFlow } from "@/index";
+import { Background, type ColorMode, Controls, MiniMap, Panel, SolidFlow } from "~/index";
 
 export function ColorMode() {
   const [nodes] = createSignal([

@@ -1,4 +1,4 @@
-import { Handle, type NodeProps, NodeToolbar, Position } from "@/index";
+import { Handle, type NodeProps, NodeToolbar, Position } from "~/index";
 
 export type CustomNodeData = {
   toolbarVisible?: boolean;

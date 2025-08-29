@@ -5,7 +5,7 @@ import {
   type NodeTypes,
   Position,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 import { CustomNode, type CustomNodeData } from "./CustomNode";
 import { SelectedNodesToolbar } from "./SelectedNodesToolbar";

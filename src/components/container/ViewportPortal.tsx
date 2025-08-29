@@ -2,7 +2,7 @@ import type { ParentProps } from "solid-js";
 import { Show } from "solid-js";
 import { Portal } from "solid-js/web";
 
-import { useInternalSolidFlow } from "@/components/contexts";
+import { useInternalSolidFlow } from "~/components/contexts";
 
 export const ViewportPortal = (props: ParentProps) => {
   const { store } = useInternalSolidFlow();

@@ -1,6 +1,6 @@
 import { createMemo } from "solid-js";
 
-import { BaseEdge, EdgeLabel, type EdgeProps, getBezierPath } from "@/index";
+import { BaseEdge, EdgeLabel, type EdgeProps, getBezierPath } from "~/index";
 
 export const CustomEdge2 = (props: EdgeProps<{ text: string }>) => {
   const pathData = createMemo(() => {

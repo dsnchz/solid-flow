@@ -8,7 +8,7 @@ import {
   MiniMap,
   Panel,
   SolidFlow,
-} from "@/index";
+} from "~/index";
 
 export const A11y = () => {
   const [nodes] = createNodeStore([

@@ -1,6 +1,6 @@
 import { type Accessor, type Setter } from "solid-js";
 
-import { Handle, type NodeProps } from "@/index";
+import { Handle, type NodeProps } from "~/index";
 
 type CustomColorNodeData = {
   backgroundColor: Accessor<string>;

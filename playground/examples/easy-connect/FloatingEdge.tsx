@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 
-import { type EdgeProps, getStraightPath, useInternalNode } from "@/index";
+import { type EdgeProps, getStraightPath, useInternalNode } from "~/index";
 
 import { getEdgeParams } from "./utils";
 

@@ -2,10 +2,10 @@ import { type Align, getNodeToolbarTransform, Position as SystemPosition } from 
 import { type JSX, mergeProps, type ParentComponent, Show, splitProps, useContext } from "solid-js";
 import { Portal } from "solid-js/web";
 
-import { useInternalSolidFlow } from "@/components/contexts";
-import { NodeIdContext } from "@/components/contexts/nodeId";
-import { useSolidFlow } from "@/hooks";
-import type { InternalNode, Position } from "@/types";
+import { useSolidFlow } from "../../../hooks";
+import type { InternalNode, Position } from "../../../types";
+import { useInternalSolidFlow } from "../../contexts";
+import { NodeIdContext } from "../../contexts/nodeId";
 
 export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
   /** The id of the node, or array of ids the toolbar should be displayed at */

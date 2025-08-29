@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 
-import { Handle, type NodeProps, useNodeConnections, useNodesData } from "@/index";
+import { Handle, type NodeProps, useNodeConnections, useNodesData } from "~/index";
 
 import { isTextNode, type MyNode } from "./types";
 

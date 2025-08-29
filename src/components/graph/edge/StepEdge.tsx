@@ -1,8 +1,7 @@
 import { getSmoothStepPath } from "@xyflow/system";
 import { createMemo } from "solid-js";
 
-import type { StepEdgeProps } from "@/types";
-
+import type { StepEdgeProps } from "../../../types";
 import { BaseEdge } from "./BaseEdge";
 
 export const StepEdge = (props: StepEdgeProps) => {

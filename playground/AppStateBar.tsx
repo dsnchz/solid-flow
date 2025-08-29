@@ -1,7 +1,7 @@
 import { useSearchParams } from "@solidjs/router";
 import { For, type JSX } from "solid-js";
 
-import { useSolidFlow } from "@/hooks";
+import { useSolidFlow } from "~/index";
 
 import { SolidFlowExamplesMap } from "./constants";
 

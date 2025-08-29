@@ -1,8 +1,7 @@
 import { getStraightPath } from "@xyflow/system";
 import { createMemo } from "solid-js";
 
-import type { StraightEdgeProps } from "@/types";
-
+import type { StraightEdgeProps } from "../../../types";
 import { BaseEdge } from "./BaseEdge";
 
 export const StraightEdge = (props: StraightEdgeProps) => {

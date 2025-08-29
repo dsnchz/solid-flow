@@ -7,7 +7,7 @@ import {
   MiniMap,
   SolidFlow,
   useSolidFlow,
-} from "@/index";
+} from "~/index";
 
 import { Sidebar } from "./Sidebar";
 
