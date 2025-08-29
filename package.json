@@ -1,6 +1,6 @@
 {
   "name": "@dschz/solid-flow",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Solid Flow - A highly customizable Solid library for building node-based editors, workflow systems, diagrams and more.",
   "type": "module",
   "author": "Daniel Sanchez <dsanc89@icloud.com>",
@@ -38,6 +38,9 @@
     "format:fix": "prettier . --write",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "pkg:changeset": "changeset",
+    "pkg:version": "changeset version",
+    "pkg:publish": "bun run build && changeset publish",
     "serve": "vite preview",
     "start": "vite",
     "test": "vitest run",
@@ -45,6 +48,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.6",
     "@dagrejs/dagre": "^1.1.5",
     "@solidjs/router": "^0.15.3",
     "@solidjs/testing-library": "^0.8.10",
