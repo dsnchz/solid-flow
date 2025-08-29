@@ -1,7 +1,7 @@
 import type { InternalNodeBase, NodeBase, NodeProps as NodePropsBase } from "@xyflow/system";
 import type { JSX } from "solid-js";
 
-type UnknownStruct = Record<string, unknown>;
+import type { UnknownStruct } from "./custom";
 
 /**
  * The node data structure that gets used for internal nodes.

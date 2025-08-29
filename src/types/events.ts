@@ -3,7 +3,7 @@ import type { FinalConnectionState, HandleType, OnReconnect } from "@xyflow/syst
 import type { Edge } from "./edge";
 import type { Node } from "./node";
 
-export type NodeEventWithPointer<T = PointerEvent, NodeType extends Node = Node> = ({
+type NodeEventWithPointer<T = PointerEvent, NodeType extends Node = Node> = ({
   node,
   event,
 }: {
@@ -11,7 +11,7 @@ export type NodeEventWithPointer<T = PointerEvent, NodeType extends Node = Node>
   event: T;
 }) => void;
 
-export type NodesEventWithPointer<T = PointerEvent, NodeType extends Node = Node> = ({
+type NodesEventWithPointer<T = PointerEvent, NodeType extends Node = Node> = ({
   nodes,
   event,
 }: {
@@ -19,7 +19,7 @@ export type NodesEventWithPointer<T = PointerEvent, NodeType extends Node = Node
   event: T;
 }) => void;
 
-export type NodeTargetEventWithPointer<T = PointerEvent, NodeType extends Node = Node> = ({
+type NodeTargetEventWithPointer<T = PointerEvent, NodeType extends Node = Node> = ({
   targetNode,
   nodes,
   event,

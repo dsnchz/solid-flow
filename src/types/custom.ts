@@ -3,6 +3,8 @@ import type { JSX } from "solid-js";
 
 import type { InternalNode, Node } from "./node";
 
+export type UnknownStruct = Record<string, unknown>;
+
 export type ConnectionLineType = `${SystemConnectionLineType}`;
 
 /**

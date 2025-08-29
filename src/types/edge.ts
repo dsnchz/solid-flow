@@ -8,9 +8,8 @@ import type {
 } from "@xyflow/system";
 import type { JSX } from "solid-js";
 
+import type { UnknownStruct } from "./custom";
 import type { Node } from "./node";
-
-type UnknownStruct = Record<string, unknown>;
 
 /**
  * An `Edge` is the complete description with everything Svelte Flow needs to know in order to
