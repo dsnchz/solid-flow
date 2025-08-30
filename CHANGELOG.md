@@ -1,5 +1,11 @@
 # @dschz/solid-flow
 
+## 0.1.3
+
+### Patch Changes
+
+- updates css export path
+
 ## 0.1.2
 
 ### Patch Changes
