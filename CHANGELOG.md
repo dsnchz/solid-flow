@@ -1,5 +1,11 @@
 # @dschz/solid-flow
 
+## 0.1.4
+
+### Patch Changes
+
+- disable bundler minification
+
 ## 0.1.3
 
 ### Patch Changes
