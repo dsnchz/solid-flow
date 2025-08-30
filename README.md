@@ -15,10 +15,9 @@
 
 ## Current Unsupported Features:
 
-- `onlyRenderVisibleElements` prop: the ability to only render visible elements on screen.
-  - Note: The prop is defined as part of `SolidFlow` but it is a no-op. During development and benchmarking, it was revealed that use of it degraded rendering performance due to the amount of work done to actually achieve the outcome of the feature. We need to innovate on the implementation to make the performance comparable (ideally better) to the normal performance of rendering all the nodes/edges on screen. As such it is a no-op prop for now.
-- Custom MiniMap nodes: the ability to render custom node visuals in the minimap
-- Edge Reconnect Anchors: the ability to re-connect already connected edges
+- [onlyRenderVisibleElements](https://github.com/dsnchz/solid-flow/issues/15): render only visible elements.
+- [Custom MiniMap Nodes](https://github.com/dsnchz/solid-flow/issues/12): define custom minimap jsx node elements.
+- [Edge Reconnect Anchors](https://github.com/dsnchz/solid-flow/issues/13): the ability to re-connect already connected edges.
 
 ## Key Features
 
