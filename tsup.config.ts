@@ -1,6 +1,8 @@
 import { defineConfig } from "tsup";
 import * as preset from "tsup-preset-solid";
 
+import pkg from "./package.json";
+
 const generateSolidPresetOptions = (watching: boolean): preset.PresetOptions => ({
   entries: [
     {
@@ -25,16 +27,9 @@ export default defineConfig((config) => {
   const solidPresetOptions = generateSolidPresetOptions(watching);
   const parsedOptions = preset.parsePresetOptions(solidPresetOptions, watching);
 
-  if (!watching) {
-    const packageFields = preset.generatePackageExports(parsedOptions);
-    // console.log(`\npackage.json: \n${JSON.stringify(packageFields, null, 2)}\n\n`);
-    /* will update ./package.json with the correct export fields */
-    void preset.writePackageJson(packageFields);
-  }
-
   const tsupOptions = preset
     .generateTsupOptions(parsedOptions)
-    .map((tsupOption) => ({ name: "solid-flow", minify: true, ...tsupOption }));
+    .map((tsupOption) => ({ name: pkg.name, ...tsupOption }));
 
   return tsupOptions;
 });
