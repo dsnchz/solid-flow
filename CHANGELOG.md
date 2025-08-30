@@ -1,5 +1,11 @@
 # @dschz/solid-flow
 
+## 0.1.2
+
+### Patch Changes
+
+- update package keywords
+
 ## 0.1.1
 
 ### Patch Changes

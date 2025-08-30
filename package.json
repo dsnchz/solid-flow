@@ -1,6 +1,6 @@
 {
   "name": "@dschz/solid-flow",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Solid Flow - A highly customizable Solid library for building node-based editors, workflow systems, diagrams and more.",
   "type": "module",
   "author": "Daniel Sanchez <dsanc89@icloud.com>",
