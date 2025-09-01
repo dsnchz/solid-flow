@@ -2,7 +2,7 @@
   <img src="https://assets.solidjs.com/banner?project=solid-flow&type=Ecosystem&background=tiles" alt="@dschz/solid-flow banner" />
 </p>
 
-# @dschz/solid-flow
+# Solid Flow
 
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![npm](https://img.shields.io/npm/v/@dschz/solid-flow?color=blue)](https://www.npmjs.com/package/@dschz/solid-flow)
@@ -37,6 +37,9 @@ The easiest way to get the latest version of Solid Flow is to install it via npm
 
 ```sh
 npm install @dschz/solid-flow
+pnpm install @dschz/solid-flow
+yarn install @dschz/solid-flow
+bun install @dschz/solid-flow
 ```
 
 ## Quick Start
@@ -46,6 +49,7 @@ This is a basic example to get you started. For more advanced examples and full 
 ```tsx
 import {
   SolidFlow,
+  SolidFlowProvider,
   Controls,
   Background,
   MiniMap,
@@ -53,10 +57,24 @@ import {
   type EdgeConnection,
   createEdgeStore,
   createNodeStore,
+  type Viewport,
 } from "@dschz/solid-flow";
 import "@dschz/solid-flow/styles"; // Required styles
 
-export default function Flow() {
+import { createStore, produce } from "solid-js/store";
+
+export default function Page() {
+  return (
+    <SolidFlowProvider>
+      <Flow />
+    </SolidFlowProvider>
+  )
+}
+
+function Flow() {
+  // Can invoke useSolidFlow due to parent Page + SolidFlowProvider wrapper. Contains all helper APIs
+  const { .. } = useSolidFlow();
+
   // Use createNodeStore and createEdgeStore for reactive state management
   const [nodes, setNodes] = createNodeStore([
     {
@@ -84,6 +102,16 @@ export default function Flow() {
     { id: "e2-3", source: "2", target: "3" },
   ]);
 
+  const [viewport, setViewport] = createStore<Viewport>({
+    x: 100,
+    y: 100,
+    zoom: 5,
+  });
+
+  const updateViewport = () => {
+    setViewport("x", (prev) => prev + 10);
+  };
+
   const onConnect = (connection: EdgeConnection) => {
     /**
      * Solid Flow updates the node/edge stores internally. The user-land edge store will have the connection inserted by the time onConnect fires so we can just go ahead and update the state of it
@@ -100,6 +128,9 @@ export default function Flow() {
     <SolidFlow nodes={nodes} edges={edges} onConnect={onConnect} fitView>
       <Controls />
       <MiniMap />
+      <Panel position="top-left">
+        <button onClick={updateViewport}>Update viewport</button>
+      </Panel>
       <Background variant="dots" />
     </SolidFlow>
   );
