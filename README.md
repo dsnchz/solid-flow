@@ -226,10 +226,10 @@ import { Handle, type NodeProps } from "@dschz/solid-flow";
 function CustomNode(props: NodeProps<{ label: string }, "custom">) {
   return (
     <div class="custom-node" style={{ padding: "10px", background: "white" }}>
-      <Handle type="target" position="top />
+      <Handle type="target" position="top" />
       <div>{props.data.label}</div>
       <Handle type="source" position="bottom" id="output-a" />
-      <Handle type="source" position="bottom id="output-b" style={{ left: "80%" }} />
+      <Handle type="source" position="bottom" id="output-b" style={{ left: "80%" }} />
     </div>
   );
 }
