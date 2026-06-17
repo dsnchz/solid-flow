@@ -2,20 +2,6 @@
   "name": "@dschz/solid-flow",
   "version": "0.1.4",
   "description": "Solid Flow - A highly customizable Solid library for building node-based editors, workflow systems, diagrams and more.",
-  "type": "module",
-  "author": "Daniel Sanchez <dsanc89@icloud.com>",
-  "license": "MIT",
-  "homepage": "https://github.com/dsnchz/solid-flow#readme",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/dsnchz/solid-flow.git"
-  },
-  "bugs": {
-    "url": "https://github.com/dsnchz/solid-flow/issues"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
   "keywords": [
     "ai workflows",
     "automation",
@@ -49,15 +35,51 @@
     "workflow editor",
     "xyflow"
   ],
+  "homepage": "https://github.com/dsnchz/solid-flow#readme",
+  "bugs": {
+    "url": "https://github.com/dsnchz/solid-flow/issues"
+  },
+  "license": "MIT",
+  "author": "Daniel Sanchez <dsanc89@icloud.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dsnchz/solid-flow.git"
+  },
   "files": [
     "dist"
   ],
+  "type": "module",
+  "main": "./dist/index/index.js",
+  "module": "./dist/index/index.js",
+  "browser": {},
+  "types": "./dist/index/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "styles": [
+        "./dist/styles/index.d.ts"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "solid": "./dist/index/index.jsx",
+      "import": {
+        "types": "./dist/index/index.d.ts",
+        "default": "./dist/index/index.js"
+      }
+    },
+    "./styles": "./dist/styles/index.css",
+    "./dist/style.css": "./dist/styles/index.css"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
     "dev": "vite",
-    "format": "prettier . --check",
-    "format:fix": "prettier . --write",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "pkg:changeset": "changeset",
@@ -68,6 +90,13 @@
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solid-primitives/map": "^0.7.2",
+    "@solid-primitives/media": "^2.3.3",
+    "@solid-primitives/resize-observer": "^2.1.3",
+    "@xyflow/system": "^0.0.68",
+    "clsx": "^2.1.1"
   },
   "devDependencies": {
     "@changesets/cli": "2.31.0",
@@ -85,7 +114,7 @@
     "globals": "17.6.0",
     "jiti": "2.7.0",
     "jsdom": "29.1.1",
-    "prettier": "3.8.4",
+    "oxfmt": "^0.41.0",
     "tsup": "8.5.1",
     "tsup-preset-solid": "2.2.0",
     "typescript": "6.0.3",
@@ -96,34 +125,5 @@
   },
   "peerDependencies": {
     "solid-js": ">=1.8.0"
-  },
-  "dependencies": {
-    "@solid-primitives/map": "^0.7.2",
-    "@solid-primitives/media": "^2.3.3",
-    "@solid-primitives/resize-observer": "^2.1.3",
-    "@xyflow/system": "^0.0.68",
-    "clsx": "^2.1.1"
-  },
-  "main": "./dist/index/index.js",
-  "module": "./dist/index/index.js",
-  "types": "./dist/index/index.d.ts",
-  "browser": {},
-  "exports": {
-    ".": {
-      "solid": "./dist/index/index.jsx",
-      "import": {
-        "types": "./dist/index/index.d.ts",
-        "default": "./dist/index/index.js"
-      }
-    },
-    "./styles": "./dist/styles/index.css",
-    "./dist/style.css": "./dist/styles/index.css"
-  },
-  "typesVersions": {
-    "*": {
-      "styles": [
-        "./dist/styles/index.d.ts"
-      ]
-    }
   }
 }
