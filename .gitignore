@@ -3,6 +3,7 @@ dist
 node_modules
 temp
 tmp
+.agent
 
 .DS_Store
 /*.tgz
