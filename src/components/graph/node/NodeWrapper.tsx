@@ -72,16 +72,17 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     }) as const;
 
   createEffect(
-    () => {
-      if (!nodeTypeValid()) {
-        console.warn("003", errorMessages["error003"](nodeType()));
+    () => ({ valid: nodeTypeValid(), nodeType: nodeType() }),
+    ({ valid, nodeType }) => {
+      if (!valid) {
+        console.warn("003", errorMessages["error003"](nodeType));
       }
     },
-    () => {},
   );
 
   createEffect(
     () => ({
+      id: node().id,
       nodeElement: nodeRef(),
       nodeType: nodeType(),
       sourcePosition: node().sourcePosition,
@@ -102,37 +103,35 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       }
 
       actions.requestUpdateNodeInternals([
-        [
-          node().id,
-          {
-            id: node().id,
-            nodeElement: current.nodeElement,
-            force: true,
-          },
-        ],
+        [current.id, { id: current.id, nodeElement: current.nodeElement, force: true }],
       ]);
     },
   );
 
-  createEffect<HTMLDivElement | undefined>(
-    (prevNodeRef) => {
-      const currentNodeRef = nodeRef();
-
-      if (currentNodeRef === prevNodeRef && nodeHasDimensions(node())) {
-        return prevNodeRef;
+  // (Re)observe when the element or observer changes, and re-observe the same
+  // element when its dimensions are lost so it gets measured again
+  createEffect(
+    () => ({
+      nodeElement: nodeRef(),
+      hasDimensions: nodeHasDimensions(node()),
+      resizeObserver: props.resizeObserver,
+    }),
+    (current, prev) => {
+      if (
+        current.nodeElement === prev?.nodeElement &&
+        current.resizeObserver === prev?.resizeObserver &&
+        current.hasDimensions
+      ) {
+        return;
       }
 
-      if (prevNodeRef) {
-        props.resizeObserver?.unobserve(prevNodeRef);
+      if (prev?.nodeElement) {
+        prev.resizeObserver?.unobserve(prev.nodeElement);
       }
-
-      if (currentNodeRef) {
-        props.resizeObserver?.observe(currentNodeRef);
+      if (current.nodeElement) {
+        current.resizeObserver?.observe(current.nodeElement);
       }
-
-      return currentNodeRef;
     },
-    () => {},
   );
 
   const onSelectNodeHandler = (event: MouseEvent) => {

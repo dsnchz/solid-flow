@@ -96,14 +96,20 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   const valid = () => Boolean(connectingTo() && store.connection.isValid);
 
   let prevConnections: Map<string, HandleConnection> | null = null;
-  let connections: Map<string, HandleConnection> | undefined;
 
+  // The compute wraps the map in a fresh object so the apply runs on every
+  // lookup mutation; the user callbacks fire from the (untracked) apply.
   createEffect(
     () => {
-      if (!_props.onConnect && !_props.onDisconnect) return;
+      if (!_props.onConnect && !_props.onDisconnect) return null;
 
-      const conectionKey = `${nodeId()}-${_props.type}${_props.id ? `-${_props.id}` : ""}`;
-      connections = connectionLookup.get(conectionKey);
+      const connectionKey = `${nodeId()}-${_props.type}${_props.id ? `-${_props.id}` : ""}`;
+      return { connections: connectionLookup.get(connectionKey) };
+    },
+    (current) => {
+      if (!current) return;
+
+      const { connections } = current;
 
       if (prevConnections && !areConnectionMapsEqual(connections, prevConnections)) {
         const _connections = connections ?? new Map();
@@ -114,7 +120,6 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
 
       prevConnections = connections ?? new Map();
     },
-    () => {},
   );
 
   const onConnectExtended = (connection: Connection) => {

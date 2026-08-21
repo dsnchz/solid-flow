@@ -1,8 +1,10 @@
 import { render } from "@solidjs/testing-library";
 import { fireEvent } from "@solidjs/testing-library";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { Handle } from "~/components/graph/handle";
 import { SolidFlow } from "~/components/SolidFlow";
+import { useSolidFlow } from "~/hooks/useSolidFlow";
 import type { Edge, Node } from "~/types";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
@@ -88,5 +90,109 @@ describe("<Handle /> connection gesture", () => {
     await tick();
 
     expect(container.querySelectorAll(".solid-flow__edge")).toHaveLength(0);
+  });
+
+  it("fires onConnect and onDisconnect callbacks as connections change", async () => {
+    const onConnect = vi.fn();
+    const onDisconnect = vi.fn();
+    let flow!: ReturnType<typeof useSolidFlow>;
+
+    const SourceNode = () => (
+      <div style={{ width: "100px", height: "40px" }}>
+        <Handle type="source" position="bottom" onConnect={onConnect} onDisconnect={onDisconnect} />
+      </div>
+    );
+
+    const Probe = () => {
+      flow = useSolidFlow();
+      return null;
+    };
+
+    render(() => (
+      <SolidFlow
+        nodes={[
+          makeNode({ id: "a", type: "custom" }),
+          makeNode({ id: "b", position: { x: 200, y: 100 } }),
+        ]}
+        edges={[]}
+        nodeTypes={{ custom: SourceNode } as never}
+        width={800}
+        height={600}
+      >
+        <Probe />
+      </SolidFlow>
+    ));
+    await tick();
+    expect(onConnect).not.toHaveBeenCalled();
+
+    flow.addEdges({ id: "e1", source: "a", target: "b" } as never);
+    await tick();
+    expect(onConnect).toHaveBeenCalledTimes(1);
+    expect(onConnect.mock.lastCall![0]).toEqual([
+      expect.objectContaining({ source: "a", target: "b" }),
+    ]);
+    expect(onDisconnect).not.toHaveBeenCalled();
+
+    await flow.deleteElements({ edges: [{ id: "e1" }] as never });
+    await tick();
+    expect(onDisconnect).toHaveBeenCalledTimes(1);
+    expect(onDisconnect.mock.lastCall![0]).toEqual([
+      expect.objectContaining({ source: "a", target: "b" }),
+    ]);
+  });
+
+  it("fires callbacks for partial changes on a handle with multiple connections", async () => {
+    // Regression: the connection lookup mutated its per-key maps in place, so
+    // ReactiveMap.set never saw a value-identity change — a second edge on the
+    // same handle (and any partial removal) was invisible to subscribers.
+    const onConnect = vi.fn();
+    const onDisconnect = vi.fn();
+    let flow!: ReturnType<typeof useSolidFlow>;
+
+    const SourceNode = () => (
+      <div style={{ width: "100px", height: "40px" }}>
+        <Handle type="source" position="bottom" onConnect={onConnect} onDisconnect={onDisconnect} />
+      </div>
+    );
+
+    const Probe = () => {
+      flow = useSolidFlow();
+      return null;
+    };
+
+    render(() => (
+      <SolidFlow
+        nodes={[
+          makeNode({ id: "a", type: "custom" }),
+          makeNode({ id: "b", position: { x: 200, y: 100 } }),
+          makeNode({ id: "c", position: { x: 400, y: 200 } }),
+        ]}
+        edges={[]}
+        nodeTypes={{ custom: SourceNode } as never}
+        width={800}
+        height={600}
+      >
+        <Probe />
+      </SolidFlow>
+    ));
+    await tick();
+
+    flow.addEdges({ id: "e1", source: "a", target: "b" } as never);
+    await tick();
+    flow.addEdges({ id: "e2", source: "a", target: "c" } as never);
+    await tick();
+
+    expect(onConnect).toHaveBeenCalledTimes(2);
+    expect(onConnect.mock.lastCall![0]).toEqual([
+      expect.objectContaining({ source: "a", target: "c" }),
+    ]);
+
+    await flow.deleteElements({ edges: [{ id: "e1" }] as never });
+    await tick();
+
+    expect(onDisconnect).toHaveBeenCalledTimes(1);
+    expect(onDisconnect.mock.lastCall![0]).toEqual([
+      expect.objectContaining({ source: "a", target: "b" }),
+    ]);
   });
 });

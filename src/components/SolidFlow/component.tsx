@@ -242,11 +242,10 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   );
 
   createEffect(
-    () => {
-      const params = selectedElements();
+    () => selectedElements(),
+    (params) => {
       untrack(() => _props.onSelectionChange)?.(params);
     },
-    () => {},
   );
 
   const rootStyle = (): JSX.CSSProperties => ({

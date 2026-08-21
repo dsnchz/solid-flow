@@ -8,6 +8,7 @@ import type { Node } from "~/types";
 import { useColorMode } from "./useColorMode";
 import { useEdges, useNodes, useViewport } from "./useGraph";
 import { useNodesInitialized, useViewportInitialized } from "./useInitialized";
+import { useNodeConnections } from "./useNodeConnections";
 import { useSolidFlow } from "./useSolidFlow";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
@@ -124,5 +125,39 @@ describe("hooks", () => {
     expect(helpers!.getNode("a")?.id).toBe("a");
     expect(helpers!.getNodes().map((n) => n.id)).toEqual(["a"]);
     expect(helpers!.getEdges()).toHaveLength(0);
+  });
+
+  it("useNodeConnections tracks connections for a node as edges come and go", async () => {
+    let connections!: ReturnType<typeof useNodeConnections>;
+    let flow!: ReturnType<typeof useSolidFlow>;
+
+    render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "a" }), makeNode({ id: "b", position: { x: 200, y: 100 } })]}
+        edges={[]}
+        width={800}
+        height={600}
+      >
+        {(() => {
+          const Probe = () => {
+            connections = useNodeConnections(() => ({ id: "a" }));
+            flow = useSolidFlow();
+            return null;
+          };
+          return <Probe />;
+        })()}
+      </SolidFlow>
+    ));
+    await tick();
+    expect(connections()).toHaveLength(0);
+
+    flow.addEdges({ id: "e1", source: "a", target: "b" } as never);
+    await tick();
+    expect(connections()).toHaveLength(1);
+    expect(connections()[0]).toMatchObject({ source: "a", target: "b", edgeId: "e1" });
+
+    await flow.deleteElements({ edges: [{ id: "e1" }] as never });
+    await tick();
+    expect(connections()).toHaveLength(0);
   });
 });

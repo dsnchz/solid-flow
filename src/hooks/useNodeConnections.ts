@@ -44,18 +44,18 @@ export const useNodeConnections = (
   const lookupKey = () =>
     `${nodeId()}${type() ? (id() ? `-${type()}-${id()}` : `-${type()}`) : ""}`;
 
-  createEffect(
-    (prevConnections: Map<string, NodeConnection> | undefined) => {
-      const nextConnections = connectionLookup.get(lookupKey());
+  // The compute wraps the map in a fresh object so the apply runs on every
+  // lookup mutation; the diff gate below keeps the signal writes minimal.
+  let prevConnections: Map<string, NodeConnection> | undefined;
 
+  createEffect(
+    () => ({ connections: connectionLookup.get(lookupKey()) }),
+    ({ connections: nextConnections }) => {
       if (!areConnectionMapsEqual(nextConnections, prevConnections)) {
         prevConnections = nextConnections;
-        setConnections(Array.from(prevConnections?.values() ?? []));
+        setConnections(Array.from(nextConnections?.values() ?? []));
       }
-
-      return nextConnections;
     },
-    () => {},
   );
 
   return connections;

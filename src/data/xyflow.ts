@@ -28,6 +28,7 @@ import {
   type XYPosition,
   type ZIndexMode,
 } from "@xyflow/system";
+import { untrack } from "solid-js";
 
 const SELECTED_NODE_Z = 1000;
 const ROOT_PARENT_Z_INCREMENT = 10;
@@ -561,21 +562,23 @@ export function addConnectionToLookup(
   /*
    * We add the connection to the connectionLookup at the following keys
    * 1. nodeId, 2. nodeId-type, 3. nodeId-type-handleId
-   * If the key already exists, we add the connection to the existing map
+   * The stored maps are treated as immutable snapshots: ReactiveMap only
+   * notifies subscribers of set() when the VALUE identity changes, and
+   * readers (Handle callbacks, useNodeConnections) keep references to the
+   * previous map for diffing — mutating in place would both skip the
+   * notification and corrupt those diffs.
    */
-  let key = nodeId;
-  const nodeMap = connectionLookup.get(key) || new Map();
-  connectionLookup.set(key, nodeMap.set(connectionKey, connection));
+  // untrack: this is a read-for-write — the callers are effects, and a
+  // tracked read of the key being written would retrigger them forever
+  const add = (key: string) => {
+    const next = new Map(untrack(() => connectionLookup.get(key)));
+    next.set(connectionKey, connection);
+    connectionLookup.set(key, next);
+  };
 
-  key = `${nodeId}-${type}`;
-  const typeMap = connectionLookup.get(key) || new Map();
-  connectionLookup.set(key, typeMap.set(connectionKey, connection));
-
-  if (handleId) {
-    key = `${nodeId}-${type}-${handleId}`;
-    const handleMap = connectionLookup.get(key) || new Map();
-    connectionLookup.set(key, handleMap.set(connectionKey, connection));
-  }
+  add(nodeId);
+  add(`${nodeId}-${type}`);
+  if (handleId) add(`${nodeId}-${type}-${handleId}`);
 }
 
 export function removeConnectionFromLookup(
@@ -585,29 +588,22 @@ export function removeConnectionFromLookup(
   nodeId: string,
   handleId: string | null,
 ) {
-  // Remove from node-level key
-  let key = nodeId;
-  const nodeMap = connectionLookup.get(key);
-  if (nodeMap) {
-    nodeMap.delete(connectionKey);
-    if (nodeMap.size === 0) connectionLookup.delete(key);
-  }
+  // Same immutable-snapshot discipline as addConnectionToLookup
+  const remove = (key: string) => {
+    const current = untrack(() => connectionLookup.get(key));
+    if (!current) return;
 
-  // Remove from type-level key
-  key = `${nodeId}-${type}`;
-  const typeMap = connectionLookup.get(key);
-  if (typeMap) {
-    typeMap.delete(connectionKey);
-    if (typeMap.size === 0) connectionLookup.delete(key);
-  }
+    const next = new Map(current);
+    next.delete(connectionKey);
 
-  // Remove from handle-level key
-  if (handleId) {
-    key = `${nodeId}-${type}-${handleId}`;
-    const handleMap = connectionLookup.get(key);
-    if (handleMap) {
-      handleMap.delete(connectionKey);
-      if (handleMap.size === 0) connectionLookup.delete(key);
+    if (next.size === 0) {
+      connectionLookup.delete(key);
+    } else {
+      connectionLookup.set(key, next);
     }
-  }
+  };
+
+  remove(nodeId);
+  remove(`${nodeId}-${type}`);
+  if (handleId) remove(`${nodeId}-${type}-${handleId}`);
 }

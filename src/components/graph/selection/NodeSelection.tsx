@@ -29,12 +29,12 @@ export const NodeSelection = <NodeType extends Node = Node>(
   };
 
   createEffect(
-    () => {
-      if (!store.disableKeyboardA11y) {
-        ref()?.focus({ preventScroll: true });
+    () => ({ el: ref(), focusable: !store.disableKeyboardA11y }),
+    ({ el, focusable }) => {
+      if (focusable) {
+        el?.focus({ preventScroll: true });
       }
     },
-    () => {},
   );
 
   const onContextMenu = (event: PointerEvent) => {
