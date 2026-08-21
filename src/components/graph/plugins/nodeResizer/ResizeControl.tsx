@@ -5,7 +5,6 @@ import {
   type XYResizerChange,
   type XYResizerChildChange,
 } from "@xyflow/system";
-import clsx from "clsx";
 import { createEffect, createSignal, omit, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow, useNodeId } from "~/components/contexts";
@@ -170,13 +169,13 @@ export const ResizeControl = <NodeType extends Node = Node>(
   return (
     <div
       ref={setResizeControlRef}
-      class={clsx([
+      class={[
         "solid-flow__resize-control",
         _props.variant,
         store.noDragClass,
         ...positionClassNames(),
         _props.class,
-      ])}
+      ]}
       style={{
         "border-color": isLineVariant() ? _props.color : undefined,
         "background-color": isLineVariant() ? undefined : _props.color,

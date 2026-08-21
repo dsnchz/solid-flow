@@ -864,7 +864,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   // applies here are structural, not unsplit effects.
   createRenderEffect(
     mapArray(
-      () => store.nodes as unknown as NodeType[],
+      () => store.nodes,
       (userNode) => {
         createRenderEffect(
           () => {

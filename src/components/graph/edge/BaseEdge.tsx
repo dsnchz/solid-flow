@@ -1,5 +1,4 @@
 import type { JSX } from "@solidjs/web";
-import clsx from "clsx";
 import { omit, type ParentProps, Show } from "solid-js";
 
 import { propDefaults } from "~/utils";
@@ -30,7 +29,7 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
     <>
       <path
         d={_props.path}
-        class={clsx(["solid-flow__edge-path", _props.class])}
+        class={["solid-flow__edge-path", _props.class]}
         marker-start={_props.markerStart}
         marker-end={_props.markerEnd}
         fill="none"

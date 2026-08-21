@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import type { PanelPosition } from "@xyflow/system";
-import clsx from "clsx";
 import { omit, type ParentProps, Show } from "solid-js";
 
 import { propDefaults } from "~/utils";
@@ -106,7 +105,7 @@ export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
 
   return (
     <Panel
-      class={clsx(["solid-flow__controls", _props.orientation, _props.class])}
+      class={["solid-flow__controls", _props.orientation, _props.class]}
       position={_props.position}
       data-testid="solid-flow__controls"
       aria-label={store.ariaLabelConfig["controls.ariaLabel"]}

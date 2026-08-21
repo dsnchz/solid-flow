@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Handle } from "~/components/graph/handle";
 import { SolidFlow } from "~/components/SolidFlow";
 import { useSolidFlow } from "~/hooks/useSolidFlow";
-import type { Edge, Node } from "~/types";
+import type { Edge, Node, NodeTypes } from "~/types";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },
@@ -97,11 +97,18 @@ describe("<Handle /> connection gesture", () => {
     const onDisconnect = vi.fn();
     let flow!: ReturnType<typeof useSolidFlow>;
 
-    const SourceNode = () => (
-      <div style={{ width: "100px", height: "40px" }}>
-        <Handle type="source" position="bottom" onConnect={onConnect} onDisconnect={onDisconnect} />
-      </div>
-    );
+    const nodeTypes: NodeTypes = {
+      custom: () => (
+        <div style={{ width: "100px", height: "40px" }}>
+          <Handle
+            type="source"
+            position="bottom"
+            onConnect={onConnect}
+            onDisconnect={onDisconnect}
+          />
+        </div>
+      ),
+    };
 
     const Probe = () => {
       flow = useSolidFlow();
@@ -115,7 +122,7 @@ describe("<Handle /> connection gesture", () => {
           makeNode({ id: "b", position: { x: 200, y: 100 } }),
         ]}
         edges={[]}
-        nodeTypes={{ custom: SourceNode } as never}
+        nodeTypes={nodeTypes}
         width={800}
         height={600}
       >
@@ -125,7 +132,7 @@ describe("<Handle /> connection gesture", () => {
     await tick();
     expect(onConnect).not.toHaveBeenCalled();
 
-    flow.addEdges({ id: "e1", source: "a", target: "b" } as never);
+    flow.addEdges({ id: "e1", source: "a", target: "b" });
     await tick();
     expect(onConnect).toHaveBeenCalledTimes(1);
     expect(onConnect.mock.lastCall![0]).toEqual([
@@ -133,7 +140,7 @@ describe("<Handle /> connection gesture", () => {
     ]);
     expect(onDisconnect).not.toHaveBeenCalled();
 
-    await flow.deleteElements({ edges: [{ id: "e1" }] as never });
+    await flow.deleteElements({ edges: [{ id: "e1" }] });
     await tick();
     expect(onDisconnect).toHaveBeenCalledTimes(1);
     expect(onDisconnect.mock.lastCall![0]).toEqual([
@@ -149,11 +156,18 @@ describe("<Handle /> connection gesture", () => {
     const onDisconnect = vi.fn();
     let flow!: ReturnType<typeof useSolidFlow>;
 
-    const SourceNode = () => (
-      <div style={{ width: "100px", height: "40px" }}>
-        <Handle type="source" position="bottom" onConnect={onConnect} onDisconnect={onDisconnect} />
-      </div>
-    );
+    const nodeTypes: NodeTypes = {
+      custom: () => (
+        <div style={{ width: "100px", height: "40px" }}>
+          <Handle
+            type="source"
+            position="bottom"
+            onConnect={onConnect}
+            onDisconnect={onDisconnect}
+          />
+        </div>
+      ),
+    };
 
     const Probe = () => {
       flow = useSolidFlow();
@@ -168,7 +182,7 @@ describe("<Handle /> connection gesture", () => {
           makeNode({ id: "c", position: { x: 400, y: 200 } }),
         ]}
         edges={[]}
-        nodeTypes={{ custom: SourceNode } as never}
+        nodeTypes={nodeTypes}
         width={800}
         height={600}
       >
@@ -177,9 +191,9 @@ describe("<Handle /> connection gesture", () => {
     ));
     await tick();
 
-    flow.addEdges({ id: "e1", source: "a", target: "b" } as never);
+    flow.addEdges({ id: "e1", source: "a", target: "b" });
     await tick();
-    flow.addEdges({ id: "e2", source: "a", target: "c" } as never);
+    flow.addEdges({ id: "e2", source: "a", target: "c" });
     await tick();
 
     expect(onConnect).toHaveBeenCalledTimes(2);
@@ -187,7 +201,7 @@ describe("<Handle /> connection gesture", () => {
       expect.objectContaining({ source: "a", target: "c" }),
     ]);
 
-    await flow.deleteElements({ edges: [{ id: "e1" }] as never });
+    await flow.deleteElements({ edges: [{ id: "e1" }] });
     await tick();
 
     expect(onDisconnect).toHaveBeenCalledTimes(1);

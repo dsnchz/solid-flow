@@ -1,5 +1,4 @@
 import type { JSX } from "@solidjs/web";
-import clsx from "clsx";
 import { Show } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
@@ -76,7 +75,7 @@ export const Background = (props: BackgroundProps): JSX.Element => {
   return (
     <svg
       data-testid="solid-flow__background"
-      class={clsx("solid-flow__container solid-flow__background", _props.class)}
+      class={["solid-flow__container solid-flow__background", _props.class]}
       style={{
         "--xy-background-color-props": _props.bgColor,
         "--xy-background-pattern-color-props": _props.patternColor,

@@ -43,15 +43,15 @@
   "author": "Daniel Sanchez <dsanc89@icloud.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dsnchz/solid-flow.git"
+    "url": "git+https://github.com/dsnchz/solid-flow.git"
   },
   "files": [
     "dist"
   ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index/index.js",
   "module": "./dist/index/index.js",
-  "browser": {},
   "types": "./dist/index/index.d.ts",
   "typesVersions": {
     "*": {
@@ -62,11 +62,9 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/index/index.d.ts",
       "solid": "./dist/index/index.jsx",
-      "import": {
-        "types": "./dist/index/index.d.ts",
-        "default": "./dist/index/index.js"
-      }
+      "default": "./dist/index/index.js"
     },
     "./styles": "./dist/styles/index.css",
     "./dist/style.css": "./dist/styles/index.css"
@@ -96,11 +94,8 @@
     "@solid-primitives/event-listener": "3.0.0-next.3",
     "@solid-primitives/map": "1.0.0-next.2",
     "@solid-primitives/media": "4.0.0-next.2",
-    "@solid-primitives/resize-observer": "4.0.0-next.3",
-    "@solidjs/signals": "2.0.0-rc.0",
     "@solidjs/web": "2.0.0-rc.1",
-    "@xyflow/system": "^0.0.80",
-    "clsx": "^2.1.1"
+    "@xyflow/system": "^0.0.80"
   },
   "devDependencies": {
     "@changesets/cli": "2.31.1",

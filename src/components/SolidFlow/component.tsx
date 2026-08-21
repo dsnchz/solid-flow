@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import { type ColorModeClass, infiniteExtent, isMacOs } from "@xyflow/system";
-import clsx from "clsx";
 import {
   type Context,
   createEffect,
@@ -262,7 +261,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
         domNode = el;
         setDomNodeRef(el);
       }}
-      class={clsx(["solid-flow", "solid-flow__container", _props.class, store.colorMode])}
+      class={["solid-flow", "solid-flow__container", _props.class, store.colorMode]}
       style={rootStyle()}
       onScroll={(e) => {
         e.currentTarget.scrollTo({ top: 0, left: 0, behavior: "auto" });

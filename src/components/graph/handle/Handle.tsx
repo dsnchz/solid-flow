@@ -16,14 +16,13 @@ import {
   type UpdateConnection,
   XYHandle,
 } from "@xyflow/system";
-import clsx from "clsx";
 import { createEffect, flush, omit, type ParentProps } from "solid-js";
 import { snapshot } from "solid-js";
 
 import { propDefaults } from "~/utils";
 
 import { getEdgeId } from "../../../data/utils";
-import type { Edge, Node, Position } from "../../../types";
+import type { Edge, InternalNode, Node, Position } from "../../../types";
 import { useInternalSolidFlow, useNodeId } from "../../contexts";
 import { useNodeConnectable } from "../../contexts/nodeConnectable";
 
@@ -148,11 +147,12 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       flowId: store.id,
       isValidConnection: (_props.isValidConnection ??
         store.isValidConnection) as SystemIsValidConnection,
-      // XYHandle reads connection state back synchronously in the same task
-      updateConnection: ((connection) => {
-        actions.setConnection(connection as never);
+      // XYHandle reads connection state back synchronously in the same task.
+      // Single seam cast: system types the callback over InternalNodeBase.
+      updateConnection: ((connection: ConnectionState<InternalNode<NodeType>>) => {
+        actions.setConnection(connection);
         flush();
-      }) as UpdateConnection<InternalNodeBase>,
+      }) as unknown as UpdateConnection<InternalNodeBase>,
       cancelConnection: actions.cancelConnection,
       panBy: actions.panBy,
       onConnect: onConnectExtended,
@@ -246,7 +246,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       onClick={store.clickConnect ? onClick : undefined}
       onPointerDown={onPointerDown}
       style={_props.style}
-      class={clsx(
+      class={[
         "solid-flow__handle",
         `solid-flow__handle-${_props.position}`,
         store.noDragClass,
@@ -254,16 +254,16 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
         _props.class,
         {
           valid: valid(),
-          connectingto: connectingTo(),
-          connectingfrom: connectingFrom(),
+          connectingto: !!connectingTo(),
+          connectingfrom: !!connectingFrom(),
           source: !isTarget(),
           target: isTarget(),
           connectablestart: _props.isConnectableStart,
           connectableend: _props.isConnectableEnd,
-          connectable: connectable(),
+          connectable: !!connectable(),
           connectionindicator: connectionIndicator(),
         },
-      )}
+      ]}
     >
       {_props.children}
     </div>

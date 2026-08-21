@@ -1,7 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { Dynamic } from "@solidjs/web";
 import { elementSelectionKeys, getMarkerId } from "@xyflow/system";
-import clsx from "clsx";
 import { Show } from "solid-js";
 
 import type { Edge, EdgeEvents, Node } from "../../../types";
@@ -83,16 +82,16 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
             aria-label={ariaLabel()}
             aria-roledescription="edge"
             aria-describedby={focusable() ? `${ARIA_EDGE_DESC_KEY}-${store.id}` : undefined}
-            class={clsx(
+            class={[
               "solid-flow__edge",
               `solid-flow__edge-${edgeType()}`,
               {
-                animated: edge().animated,
-                selected: edge().selected,
-                selectable: selectable(),
+                animated: !!edge().animated,
+                selected: !!edge().selected,
+                selectable: !!selectable(),
               },
               edge().class,
-            )}
+            ]}
             onClick={onClick}
             onKeyDown={(e) => focusable() && onKeyDown(e)}
             onContextMenu={(e) => onPointerEvent(e, "contextmenu")}

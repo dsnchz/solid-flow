@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import { type EdgeToolbarBaseProps, getEdgeToolbarTransform } from "@xyflow/system";
-import clsx from "clsx";
 import { omit, type ParentProps, Show } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
@@ -51,7 +50,7 @@ export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element =
     <Show when={isActive()}>
       <EdgeLabel selectEdgeOnClick={props.selectEdgeOnClick} transparent>
         <div
-          class={clsx("solid-flow__edge-toolbar", props.class)}
+          class={["solid-flow__edge-toolbar", props.class]}
           style={{
             position: "absolute",
             transform: transform(),

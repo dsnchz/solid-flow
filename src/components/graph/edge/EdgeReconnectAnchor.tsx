@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import { ConnectionMode, type HandleType, XYHandle, type XYPosition } from "@xyflow/system";
-import clsx from "clsx";
 import { createSignal, omit, type ParentProps, Show } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
@@ -112,12 +111,12 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     <EdgeLabel x={_props.position?.x} y={_props.position?.y} style={_props.style} {...rest}>
       <div
         onPointerDown={onPointerDown}
-        class={clsx(
+        class={[
           "solid-flow__edgeupdater",
           `solid-flow__edgeupdater-${_props.type}`,
           store.noPanClass,
           _props.class,
-        )}
+        ]}
         style={{
           width: toPxString(_props.size),
           height: toPxString(_props.size),

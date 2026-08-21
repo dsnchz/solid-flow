@@ -7,7 +7,6 @@ import {
   isInputDOMNode,
   nodeHasDimensions,
 } from "@xyflow/system";
-import clsx from "clsx";
 import { createEffect, createSignal, Show } from "solid-js";
 
 import createDraggable from "../../../actions/createDraggable";
@@ -233,20 +232,20 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       <div
         ref={setNodeRef}
         data-id={node().id}
-        class={clsx(
+        class={[
           "solid-flow__node",
           `solid-flow__node-${nodeType()}`,
           {
-            connectable: connectable(),
-            draggable: draggable(),
+            connectable: !!connectable(),
+            draggable: !!draggable(),
             dragging: dragging(),
-            nopan: draggable(),
+            nopan: !!draggable(),
             parent: isParentNode(),
-            selectable: selectable(),
-            selected: node().selected,
+            selectable: !!selectable(),
+            selected: !!node().selected,
           },
           node().class,
-        )}
+        ]}
         style={style()}
         onClick={onSelectNodeHandler}
         onPointerEnter={(event) => props.onNodePointerEnter?.({ node: userNode(), event })}

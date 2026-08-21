@@ -1,5 +1,3 @@
-import clsx from "clsx";
-
 import { propDefaults } from "~/utils";
 
 type DotPatternProps = {
@@ -12,7 +10,7 @@ export const DotPattern = (props: DotPatternProps) => {
 
   return (
     <circle
-      class={clsx("solid-flow__background-pattern", "dots", _props.class)}
+      class={["solid-flow__background-pattern", "dots", _props.class]}
       cx={_props.radius}
       cy={_props.radius}
       r={_props.radius}

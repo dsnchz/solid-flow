@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import type { PanelPosition } from "@xyflow/system";
-import clsx from "clsx";
 import { omit, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
@@ -28,7 +27,7 @@ export const Panel = (props: ParentProps<PanelProps>): JSX.Element => {
 
   return (
     <div
-      class={clsx(["solid-flow__panel", ..._props.position.split("-"), _props.class])}
+      class={["solid-flow__panel", ..._props.position.split("-"), _props.class]}
       style={{
         "pointer-events": store.selectionRectMode ? "none" : undefined,
         ..._props.style,

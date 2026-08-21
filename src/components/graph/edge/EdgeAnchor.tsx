@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import { Position } from "@xyflow/system";
-import clsx from "clsx";
 
 import { propDefaults } from "~/utils";
 
@@ -32,7 +31,7 @@ export const EdgeAnchor = (props: EdgeAnchorProps) => {
 
   return (
     <circle
-      class={clsx("solid-flow__edgeupdater", _props.type)}
+      class={["solid-flow__edgeupdater", _props.type]}
       stroke="transparent"
       fill="transparent"
       cx={shiftX(_props.centerX, _props.radius, _props.position)}

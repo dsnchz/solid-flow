@@ -5,7 +5,6 @@ import {
   getSmoothStepPath,
   getStraightPath,
 } from "@xyflow/system";
-import clsx from "clsx";
 import { type ParentProps, Show } from "solid-js";
 
 import type { Node } from "../../../types";
@@ -33,7 +32,7 @@ const ConnectionLine = <NodeType extends Node = Node>(
         height={store.height}
         style={props.containerStyle}
       >
-        <g class={clsx(["solid-flow__connection", connectionStatus()])}>
+        <g class={["solid-flow__connection", connectionStatus()]}>
           <Show when={props.component} fallback={<InternalConnectionLine style={props.style} />}>
             {(CustomComponent) => {
               const UserConnectionLine = CustomComponent();

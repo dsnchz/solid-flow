@@ -1,5 +1,4 @@
 import type { JSX } from "@solidjs/web";
-import clsx from "clsx";
 import { omit, type ParentProps } from "solid-js";
 
 export type ControlButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
@@ -42,7 +41,7 @@ export const ControlButton = (props: ParentProps<ControlButtonProps>): JSX.Eleme
   return (
     <button
       type="button"
-      class={clsx("solid-flow__controls-button", props.class)}
+      class={["solid-flow__controls-button", props.class]}
       onClick={(e) => props.onClick?.(e)}
       style={style()}
       {...rest}

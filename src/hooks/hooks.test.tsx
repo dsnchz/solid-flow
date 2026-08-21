@@ -1,5 +1,6 @@
 import { render } from "@solidjs/testing-library";
 import type { JSX } from "@solidjs/web";
+import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
 import { SolidFlow } from "~/components/SolidFlow";
@@ -151,13 +152,24 @@ describe("hooks", () => {
     await tick();
     expect(connections()).toHaveLength(0);
 
-    flow.addEdges({ id: "e1", source: "a", target: "b" } as never);
+    flow.addEdges({ id: "e1", source: "a", target: "b" });
     await tick();
     expect(connections()).toHaveLength(1);
     expect(connections()[0]).toMatchObject({ source: "a", target: "b", edgeId: "e1" });
 
-    await flow.deleteElements({ edges: [{ id: "e1" }] as never });
+    await flow.deleteElements({ edges: [{ id: "e1" }] });
     await tick();
     expect(connections()).toHaveLength(0);
+  });
+
+  it("throws a descriptive error when used outside <SolidFlow>", () => {
+    // 2.0 regression guard: contexts created with an undefined default throw
+    // ContextNotFoundError on read, before our guard runs — the null sentinel
+    // keeps the library's own error message reachable.
+    createRoot((dispose) => {
+      expect(() => useSolidFlow()).toThrow(/wrapped with <SolidFlow>/);
+      expect(() => useNodes()()).toThrow(/wrapped with <SolidFlow>/);
+      dispose();
+    });
   });
 });

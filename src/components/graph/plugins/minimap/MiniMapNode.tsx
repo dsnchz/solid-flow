@@ -1,5 +1,4 @@
 import type { JSX } from "@solidjs/web";
-import clsx from "clsx";
 
 import { propDefaults } from "~/utils";
 
@@ -38,7 +37,7 @@ export const MiniMapNode = (props: MinimapNodeProps) => {
 
   return (
     <rect
-      class={clsx("solid-flow__minimap-node", { selected: _props.selected }, _props.class)}
+      class={["solid-flow__minimap-node", { selected: !!_props.selected }, _props.class]}
       x={_props.x}
       y={_props.y}
       rx={_props.borderRadius}

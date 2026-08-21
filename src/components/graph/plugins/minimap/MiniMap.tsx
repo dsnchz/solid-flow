@@ -7,7 +7,6 @@ import {
   type PanelPosition,
   XYMinimap,
 } from "@xyflow/system";
-import clsx from "clsx";
 import {
   createEffect,
   createMemo,
@@ -185,7 +184,7 @@ export const MiniMap = <NodeType extends Node>(
     <Panel
       position={_props.position}
       data-testid="solid-flow__minimap"
-      class={clsx(["solid-flow__minimap", _props.class])}
+      class={["solid-flow__minimap", _props.class]}
       style={{
         "--xy-minimap-background-color-props": _props.bgColor,
         ..._props.style,

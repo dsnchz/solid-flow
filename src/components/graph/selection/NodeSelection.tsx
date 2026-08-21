@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
-import clsx from "clsx";
 import { createEffect, createSignal, Show } from "solid-js";
 
 import createDraggable from "~/actions/createDraggable";
@@ -80,7 +79,7 @@ export const NodeSelection = <NodeType extends Node = Node>(
     >
       <div
         ref={setRef}
-        class={clsx("solid-flow__selection-wrapper", store.noPanClass)}
+        class={["solid-flow__selection-wrapper", store.noPanClass]}
         style={{
           width: toPxString(bounds()?.width),
           height: toPxString(bounds()?.height),

@@ -1,5 +1,4 @@
 import type { JSX } from "@solidjs/web";
-import clsx from "clsx";
 import type { ParentProps } from "solid-js";
 import { omit } from "solid-js";
 
@@ -51,7 +50,7 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
       <div
         role="button"
         tabindex={-1}
-        class={clsx("solid-flow__edge-label", { transparent: _props.transparent }, _props.class)}
+        class={["solid-flow__edge-label", { transparent: _props.transparent }, _props.class]}
         style={{
           // TODO: Add hideOnSSR
           "pointer-events": "all",

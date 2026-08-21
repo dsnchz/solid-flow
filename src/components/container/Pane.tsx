@@ -9,7 +9,6 @@ import {
   SelectionMode,
   type XYPosition,
 } from "@xyflow/system";
-import clsx from "clsx";
 import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
 import type { Edge, Node, PaneEvents } from "../../types";
@@ -371,13 +370,16 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
         container = el;
         setContainerRef(el);
       }}
-      class={clsx("solid-flow__container solid-flow__pane", {
-        selection: isSelecting(),
-        dragging: store.dragging,
-        draggable:
-          props.panOnDrag === true ||
-          (Array.isArray(props.panOnDrag) && props.panOnDrag.includes(0)),
-      })}
+      class={[
+        "solid-flow__container solid-flow__pane",
+        {
+          selection: !!isSelecting(),
+          dragging: store.dragging,
+          draggable:
+            props.panOnDrag === true ||
+            (Array.isArray(props.panOnDrag) && props.panOnDrag.includes(0)),
+        },
+      ]}
       onClick={(e) => (isSelectionEnabled() ? undefined : onClick(e))}
       onPointerMove={(e) => (isSelectionEnabled() ? onPointerMove(e) : undefined)}
       onPointerUp={onPointerUp}
