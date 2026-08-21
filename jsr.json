@@ -3,6 +3,9 @@
   "version": "0.2.0",
   "license": "MIT",
   "exports": "./src/index.tsx",
+  "imports": {
+    "~/": "./src/"
+  },
   "publish": {
     "include": ["LICENSE", "README.md", "CHANGELOG.md", "src/**/*.tsx", "src/**/*.ts"],
     "exclude": ["**/*.test.tsx", "**/*.test.ts"]
