@@ -1,10 +1,10 @@
 import clsx from "clsx";
-import { mergeProps, type ParentProps, Show, splitProps } from "solid-js";
+import { type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
 
 import type { BaseEdgeProps } from "../../../types";
 import { EdgeLabel } from "./EdgeLabel";
 
-export const BaseEdge = (props: ParentProps<BaseEdgeProps>) => {
+export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
   const _props = mergeProps(
     {
       interactionWidth: 20,

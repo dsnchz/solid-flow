@@ -80,7 +80,7 @@ const getAttrFunction = <NodeType extends Node>(func: any): GetMiniMapNodeAttrib
 
 export const MiniMap = <NodeType extends Node>(
   props: ParentProps<Partial<MiniMapProps<NodeType>>>,
-) => {
+): JSX.Element => {
   const { store, nodeLookup } = useInternalSolidFlow<NodeType>();
 
   const _props = mergeProps(

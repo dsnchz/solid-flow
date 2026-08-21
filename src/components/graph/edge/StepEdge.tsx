@@ -1,10 +1,10 @@
 import { getSmoothStepPath } from "@xyflow/system";
-import { createMemo } from "solid-js";
+import { createMemo, type JSX } from "solid-js";
 
 import type { StepEdgeProps } from "../../../types";
 import { BaseEdge } from "./BaseEdge";
 
-export const StepEdge = (props: StepEdgeProps) => {
+export const StepEdge = (props: StepEdgeProps): JSX.Element => {
   const pathData = createMemo(() => {
     const [path, labelX, labelY] = getSmoothStepPath({
       sourceX: props.sourceX,

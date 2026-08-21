@@ -1,6 +1,6 @@
 import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createSignal, type JSX, Show } from "solid-js";
 
 import createDraggable from "~/actions/createDraggable";
 import { useInternalSolidFlow } from "~/components/contexts";
@@ -14,7 +14,7 @@ export type NodeSelectionProps<NodeType extends Node = Node> = NodeSelectionEven
 
 export const NodeSelection = <NodeType extends Node = Node>(
   props: NodeSelectionProps<NodeType>,
-) => {
+): JSX.Element => {
   const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
   const [ref, setRef] = createSignal<HTMLDivElement>();
 

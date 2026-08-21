@@ -1,9 +1,10 @@
 import { getBezierPath } from "@xyflow/system";
+import type { JSX } from "solid-js";
 
 import type { BezierEdgeProps } from "../../../types";
 import { BaseEdge } from "./BaseEdge";
 
-export const BezierEdgeInternal = (props: BezierEdgeProps) => {
+export const BezierEdgeInternal = (props: BezierEdgeProps): JSX.Element => {
   const pathData = () => {
     const [path, labelX, labelY] = getBezierPath({
       sourceX: props.sourceX,

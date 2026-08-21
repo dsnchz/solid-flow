@@ -7,7 +7,7 @@ export type MarkerProps = SystemMarkerProps & {
   readonly strokeWidth?: number;
 };
 
-export const Marker = (props: MarkerProps) => {
+export const Marker = (props: MarkerProps): JSX.Element => {
   const _props = mergeProps(
     {
       markerUnits: "strokeWidth" as JSX.MarkerSVGAttributes<SVGElement>["markerUnits"],

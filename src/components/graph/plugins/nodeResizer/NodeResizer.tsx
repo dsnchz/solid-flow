@@ -47,7 +47,7 @@ export type NodeResizerProps = {
   readonly onResizeEnd?: OnResizeEnd;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
-export const NodeResizer = (props: Partial<NodeResizerProps>) => {
+export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
   const _props = mergeProps(
     {
       autoScale: true,

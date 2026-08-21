@@ -1,9 +1,9 @@
-import { mergeProps } from "solid-js";
+import { type JSX, mergeProps } from "solid-js";
 
 import type { NodeProps, Position } from "../../../types";
 import { Handle } from "../handle";
 
-export const DefaultNode = (props: NodeProps<{ label: string }, "default">) => {
+export const DefaultNode = (props: NodeProps<{ label: string }, "default">): JSX.Element => {
   const _props = mergeProps(
     {
       targetPosition: "top" as Position,

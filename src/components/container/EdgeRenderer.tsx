@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { For, type JSX } from "solid-js";
 
 import type { DefaultEdgeOptions, Edge, EdgeEvents, Node } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
@@ -12,7 +12,7 @@ type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
 
 export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: EdgeRendererProps<EdgeType>,
-) => {
+): JSX.Element => {
   const { store } = useInternalSolidFlow();
   return (
     <div class="solid-flow__edges">

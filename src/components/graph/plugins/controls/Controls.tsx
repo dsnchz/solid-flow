@@ -35,7 +35,7 @@ type ControlsProps = {
   readonly afterControls?: JSX.Element;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
-export const Controls = (props: ParentProps<ControlsProps>) => {
+export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
   const { store, actions } = useInternalSolidFlow();
 
   const _props = mergeProps(

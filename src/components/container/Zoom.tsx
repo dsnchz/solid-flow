@@ -7,7 +7,7 @@ import {
   type Viewport,
   XYPanZoom,
 } from "@xyflow/system";
-import { batch, createEffect, onMount, type ParentProps } from "solid-js";
+import { batch, createEffect, type JSX, onMount, type ParentProps } from "solid-js";
 
 import type { PanOnScrollMode } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
@@ -30,7 +30,7 @@ export type ZoomProps = {
   readonly selectionOnDrag?: boolean;
 };
 
-export const Zoom = (props: ParentProps<ZoomProps>) => {
+export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
   let ref!: HTMLDivElement;
   const { store, actions } = useInternalSolidFlow();
 

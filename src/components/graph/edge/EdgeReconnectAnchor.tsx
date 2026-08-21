@@ -17,7 +17,7 @@ export type EdgeReconnectAnchorProps = {
   readonly reconnecting?: boolean;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
-export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>) => {
+export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>): JSX.Element => {
   const _props = mergeProps(
     {
       size: 25,

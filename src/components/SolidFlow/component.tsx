@@ -37,7 +37,7 @@ type SolidFlowComponentProps<
 
 export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: SolidFlowComponentProps<NodeType, EdgeType>,
-) => {
+): JSX.Element => {
   let domNode!: HTMLDivElement;
 
   const _props = mergeProps(

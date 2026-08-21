@@ -17,7 +17,7 @@ type EdgeLabelProps = {
   readonly style?: JSX.CSSProperties;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
-export const EdgeLabel = (props: ParentProps<EdgeLabelProps>) => {
+export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
   const _props = mergeProps(
     {
       x: 0,

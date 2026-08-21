@@ -24,7 +24,9 @@ type UseNodeConnectionsParams = {
  * @todo @param param.onDisconnect - gets called when a connection is removed
  * @returns an array with connections
  */
-export const useNodeConnections = (params: Accessor<UseNodeConnectionsParams>) => {
+export const useNodeConnections = (
+  params: Accessor<UseNodeConnectionsParams>,
+): Accessor<NodeConnection[]> => {
   const { connectionLookup } = useInternalSolidFlow();
 
   const ctxNodeId = () => {

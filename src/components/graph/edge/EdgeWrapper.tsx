@@ -1,6 +1,6 @@
 import { elementSelectionKeys, getMarkerId } from "@xyflow/system";
 import clsx from "clsx";
-import { Show } from "solid-js";
+import { type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type { Edge, EdgeEvents, Node } from "../../../types";
@@ -14,7 +14,7 @@ export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType
 
 export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: EdgeWrapperProps<EdgeType>,
-) => {
+): JSX.Element => {
   let edgeRef!: SVGGElement;
   const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
 

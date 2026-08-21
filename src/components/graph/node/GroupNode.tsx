@@ -1,7 +1,9 @@
+import type { JSX } from "solid-js";
+
 import type { NodeProps } from "../../../types";
 import { toPxString } from "../../../utils";
 
-export const GroupNode = (props: NodeProps<Record<string, never>>) => (
+export const GroupNode = (props: NodeProps<Record<string, never>>): JSX.Element => (
   <div
     style={{
       position: "absolute",

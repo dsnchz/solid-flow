@@ -14,7 +14,7 @@ export type PanelProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
   readonly "data-message"?: string;
 };
 
-export const Panel = (props: ParentProps<PanelProps>) => {
+export const Panel = (props: ParentProps<PanelProps>): JSX.Element => {
   const { store } = useInternalSolidFlow();
 
   const _props = mergeProps(

@@ -1,4 +1,4 @@
-import { mergeProps, Show } from "solid-js";
+import { type JSX, mergeProps, Show } from "solid-js";
 
 import { toPxString } from "~/utils";
 
@@ -10,7 +10,7 @@ type SelectionProps = {
   readonly isVisible?: boolean;
 };
 
-export const Selection = (props: SelectionProps) => {
+export const Selection = (props: SelectionProps): JSX.Element => {
   const _props = mergeProps({ isVisible: true }, props);
 
   const styles = () => ({

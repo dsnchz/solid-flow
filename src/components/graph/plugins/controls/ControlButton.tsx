@@ -11,7 +11,7 @@ export type ControlButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement
   readonly onClick?: JSX.EventHandler<HTMLButtonElement, MouseEvent>;
 };
 
-export const ControlButton = (props: ParentProps<ControlButtonProps>) => {
+export const ControlButton = (props: ParentProps<ControlButtonProps>): JSX.Element => {
   const [local, rest] = splitProps(props, [
     "class",
     "bgColor",

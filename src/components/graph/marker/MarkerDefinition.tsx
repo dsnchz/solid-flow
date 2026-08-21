@@ -1,11 +1,11 @@
 import { createMarkerIds } from "@xyflow/system";
-import { createMemo, For, Show } from "solid-js";
+import { createMemo, For, type JSX, Show } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
 
 import { Marker, type MarkerProps } from "./Marker";
 
-export const MarkerDefinition = () => {
+export const MarkerDefinition = (): JSX.Element => {
   const { store } = useInternalSolidFlow();
 
   const markers = createMemo(() => {

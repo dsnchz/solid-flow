@@ -51,7 +51,7 @@ type ResizeControlProps = NodeResizerSubProps & {
 
 export const ResizeControl = <NodeType extends Node = Node>(
   props: ParentProps<ResizeControlProps>,
-) => {
+): JSX.Element => {
   const _props = mergeProps(
     {
       variant: "handle" as ResizeControlVariant,

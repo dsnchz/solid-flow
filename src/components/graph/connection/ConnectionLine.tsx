@@ -20,7 +20,7 @@ type ConnectionLineProps<NodeType extends Node = Node> = {
 
 const ConnectionLine = <NodeType extends Node = Node>(
   props: ParentProps<Partial<ConnectionLineProps<NodeType>>>,
-) => {
+): JSX.Element => {
   const { store } = useInternalSolidFlow<NodeType>();
   const connectionStatus = () => getConnectionStatus(store.connection.isValid);
 

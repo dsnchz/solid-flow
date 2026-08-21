@@ -3,7 +3,7 @@ import { batch } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
 
-export function useHandleEdgeSelect() {
+export function useHandleEdgeSelect(): (id: string) => void {
   const { store, edgeLookup, actions } = useInternalSolidFlow();
 
   return (id: string) => {

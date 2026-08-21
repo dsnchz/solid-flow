@@ -1,11 +1,12 @@
 import { getStraightPath } from "@xyflow/system";
+import type { JSX } from "solid-js";
 
 import type { StraightEdgeProps } from "../../../types";
 import { BaseEdge } from "./BaseEdge";
 
 export const StraightEdgeInternal = (
   props: Omit<StraightEdgeProps, "sourcePosition" | "targetPosition">,
-) => {
+): JSX.Element => {
   const pathData = () => {
     const [path, labelX, labelY] = getStraightPath({
       sourceX: props.sourceX,

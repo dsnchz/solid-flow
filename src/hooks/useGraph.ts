@@ -1,3 +1,6 @@
+import type { Viewport } from "@xyflow/system";
+import type { Accessor } from "solid-js";
+
 import { useInternalSolidFlow } from "~/components/contexts";
 import type { Edge, Node } from "~/types";
 
@@ -7,7 +10,7 @@ import type { Edge, Node } from "~/types";
  * @public
  * @returns store with an array of nodes
  */
-export function useNodes<NodeType extends Node = Node>() {
+export function useNodes<NodeType extends Node = Node>(): Accessor<NodeType[]> {
   const { store } = useInternalSolidFlow<NodeType>();
   return () => store.nodes;
 }
@@ -18,7 +21,7 @@ export function useNodes<NodeType extends Node = Node>() {
  * @public
  * @returns store with an array of edges
  */
-export function useEdges<EdgeType extends Edge = Edge>() {
+export function useEdges<EdgeType extends Edge = Edge>(): Accessor<EdgeType[]> {
   const { store } = useInternalSolidFlow<Node, EdgeType>();
   return () => store.edges;
 }
@@ -29,7 +32,7 @@ export function useEdges<EdgeType extends Edge = Edge>() {
  * @public
  * @returns store with the viewport object
  */
-export function useViewport() {
+export function useViewport(): Accessor<Viewport> {
   const { store } = useInternalSolidFlow();
   return () => store.viewport;
 }

@@ -7,7 +7,7 @@ import {
   Position,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { batch, createEffect, createSignal, Show } from "solid-js";
+import { batch, createEffect, createSignal, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import createDraggable from "../../../actions/createDraggable";
@@ -24,7 +24,9 @@ export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType
   readonly nodeClickDistance: number;
 };
 
-export const NodeWrapper = <NodeType extends Node = Node>(props: NodeWrapperProps<NodeType>) => {
+export const NodeWrapper = <NodeType extends Node = Node>(
+  props: NodeWrapperProps<NodeType>,
+): JSX.Element => {
   const { store, nodeLookup, parentLookup, actions } = useInternalSolidFlow<NodeType>();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();

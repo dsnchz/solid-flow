@@ -1,4 +1,4 @@
-import { For, onCleanup } from "solid-js";
+import { For, type JSX, onCleanup } from "solid-js";
 
 import type { Node, NodeEvents } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
@@ -8,7 +8,9 @@ export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeTyp
   readonly nodeClickDistance: number;
 };
 
-export const NodeRenderer = <NodeType extends Node = Node>(props: NodeRendererProps<NodeType>) => {
+export const NodeRenderer = <NodeType extends Node = Node>(
+  props: NodeRendererProps<NodeType>,
+): JSX.Element => {
   const { actions, store } = useInternalSolidFlow<NodeType>();
 
   const resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {

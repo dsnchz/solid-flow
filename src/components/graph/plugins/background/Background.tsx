@@ -37,7 +37,7 @@ export type BackgroundProps = {
   readonly style?: JSX.CSSProperties;
 };
 
-export const Background = (props: BackgroundProps) => {
+export const Background = (props: BackgroundProps): JSX.Element => {
   const _props = mergeProps(
     {
       variant: "dots" as BackgroundVariant,

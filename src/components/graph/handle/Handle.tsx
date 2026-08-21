@@ -34,7 +34,7 @@ type HandleProps = Omit<SystemHandleProps, "position"> & {
 
 export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<HandleProps>,
-) => {
+): JSX.Element => {
   const _props = mergeProps(
     {
       id: null,
