@@ -1,5 +1,11 @@
 # @dschz/solid-flow
 
+## 0.2.1
+
+### Patch Changes
+
+- Add explicit return types to all public API functions (components and hooks). No runtime changes. This satisfies JSR's no-slow-types check — enabling `.d.ts` generation and faster type-checking for JSR consumers — and ships slightly leaner declaration files on npm.
+
 ## 0.2.0
 
 ### Minor Changes
