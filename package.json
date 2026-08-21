@@ -96,12 +96,15 @@
     "@solid-primitives/map": "^0.7.4",
     "@solid-primitives/media": "^2.3.6",
     "@solid-primitives/resize-observer": "^2.2.0",
+    "@solidjs/signals": "2.0.0-rc.0",
+    "@solidjs/web": "2.0.0-rc.1",
     "@xyflow/system": "^0.0.80",
     "clsx": "^2.1.1"
   },
   "devDependencies": {
     "@changesets/cli": "2.31.1",
     "@dagrejs/dagre": "^1.1.5",
+    "@dom-expressions/compiler": "0.50.0-next.43",
     "@solidjs/router": "0.16.2",
     "@solidjs/testing-library": "0.8.10",
     "@testing-library/jest-dom": "7.0.0",
@@ -125,7 +128,7 @@
     "vitest": "4.1.10"
   },
   "peerDependencies": {
-    "solid-js": ">=1.8.0"
+    "solid-js": "2.0.0-rc.1"
   },
   "overrides": {
     "babel-preset-solid": "1.9.6"
