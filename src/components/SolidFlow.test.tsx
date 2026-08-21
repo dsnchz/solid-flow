@@ -2,6 +2,7 @@ import { render } from "@solidjs/testing-library";
 import { fireEvent } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
 
+import { useSolidFlow } from "~/hooks/useSolidFlow";
 import type { Edge, Node, OnSelectionChange } from "~/types";
 
 import { SolidFlow } from "./SolidFlow";
@@ -139,5 +140,41 @@ describe("<SolidFlow />", () => {
     fireEvent.click(node);
     await tick();
     expect(onSelectionChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps existing edges rendered when a new edge is added", async () => {
+    // Regression: with projection-form input stores, one added edge churned
+    // every row identity and the disposed rows' cleanups deleted the freshly
+    // written layout entries — all pre-existing edges vanished from the DOM.
+    let addEdges!: ReturnType<typeof useSolidFlow>["addEdges"];
+    const Probe = () => {
+      addEdges = useSolidFlow().addEdges;
+      return null;
+    };
+
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={[
+          makeNode({ id: "a" }),
+          makeNode({ id: "b", position: { x: 200, y: 100 } }),
+          makeNode({ id: "c", position: { x: 400, y: 200 } }),
+        ]}
+        edges={[makeEdge({ id: "e1", source: "a", target: "b" })]}
+        width={800}
+        height={600}
+      >
+        <Probe />
+      </SolidFlow>
+    ));
+    await tick();
+    expect(container.querySelectorAll(".solid-flow__edge")).toHaveLength(1);
+
+    addEdges(makeEdge({ id: "e2", source: "b", target: "c" }));
+    await tick();
+
+    const ids = Array.from(container.querySelectorAll(".solid-flow__edge")).map((edge) =>
+      edge.getAttribute("data-id"),
+    );
+    expect(ids).toEqual(["e1", "e2"]);
   });
 });

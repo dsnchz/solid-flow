@@ -821,42 +821,47 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
+  // The initial fitView also needs the measured nodes, which arrive through
+  // requestUpdateNodeInternals (imperative); this effect covers the case where
+  // the container/panZoom side is what arrives last.
   createEffect(
-    () => {
-      if (width() && height() && panZoom()) tryInitialFitView();
+    () => Boolean(width() && height() && panZoom()),
+    (ready) => {
+      if (ready) tryInitialFitView();
     },
-    () => {},
+  );
+
+  // External system: keep the d3 zoom transform in sync with the viewport
+  // store. The leaves are read in the compute so deep writes retrigger.
+  createEffect(
+    () => ({
+      panZoom: store.panZoom,
+      viewport: { x: store.viewport.x, y: store.viewport.y, zoom: store.viewport.zoom },
+    }),
+    ({ panZoom, viewport }) => {
+      panZoom?.syncViewport(viewport);
+    },
+  );
+
+  // panZoom is part of each compute: the instance lands after mount and each
+  // new instance must receive the current values.
+  createEffect(
+    () => ({ panZoom: panZoom(), extent: [store.minZoom, store.maxZoom] as [number, number] }),
+    ({ panZoom, extent }) => {
+      panZoom?.setScaleExtent(extent);
+    },
   );
 
   createEffect(
-    () => {
-      store.panZoom?.syncViewport(store.viewport);
+    () => ({ panZoom: panZoom(), extent: store.translateExtent }),
+    ({ panZoom, extent }) => {
+      panZoom?.setTranslateExtent(extent);
     },
-    () => {},
   );
 
-  createEffect(
-    () => {
-      const _panZoom = panZoom();
-      if (!_panZoom) return;
-
-      createEffect(
-        () => [store.minZoom, store.maxZoom] as [number, number],
-        (extent) => {
-          _panZoom.setScaleExtent(extent);
-        },
-      );
-
-      createEffect(
-        () => store.translateExtent,
-        (extent) => {
-          _panZoom.setTranslateExtent(extent);
-        },
-      );
-    },
-    () => {},
-  );
-
+  // Adoption pipeline (P3.2 rewrite target): mapArray IS the compute and the
+  // per-row render effects write the lookups from their computes, so the noop
+  // applies here are structural, not unsplit effects.
   createRenderEffect(
     mapArray(
       () => store.nodes as unknown as NodeType[],
@@ -924,19 +929,21 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     () => {},
   );
 
-  // Garbage-collect nodeLookup entries for nodes that no longer exist in the store
+  // Garbage-collect nodeLookup entries for nodes that no longer exist in the
+  // store. Entries only appear via the adoption pipeline (also driven by
+  // store.nodes), so tracking the node ids is sufficient.
   createEffect(
-    () => {
-      const currentIds = new Set(store.nodes.map((n) => n.id));
-      for (const id of Array.from(nodeLookup.keys())) {
+    () => new Set(store.nodes.map((n) => n.id)),
+    (currentIds) => {
+      for (const id of untrack(() => Array.from(nodeLookup.keys()))) {
         if (!currentIds.has(id)) {
           nodeLookup.delete(id);
         }
       }
     },
-    () => {},
   );
 
+  // Edge layout pipeline — same deliberate shape as the node adoption pipeline above
   createRenderEffect(
     mapArray(
       () => store.edges,
@@ -1069,8 +1076,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   createEffect(
     () => {
-      const currentIds = new Set(store.edges.map((e) => e.id));
-      for (const id of Array.from(edgeLookup.keys())) {
+      return new Set(store.edges.map((e) => e.id));
+    },
+    (currentIds) => {
+      for (const id of untrack(() => Array.from(edgeLookup.keys()))) {
         if (!currentIds.has(id)) {
           edgeLookup.delete(id);
           connectionLookup.delete(id);
@@ -1078,7 +1087,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         }
       }
     },
-    () => {},
   );
 
   // TODO: Add viewportInitialized to store

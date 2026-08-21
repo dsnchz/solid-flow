@@ -1,5 +1,6 @@
+import type { PanZoomInstance } from "@xyflow/system";
 import { createRoot, flush } from "solid-js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Edge, Node } from "~/types";
 
@@ -14,18 +15,25 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
 const makeEdge = (overrides: Partial<Edge> & { id: string; source: string; target: string }) =>
   ({ ...overrides }) as Edge;
 
+// The callback runs OUTSIDE the root's owned scope: signal writes (setConfig,
+// setPanZoom, ...) throw REACTIVE_WRITE_IN_OWNED_SCOPE when performed inside it.
 const withFlow = <T,>(
   props: Parameters<typeof createSolidFlow>[0],
   run: (flow: ReturnType<typeof createSolidFlow>) => T,
-): T =>
-  createRoot((dispose) => {
-    const flow = createSolidFlow(props);
-    try {
-      return run(flow);
-    } finally {
-      dispose();
-    }
+): T => {
+  let flow!: ReturnType<typeof createSolidFlow>;
+  let dispose!: () => void;
+  createRoot((d) => {
+    dispose = d;
+    flow = createSolidFlow(props);
   });
+  try {
+    flush();
+    return run(flow);
+  } finally {
+    dispose();
+  }
+};
 
 describe("createSolidFlow", () => {
   it("exposes the provided nodes and edges", () => {
@@ -166,5 +174,140 @@ describe("createSolidFlow", () => {
         expect(store.edges[0]).toMatchObject({ source: "a", target: "b" });
       },
     );
+  });
+
+  it("addEdge rejects duplicate connections", () => {
+    withFlow(
+      {
+        nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })],
+        edges: [makeEdge({ id: "e1", source: "a", target: "b" })],
+      },
+      ({ store, actions }) => {
+        actions.addEdge({ source: "a", target: "b", sourceHandle: null, targetHandle: null });
+        flush();
+        expect(store.edges).toHaveLength(1);
+        expect(store.edges[0]!.id).toBe("e1");
+      },
+    );
+  });
+
+  it("addEdge preserves the identity of existing edge rows", () => {
+    // Regression: the projection form of createStore rewrapped every element
+    // on structural writes, churning row identities and collapsing the
+    // mapArray edge pipeline. Element identity must survive a push.
+    withFlow(
+      {
+        nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })],
+        edges: [makeEdge({ id: "e1", source: "a", target: "b" })],
+      },
+      ({ store, actions, edgeLookup }) => {
+        const existing = store.edges[0];
+        actions.addEdge({ source: "b", target: "a", sourceHandle: null, targetHandle: null });
+        flush();
+        expect(store.edges).toHaveLength(2);
+        expect(store.edges[0]).toBe(existing);
+        expect(edgeLookup.has("e1")).toBe(true);
+        expect(edgeLookup.has("xy-edge__b-a")).toBe(true);
+      },
+    );
+  });
+
+  it("resets local drafts when the nodes input identity changes", () => {
+    withFlow(
+      { nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })], edges: [] },
+      ({ store, actions, nodeLookup }) => {
+        actions.setNodes((nodes) => {
+          for (const node of nodes) node.selected = true;
+          return undefined;
+        });
+        flush();
+        expect(store.selectedNodes).toHaveLength(2);
+
+        actions.setConfig((prev) => ({
+          ...prev,
+          nodes: [makeNode({ id: "a" }), makeNode({ id: "c" })],
+        }));
+        flush();
+
+        expect(store.nodes.map((n) => n.id)).toEqual(["a", "c"]);
+        expect(store.selectedNodes).toHaveLength(0);
+        // stale lookup entries are garbage-collected, new ones adopted
+        expect(nodeLookup.has("b")).toBe(false);
+        expect(nodeLookup.has("c")).toBe(true);
+      },
+    );
+  });
+
+  it("resets edges and cleans lookups when the edges input identity changes", () => {
+    withFlow(
+      {
+        nodes: [makeNode({ id: "a" }), makeNode({ id: "b" }), makeNode({ id: "c" })],
+        edges: [makeEdge({ id: "e1", source: "a", target: "b" })],
+      },
+      ({ store, actions, edgeLookup }) => {
+        actions.addEdge({ source: "b", target: "c", sourceHandle: null, targetHandle: null });
+        flush();
+        expect(store.edges).toHaveLength(2);
+
+        actions.setConfig((prev) => ({
+          ...prev,
+          edges: [makeEdge({ id: "e9", source: "a", target: "c" })],
+        }));
+        flush();
+
+        expect(store.edges.map((e) => e.id)).toEqual(["e9"]);
+        expect(edgeLookup.has("e1")).toBe(false);
+        expect(edgeLookup.has("xy-edge__b-c")).toBe(false);
+        expect(edgeLookup.has("e9")).toBe(true);
+      },
+    );
+  });
+
+  it("follows a controlled viewport prop and holds when it goes undefined", () => {
+    withFlow({ nodes: [], edges: [], viewport: { x: 1, y: 1, zoom: 1 } }, ({ store, actions }) => {
+      actions.setConfig((prev) => ({ ...prev, viewport: { x: 9, y: 9, zoom: 2 } }));
+      flush();
+      expect({ ...store.viewport }).toEqual({ x: 9, y: 9, zoom: 2 });
+
+      actions.setConfig((prev) => ({ ...prev, viewport: undefined }));
+      flush();
+      expect({ ...store.viewport }).toEqual({ x: 9, y: 9, zoom: 2 });
+    });
+  });
+
+  it("applies viewport, scale extent and translate extent to a late-arriving panZoom", () => {
+    withFlow({ nodes: [], edges: [], minZoom: 0.25, maxZoom: 3 }, ({ actions }) => {
+      const syncViewport = vi.fn();
+      const setScaleExtent = vi.fn();
+      const setTranslateExtent = vi.fn();
+      actions.setPanZoom({
+        syncViewport,
+        setScaleExtent,
+        setTranslateExtent,
+      } as unknown as PanZoomInstance);
+      flush();
+
+      expect(syncViewport).toHaveBeenCalledWith({ x: 0, y: 0, zoom: 1 });
+      expect(setScaleExtent).toHaveBeenCalledWith([0.25, 3]);
+      expect(setTranslateExtent).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("syncs viewport writes to the panZoom instance", () => {
+    withFlow({ nodes: [], edges: [] }, ({ actions }) => {
+      const syncViewport = vi.fn();
+      actions.setPanZoom({
+        syncViewport,
+        setScaleExtent: vi.fn(),
+        setTranslateExtent: vi.fn(),
+      } as unknown as PanZoomInstance);
+      flush();
+      syncViewport.mockClear();
+
+      actions.setViewport({ x: 42, y: 0, zoom: 1 });
+      flush();
+
+      expect(syncViewport).toHaveBeenCalledWith({ x: 42, y: 0, zoom: 1 });
+    });
   });
 });
