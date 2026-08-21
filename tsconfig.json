@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     /* Base Options: */
-    "ignoreDeprecations": "6.0",
     "outDir": "dist",
     "esModuleInterop": true,
     "skipLibCheck": true,
