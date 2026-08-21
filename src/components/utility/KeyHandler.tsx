@@ -1,5 +1,7 @@
+import { createEventListenerMap } from "@solid-primitives/event-listener";
+import { isServer } from "@solidjs/web";
 import { isInputDOMNode, isMacOs } from "@xyflow/system";
-import { flush, onSettled } from "solid-js";
+import { flush } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
 import { useSolidFlow } from "~/hooks/useSolidFlow";
@@ -171,19 +173,14 @@ export const KeyHandler = (props: KeyHandlerProps) => {
     flush();
   };
 
-  onSettled(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", resetKeysAndSelection);
-    window.addEventListener("contextmenu", resetKeysAndSelection);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", resetKeysAndSelection);
-      window.removeEventListener("contextmenu", resetKeysAndSelection);
-    };
-  });
+  if (!isServer) {
+    createEventListenerMap(window, {
+      keydown: handleKeyDown,
+      keyup: handleKeyUp,
+      blur: resetKeysAndSelection,
+      contextmenu: resetKeysAndSelection,
+    });
+  }
 
   return null;
 };

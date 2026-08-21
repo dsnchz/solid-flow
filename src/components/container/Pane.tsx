@@ -1,3 +1,4 @@
+import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
 import {
   calcAutoPan,
@@ -9,7 +10,7 @@ import {
   type XYPosition,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { flush, onCleanup, type ParentProps } from "solid-js";
+import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
 import type { Edge, Node, PaneEvents } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
@@ -43,6 +44,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     EdgeType
   >();
 
+  const [containerRef, setContainerRef] = createSignal<HTMLDivElement>();
   let container: HTMLDivElement | undefined;
   let containerBounds: DOMRect | null = null;
   let connectionEndedOnPane = false;
@@ -332,6 +334,24 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     }
   };
 
+  createEventListener(
+    containerRef,
+    "pointerdown",
+    (e) => {
+      if (isSelectionEnabled()) onPointerDownCapture(e);
+    },
+    { capture: true },
+  );
+
+  createEventListener(
+    containerRef,
+    "click",
+    (e) => {
+      if (isSelectionEnabled()) onClickCapture(e);
+    },
+    { capture: true },
+  );
+
   const onContextMenu = (event: PointerEvent) => {
     if (event.target !== container) return;
 
@@ -349,23 +369,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     <div
       ref={(el) => {
         container = el;
-        // Capture-phase listeners (2.0 removed the on:/oncapture: namespaces):
-        // selection start must win over children, and a click that ends a
-        // selection drag must never reach them.
-        el.addEventListener(
-          "pointerdown",
-          (e) => {
-            if (isSelectionEnabled()) onPointerDownCapture(e);
-          },
-          { capture: true },
-        );
-        el.addEventListener(
-          "click",
-          (e) => {
-            if (isSelectionEnabled()) onClickCapture(e);
-          },
-          { capture: true },
-        );
+        setContainerRef(el);
       }}
       class={clsx("solid-flow__container solid-flow__pane", {
         selection: isSelecting(),
