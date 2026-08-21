@@ -1,6 +1,7 @@
+import type { JSX } from "@solidjs/web";
 import clsx from "clsx";
-import type { JSX, ParentProps } from "solid-js";
-import { mergeProps, splitProps } from "solid-js";
+import type { ParentProps } from "solid-js";
+import { merge, omit } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
 import { toPxString } from "~/utils";
@@ -18,7 +19,7 @@ type EdgeLabelProps = {
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
 export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
-  const _props = mergeProps(
+  const _props = merge(
     {
       x: 0,
       y: 0,
@@ -29,7 +30,8 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
     props,
   );
 
-  const [local, rest] = splitProps(_props, [
+  const rest = omit(
+    _props,
     "x",
     "y",
     "width",
@@ -39,7 +41,7 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
     "children",
     "class",
     "style",
-  ]);
+  );
 
   const { actions } = useInternalSolidFlow();
 
@@ -51,24 +53,24 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
     <EdgeLabelRenderer>
       <div
         role="button"
-        tabIndex={-1}
-        class={clsx("solid-flow__edge-label", { transparent: local.transparent }, local.class)}
+        tabindex={-1}
+        class={clsx("solid-flow__edge-label", { transparent: _props.transparent }, _props.class)}
         style={{
           // TODO: Add hideOnSSR
           "pointer-events": "all",
-          width: toPxString(local.width),
-          height: toPxString(local.height),
-          transform: `translate(-50%, -50%) translate(${local.x}px,${local.y}px)`,
-          cursor: local.selectEdgeOnClick ? "pointer" : undefined,
+          width: toPxString(_props.width),
+          height: toPxString(_props.height),
+          transform: `translate(-50%, -50%) translate(${_props.x}px,${_props.y}px)`,
+          cursor: _props.selectEdgeOnClick ? "pointer" : undefined,
           "z-index": zIndex(),
-          ...local.style,
+          ..._props.style,
         }}
         onClick={() => {
-          if (local.selectEdgeOnClick) actions.handleEdgeSelection(id());
+          if (_props.selectEdgeOnClick) actions.handleEdgeSelection(id());
         }}
         {...rest}
       >
-        {local.children}
+        {_props.children}
       </div>
     </EdgeLabelRenderer>
   );

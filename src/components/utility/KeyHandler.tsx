@@ -1,5 +1,5 @@
 import { isInputDOMNode, isMacOs } from "@xyflow/system";
-import { batch, mergeProps, onCleanup, onMount } from "solid-js";
+import { flush, onSettled } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
 import { useSolidFlow } from "~/hooks/useSolidFlow";
@@ -74,26 +74,35 @@ export const KeyHandler = (props: KeyHandlerProps) => {
   const { store, actions } = useInternalSolidFlow();
   const { deleteElements } = useSolidFlow();
 
-  const _props = mergeProps(
-    {
-      selectionKey: "Shift",
-      multiSelectionKey: isMacOs() ? "Meta" : "Control",
-      deleteKey: "Backspace",
-      panActivationKey: " ",
-      zoomActivationKey: isMacOs() ? "Meta" : "Control",
+  // Read-time defaults: `merge` in 2.0 treats an explicitly passed `undefined`
+  // as an override, so parents forwarding optional props would clobber these.
+  const _props = {
+    get selectionKey() {
+      return props.selectionKey ?? "Shift";
     },
-    props,
-  );
+    get multiSelectionKey() {
+      return props.multiSelectionKey ?? (isMacOs() ? "Meta" : "Control");
+    },
+    get deleteKey() {
+      return props.deleteKey ?? "Backspace";
+    },
+    get panActivationKey() {
+      return props.panActivationKey ?? " ";
+    },
+    get zoomActivationKey() {
+      return props.zoomActivationKey ?? (isMacOs() ? "Meta" : "Control");
+    },
+  };
 
   const resetKeysAndSelection = () => {
-    batch(() => {
+    {
       actions.setSelectionRect(undefined);
       actions.setSelectionKeyPressed(false);
       actions.setMultiselectionKeyPressed(false);
       actions.setDeleteKeyPressed(false);
       actions.setPanActivationKeyPressed(false);
       actions.setZoomActivationKeyPressed(false);
-    });
+    }
   };
 
   const handleDelete = async () => {
@@ -114,7 +123,7 @@ export const KeyHandler = (props: KeyHandlerProps) => {
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    batch(() => {
+    {
       if (matchesKeyArray(event, _props.selectionKey)) {
         actions.setSelectionKeyPressed(true);
       }
@@ -135,11 +144,13 @@ export const KeyHandler = (props: KeyHandlerProps) => {
       if (matchesKeyArray(event, _props.zoomActivationKey)) {
         actions.setZoomActivationKeyPressed(true);
       }
-    });
+    }
+    // Key state gates pointer handlers in the same task — commit now
+    flush();
   };
 
   const handleKeyUp = (event: KeyboardEvent) => {
-    batch(() => {
+    {
       if (matchesKeyArray(event, _props.selectionKey)) {
         actions.setSelectionKeyPressed(false);
       }
@@ -155,21 +166,23 @@ export const KeyHandler = (props: KeyHandlerProps) => {
       if (matchesKeyArray(event, _props.zoomActivationKey)) {
         actions.setZoomActivationKeyPressed(false);
       }
-    });
+    }
+    // Key state gates pointer handlers in the same task — commit now
+    flush();
   };
 
-  onMount(() => {
+  onSettled(() => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", resetKeysAndSelection);
     window.addEventListener("contextmenu", resetKeysAndSelection);
 
-    onCleanup(() => {
+    return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", resetKeysAndSelection);
       window.removeEventListener("contextmenu", resetKeysAndSelection);
-    });
+    };
   });
 
   return null;

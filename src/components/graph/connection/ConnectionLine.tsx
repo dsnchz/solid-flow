@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import {
   getBezierPath,
   getConnectionStatus,
@@ -5,7 +6,7 @@ import {
   getStraightPath,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { type JSX, type ParentProps, Show } from "solid-js";
+import { type ParentProps, Show } from "solid-js";
 
 import type { Node } from "../../../types";
 import { useInternalSolidFlow } from "../../contexts";

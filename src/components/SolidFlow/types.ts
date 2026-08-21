@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import type {
   AriaLabelConfig,
   ColorMode,
@@ -18,8 +19,7 @@ import type {
   Viewport,
   ZIndexMode,
 } from "@xyflow/system";
-import type { JSX } from "solid-js";
-import type { Store } from "solid-js/store";
+import type { Store } from "solid-js";
 
 import type { ConnectionLineComponentProps } from "~/components/graph/connection/types";
 import type {

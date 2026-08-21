@@ -1,5 +1,6 @@
+import type { JSX } from "@solidjs/web";
 import type { MarkerProps as SystemMarkerProps } from "@xyflow/system";
-import { type JSX, mergeProps, Show } from "solid-js";
+import { merge, Show } from "solid-js";
 
 export type MarkerProps = SystemMarkerProps & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse";
@@ -8,7 +9,7 @@ export type MarkerProps = SystemMarkerProps & {
 };
 
 export const Marker = (props: MarkerProps): JSX.Element => {
-  const _props = mergeProps(
+  const _props = merge(
     {
       markerUnits: "strokeWidth" as JSX.MarkerSVGAttributes<SVGElement>["markerUnits"],
       orient: "auto-start-reverse",

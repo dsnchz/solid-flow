@@ -1,5 +1,6 @@
+import type { JSX } from "@solidjs/web";
 import clsx from "clsx";
-import { type JSX, type ParentProps, splitProps } from "solid-js";
+import { omit, type ParentProps } from "solid-js";
 
 export type ControlButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
   readonly class?: string;
@@ -12,7 +13,8 @@ export type ControlButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement
 };
 
 export const ControlButton = (props: ParentProps<ControlButtonProps>): JSX.Element => {
-  const [local, rest] = splitProps(props, [
+  const rest = omit(
+    props,
     "class",
     "bgColor",
     "bgColorHover",
@@ -21,15 +23,15 @@ export const ControlButton = (props: ParentProps<ControlButtonProps>): JSX.Eleme
     "borderColor",
     "onClick",
     "children",
-  ]);
+  );
 
   const style = () =>
     Object.entries({
-      "--xy-controls-button-background-color-props": local.bgColor,
-      "--xy-controls-button-background-color-hover-props": local.bgColorHover,
-      "--xy-controls-button-color-props": local.color,
-      "--xy-controls-button-color-hover-props": local.colorHover,
-      "--xy-controls-button-border-color-props": local.borderColor,
+      "--xy-controls-button-background-color-props": props.bgColor,
+      "--xy-controls-button-background-color-hover-props": props.bgColorHover,
+      "--xy-controls-button-color-props": props.color,
+      "--xy-controls-button-color-hover-props": props.colorHover,
+      "--xy-controls-button-border-color-props": props.borderColor,
     })
       .filter(([_, value]) => value !== undefined)
       .reduce<Record<string, string>>((acc, [key, value]) => {
@@ -40,12 +42,12 @@ export const ControlButton = (props: ParentProps<ControlButtonProps>): JSX.Eleme
   return (
     <button
       type="button"
-      class={clsx("solid-flow__controls-button", local.class)}
-      onClick={(e) => local.onClick?.(e)}
+      class={clsx("solid-flow__controls-button", props.class)}
+      onClick={(e) => props.onClick?.(e)}
       style={style()}
       {...rest}
     >
-      {local.children}
+      {props.children}
     </button>
   );
 };

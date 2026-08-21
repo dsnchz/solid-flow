@@ -1,7 +1,9 @@
+import type { JSX } from "@solidjs/web";
 import { createMarkerIds } from "@xyflow/system";
-import { createMemo, For, type JSX, Show } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
+import type { Edge } from "~/types";
 
 import { Marker, type MarkerProps } from "./Marker";
 
@@ -9,7 +11,7 @@ export const MarkerDefinition = (): JSX.Element => {
   const { store } = useInternalSolidFlow();
 
   const markers = createMemo(() => {
-    return createMarkerIds(store.edges, {
+    return createMarkerIds(store.edges as Edge[], {
       id: store.id,
       defaultColor: store.defaultMarkerColor,
       defaultMarkerStart: store.defaultEdgeOptions.markerStart,

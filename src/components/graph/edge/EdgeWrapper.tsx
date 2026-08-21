@@ -1,7 +1,8 @@
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 import { elementSelectionKeys, getMarkerId } from "@xyflow/system";
 import clsx from "clsx";
-import { type JSX, Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Show } from "solid-js";
 
 import type { Edge, EdgeEvents, Node } from "../../../types";
 import { ARIA_EDGE_DESC_KEY } from "../../accessibility";
@@ -71,13 +72,13 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const ariaLabel = () => edge().ariaLabel ?? `Edge from ${edge().source} to ${edge().target}`;
 
   return (
-    <EdgeIdContext.Provider value={edgeId}>
+    <EdgeIdContext value={edgeId}>
       <Show when={!edge().hidden}>
         <svg class="solid-flow__edge-wrapper" style={{ "z-index": edge().zIndex }}>
           <g
             ref={edgeRef}
             data-id={edge().id}
-            tabIndex={focusable() ? 0 : undefined}
+            tabindex={focusable() ? 0 : undefined}
             role={edge().ariaRole ?? (focusable() ? "group" : "img")}
             aria-label={ariaLabel()}
             aria-roledescription="edge"
@@ -128,6 +129,6 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
           </g>
         </svg>
       </Show>
-    </EdgeIdContext.Provider>
+    </EdgeIdContext>
   );
 };

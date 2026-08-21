@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import {
   calcAutoPan,
   getEventPosition,
@@ -8,8 +9,7 @@ import {
   type XYPosition,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { batch, type JSX, onCleanup, type ParentProps } from "solid-js";
-import { produce } from "solid-js/store";
+import { flush, onCleanup, type ParentProps } from "solid-js";
 
 import type { Edge, Node, PaneEvents } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
@@ -83,11 +83,9 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     props.onPaneClick?.({ event });
 
-    batch(() => {
-      actions.unselectNodesAndEdges();
-      actions.setSelectionRectMode(undefined);
-      actions.setSelectionRect(undefined);
-    });
+    actions.unselectNodesAndEdges();
+    actions.setSelectionRectMode(undefined);
+    actions.setSelectionRect(undefined);
   };
 
   // We start the selection process when the user clicks down on the pane
@@ -137,6 +135,8 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       x,
       y,
     });
+    // Commit immediately: the next pointermove in this gesture must see the rect
+    flush();
 
     if (!eventTargetIsContainer) {
       event.stopPropagation();
@@ -194,41 +194,30 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       }
     }
 
-    batch(() => {
-      // this prevents unnecessary updates while updating the selection rectangle
-      if (!isSetEqual(prevSelectedNodeIds, selectedNodeIds)) {
-        const selectionMap = new Map<string, boolean>();
+    // this prevents unnecessary updates while updating the selection rectangle
+    if (!isSetEqual(prevSelectedNodeIds, selectedNodeIds)) {
+      actions.setNodes((nodes) => {
+        for (const node of nodes) {
+          const isSelected = selectedNodeIds.has(node.id);
+          if (!!node.selected !== isSelected) node.selected = isSelected;
+        }
+        return undefined;
+      });
+    }
 
-        actions.setNodes(
-          (node) => {
-            const isSelected = selectedNodeIds.has(node.id);
-            selectionMap.set(node.id, isSelected);
-            return !!node.selected !== isSelected;
-          },
-          produce((node) => {
-            node.selected = selectionMap.get(node.id);
-          }),
-        );
-      }
+    if (!isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)) {
+      actions.setEdges((edges) => {
+        for (const edge of edges) {
+          const isSelected = selectedEdgeIds.has(edge.id);
+          if (!!edge.selected !== isSelected) edge.selected = isSelected;
+        }
+        return undefined;
+      });
+    }
 
-      if (!isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)) {
-        const selectionMap = new Map<string, boolean>();
-
-        actions.setEdges(
-          (edge) => {
-            const isSelected = selectedEdgeIds.has(edge.id);
-            selectionMap.set(edge.id, isSelected);
-            return !!edge.selected !== isSelected;
-          },
-          produce((edge) => {
-            edge.selected = selectionMap.get(edge.id);
-          }),
-        );
-      }
-
-      actions.setSelectionRectMode("user");
-      actions.setSelectionRect(nextUserSelectRect);
-    });
+    actions.setSelectionRectMode("user");
+    actions.setSelectionRect(nextUserSelectRect);
+    flush();
   };
 
   const autoPan = () => {
@@ -317,13 +306,12 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       onClick(event);
     }
 
-    batch(() => {
-      actions.setSelectionRect(undefined);
+    actions.setSelectionRect(undefined);
 
-      if (selectionInProgress) {
-        actions.setSelectionRectMode(selectedNodeIds.size > 0 ? "nodes" : undefined);
-      }
-    });
+    if (selectionInProgress) {
+      actions.setSelectionRectMode(selectedNodeIds.size > 0 ? "nodes" : undefined);
+    }
+    flush();
 
     if (selectionInProgress) {
       props.onSelectionEnd?.(event);
@@ -361,7 +349,16 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     <div
       ref={(el) => {
         container = el;
-        // Capture-phase listener so a click that ends a selection drag never reaches children
+        // Capture-phase listeners (2.0 removed the on:/oncapture: namespaces):
+        // selection start must win over children, and a click that ends a
+        // selection drag must never reach them.
+        el.addEventListener(
+          "pointerdown",
+          (e) => {
+            if (isSelectionEnabled()) onPointerDownCapture(e);
+          },
+          { capture: true },
+        );
         el.addEventListener(
           "click",
           (e) => {
@@ -378,12 +375,6 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
           (Array.isArray(props.panOnDrag) && props.panOnDrag.includes(0)),
       })}
       onClick={(e) => (isSelectionEnabled() ? undefined : onClick(e))}
-      on:pointerdown={{
-        capture: true,
-        handleEvent: (e) => {
-          if (isSelectionEnabled()) onPointerDownCapture(e);
-        },
-      }}
       onPointerMove={(e) => (isSelectionEnabled() ? onPointerMove(e) : undefined)}
       onPointerUp={onPointerUp}
       onPointerCancel={(e) => (isSelectionEnabled() ? onPointerCancel(e) : undefined)}

@@ -1,17 +1,15 @@
-import { createResizeObserver } from "@solid-primitives/resize-observer";
+import type { JSX } from "@solidjs/web";
 import { type ColorModeClass, infiniteExtent, isMacOs } from "@xyflow/system";
 import clsx from "clsx";
 import {
-  batch,
   type Context,
   createEffect,
   createMemo,
-  type JSX,
-  mergeProps,
-  onCleanup,
-  onMount,
+  createSignal,
+  merge,
+  omit,
+  onSettled,
   type ParentProps,
-  splitProps,
   untrack,
   useContext,
 } from "solid-js";
@@ -38,9 +36,10 @@ type SolidFlowComponentProps<
 export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: SolidFlowComponentProps<NodeType, EdgeType>,
 ): JSX.Element => {
+  const [domNodeRef, setDomNodeRef] = createSignal<HTMLDivElement>();
   let domNode!: HTMLDivElement;
 
-  const _props = mergeProps(
+  const _props = merge(
     {
       ...getDefaultFlowStateProps<NodeType, EdgeType>(),
       colorMode: "light" as ColorModeClass,
@@ -67,14 +66,12 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     props,
   );
 
-  const [flowProps, htmlProps] = splitProps(_props, [
-    // Core flow props
+  const htmlProps = omit(
+    _props,
     "nodes",
     "edges",
     "nodeTypes",
     "edgeTypes",
-
-    // Layout and viewport
     "width",
     "height",
     "fitView",
@@ -90,8 +87,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "viewport",
     "translateExtent",
     "nodeExtent",
-
-    // Interaction and behavior
     "selectionKey",
     "panActivationKey",
     "deleteKey",
@@ -113,8 +108,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "autoPanOnNodeFocus",
     "autoPanOnSelection",
     "autoPanSpeed",
-
-    // Connection and validation
     "connectionRadius",
     "connectionMode",
     "connectionLineType",
@@ -125,8 +118,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "isValidConnection",
     "clickConnect",
     "reconnectRadius",
-
-    // Selection and accessibility
     "selectionMode",
     "elementsSelectable",
     "nodesDraggable",
@@ -136,8 +127,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "disableKeyboardA11y",
     "ariaLabelConfig",
     "ariaLiveMessage",
-
-    // Styling and theming
     "colorMode",
     "colorModeSSR",
     "class",
@@ -150,19 +139,13 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "noDragClass",
     "noPanClass",
     "noWheelClass",
-
-    // Attribution and pro features
     "attributionPosition",
     "proOptions",
-
-    // Event handlers - Flow lifecycle
     "onInit",
     "onMoveStart",
     "onMove",
     "onMoveEnd",
     "onFlowError",
-
-    // Event handlers - Node events
     "onNodeClick",
     "onNodeContextMenu",
     "onNodeDrag",
@@ -171,18 +154,12 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "onNodePointerEnter",
     "onNodePointerMove",
     "onNodePointerLeave",
-
-    // Event handlers - Edge events
     "onEdgeClick",
     "onEdgeContextMenu",
     "onEdgePointerEnter",
     "onEdgePointerLeave",
-
-    // Event handlers - Pane events
     "onPaneClick",
     "onPaneContextMenu",
-
-    // Event handlers - Selection events
     "onSelectionChange",
     "onSelectionClick",
     "onSelectionContextMenu",
@@ -191,8 +168,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "onSelectionDragStop",
     "onSelectionStart",
     "onSelectionEnd",
-
-    // Event handlers - Connection events
     "onConnect",
     "onConnectStart",
     "onConnectEnd",
@@ -203,21 +178,15 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "onClickConnectEnd",
     "onBeforeConnect",
     "onBeforeReconnect",
-
-    // Event handlers - Delete events
     "onDelete",
     "onBeforeDelete",
-
-    // Legacy/deprecated props
     "deleteKeyCode",
     "selectionKeyCode",
     "panActivationKeyCode",
     "multiSelectionKeyCode",
     "zoomActivationKeyCode",
-
-    // Special props that conflict with HTML
     "children",
-  ]);
+  );
 
   // Since we cannot pass generic types info at the point of context creation, we need to cast it here
   const TypedSolidFlowContext = SolidFlowContext as unknown as Context<
@@ -227,32 +196,40 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   const solidFlow = useContext(TypedSolidFlowContext) ?? createSolidFlow(_props);
   const { store, actions } = solidFlow;
 
-  onMount(() => {
-    actions.applyInitialFitView(flowProps.fitView);
+  onSettled(() => {
+    actions.applyInitialFitView(_props.fitView);
+    actions.setConfig(_props);
+    actions.setDomNode(domNode);
 
-    batch(() => {
-      actions.setConfig(_props);
-      actions.setDomNode(domNode);
-    });
-
-    createResizeObserver(domNode, () => {
-      actions.setWidth(domNode.clientWidth);
-      actions.setHeight(domNode.clientHeight);
-    });
-
-    createEffect(() => {
-      actions.setPaneClickDistance(flowProps.paneClickDistance);
-    });
-
-    onCleanup(() => {
+    return () => {
       actions.reset();
-    });
+    };
   });
+
+  // Sync with the container's real size (external system: ResizeObserver)
+  createEffect(
+    () => domNodeRef(),
+    (el) => {
+      if (!el) return;
+      const observer = new ResizeObserver(() => {
+        actions.setWidth(el.clientWidth);
+        actions.setHeight(el.clientHeight);
+      });
+      observer.observe(el);
+      return () => observer.disconnect();
+    },
+  );
+
+  createEffect(
+    () => _props.paneClickDistance,
+    (distance) => {
+      actions.setPaneClickDistance(distance);
+    },
+  );
 
   // Fires only when the set of selected ids changes, not on unrelated node/edge updates
   const selectedElements = createMemo(
     () => ({ nodes: store.selectedNodes, edges: store.selectedEdges }),
-    undefined,
     {
       equals: (a, b) =>
         a.nodes.length === b.nodes.length &&
@@ -262,98 +239,104 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     },
   );
 
-  createEffect(() => {
-    const params = selectedElements();
-    untrack(() => flowProps.onSelectionChange)?.(params);
-  });
+  createEffect(
+    () => {
+      const params = selectedElements();
+      untrack(() => _props.onSelectionChange)?.(params);
+    },
+    () => {},
+  );
 
   const rootStyle = (): JSX.CSSProperties => ({
-    width: toPxString(flowProps.width),
-    height: toPxString(flowProps.height),
-    ...flowProps.style,
+    width: toPxString(_props.width),
+    height: toPxString(_props.height),
+    ..._props.style,
   });
 
   return (
     <div
       role="application"
       data-testid="solid-flow__wrapper"
-      ref={domNode}
-      class={clsx(["solid-flow", "solid-flow__container", flowProps.class, store.colorMode])}
+      ref={(el) => {
+        domNode = el;
+        setDomNodeRef(el);
+      }}
+      class={clsx(["solid-flow", "solid-flow__container", _props.class, store.colorMode])}
       style={rootStyle()}
       onScroll={(e) => {
         e.currentTarget.scrollTo({ top: 0, left: 0, behavior: "auto" });
       }}
       {...htmlProps}
     >
-      <TypedSolidFlowContext.Provider value={solidFlow}>
+      <TypedSolidFlowContext value={solidFlow}>
         <KeyHandler
-          selectionKey={flowProps.selectionKey}
-          deleteKey={flowProps.deleteKey}
-          panActivationKey={flowProps.panActivationKey}
-          multiSelectionKey={flowProps.multiSelectionKey}
-          zoomActivationKey={flowProps.zoomActivationKey}
+          selectionKey={_props.selectionKey}
+          deleteKey={_props.deleteKey}
+          panActivationKey={_props.panActivationKey}
+          multiSelectionKey={_props.multiSelectionKey}
+          zoomActivationKey={_props.zoomActivationKey}
         />
         <Zoom
-          panOnScrollMode={flowProps.panOnScrollMode}
-          preventScrolling={flowProps.preventScrolling}
-          zoomOnScroll={flowProps.zoomOnScroll}
-          zoomOnDoubleClick={flowProps.zoomOnDoubleClick}
-          zoomOnPinch={flowProps.zoomOnPinch}
-          panOnScroll={flowProps.panOnScroll}
-          panOnScrollSpeed={flowProps.panOnScrollSpeed}
-          panOnDrag={flowProps.panOnDrag}
-          paneClickDistance={flowProps.paneClickDistance}
-          selectionOnDrag={flowProps.selectionOnDrag}
-          onMoveStart={flowProps.onMoveStart}
-          onMove={flowProps.onMove}
-          onMoveEnd={flowProps.onMoveEnd}
-          onViewportInitialized={flowProps.onInit}
-          initialViewport={flowProps.viewport || flowProps.initialViewport}
+          panOnScrollMode={_props.panOnScrollMode}
+          preventScrolling={_props.preventScrolling}
+          zoomOnScroll={_props.zoomOnScroll}
+          zoomOnDoubleClick={_props.zoomOnDoubleClick}
+          zoomOnPinch={_props.zoomOnPinch}
+          panOnScroll={_props.panOnScroll}
+          panOnScrollSpeed={_props.panOnScrollSpeed}
+          panOnDrag={_props.panOnDrag}
+          paneClickDistance={_props.paneClickDistance}
+          selectionOnDrag={_props.selectionOnDrag}
+          onMoveStart={_props.onMoveStart}
+          onMove={_props.onMove}
+          onMoveEnd={_props.onMoveEnd}
+          onViewportInitialized={_props.onInit}
+          initialViewport={_props.viewport || _props.initialViewport}
         >
           <Pane
-            onPaneClick={flowProps.onPaneClick}
-            onPaneContextMenu={flowProps.onPaneContextMenu}
-            onSelectionStart={flowProps.onSelectionStart}
-            onSelectionEnd={flowProps.onSelectionEnd}
-            panOnDrag={flowProps.panOnDrag}
-            selectionOnDrag={flowProps.selectionOnDrag}
-            paneClickDistance={flowProps.paneClickDistance}
-            autoPanOnSelection={flowProps.autoPanOnSelection}
+            onPaneClick={_props.onPaneClick}
+            onPaneContextMenu={_props.onPaneContextMenu}
+            onSelectionStart={_props.onSelectionStart}
+            onSelectionEnd={_props.onSelectionEnd}
+            panOnDrag={_props.panOnDrag}
+            selectionOnDrag={_props.selectionOnDrag}
+            paneClickDistance={_props.paneClickDistance}
+            autoPanOnSelection={_props.autoPanOnSelection}
           >
             <Viewport>
               <div class="solid-flow__container solid-flow__viewport-back" />
               <EdgeRenderer<NodeType, EdgeType>
-                reconnectRadius={flowProps.reconnectRadius}
-                onEdgeClick={flowProps.onEdgeClick}
-                onEdgeContextMenu={flowProps.onEdgeContextMenu}
-                onEdgePointerEnter={flowProps.onEdgePointerEnter}
-                onEdgePointerLeave={flowProps.onEdgePointerLeave}
-                defaultEdgeOptions={flowProps.defaultEdgeOptions}
+                reconnectRadius={_props.reconnectRadius}
+                onEdgeClick={_props.onEdgeClick}
+                onEdgeContextMenu={_props.onEdgeContextMenu}
+                onEdgePointerEnter={_props.onEdgePointerEnter}
+                onEdgePointerLeave={_props.onEdgePointerLeave}
+                defaultEdgeOptions={_props.defaultEdgeOptions}
               />
               <div class="solid-flow__container solid-flow__edge-labels" />
               <ConnectionLine<NodeType>
-                type={flowProps.connectionLineType}
-                component={flowProps.connectionLineComponent}
-                containerStyle={flowProps.connectionLineContainerStyle}
-                style={flowProps.connectionLineStyle}
+                type={_props.connectionLineType}
+                component={_props.connectionLineComponent}
+                containerStyle={_props.connectionLineContainerStyle}
+                style={_props.connectionLineStyle}
               />
               <NodeRenderer
-                nodeClickDistance={flowProps.nodeClickDistance}
-                onNodeClick={flowProps.onNodeClick}
-                onNodeContextMenu={flowProps.onNodeContextMenu}
-                onNodePointerEnter={flowProps.onNodePointerEnter}
-                onNodePointerMove={flowProps.onNodePointerMove}
-                onNodePointerLeave={flowProps.onNodePointerLeave}
-                onNodeDrag={flowProps.onNodeDrag}
-                onNodeDragStart={flowProps.onNodeDragStart}
-                onNodeDragStop={flowProps.onNodeDragStop}
+                nodeClickDistance={_props.nodeClickDistance}
+                onNodeClick={_props.onNodeClick}
+                onNodeContextMenu={_props.onNodeContextMenu}
+                onNodePointerEnter={_props.onNodePointerEnter}
+                onNodePointerMove={_props.onNodePointerMove}
+                onNodePointerLeave={_props.onNodePointerLeave}
+                onNodeDrag={_props.onNodeDrag}
+                onNodeDragStart={_props.onNodeDragStart}
+                onNodeDragStop={_props.onNodeDragStop}
               />
               <NodeSelection
-                onSelectionClick={flowProps.onSelectionClick}
-                onSelectionContextMenu={flowProps.onSelectionContextMenu}
-                onNodeDrag={flowProps.onNodeDrag}
-                onNodeDragStart={flowProps.onNodeDragStart}
-                onNodeDragStop={flowProps.onNodeDragStop}
+                onSelectionClick={_props.onSelectionClick}
+                onSelectionContextMenu={_props.onSelectionContextMenu}
+                onNodeDrag={_props.onNodeDrag}
+                onNodeDragStart={_props.onNodeDragStart}
+                onNodeDragStop={_props.onNodeDragStop}
               />
             </Viewport>
             <Selection
@@ -365,10 +348,10 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
             />
           </Pane>
         </Zoom>
-        <Attribution proOptions={flowProps.proOptions} position={flowProps.attributionPosition} />
+        <Attribution proOptions={_props.proOptions} position={_props.attributionPosition} />
         <A11yDescriptions />
-        {flowProps.children}
-      </TypedSolidFlowContext.Provider>
+        {_props.children}
+      </TypedSolidFlowContext>
     </div>
   );
 };

@@ -12,7 +12,7 @@ import type { Edge, Node } from "~/types";
  */
 export function useNodes<NodeType extends Node = Node>(): Accessor<NodeType[]> {
   const { store } = useInternalSolidFlow<NodeType>();
-  return () => store.nodes;
+  return () => store.nodes as unknown as NodeType[];
 }
 
 /**
@@ -23,7 +23,7 @@ export function useNodes<NodeType extends Node = Node>(): Accessor<NodeType[]> {
  */
 export function useEdges<EdgeType extends Edge = Edge>(): Accessor<EdgeType[]> {
   const { store } = useInternalSolidFlow<Node, EdgeType>();
-  return () => store.edges;
+  return () => store.edges as unknown as EdgeType[];
 }
 
 /**

@@ -1,5 +1,5 @@
+import type { JSX } from "@solidjs/web";
 import { getSmoothStepPath } from "@xyflow/system";
-import type { JSX } from "solid-js";
 
 import type { SmoothStepEdgeProps } from "../../../types";
 import { BaseEdge } from "./BaseEdge";

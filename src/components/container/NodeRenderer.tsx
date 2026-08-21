@@ -1,5 +1,6 @@
-import { For, type JSX, onCleanup } from "solid-js";
-import { isServer } from "solid-js/web";
+import type { JSX } from "@solidjs/web";
+import { isServer } from "@solidjs/web";
+import { For, onCleanup } from "solid-js";
 
 import type { Node, NodeEvents } from "../../types";
 import { useInternalSolidFlow } from "../contexts";

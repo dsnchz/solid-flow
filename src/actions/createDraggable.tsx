@@ -1,5 +1,5 @@
 import { type OnDrag, XYDrag } from "@xyflow/system";
-import { type Accessor, createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { type Accessor, createEffect, createSignal } from "solid-js";
 
 import { useInternalSolidFlow } from "../components/contexts/flow";
 import type { Node } from "../types";
@@ -24,68 +24,64 @@ const createDraggable = (
   const { store, nodeLookup, actions } = useInternalSolidFlow();
   const [dragging, setDragging] = createSignal(false);
 
-  onMount(() => {
-    const { onDrag, onDragStart, onDragStop, onNodeMouseDown } = params();
+  // Mount the drag controller on the element (external system: XYDrag/d3-drag)
+  createEffect(
+    () => ({ el: elem(), current: params() }),
+    ({ el, current }) => {
+      if (!el || current.disabled) return;
 
-    const dragInstance = XYDrag<Node>({
-      onDrag,
-      onDragStart: (event, dragItems, node, nodes) => {
-        setDragging(true);
-        onDragStart?.(event, dragItems, node, nodes);
-      },
-      onDragStop: (event, dragItems, node, nodes) => {
-        setDragging(false);
-        onDragStop?.(event, dragItems, node, nodes);
-      },
-      onNodeMouseDown,
-      getStoreItems: () => {
-        return {
-          nodes: store.nodes,
-          nodeLookup,
-          edges: store.edges,
-          nodeExtent: store.nodeExtent,
-          snapGrid: store.snapGrid ?? [0, 0],
-          snapToGrid: !!store.snapGrid,
-          autoPanSpeed: store.autoPanSpeed,
-          nodeOrigin: store.nodeOrigin,
-          multiSelectionActive: store.multiselectionKeyPressed,
-          domNode: store.domNode,
-          transform: store.transform,
-          autoPanOnNodeDrag: store.autoPanOnNodeDrag,
-          nodesDraggable: store.nodesDraggable,
-          selectNodesOnDrag: store.selectNodesOnDrag,
-          nodeDragThreshold: store.nodeDragThreshold,
-          unselectNodesAndEdges: actions.unselectNodesAndEdges,
-          updateNodePositions: actions.updateNodePositions,
-          panBy: actions.panBy,
-        };
-      },
-    });
+      const { onDrag, onDragStart, onDragStop, onNodeMouseDown } = current;
 
-    function updateDrag(elem: Element, params: Partial<CreateDraggableParams>) {
-      if (params.disabled) {
-        dragInstance.destroy();
-        return;
-      }
+      const dragInstance = XYDrag<Node>({
+        onDrag,
+        onDragStart: (event, dragItems, node, nodes) => {
+          setDragging(true);
+          onDragStart?.(event, dragItems, node, nodes);
+        },
+        onDragStop: (event, dragItems, node, nodes) => {
+          setDragging(false);
+          onDragStop?.(event, dragItems, node, nodes);
+        },
+        onNodeMouseDown,
+        getStoreItems: () => {
+          return {
+            nodes: store.nodes,
+            nodeLookup,
+            edges: store.edges,
+            nodeExtent: store.nodeExtent,
+            snapGrid: store.snapGrid ?? [0, 0],
+            snapToGrid: !!store.snapGrid,
+            autoPanSpeed: store.autoPanSpeed,
+            nodeOrigin: store.nodeOrigin,
+            multiSelectionActive: store.multiselectionKeyPressed,
+            domNode: store.domNode,
+            transform: store.transform,
+            autoPanOnNodeDrag: store.autoPanOnNodeDrag,
+            nodesDraggable: store.nodesDraggable,
+            selectNodesOnDrag: store.selectNodesOnDrag,
+            nodeDragThreshold: store.nodeDragThreshold,
+            unselectNodesAndEdges: actions.unselectNodesAndEdges,
+            updateNodePositions: actions.updateNodePositions,
+            panBy: actions.panBy,
+            // Store arrays are readonly in 2.0; XYDrag's StoreItems expects mutable
+          } as unknown as ReturnType<Parameters<typeof XYDrag<Node>>[0]["getStoreItems"]>;
+        },
+      });
 
       dragInstance.update({
-        domNode: elem,
-        nodeId: params.nodeId,
-        noDragClassName: params.noDragClass,
-        handleSelector: params.handleSelector,
-        isSelectable: params.isSelectable,
-        nodeClickDistance: params.nodeClickDistance,
+        domNode: el,
+        nodeId: current.nodeId,
+        noDragClassName: current.noDragClass,
+        handleSelector: current.handleSelector,
+        isSelectable: current.isSelectable,
+        nodeClickDistance: current.nodeClickDistance,
       });
-    }
 
-    createEffect(() => {
-      updateDrag(elem()!, params());
-    });
-
-    onCleanup(() => {
-      dragInstance.destroy();
-    });
-  });
+      return () => {
+        dragInstance.destroy();
+      };
+    },
+  );
 
   return dragging;
 };

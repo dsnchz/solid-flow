@@ -1,3 +1,5 @@
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 import {
   elementSelectionKeys,
   errorMessages,
@@ -7,8 +9,7 @@ import {
   Position,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { batch, createEffect, createSignal, type JSX, Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { createEffect, createSignal, Show } from "solid-js";
 
 import createDraggable from "../../../actions/createDraggable";
 import type { Node, NodeEvents } from "../../../types";
@@ -71,61 +72,70 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       ...(node().style ?? {}),
     }) as const;
 
-  createEffect(() => {
-    if (!nodeTypeValid()) {
-      console.warn("003", errorMessages["error003"](nodeType()));
-    }
-  });
+  createEffect(
+    () => {
+      if (!nodeTypeValid()) {
+        console.warn("003", errorMessages["error003"](nodeType()));
+      }
+    },
+    () => {},
+  );
 
   createEffect<{
     sourcePosition: Position | undefined;
     targetPosition: Position | undefined;
     nodeType: string;
-  }>((prev) => {
-    if (
-      prev &&
-      prev.sourcePosition === node().sourcePosition &&
-      prev.targetPosition === node().targetPosition &&
-      prev.nodeType === nodeType()
-    ) {
-      return prev;
-    }
+  }>(
+    (prev) => {
+      if (
+        prev &&
+        prev.sourcePosition === node().sourcePosition &&
+        prev.targetPosition === node().targetPosition &&
+        prev.nodeType === nodeType()
+      ) {
+        return prev;
+      }
 
-    actions.requestUpdateNodeInternals([
-      [
-        node().id,
-        {
-          id: node().id,
-          nodeElement: nodeRef()!,
-          force: true,
-        },
-      ],
-    ]);
+      actions.requestUpdateNodeInternals([
+        [
+          node().id,
+          {
+            id: node().id,
+            nodeElement: nodeRef()!,
+            force: true,
+          },
+        ],
+      ]);
 
-    return {
-      nodeType: nodeType(),
-      sourcePosition: node().sourcePosition,
-      targetPosition: node().targetPosition,
-    };
-  });
+      return {
+        nodeType: nodeType(),
+        sourcePosition: node().sourcePosition,
+        targetPosition: node().targetPosition,
+      };
+    },
+    () => {},
+  );
 
-  createEffect<HTMLDivElement | undefined>((prevNodeRef) => {
-    const currentNodeRef = nodeRef();
+  createEffect<HTMLDivElement | undefined>(
+    (prevNodeRef) => {
+      const currentNodeRef = nodeRef();
 
-    if (currentNodeRef === prevNodeRef && nodeHasDimensions(node())) {
-      return prevNodeRef;
-    }
+      if (currentNodeRef === prevNodeRef && nodeHasDimensions(node())) {
+        return prevNodeRef;
+      }
 
-    if (prevNodeRef) {
-      props.resizeObserver?.unobserve(prevNodeRef);
-    }
+      if (prevNodeRef) {
+        props.resizeObserver?.unobserve(prevNodeRef);
+      }
 
-    if (currentNodeRef) {
-      props.resizeObserver?.observe(currentNodeRef);
-    }
+      if (currentNodeRef) {
+        props.resizeObserver?.observe(currentNodeRef);
+      }
 
-    return currentNodeRef;
-  });
+      return currentNodeRef;
+    },
+    () => {},
+  );
 
   const onSelectNodeHandler = (event: MouseEvent) => {
     if (selectable() && (!store.selectNodesOnDrag || !draggable() || store.nodeDragThreshold > 0)) {
@@ -150,7 +160,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     const arrowKeyDiff = ARROW_KEY_DIFFS[event.key];
 
     if (draggable() && node().selected && arrowKeyDiff) {
-      batch(() => {
+      {
         // prevent default scrolling behavior on arrow key press when node is moved
         event.preventDefault();
         actions.setAriaLiveMessage(
@@ -162,7 +172,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         );
 
         actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
-      });
+      }
     }
   };
 
@@ -248,7 +258,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         onContextMenu={(event) => props.onNodeContextMenu?.({ node: userNode(), event })}
         onKeyDown={(e) => focusable() && onKeyDown(e)}
         onFocus={() => focusable() && onFocus()}
-        tabIndex={focusable() ? 0 : undefined}
+        tabindex={focusable() ? 0 : undefined}
         role={node().ariaRole ?? (focusable() ? "group" : undefined)}
         aria-roledescription="node"
         aria-describedby={
@@ -256,8 +266,8 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         }
         {...node().domAttributes}
       >
-        <NodeIdContext.Provider value={nodeId}>
-          <NodeConnectableContext.Provider value={connectable}>
+        <NodeIdContext value={nodeId}>
+          <NodeConnectableContext value={connectable}>
             <Dynamic
               component={nodeComponent()}
               data={node().data}
@@ -279,8 +289,8 @@ export const NodeWrapper = <NodeType extends Node = Node>(
               width={node().width}
               height={node().height}
             />
-          </NodeConnectableContext.Provider>
-        </NodeIdContext.Provider>
+          </NodeConnectableContext>
+        </NodeIdContext>
       </div>
     </Show>
   );

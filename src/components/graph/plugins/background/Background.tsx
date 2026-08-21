@@ -1,5 +1,6 @@
+import type { JSX } from "@solidjs/web";
 import clsx from "clsx";
-import { type JSX, mergeProps, Show } from "solid-js";
+import { merge, Show } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
 
@@ -38,7 +39,7 @@ export type BackgroundProps = {
 };
 
 export const Background = (props: BackgroundProps): JSX.Element => {
-  const _props = mergeProps(
+  const _props = merge(
     {
       variant: "dots" as BackgroundVariant,
       gap: 20,

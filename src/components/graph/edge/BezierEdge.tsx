@@ -1,5 +1,5 @@
+import type { JSX } from "@solidjs/web";
 import { getBezierPath } from "@xyflow/system";
-import type { JSX } from "solid-js";
 
 import type { BezierEdgeProps } from "../../../types";
 import { BaseEdge } from "./BaseEdge";

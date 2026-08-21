@@ -1,6 +1,7 @@
+import type { JSX } from "@solidjs/web";
 import type { PanelPosition } from "@xyflow/system";
 import clsx from "clsx";
-import { batch, type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
+import { merge, omit, type ParentProps, Show } from "solid-js";
 
 import type { FitViewOptions } from "../../../../types";
 import { Panel } from "../../../container";
@@ -38,7 +39,7 @@ type ControlsProps = {
 export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
   const { store, actions } = useInternalSolidFlow();
 
-  const _props = mergeProps(
+  const _props = merge(
     {
       position: "bottom-left" as PanelPosition,
       showZoom: true,
@@ -49,7 +50,8 @@ export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
     props,
   );
 
-  const [local, rest] = splitProps(_props, [
+  const rest = omit(
+    _props,
     "class",
     "position",
     "showZoom",
@@ -66,7 +68,7 @@ export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
     "buttonBorderColor",
     "style",
     "children",
-  ]);
+  );
 
   const getMinZoomReached = () => store.viewport.zoom <= store.minZoom;
   const getMaxZoomReached = () => store.viewport.zoom >= store.maxZoom;
@@ -82,38 +84,38 @@ export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
   };
 
   const onFitViewHandler = () => {
-    void actions.fitView(local.fitViewOptions);
+    void actions.fitView(_props.fitViewOptions);
   };
 
   const onToggleInteractivity = () => {
     const newValue = !getIsInteractive();
 
-    batch(() => {
+    {
       actions.setNodesDraggable(newValue);
       actions.setNodesConnectable(newValue);
       actions.setElementsSelectable(newValue);
-    });
+    }
   };
 
   const buttonProps = () => ({
-    bgColor: local.buttonBgColor,
-    bgColorHover: local.buttonBgColorHover,
-    color: local.buttonColor,
-    colorHover: local.buttonColorHover,
-    borderColor: local.buttonBorderColor,
+    bgColor: _props.buttonBgColor,
+    bgColorHover: _props.buttonBgColorHover,
+    color: _props.buttonColor,
+    colorHover: _props.buttonColorHover,
+    borderColor: _props.buttonBorderColor,
   });
 
   return (
     <Panel
-      class={clsx(["solid-flow__controls", local.orientation, local.class])}
-      position={local.position}
+      class={clsx(["solid-flow__controls", _props.orientation, _props.class])}
+      position={_props.position}
       data-testid="solid-flow__controls"
       aria-label={store.ariaLabelConfig["controls.ariaLabel"]}
-      style={local.style}
+      style={_props.style}
       {...rest}
     >
-      {local.beforeControls}
-      <Show when={local.showZoom}>
+      {_props.beforeControls}
+      <Show when={_props.showZoom}>
         <>
           <ControlButton
             onClick={onZoomInHandler}
@@ -137,7 +139,7 @@ export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
           </ControlButton>
         </>
       </Show>
-      <Show when={local.showFitView}>
+      <Show when={_props.showFitView}>
         <ControlButton
           class="solid-flow__controls-fitview"
           onClick={onFitViewHandler}
@@ -148,7 +150,7 @@ export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
           <Fit />
         </ControlButton>
       </Show>
-      <Show when={local.showLock}>
+      <Show when={_props.showLock}>
         <ControlButton
           class="solid-flow__controls-interactive"
           onClick={onToggleInteractivity}
@@ -161,8 +163,8 @@ export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
           </Show>
         </ControlButton>
       </Show>
-      {local.children}
-      {local.afterControls}
+      {_props.children}
+      {_props.afterControls}
     </Panel>
   );
 };

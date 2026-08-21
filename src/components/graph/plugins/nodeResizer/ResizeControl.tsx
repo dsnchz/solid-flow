@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import {
   type ControlPosition,
   XYResizer,
@@ -5,16 +6,7 @@ import {
   type XYResizerChildChange,
 } from "@xyflow/system";
 import clsx from "clsx";
-import {
-  createEffect,
-  type JSX,
-  mergeProps,
-  onCleanup,
-  onMount,
-  type ParentProps,
-  splitProps,
-} from "solid-js";
-import { produce } from "solid-js/store";
+import { createEffect, createSignal, merge, omit, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow, useNodeId } from "~/components/contexts";
 import type { Node, ResizeControlVariant } from "~/types";
@@ -46,13 +38,14 @@ type ResizeControlProps = NodeResizerSubProps & {
    * @example ResizeControlVariant.Handle, ResizeControlVariant.Line
    */
   readonly variant?: ResizeControlVariant;
+  readonly color?: string;
   readonly style?: JSX.CSSProperties;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
 export const ResizeControl = <NodeType extends Node = Node>(
   props: ParentProps<ResizeControlProps>,
 ): JSX.Element => {
-  const _props = mergeProps(
+  const _props = merge(
     {
       variant: "handle" as ResizeControlVariant,
       minWidth: 10,
@@ -66,7 +59,8 @@ export const ResizeControl = <NodeType extends Node = Node>(
     props,
   );
 
-  const [local, rest] = splitProps(_props, [
+  const rest = omit(
+    _props,
     "nodeId",
     "variant",
     "position",
@@ -84,101 +78,117 @@ export const ResizeControl = <NodeType extends Node = Node>(
     "children",
     "color",
     "style",
-  ]);
+  );
 
-  let resizeControlRef!: HTMLDivElement;
+  const [resizeControlRef, setResizeControlRef] = createSignal<HTMLDivElement>();
   const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
 
   const ctxNodeId = useNodeId();
-  const nodeId = () => local.nodeId ?? ctxNodeId();
-  const isLineVariant = () => local.variant === "line";
+  const nodeId = () => _props.nodeId ?? ctxNodeId();
+  const isLineVariant = () => _props.variant === "line";
 
   const controlPosition = () =>
-    local.position ?? ((isLineVariant() ? "right" : "bottom-right") as ControlPosition);
+    _props.position ?? ((isLineVariant() ? "right" : "bottom-right") as ControlPosition);
 
   const positionClassNames = () => controlPosition().split("-");
 
-  onMount(() => {
-    const resizer = XYResizer({
-      domNode: resizeControlRef,
-      nodeId: nodeId(),
-      getStoreItems: () => ({
-        nodeLookup,
-        transform: store.transform,
-        snapGrid: store.snapGrid,
-        snapToGrid: !!store.snapGrid,
-        nodeOrigin: store.nodeOrigin,
-        paneDomNode: store.domNode,
-      }),
-      onChange: (change: XYResizerChange, childChanges: XYResizerChildChange[]) => {
-        const changes = new Map<string, Partial<Node>>();
-        const position = change.x && change.y ? { x: change.x, y: change.y } : undefined;
-        changes.set(nodeId(), { ...change, position });
+  // Mount the resize controller on the control element (external system: XYResizer)
+  const [resizer, setResizer] = createSignal<ReturnType<typeof XYResizer>>();
 
-        for (const childChange of childChanges) {
-          changes.set(childChange.id, {
-            position: childChange.position,
+  createEffect(
+    () => resizeControlRef(),
+    (el) => {
+      if (!el) return;
+
+      const instance = XYResizer({
+        domNode: el,
+        nodeId: nodeId(),
+        getStoreItems: () => ({
+          nodeLookup,
+          transform: store.transform,
+          snapGrid: store.snapGrid,
+          snapToGrid: !!store.snapGrid,
+          nodeOrigin: store.nodeOrigin,
+          paneDomNode: store.domNode,
+        }),
+        onChange: (change: XYResizerChange, childChanges: XYResizerChildChange[]) => {
+          const changes = new Map<string, Partial<Node>>();
+          const position = change.x && change.y ? { x: change.x, y: change.y } : undefined;
+          changes.set(nodeId(), { ...change, position });
+
+          for (const childChange of childChanges) {
+            changes.set(childChange.id, {
+              position: childChange.position,
+            });
+          }
+
+          actions.setNodes((nodes) => {
+            for (const node of nodes) {
+              const nodeChange = changes.get(node.id);
+              if (!nodeChange) continue;
+
+              node.width = nodeChange.width;
+              node.height = nodeChange.height;
+              node.position = {
+                x: nodeChange.position?.x ?? node.position.x,
+                y: nodeChange.position?.y ?? node.position.y,
+              };
+            }
+            return undefined;
           });
-        }
+        },
+      });
 
-        actions.setNodes(
-          (node) => changes.has(node.id),
-          produce((node) => {
-            const nodeChange = changes.get(node.id)!;
+      setResizer(instance);
+      return () => {
+        instance.destroy();
+      };
+    },
+  );
 
-            node.width = nodeChange.width;
-            node.height = nodeChange.height;
-            node.position = {
-              x: nodeChange.position?.x ?? node.position.x,
-              y: nodeChange.position?.y ?? node.position.y,
-            };
-          }),
-        );
-      },
-    });
-
-    createEffect(() => {
-      resizer.update({
+  createEffect(
+    () => ({
+      instance: resizer(),
+      options: {
         controlPosition: controlPosition(),
         boundaries: {
-          minWidth: local.minWidth,
-          minHeight: local.minHeight,
-          maxWidth: local.maxWidth,
-          maxHeight: local.maxHeight,
+          minWidth: _props.minWidth,
+          minHeight: _props.minHeight,
+          maxWidth: _props.maxWidth,
+          maxHeight: _props.maxHeight,
         },
-        keepAspectRatio: !!local.keepAspectRatio,
-        onResizeStart: local.onResizeStart,
-        onResize: local.onResize,
-        onResizeEnd: local.onResizeEnd,
-        shouldResize: local.shouldResize,
-      });
-    });
-
-    onCleanup(() => {
-      resizer.destroy();
-    });
-  });
+        keepAspectRatio: !!_props.keepAspectRatio,
+        onResizeStart: _props.onResizeStart,
+        onResize: _props.onResize,
+        onResizeEnd: _props.onResizeEnd,
+        shouldResize: _props.shouldResize,
+      },
+    }),
+    ({ instance, options }) => {
+      instance?.update(options);
+    },
+  );
 
   return (
     <div
-      ref={resizeControlRef}
+      ref={setResizeControlRef}
       class={clsx([
         "solid-flow__resize-control",
-        local.variant,
+        _props.variant,
         store.noDragClass,
         ...positionClassNames(),
-        local.class,
+        _props.class,
       ])}
       style={{
-        "border-color": isLineVariant() ? local.color : undefined,
-        "background-color": isLineVariant() ? undefined : local.color,
+        "border-color": isLineVariant() ? _props.color : undefined,
+        "background-color": isLineVariant() ? undefined : _props.color,
         scale:
-          isLineVariant() || !local.autoScale ? undefined : Math.max(1 / store.viewport.zoom, 1),
-        ...local.style,
+          isLineVariant() || !_props.autoScale ? undefined : Math.max(1 / store.viewport.zoom, 1),
+        ..._props.style,
       }}
       {...rest}
     >
-      {local.children}
+      {_props.children}
     </div>
   );
 };

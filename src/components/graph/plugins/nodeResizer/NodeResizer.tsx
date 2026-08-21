@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import {
   type OnResize,
   type OnResizeEnd,
@@ -6,7 +7,7 @@ import {
   XY_RESIZER_HANDLE_POSITIONS,
   XY_RESIZER_LINE_POSITIONS,
 } from "@xyflow/system";
-import { For, type JSX, mergeProps, Show, splitProps } from "solid-js";
+import { For, merge, omit, Show } from "solid-js";
 
 import { ResizeControl } from "./ResizeControl";
 
@@ -48,7 +49,7 @@ export type NodeResizerProps = {
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
 export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
-  const _props = mergeProps(
+  const _props = merge(
     {
       autoScale: true,
       visible: true,
@@ -56,7 +57,7 @@ export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
     props,
   );
 
-  const [local, rest] = splitProps(props, ["handleClass", "handleStyle", "lineClass", "lineStyle"]);
+  const rest = omit(props, "handleClass", "handleStyle", "lineClass", "lineStyle");
 
   return (
     <Show when={_props.visible}>
@@ -65,8 +66,8 @@ export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
           <ResizeControl
             variant="line"
             position={position}
-            class={local.lineClass}
-            style={local.lineStyle}
+            class={props.lineClass}
+            style={props.lineStyle}
             {...rest}
           />
         )}
@@ -75,8 +76,8 @@ export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
         {(position) => (
           <ResizeControl
             position={position}
-            class={local.handleClass}
-            style={local.handleStyle}
+            class={props.handleClass}
+            style={props.handleStyle}
             {...rest}
           />
         )}

@@ -1,5 +1,5 @@
+import solidPlugin from "@solidjs/vite-plugin";
 import path from "path";
-import solidPlugin from "vite-plugin-solid";
 import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
 
 // We exclude the server directory because we use Bun (not Vitest) to run those tests

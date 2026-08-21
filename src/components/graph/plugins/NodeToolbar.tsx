@@ -1,6 +1,7 @@
+import type { JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 import { type Align, getNodeToolbarTransform, Position as SystemPosition } from "@xyflow/system";
-import { type JSX, mergeProps, type ParentComponent, Show, splitProps, useContext } from "solid-js";
-import { Portal } from "solid-js/web";
+import { merge, omit, type ParentComponent, Show, useContext } from "solid-js";
 
 import { useSolidFlow } from "../../../hooks";
 import type { InternalNode, Position } from "../../../types";
@@ -31,7 +32,7 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
   const { store } = useInternalSolidFlow();
   const { getNodes, getNodesBounds, getInternalNode } = useSolidFlow();
 
-  const _props = mergeProps(
+  const _props = merge(
     {
       offset: 10,
       position: "top" as Position,
@@ -41,7 +42,8 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
     props,
   );
 
-  const [local, divProps] = splitProps(_props, [
+  const divProps = omit(
+    _props,
     "nodeId",
     "position",
     "align",
@@ -49,7 +51,7 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
     "isVisible",
     "style",
     "children",
-  ]);
+  );
 
   const ctxNodeId = () => {
     // NodeToolbar can be rendered outside of NodeWrapper, so we need to use the context directly.
@@ -58,7 +60,7 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
   };
 
   const toolbarNodes = () => {
-    const nodeIds = Array.isArray(local.nodeId) ? local.nodeId : [local.nodeId ?? ctxNodeId()];
+    const nodeIds = Array.isArray(_props.nodeId) ? _props.nodeId : [_props.nodeId ?? ctxNodeId()];
 
     return nodeIds.reduce<InternalNode[]>((res, nodeId) => {
       const node = getInternalNode(nodeId);
@@ -75,9 +77,9 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
       : getNodeToolbarTransform(
           nodeRect,
           store.viewport,
-          local.position as SystemPosition,
-          local.offset,
-          local.align,
+          _props.position as SystemPosition,
+          _props.offset,
+          _props.align,
         );
   };
 
@@ -90,8 +92,8 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
 
   const isActive = () => {
     const nodes = toolbarNodes();
-    return typeof local.isVisible === "boolean"
-      ? local.isVisible
+    return typeof _props.isVisible === "boolean"
+      ? _props.isVisible
       : nodes.length === 1 && Boolean(nodes[0]!.selected) && selectedNodesCount() === 1;
   };
 
@@ -110,11 +112,11 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
             position: "absolute",
             transform: transform(),
             "z-index": zIndex(),
-            ...local.style,
+            ..._props.style,
           }}
           {...divProps}
         >
-          {local.children}
+          {_props.children}
         </div>
       </Portal>
     </Show>

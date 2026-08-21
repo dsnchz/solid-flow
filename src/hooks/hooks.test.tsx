@@ -1,5 +1,5 @@
 import { render } from "@solidjs/testing-library";
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { describe, expect, it, vi } from "vitest";
 
 import { SolidFlow } from "~/components/SolidFlow";

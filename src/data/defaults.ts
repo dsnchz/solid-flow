@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import {
   type ColorMode,
   createDevWarn,
@@ -7,7 +8,6 @@ import {
   type OnError,
   type ZIndexMode,
 } from "@xyflow/system";
-import type { JSX } from "solid-js";
 
 import type {
   ConnectionLineType,

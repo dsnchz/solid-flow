@@ -1,5 +1,4 @@
-import { createRoot } from "solid-js";
-import { produce } from "solid-js/store";
+import { createRoot, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import type { Edge, Node } from "~/types";
@@ -37,7 +36,7 @@ describe("createSolidFlow", () => {
       },
       ({ store }) => {
         expect(store.nodes.map((n) => n.id)).toEqual(["a", "b"]);
-        expect(store.edges.map((e) => e.id)).toEqual(["e1"]);
+        expect((store.edges as Edge[]).map((e) => e.id)).toEqual(["e1"]);
       },
     );
   });
@@ -74,18 +73,19 @@ describe("createSolidFlow", () => {
       ({ store, actions }) => {
         expect(store.selectedNodes).toHaveLength(0);
 
-        actions.setNodes(
-          (node) => node.id === "b",
-          produce((node) => {
-            node.selected = true;
-          }),
-        );
-        actions.setEdges(
-          () => true,
-          produce((edge) => {
+        actions.setNodes((nodes) => {
+          for (const node of nodes) {
+            if (node.id === "b") node.selected = true;
+          }
+          return undefined;
+        });
+        actions.setEdges((edges) => {
+          for (const edge of edges) {
             edge.selected = true;
-          }),
-        );
+          }
+          return undefined;
+        });
+        flush();
 
         expect(store.selectedNodes.map((n) => n.id)).toEqual(["b"]);
         expect(store.selectedEdges.map((e) => e.id)).toEqual(["e1"]);
@@ -97,12 +97,13 @@ describe("createSolidFlow", () => {
     withFlow({ nodes: [makeNode({ id: "a" })], edges: [] }, ({ store, actions }) => {
       expect(store.nodesInitialized).toBe(false);
 
-      actions.setNodes(
-        () => true,
-        produce((node) => {
+      actions.setNodes((nodes) => {
+        for (const node of nodes) {
           node.measured = { width: 100, height: 40 };
-        }),
-      );
+        }
+        return undefined;
+      });
+      flush();
 
       expect(store.nodesInitialized).toBe(true);
     });
@@ -131,13 +132,15 @@ describe("createSolidFlow", () => {
   });
 
   it("elevates selected node z by default but not in manual zIndexMode", () => {
-    const select = (actions: ReturnType<typeof createSolidFlow>["actions"]) =>
-      actions.setNodes(
-        () => true,
-        produce((node) => {
+    const select = (actions: ReturnType<typeof createSolidFlow>["actions"]) => {
+      actions.setNodes((nodes) => {
+        for (const node of nodes) {
           node.selected = true;
-        }),
-      );
+        }
+        return undefined;
+      });
+      flush();
+    };
 
     withFlow({ nodes: [makeNode({ id: "a" })], edges: [] }, ({ nodeLookup, actions }) => {
       select(actions);
@@ -158,6 +161,7 @@ describe("createSolidFlow", () => {
       { nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })], edges: [] },
       ({ store, actions }) => {
         actions.addEdge({ source: "a", target: "b", sourceHandle: null, targetHandle: null });
+        flush();
         expect(store.edges).toHaveLength(1);
         expect(store.edges[0]).toMatchObject({ source: "a", target: "b" });
       },

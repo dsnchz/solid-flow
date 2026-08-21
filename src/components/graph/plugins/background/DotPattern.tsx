@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { mergeProps } from "solid-js";
+import { merge } from "solid-js";
 
 type DotPatternProps = {
   readonly class?: string;
@@ -7,7 +7,7 @@ type DotPatternProps = {
 };
 
 export const DotPattern = (props: DotPatternProps) => {
-  const _props = mergeProps({ radius: 5 }, props);
+  const _props = merge({ radius: 5 }, props);
 
   return (
     <circle

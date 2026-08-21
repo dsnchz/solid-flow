@@ -1,6 +1,7 @@
+import type { JSX } from "@solidjs/web";
 import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, createSignal, type JSX, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 
 import createDraggable from "~/actions/createDraggable";
 import { useInternalSolidFlow } from "~/components/contexts";
@@ -27,11 +28,14 @@ export const NodeSelection = <NodeType extends Node = Node>(
     return null;
   };
 
-  createEffect(() => {
-    if (!store.disableKeyboardA11y) {
-      ref()?.focus({ preventScroll: true });
-    }
-  });
+  createEffect(
+    () => {
+      if (!store.disableKeyboardA11y) {
+        ref()?.focus({ preventScroll: true });
+      }
+    },
+    () => {},
+  );
 
   const onContextMenu = (event: PointerEvent) => {
     const selectedNodes = store.nodes.filter((n) => n.selected);
@@ -85,7 +89,7 @@ export const NodeSelection = <NodeType extends Node = Node>(
         onClick={onClick}
         onContextMenu={onContextMenu}
         role={store.disableKeyboardA11y ? undefined : "button"}
-        tabIndex={store.disableKeyboardA11y ? undefined : -1}
+        tabindex={store.disableKeyboardA11y ? undefined : -1}
         onKeyDown={store.disableKeyboardA11y ? undefined : onKeyDown}
       >
         <Selection width="100%" height="100%" x={0} y={0} />

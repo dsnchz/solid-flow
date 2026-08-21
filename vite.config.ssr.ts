@@ -1,5 +1,5 @@
+import solidPlugin from "@solidjs/vite-plugin";
 import path from "path";
-import solidPlugin from "vite-plugin-solid";
 import { defineConfig } from "vitest/config";
 
 // SSR test lane: compiles Solid components with `generate: "ssr"` and runs in a
@@ -8,16 +8,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [solidPlugin({ solid: { generate: "ssr", hydratable: false } })],
   resolve: {
-    // vite-plugin-solid inlines solid-js with browser-conditioned resolution even
-    // in a node environment, so pin the server builds explicitly for this lane
+    // Pin the server builds explicitly for this lane so inlined modules resolve
+    // consistently (see the 1.x lane history: browser-conditioned inlining)
     alias: [
       {
-        find: /^solid-js\/web$/,
-        replacement: path.resolve(__dirname, "node_modules/solid-js/web/dist/server.js"),
-      },
-      {
-        find: /^solid-js\/store$/,
-        replacement: path.resolve(__dirname, "node_modules/solid-js/store/dist/server.js"),
+        find: /^@solidjs\/web$/,
+        replacement: path.resolve(__dirname, "node_modules/@solidjs/web/dist/server.js"),
       },
       {
         find: /^solid-js$/,
@@ -34,7 +30,7 @@ export default defineConfig({
       // inline everything solid-adjacent so the server-build aliases above
       // apply to the whole module graph (no mixed browser/server instances)
       deps: {
-        inline: [/solid-js/, /@solid-primitives/, /@xyflow/],
+        inline: [/solid-js/, /@solidjs/, /@solid-primitives/, /@xyflow/],
       },
     },
   },

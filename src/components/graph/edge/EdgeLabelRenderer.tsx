@@ -1,5 +1,6 @@
-import { type JSX, type ParentProps, Show } from "solid-js";
-import { Portal } from "solid-js/web";
+import type { JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
+import { type ParentProps, Show } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
 

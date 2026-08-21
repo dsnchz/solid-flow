@@ -20,7 +20,7 @@ export function useNodesData<NodeType extends Node = Node>(
 ): Accessor<NodeData<NodeType>[]>;
 export function useNodesData<NodeType extends Node = Node>(
   nodeIds: Accessor<string | string[] | undefined | null>,
-) {
+): Accessor<NodeData<NodeType> | NodeData<NodeType>[] | undefined> {
   const { nodeLookup } = useInternalSolidFlow();
 
   let prevNodesData = [] as NodeData<NodeType>[];
@@ -53,5 +53,5 @@ export function useNodesData<NodeType extends Node = Node>(
     return Array.isArray(idValues) ? nodesData : nodesData[0];
   });
 
-  return result;
+  return result as Accessor<NodeData<NodeType> | NodeData<NodeType>[] | undefined>;
 }

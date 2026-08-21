@@ -1,4 +1,5 @@
-import { type JSX, mergeProps, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { merge, Show } from "solid-js";
 
 import { toPxString } from "~/utils";
 
@@ -11,7 +12,7 @@ type SelectionProps = {
 };
 
 export const Selection = (props: SelectionProps): JSX.Element => {
-  const _props = mergeProps({ isVisible: true }, props);
+  const _props = merge({ isVisible: true }, props);
 
   const styles = () => ({
     ...(_props.width != null && {

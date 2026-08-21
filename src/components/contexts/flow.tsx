@@ -8,7 +8,7 @@ export type SolidFlowContextValue<
   EdgeType extends Edge = Edge,
 > = ReturnType<typeof createSolidFlow<NodeType, EdgeType>>;
 
-export const SolidFlowContext = createContext<SolidFlowContextValue>();
+export const SolidFlowContext = createContext<SolidFlowContextValue | null>(null);
 
 export function useInternalSolidFlow<NodeType extends Node = Node, EdgeType extends Edge = Edge>() {
   // Since we cannot pass generic types info at the point of context creation, we need to cast it here

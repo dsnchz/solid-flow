@@ -1,6 +1,6 @@
 import { type Accessor, createContext, useContext } from "solid-js";
 
-export const EdgeIdContext = createContext<Accessor<string>>();
+export const EdgeIdContext = createContext<Accessor<string> | null>(null);
 
 export function useEdgeId() {
   const ctx = useContext(EdgeIdContext);

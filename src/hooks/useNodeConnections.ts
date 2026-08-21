@@ -44,16 +44,19 @@ export const useNodeConnections = (
   const lookupKey = () =>
     `${nodeId()}${type() ? (id() ? `-${type()}-${id()}` : `-${type()}`) : ""}`;
 
-  createEffect((prevConnections: Map<string, NodeConnection> | undefined) => {
-    const nextConnections = connectionLookup.get(lookupKey());
+  createEffect(
+    (prevConnections: Map<string, NodeConnection> | undefined) => {
+      const nextConnections = connectionLookup.get(lookupKey());
 
-    if (!areConnectionMapsEqual(nextConnections, prevConnections)) {
-      prevConnections = nextConnections;
-      setConnections(Array.from(prevConnections?.values() ?? []));
-    }
+      if (!areConnectionMapsEqual(nextConnections, prevConnections)) {
+        prevConnections = nextConnections;
+        setConnections(Array.from(prevConnections?.values() ?? []));
+      }
 
-    return nextConnections;
-  });
+      return nextConnections;
+    },
+    () => {},
+  );
 
   return connections;
 };

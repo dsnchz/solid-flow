@@ -1,6 +1,6 @@
 import { type Accessor, createContext, useContext } from "solid-js";
 
-export const NodeConnectableContext = createContext<Accessor<boolean>>();
+export const NodeConnectableContext = createContext<Accessor<boolean> | null>(null);
 
 export function useNodeConnectable() {
   const ctx = useContext(NodeConnectableContext);

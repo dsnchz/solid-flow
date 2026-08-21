@@ -18,8 +18,7 @@ import {
   type XYPosition,
   type ZoomInOut,
 } from "@xyflow/system";
-import { batch } from "solid-js";
-import { unwrap } from "solid-js/store";
+import { snapshot } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
 import type { Edge, FitViewOptions, InternalNode, Node } from "~/types";
@@ -321,13 +320,16 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     nodeUpdate: Partial<NodeType> | ((node: NodeType) => Partial<NodeType>),
     options: { replace: boolean } = { replace: false },
   ) => {
-    actions.setNodes(
-      (node) => node.id === id,
-      (node) => {
-        const nextNode = typeof nodeUpdate === "function" ? nodeUpdate(node) : nodeUpdate;
-        return options?.replace && isNode<NodeType>(nextNode) ? nextNode : { ...node, ...nextNode };
-      },
-    );
+    actions.setNodes((nodes) => {
+      const index = nodes.findIndex((node) => node.id === id);
+      if (index === -1) return undefined;
+
+      const node = nodes[index]!;
+      const nextNode = typeof nodeUpdate === "function" ? nodeUpdate(node) : nodeUpdate;
+      nodes[index] =
+        options?.replace && isNode<NodeType>(nextNode) ? nextNode : { ...node, ...nextNode };
+      return undefined;
+    });
   };
 
   const updateEdge = (
@@ -335,13 +337,16 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     edgeUpdate: Partial<EdgeType> | ((edge: EdgeType) => Partial<EdgeType>),
     options: { replace: boolean } = { replace: false },
   ) => {
-    actions.setEdges(
-      (edge) => edge.id === id,
-      (edge) => {
-        const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
-        return options.replace && isEdge<EdgeType>(nextEdge) ? nextEdge : { ...edge, ...nextEdge };
-      },
-    );
+    actions.setEdges((edges) => {
+      const index = edges.findIndex((edge) => edge.id === id);
+      if (index === -1) return undefined;
+
+      const edge = edges[index]!;
+      const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
+      edges[index] =
+        options.replace && isEdge<EdgeType>(nextEdge) ? nextEdge : { ...edge, ...nextEdge };
+      return undefined;
+    });
   };
 
   const getInternalNode = (id: string) => nodeLookup.get(id);
@@ -363,12 +368,13 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     setCenter: actions.setCenter,
     fitView: actions.fitView,
     getNode: (id) => getInternalNode(id)?.internals.userNode,
-    getNodes: (ids) => (!ids ? store.nodes : getElements(nodeLookup, ids)),
+    getNodes: (ids) =>
+      !ids ? (store.nodes as unknown as NodeType[]) : getElements(nodeLookup, ids),
     getEdge: (id) => edgeLookup.get(id),
-    getEdges: (ids) => (!ids ? store.edges : getElements(edgeLookup, ids)),
+    getEdges: (ids) => (!ids ? (store.edges as EdgeType[]) : getElements(edgeLookup, ids)),
     addNodes,
     addEdges,
-    getViewport: () => unwrap(store.viewport),
+    getViewport: () => snapshot(store.viewport),
     setViewport: async (nextViewport, options) => {
       const currentViewport = store.viewport;
 
@@ -465,19 +471,19 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
       >({
         nodesToRemove,
         edgesToRemove,
-        nodes: store.nodes,
-        edges: store.edges,
+        nodes: store.nodes as unknown as NodeType[],
+        edges: store.edges as EdgeType[],
         onBeforeDelete: store.onBeforeDelete,
       });
 
-      batch(() => {
+      {
         if (matchingEdges) {
           const remmainingEdges = store.edges.filter(
             (edge) => !matchingEdges.some(({ id }) => id === edge.id),
           );
 
           store.onEdgesDelete?.(matchingEdges);
-          actions.setEdges(remmainingEdges);
+          actions.setEdges(() => remmainingEdges);
         }
 
         if (matchingNodes) {
@@ -486,9 +492,9 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
           );
 
           store.onNodesDelete?.(matchingNodes);
-          actions.setNodes(remmainingNodes);
+          actions.setNodes(() => remmainingNodes);
         }
-      });
+      }
 
       return {
         deletedNodes: matchingNodes,
@@ -540,9 +546,9 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
 
     toObject: () => {
       return structuredClone({
-        nodes: [...unwrap(store.nodes)],
-        edges: [...unwrap(store.edges)],
-        viewport: { ...unwrap(store.viewport) },
+        nodes: [...snapshot(store.nodes)],
+        edges: [...snapshot(store.edges)],
+        viewport: { ...snapshot(store.viewport) },
       });
     },
     updateNode,

@@ -1,6 +1,7 @@
+import type { JSX } from "@solidjs/web";
 import { type EdgeToolbarBaseProps, getEdgeToolbarTransform } from "@xyflow/system";
 import clsx from "clsx";
-import { type JSX, type ParentProps, Show, splitProps } from "solid-js";
+import { omit, type ParentProps, Show } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
 import { EdgeLabel } from "~/components/graph/edge";
@@ -18,7 +19,8 @@ export type EdgeToolbarProps = EdgeToolbarBaseProps & {
  * The toolbar does not scale with the viewport so that its content is always legible.
  */
 export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element => {
-  const [local, rest] = splitProps(props, [
+  const rest = omit(
+    props,
     "x",
     "y",
     "alignX",
@@ -27,29 +29,29 @@ export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element =
     "selectEdgeOnClick",
     "class",
     "children",
-  ]);
+  );
 
   const { store, edgeLookup } = useInternalSolidFlow();
 
   const edgeId = useEdgeId();
 
   const isActive = () =>
-    typeof local.isVisible === "boolean" ? local.isVisible : !!edgeLookup.get(edgeId())?.selected;
+    typeof props.isVisible === "boolean" ? props.isVisible : !!edgeLookup.get(edgeId())?.selected;
 
   const transform = () =>
     getEdgeToolbarTransform(
-      local.x,
-      local.y,
+      props.x,
+      props.y,
       store.viewport.zoom,
-      local.alignX ?? "center",
-      local.alignY ?? "center",
+      props.alignX ?? "center",
+      props.alignY ?? "center",
     );
 
   return (
     <Show when={isActive()}>
-      <EdgeLabel selectEdgeOnClick={local.selectEdgeOnClick} transparent>
+      <EdgeLabel selectEdgeOnClick={props.selectEdgeOnClick} transparent>
         <div
-          class={clsx("solid-flow__edge-toolbar", local.class)}
+          class={clsx("solid-flow__edge-toolbar", props.class)}
           style={{
             position: "absolute",
             transform: transform(),
@@ -58,7 +60,7 @@ export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element =
           data-id={edgeId()}
           {...rest}
         >
-          {local.children}
+          {props.children}
         </div>
       </EdgeLabel>
     </Show>

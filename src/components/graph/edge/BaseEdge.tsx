@@ -1,18 +1,20 @@
+import type { JSX } from "@solidjs/web";
 import clsx from "clsx";
-import { type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
+import { merge, omit, type ParentProps, Show } from "solid-js";
 
 import type { BaseEdgeProps } from "../../../types";
 import { EdgeLabel } from "./EdgeLabel";
 
 export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
-  const _props = mergeProps(
+  const _props = merge(
     {
       interactionWidth: 20,
     },
     props,
   );
 
-  const [local, rest] = splitProps(_props, [
+  const rest = omit(
+    _props,
     "class",
     "style",
     "path",
@@ -23,33 +25,33 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
     "labelY",
     "markerStart",
     "markerEnd",
-  ]);
+  );
 
   return (
     <>
       <path
-        d={local.path}
-        class={clsx(["solid-flow__edge-path", local.class])}
-        marker-start={local.markerStart}
-        marker-end={local.markerEnd}
+        d={_props.path}
+        class={clsx(["solid-flow__edge-path", _props.class])}
+        marker-start={_props.markerStart}
+        marker-end={_props.markerEnd}
         fill="none"
-        style={local.style}
+        style={_props.style}
         {...rest}
       />
 
-      <Show when={local.interactionWidth > 0}>
+      <Show when={_props.interactionWidth > 0}>
         <path
-          d={local.path}
+          d={_props.path}
           stroke-opacity={0}
-          stroke-width={local.interactionWidth}
+          stroke-width={_props.interactionWidth}
           fill="none"
           class="solid-flow__edge-interaction"
         />
       </Show>
 
-      <Show when={local.label}>
-        <EdgeLabel x={local.labelX} y={local.labelY} style={local.labelStyle}>
-          {local.label}
+      <Show when={_props.label}>
+        <EdgeLabel x={_props.labelX} y={_props.labelY} style={_props.labelStyle}>
+          {_props.label}
         </EdgeLabel>
       </Show>
     </>

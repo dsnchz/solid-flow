@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import type {
   BezierPathOptions,
   DefaultEdgeOptionsBase,
@@ -6,7 +7,6 @@ import type {
   SmoothStepPathOptions,
   StepPathOptions,
 } from "@xyflow/system";
-import type { JSX } from "solid-js";
 
 import type { UnknownStruct } from "./custom";
 import type { Node } from "./node";

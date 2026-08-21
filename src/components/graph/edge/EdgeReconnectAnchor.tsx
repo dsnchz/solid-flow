@@ -1,6 +1,7 @@
+import type { JSX } from "@solidjs/web";
 import { ConnectionMode, type HandleType, XYHandle, type XYPosition } from "@xyflow/system";
 import clsx from "clsx";
-import { createSignal, type JSX, mergeProps, type ParentProps, Show, splitProps } from "solid-js";
+import { createSignal, merge, omit, type ParentProps, Show } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
 import type { Edge } from "~/types";
@@ -18,7 +19,7 @@ export type EdgeReconnectAnchorProps = {
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
 export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>): JSX.Element => {
-  const _props = mergeProps(
+  const _props = merge(
     {
       size: 25,
       reconnecting: false,
@@ -27,7 +28,8 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     props,
   );
 
-  const [local, rest] = splitProps(_props, [
+  const rest = omit(
+    _props,
     "type",
     "class",
     "style",
@@ -35,7 +37,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     "size",
     "reconnecting",
     "children",
-  ]);
+  );
 
   const { store, nodeLookup, edgeLookup, actions } = useInternalSolidFlow();
 
@@ -54,10 +56,10 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     }
 
     setReconnecting(true);
-    store.onReconnectStart?.(event, edge(), local.type);
+    store.onReconnectStart?.(event, edge(), _props.type);
 
     const opposite =
-      local.type === "target"
+      _props.type === "target"
         ? {
             nodeId: edge().source,
             handleId: edge().sourceHandle ?? null,
@@ -110,25 +112,25 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
   };
 
   return (
-    <EdgeLabel x={local.position?.x} y={local.position?.y} style={local.style} {...rest}>
+    <EdgeLabel x={_props.position?.x} y={_props.position?.y} style={_props.style} {...rest}>
       <div
         onPointerDown={onPointerDown}
         class={clsx(
           "solid-flow__edgeupdater",
-          `solid-flow__edgeupdater-${local.type}`,
+          `solid-flow__edgeupdater-${_props.type}`,
           store.noPanClass,
-          local.class,
+          _props.class,
         )}
         style={{
-          width: toPxString(local.size),
-          height: toPxString(local.size),
+          width: toPxString(_props.size),
+          height: toPxString(_props.size),
           background: "transparent",
           border: "none",
           cursor: "move",
-          ...local.style,
+          ..._props.style,
         }}
       >
-        <Show when={!reconnecting()}>{local.children}</Show>
+        <Show when={!reconnecting()}>{_props.children}</Show>
       </div>
     </EdgeLabel>
   );

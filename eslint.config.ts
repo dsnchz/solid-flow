@@ -7,7 +7,15 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
     // config with just ignores is the replacement for `.eslintignore`
-    ignores: ["**/build/**", "**/coverage/**", "**/dist/**", "**/node_modules/**", "tmp/**"],
+    ignores: [
+      "**/build/**",
+      "**/coverage/**",
+      "**/dist/**",
+      "**/node_modules/**",
+      "tmp/**",
+      "playground/**",
+      ".spike/**",
+    ],
   },
   js.configs.recommended,
   tseslint.configs.strict,
@@ -39,6 +47,11 @@ export default tseslint.config(
     plugins: solid.plugins,
     rules: {
       ...solid.rules,
+      // eslint-plugin-solid targets Solid 1.x; these rules actively fight 2.0
+      // idioms (solid/imports autofixes store imports back to "solid-js/store").
+      // Revisit when the plugin ships 2.0 support.
+      "solid/imports": "off",
+      "solid/reactivity": "off",
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-namespace": "off",

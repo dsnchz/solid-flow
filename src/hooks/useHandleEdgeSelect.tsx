@@ -1,5 +1,4 @@
 import { errorMessages } from "@xyflow/system";
-import { batch } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
 
@@ -18,7 +17,7 @@ export function useHandleEdgeSelect(): (id: string) => void {
       edge.selectable || (store.elementsSelectable && typeof edge.selectable === "undefined");
 
     if (selectable) {
-      batch(() => {
+      {
         actions.setSelectionRect(undefined);
         actions.setSelectionRectMode(undefined);
 
@@ -27,7 +26,7 @@ export function useHandleEdgeSelect(): (id: string) => void {
         } else if (edge.selected && store.multiselectionKeyPressed) {
           actions.unselectNodesAndEdges({ nodes: [], edges: [edge] });
         }
-      });
+      }
     }
   };
 }

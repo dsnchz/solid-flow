@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import {
   type OnMove,
   type OnMoveEnd,
@@ -7,7 +8,7 @@ import {
   type Viewport,
   XYPanZoom,
 } from "@xyflow/system";
-import { batch, createEffect, type JSX, onMount, type ParentProps } from "solid-js";
+import { createEffect, createSignal, type ParentProps, untrack } from "solid-js";
 
 import type { PanOnScrollMode } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
@@ -31,7 +32,7 @@ export type ZoomProps = {
 };
 
 export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
-  let ref!: HTMLDivElement;
+  const [ref, setRef] = createSignal<HTMLDivElement>();
   const { store, actions } = useInternalSolidFlow();
 
   const viewPort = () => props.initialViewport || { x: 0, y: 0, zoom: 1 };
@@ -43,34 +44,45 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
     actions.setViewport({ x, y, zoom });
   };
 
-  onMount(() => {
-    const panZoomInstance = XYPanZoom({
-      domNode: ref,
-      minZoom: store.minZoom,
-      maxZoom: store.maxZoom,
-      translateExtent: store.translateExtent,
-      viewport: viewPort(),
-      onDraggingChange: actions.setDragging,
-      onPanZoomStart: props.onMoveStart,
-      onPanZoom: props.onMove,
-      onPanZoomEnd: props.onMoveEnd,
-    });
+  // Mount the pan/zoom controller on the container (external system: XYPanZoom/d3)
+  createEffect(
+    () => ref(),
+    (el) => {
+      if (!el) return;
 
-    const vp = panZoomInstance.getViewport();
+      const panZoomInstance = untrack(() =>
+        XYPanZoom({
+          domNode: el,
+          minZoom: store.minZoom,
+          maxZoom: store.maxZoom,
+          translateExtent: store.translateExtent,
+          viewport: viewPort(),
+          onDraggingChange: actions.setDragging,
+          onPanZoomStart: props.onMoveStart,
+          onPanZoom: props.onMove,
+          onPanZoomEnd: props.onMoveEnd,
+        }),
+      );
 
-    if (viewPort().x !== vp.x || viewPort().y !== vp.y || viewPort().zoom !== vp.zoom) {
-      onTransformChange([vp.x, vp.y, vp.zoom]);
-    }
+      const vp = panZoomInstance.getViewport();
+      const initial = untrack(() => viewPort());
 
-    batch(() => {
+      if (initial.x !== vp.x || initial.y !== vp.y || initial.zoom !== vp.zoom) {
+        onTransformChange([vp.x, vp.y, vp.zoom]);
+      }
+
       actions.setViewport(vp);
       actions.setPanZoom(panZoomInstance);
-    });
 
-    props.onViewportInitialized?.();
+      props.onViewportInitialized?.();
+    },
+  );
 
-    createEffect(() => {
-      panZoomInstance.update({
+  // Sync reactive options into the controller
+  createEffect(
+    () => ({
+      panZoom: store.panZoom,
+      options: {
         lib: store.lib,
         panActivationKeyPressed: store.panActivationKeyPressed,
         zoomActivationKeyPressed: store.zoomActivationKeyPressed,
@@ -89,13 +101,15 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
         paneClickDistance: props.paneClickDistance,
         selectionOnDrag: props.selectionOnDrag,
         connectionInProgress: store.connection.inProgress,
-        onTransformChange,
-      });
-    });
-  });
+      },
+    }),
+    ({ panZoom, options }) => {
+      panZoom?.update({ ...options, onTransformChange });
+    },
+  );
 
   return (
-    <div ref={ref} class="solid-flow__container solid-flow__zoom">
+    <div ref={setRef} class="solid-flow__container solid-flow__zoom">
       {props.children}
     </div>
   );

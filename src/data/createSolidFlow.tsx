@@ -41,17 +41,17 @@ import {
   type XYPosition,
 } from "@xyflow/system";
 import {
-  batch,
-  createComputed,
   createEffect,
   createMemo,
+  createRenderEffect,
   createSignal,
+  createStore,
+  flush,
   mapArray,
-  mergeProps,
+  merge,
   onCleanup,
   untrack,
 } from "solid-js";
-import { produce } from "solid-js/store";
 
 import {
   BezierEdgeInternal,
@@ -73,7 +73,7 @@ import type {
   NodeGraph,
   NodeTypes,
 } from "~/types";
-import { createWritable, createWritableStore, scheduleIdleCallback } from "~/utils";
+import { scheduleIdleCallback } from "~/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
@@ -122,7 +122,7 @@ const getInitialViewport = (
 export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: SolidFlowProps<NodeType, EdgeType>,
 ) => {
-  const _props = mergeProps(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
+  const _props = merge(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
 
   const nodeLookup = new ReactiveMap<string, InternalNode<NodeType>>();
   const parentLookup = new ReactiveMap<string, Map<string, InternalNode<NodeType>>>();
@@ -130,16 +130,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const connectionLookup = new ReactiveMap<string, Map<string, HandleConnection>>();
   const layoutedEdgesMap = new ReactiveMap<string, EdgeLayouted<EdgeType>>();
 
-  const startNodesInitialized = batch(() => {
-    // eslint-disable-next-line solid/reactivity
-    return adoptUserNodes(_props.nodes, nodeLookup, parentLookup, {
-      // eslint-disable-next-line solid/reactivity
+  const startNodesInitialized = untrack(() => {
+    return adoptUserNodes(_props.nodes as NodeType[], nodeLookup, parentLookup, {
       nodeExtent: _props.nodeExtent,
-      // eslint-disable-next-line solid/reactivity
+
       nodeOrigin: _props.nodeOrigin,
-      // eslint-disable-next-line solid/reactivity
+
       elevateNodesOnSelect: _props.elevateNodesOnSelect,
-      // eslint-disable-next-line solid/reactivity
+
       zIndexMode: _props.zIndexMode,
       checkEquality: true,
     });
@@ -147,12 +145,12 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   const initialViewport = getInitialViewport(
     startNodesInitialized,
-    // eslint-disable-next-line solid/reactivity
+
     _props.fitView,
     _props.initialViewport,
-    // eslint-disable-next-line solid/reactivity
+
     _props.width ?? 0,
-    // eslint-disable-next-line solid/reactivity
+
     _props.height ?? 0,
     nodeLookup,
   );
@@ -172,10 +170,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   // The config-signal is set by SolidFlow to its props.
   const [config, setConfig] = createSignal(_props);
 
-  const [ariaLabelConfig, setAriaLabelConfig] = createWritable(() =>
+  const [ariaLabelConfig, setAriaLabelConfig] = createSignal(() =>
     mergeAriaLabelConfig(config().ariaLabelConfig),
   );
-  const [ariaLiveMessage, setAriaLiveMessage] = createWritable(() => config().ariaLiveMessage);
+  const [ariaLiveMessage, setAriaLiveMessage] = createSignal(() => config().ariaLiveMessage);
   const [clickConnectStartHandle, setClickConnectStartHandle] = createSignal<
     Pick<Handle, "id" | "nodeId" | "type"> | undefined
   >(undefined);
@@ -183,22 +181,22 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     createSignal<ConnectionState<InternalNode<NodeType>>>(initialConnection);
   const [domNode, setDomNode] = createSignal<HTMLDivElement | null>(null);
   const [dragging, setDragging] = createSignal(false);
-  const [elementsSelectable, setElementsSelectable] = createWritable(
+  const [elementsSelectable, setElementsSelectable] = createSignal(
     () => config().elementsSelectable,
   );
-  const [height, setHeight] = createWritable(() => config().height);
-  const [minZoom, _setMinZoom] = createWritable<number>(() => config().minZoom);
-  const [maxZoom, _setMaxZoom] = createWritable<number>(() => config().maxZoom);
-  const [nodesConnectable, setNodesConnectable] = createWritable(() => config().nodesDraggable);
-  const [nodesDraggable, setNodesDraggable] = createWritable(() => config().nodesDraggable);
+  const [height, setHeight] = createSignal(() => config().height);
+  const [minZoom, _setMinZoom] = createSignal<number>(() => config().minZoom);
+  const [maxZoom, _setMaxZoom] = createSignal<number>(() => config().maxZoom);
+  const [nodesConnectable, setNodesConnectable] = createSignal(() => config().nodesDraggable);
+  const [nodesDraggable, setNodesDraggable] = createSignal(() => config().nodesDraggable);
   const [panZoom, setPanZoom] = createSignal<PanZoomInstance | null>(null);
   const [selectionRect, setSelectionRect] = createSignal<SelectionRect | undefined>();
   const [selectionRectMode, setSelectionRectMode] = createSignal<string | undefined>();
-  const [snapGrid, setSnapGrid] = createWritable(() => config().snapGrid);
-  const [translateExtent, _setTranslateExtent] = createWritable(
+  const [snapGrid, setSnapGrid] = createSignal(() => config().snapGrid);
+  const [translateExtent, _setTranslateExtent] = createSignal(
     () => config().translateExtent ?? infiniteExtent,
   );
-  const [width, setWidth] = createWritable(() => config().width);
+  const [width, setWidth] = createSignal(() => config().width);
 
   // Key flags
   const [selectionKeyPressed, setSelectionKeyPressed] = createSignal(false);
@@ -207,17 +205,50 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [panActivationKeyPressed, setPanActivationKeyPressed] = createSignal(false);
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
-  const nodesMemo = createWritableStore(() => config().nodes);
-  const edgesMemo = createWritableStore(() => config().edges);
-  const viewportMemo = createWritableStore(() => config().viewport ?? initialViewport);
+  // Plain writable stores seeded from the user's graph. A change of the
+  // supplied array identity resets the store (matching 1.x behavior, where the
+  // backing store was recreated whenever the accessor value changed); all
+  // other mutations are local drafts. The store core rewrite (P3.2) replaces
+  // this input boundary with projections.
+  const [nodesStore, setNodesStore] = createStore<NodeType[]>(
+    untrack(() => config().nodes as NodeType[]) as never,
+  );
+  const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(
+    untrack(() => config().edges as EdgeType[]) as never,
+  );
+  const [viewportStore, setViewportStore] = createStore<Viewport>(
+    untrack(() => config().viewport ?? initialViewport) as never,
+  );
+
+  createEffect(
+    () => config().nodes as NodeType[],
+    (next) => {
+      setNodesStore(() => next);
+    },
+    { defer: true },
+  );
+  createEffect(
+    () => config().edges as EdgeType[],
+    (next) => {
+      setEdgesStore(() => next);
+    },
+    { defer: true },
+  );
+  createEffect(
+    () => config().viewport,
+    (next) => {
+      if (next) setViewportStore(() => next);
+    },
+    { defer: true },
+  );
 
   const transform = createMemo(
-    () => [viewportMemo.get().x, viewportMemo.get().y, viewportMemo.get().zoom] as Transform,
+    () => [viewportStore.x, viewportStore.y, viewportStore.zoom] as Transform,
   );
 
   // Mirrors upstream adoptUserNodes semantics: true once every non-hidden node has been measured
   const nodesInitialized = createMemo(() => {
-    const nodes = nodesMemo.get();
+    const nodes = nodesStore;
     if (nodes.length === 0) return false;
 
     for (const node of nodes) {
@@ -236,8 +267,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  // eslint-disable-next-line solid/reactivity
-  const store = mergeProps({ width: 0, height: 0 }, config, {
+  const store = merge({ width: 0, height: 0 }, config, {
     get _colorMode() {
       return config().colorMode;
     },
@@ -308,8 +338,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     get minZoom() {
       return minZoom();
     },
+    get edges() {
+      return edgesStore;
+    },
     get nodes() {
-      return nodesMemo.get();
+      return nodesStore;
     },
     get nodesConnectable() {
       return nodesConnectable();
@@ -324,10 +357,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       return panZoom();
     },
     get selectedNodes() {
-      return nodesMemo.get().filter((node) => node.selected);
+      return nodesStore.filter((node) => node.selected);
     },
     get selectedEdges() {
-      return edgesMemo.get().filter((edge) => edge.selected);
+      return edgesStore.filter((edge) => edge.selected);
     },
     get selectionRect() {
       return selectionRect();
@@ -339,7 +372,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       return snapGrid();
     },
     get viewport() {
-      return viewportMemo.get();
+      return viewportStore;
     },
     get viewportInitialized() {
       return panZoom() !== null;
@@ -444,13 +477,20 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     setZoomActivationKeyPressed(false);
     setConnection({ ...initialConnection });
     setClickConnectStartHandle(undefined);
-    viewportMemo.set(config().initialViewport ?? { x: 0, y: 0, zoom: 1 });
+    setViewportStore(() => config().initialViewport ?? { x: 0, y: 0, zoom: 1 });
     setAriaLiveMessage("");
     setSnapGrid(undefined);
   };
 
   const addEdge = (edgeParams: EdgeType | Connection) => {
-    edgesMemo.set((edges) => systemAddEdge(edgeParams, edges));
+    setEdgesStore((edges) => {
+      const next = systemAddEdge(edgeParams, edges as EdgeType[]);
+      // systemAddEdge returns the same array when the edge is invalid/duplicate
+      if (next !== edges) {
+        edges.push(next[next.length - 1]!);
+      }
+      return undefined;
+    });
   };
 
   let initialFitViewApplied = false;
@@ -475,13 +515,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     nodeDragItems: Map<string, NodeDragItem | InternalNodeBase<NodeType>>,
     dragging = false,
   ) => {
-    nodesMemo.set(
-      (node) => nodeDragItems.has(node.id),
-      produce((node) => {
+    setNodesStore((nodes) => {
+      for (const node of nodes) {
+        if (!nodeDragItems.has(node.id)) continue;
         node.dragging = dragging;
         node.position = nodeDragItems.get(node.id)!.position;
-      }),
-    );
+      }
+      return undefined;
+    });
   };
 
   let pendingEntries: InternalUpdateEntry[] | undefined = undefined;
@@ -494,9 +535,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
     pendingEntries = updateEntries;
 
-    // eslint-disable-next-line solid/reactivity -- deferred like requestIdleCallback, reads latest state on purpose
     scheduleIdleCallback(() => {
-      batch(() => {
+      {
         const updates = new Map(pendingEntries);
         pendingEntries = undefined;
         const { changes, updatedInternals } = systemUpdateNodeInternals(
@@ -528,10 +568,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           new Map(),
         );
 
-        nodesMemo.set(
-          (node) => nodeToChange.has(node.id),
-          produce((node) => {
-            const change = nodeToChange.get(node.id)!;
+        setNodesStore((nodes) => {
+          for (const node of nodes) {
+            const change = nodeToChange.get(node.id);
+            if (!change) continue;
 
             switch (change.type) {
               case "dimensions": {
@@ -547,12 +587,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
                 node.position = change.position ?? node.position;
                 break;
             }
-          }),
-        );
+          }
+          return undefined;
+        });
 
+        flush();
         initialNodesMeasured = true;
         tryInitialFitView();
-      });
+      }
     });
   };
 
@@ -594,23 +636,23 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     const nodesToUnselect = new Set((_nodes ? _nodes : store.nodes).map(({ id }) => id));
 
     if (nodesToUnselect.size) {
-      nodesMemo.set(
-        (node) => nodesToUnselect.has(node.id),
-        produce((node) => {
-          node.selected = false;
-        }),
-      );
+      setNodesStore((nodes) => {
+        for (const node of nodes) {
+          if (nodesToUnselect.has(node.id)) node.selected = false;
+        }
+        return undefined;
+      });
     }
 
-    const edgesToUnselect = new Set((edges ? edges : store.edges).map(({ id }) => id));
+    const edgesToUnselect = new Set((edges ?? (store.edges as EdgeType[])).map(({ id }) => id));
 
     if (edgesToUnselect.size) {
-      edgesMemo.set(
-        (edge) => edgesToUnselect.has(edge.id),
-        produce((edge) => {
-          edge.selected = false;
-        }),
-      );
+      setEdgesStore((edges) => {
+        for (const edge of edges) {
+          if (edgesToUnselect.has(edge.id)) edge.selected = false;
+        }
+        return undefined;
+      });
     }
   };
 
@@ -618,25 +660,23 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     const isMultiSelection = store.multiselectionKeyPressed;
     const selectState = new Map<string, boolean>();
 
-    nodesMemo.set(
-      (node) => {
+    setNodesStore((nodes) => {
+      for (const node of nodes) {
         const nodeWillBeSelected = ids.includes(node.id);
-
         const selected = isMultiSelection
           ? node.selected || nodeWillBeSelected
           : nodeWillBeSelected;
 
         selectState.set(node.id, selected);
+        if (node.selected === selected) continue;
 
-        return node.selected !== selected;
-      },
-      produce((node) => {
-        // we need to mutate the node here in order to have the correct selected state in the drag handler
+        // we need to mutate the internal node here in order to have the correct selected state in the drag handler
         const internalNode = nodeLookup.get(node.id);
-        if (internalNode) internalNode.selected = selectState.get(node.id)!;
-        node.selected = selectState.get(node.id)!;
-      }),
-    );
+        if (internalNode) internalNode.selected = selected;
+        node.selected = selected;
+      }
+      return undefined;
+    });
 
     if (!isMultiSelection) {
       unselectNodesAndEdges({ nodes: [] });
@@ -647,21 +687,18 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     const isMultiSelection = store.multiselectionKeyPressed;
     const edgeSelectState = new Map<string, boolean>();
 
-    edgesMemo.set(
-      (edge) => {
+    setEdgesStore((edges) => {
+      for (const edge of edges) {
         const edgeWillBeSelected = ids.includes(edge.id);
         const selected = isMultiSelection
           ? edge.selected || edgeWillBeSelected
           : edgeWillBeSelected;
 
         edgeSelectState.set(edge.id, selected);
-
-        return edge.selected !== selected;
-      },
-      produce((edge) => {
-        edge.selected = edgeSelectState.get(edge.id)!;
-      }),
-    );
+        if (edge.selected !== selected) edge.selected = selected;
+      }
+      return undefined;
+    });
 
     if (!isMultiSelection) {
       unselectNodesAndEdges({ edges: [] });
@@ -676,10 +713,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       return;
     }
 
-    batch(() => {
-      setSelectionRect(undefined);
-      setSelectionRectMode(undefined);
-    });
+    setSelectionRect(undefined);
+    setSelectionRectMode(undefined);
 
     if (!node.selected) {
       addSelectedNodes([id]);
@@ -703,10 +738,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
     if (!selectable) return;
 
-    batch(() => {
-      setSelectionRect(undefined);
-      setSelectionRectMode(undefined);
-    });
+    setSelectionRect(undefined);
+    setSelectionRectMode(undefined);
 
     if (!edge.selected) {
       addSelectedEdges([id]);
@@ -789,81 +822,99 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  createEffect(() => {
-    if (width() && height() && panZoom()) tryInitialFitView();
-  });
+  createEffect(
+    () => {
+      if (width() && height() && panZoom()) tryInitialFitView();
+    },
+    () => {},
+  );
 
-  createEffect(() => {
-    store.panZoom?.syncViewport(store.viewport);
-  });
+  createEffect(
+    () => {
+      store.panZoom?.syncViewport(store.viewport);
+    },
+    () => {},
+  );
 
-  createEffect(() => {
-    const _panZoom = panZoom();
-    if (!_panZoom) return;
+  createEffect(
+    () => {
+      const _panZoom = panZoom();
+      if (!_panZoom) return;
 
-    createEffect(() => {
-      _panZoom.setScaleExtent([store.minZoom, store.maxZoom]);
-    });
+      createEffect(
+        () => [store.minZoom, store.maxZoom] as [number, number],
+        (extent) => {
+          _panZoom.setScaleExtent(extent);
+        },
+      );
 
-    createEffect(() => {
-      _panZoom.setTranslateExtent(store.translateExtent);
-    });
-  });
+      createEffect(
+        () => store.translateExtent,
+        (extent) => {
+          _panZoom.setTranslateExtent(extent);
+        },
+      );
+    },
+    () => {},
+  );
 
-  createComputed(
+  createRenderEffect(
     mapArray(
-      () => store.nodes,
+      () => store.nodes as unknown as NodeType[],
       (userNode) => {
-        createComputed(() => {
-          const internalNode = untrack(() => nodeLookup.get(userNode.id));
-          const selectedNodeZ: number =
-            store.elevateNodesOnSelect && store.zIndexMode !== "manual" ? 1000 : 0;
+        createRenderEffect(
+          () => {
+            const internalNode = untrack(() => nodeLookup.get(userNode.id));
+            const selectedNodeZ: number =
+              store.elevateNodesOnSelect && store.zIndexMode !== "manual" ? 1000 : 0;
 
-          const clampedPosition = clampPosition(
-            getNodePositionWithOrigin(userNode, store.nodeOrigin),
-            isCoordinateExtent(userNode.extent) ? userNode.extent : store.nodeExtent,
-            getNodeDimensions(userNode),
-          );
+            const clampedPosition = clampPosition(
+              getNodePositionWithOrigin(userNode, store.nodeOrigin),
+              isCoordinateExtent(userNode.extent) ? userNode.extent : store.nodeExtent,
+              getNodeDimensions(userNode),
+            );
 
-          /*
-           * We preserve the measured dimensions of the node if the user has provided them.
-           * If the user has not provided them, we use the previously measured dimensions.
-           * If the user has not provided them and there are no previously measured dimensions,
-           * we reset the handleBounds so that the node gets re-measured.
-           */
-          const preservedMeasured = {
-            width: userNode.measured?.width ?? internalNode?.measured?.width,
-            height: userNode.measured?.height ?? internalNode?.measured?.height,
-          };
+            /*
+             * We preserve the measured dimensions of the node if the user has provided them.
+             * If the user has not provided them, we use the previously measured dimensions.
+             * If the user has not provided them and there are no previously measured dimensions,
+             * we reset the handleBounds so that the node gets re-measured.
+             */
+            const preservedMeasured = {
+              width: userNode.measured?.width ?? internalNode?.measured?.width,
+              height: userNode.measured?.height ?? internalNode?.measured?.height,
+            };
 
-          const updatedNodeInternals = {
-            ...userNode,
-            measured: preservedMeasured,
-            internals: {
-              positionAbsolute: clampedPosition,
-              // If there is neither a user-provided nor a previously measured size,
-              // reset handleBounds so that the node gets re-measured.
-              handleBounds:
-                !userNode.measured && !internalNode?.measured
-                  ? undefined
-                  : internalNode?.internals.handleBounds,
-              z: calculateZ(userNode, selectedNodeZ, store.zIndexMode),
-              userNode,
-            },
-          } as InternalNode<NodeType>;
+            const updatedNodeInternals = {
+              ...userNode,
+              measured: preservedMeasured,
+              internals: {
+                positionAbsolute: clampedPosition,
+                // If there is neither a user-provided nor a previously measured size,
+                // reset handleBounds so that the node gets re-measured.
+                handleBounds:
+                  !userNode.measured && !internalNode?.measured
+                    ? undefined
+                    : internalNode?.internals.handleBounds,
+                z: calculateZ(userNode, selectedNodeZ, store.zIndexMode),
+                userNode,
+              },
+            } as InternalNode<NodeType>;
 
-          nodeLookup.set(userNode.id, updatedNodeInternals);
+            nodeLookup.set(userNode.id, updatedNodeInternals);
 
-          if (userNode.parentId) {
-            updateChildNode(updatedNodeInternals, nodeLookup, parentLookup, {
-              nodeOrigin: store.nodeOrigin,
-              nodeExtent: store.nodeExtent,
-              elevateNodesOnSelect: store.elevateNodesOnSelect,
-              zIndexMode: store.zIndexMode,
-              checkEquality: true,
-            });
-          }
-        });
+            if (userNode.parentId) {
+              updateChildNode(updatedNodeInternals, nodeLookup, parentLookup, {
+                nodeOrigin: store.nodeOrigin,
+                nodeExtent: store.nodeExtent,
+                elevateNodesOnSelect: store.elevateNodesOnSelect,
+                zIndexMode: store.zIndexMode,
+                checkEquality: true,
+              });
+            }
+          },
+          () => {},
+        );
 
         // Do not delete here; we garbage-collect removed nodes in a separate effect
         onCleanup(() => {
@@ -871,21 +922,25 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         });
       },
     ),
+    () => {},
   );
 
   // Garbage-collect nodeLookup entries for nodes that no longer exist in the store
-  createEffect(() => {
-    const currentIds = new Set(store.nodes.map((n) => n.id));
-    for (const id of Array.from(nodeLookup.keys())) {
-      if (!currentIds.has(id)) {
-        nodeLookup.delete(id);
+  createEffect(
+    () => {
+      const currentIds = new Set(store.nodes.map((n) => n.id));
+      for (const id of Array.from(nodeLookup.keys())) {
+        if (!currentIds.has(id)) {
+          nodeLookup.delete(id);
+        }
       }
-    }
-  });
+    },
+    () => {},
+  );
 
-  createComputed(
+  createRenderEffect(
     mapArray(
-      () => store.edges,
+      () => store.edges as EdgeType[],
       (edge) => {
         const {
           source: sourceNodeId,
@@ -905,83 +960,89 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         const sourceKey = `${sourceNodeId}-${sourceHandle}--${targetNodeId}-${targetHandle}`;
         const targetKey = `${targetNodeId}-${targetHandle}--${sourceNodeId}-${sourceHandle}`;
 
-        createComputed(() => {
-          batch(() => {
-            addConnectionToLookup(
-              "source",
-              connection,
-              targetKey,
-              connectionLookup,
-              sourceNodeId,
-              sourceHandle,
-            );
+        createRenderEffect(
+          () => {
+            {
+              addConnectionToLookup(
+                "source",
+                connection,
+                targetKey,
+                connectionLookup,
+                sourceNodeId,
+                sourceHandle,
+              );
 
-            addConnectionToLookup(
-              "target",
-              connection,
-              sourceKey,
-              connectionLookup,
-              targetNodeId,
-              targetHandle,
-            );
+              addConnectionToLookup(
+                "target",
+                connection,
+                sourceKey,
+                connectionLookup,
+                targetNodeId,
+                targetHandle,
+              );
 
-            edgeLookup.set(edge.id, edge);
-          });
-        });
+              edgeLookup.set(edge.id, edge);
+            }
+          },
+          () => {},
+        );
 
-        createComputed(() => {
-          const sourceNode = nodeLookup.get(edge.source);
-          const targetNode = nodeLookup.get(edge.target);
+        createRenderEffect(
+          () => {
+            const sourceNode = nodeLookup.get(edge.source);
+            const targetNode = nodeLookup.get(edge.target);
 
-          if (!sourceNode || !targetNode) return;
+            if (!sourceNode || !targetNode) return;
 
-          if (store.onlyRenderVisibleElements) {
-            const edgeVisible = isEdgeVisible({
+            if (store.onlyRenderVisibleElements) {
+              const edgeVisible = isEdgeVisible({
+                sourceNode,
+                targetNode,
+                width: store.width ?? 0,
+                height: store.height ?? 0,
+                transform: store.transform,
+              });
+
+              if (!edgeVisible) return;
+
+              store.visibleNodesMap.set(sourceNode.id, sourceNode);
+              store.visibleNodesMap.set(targetNode.id, targetNode);
+            }
+
+            const edgePosition = getEdgePosition({
+              id: edge.id,
               sourceNode,
               targetNode,
-              width: store.width ?? 0,
-              height: store.height ?? 0,
-              transform: store.transform,
+              sourceHandle: edge.sourceHandle || null,
+              targetHandle: edge.targetHandle || null,
+              connectionMode: store.connectionMode as ConnectionMode,
+              onError: store.onError,
             });
 
-            if (!edgeVisible) return;
+            if (!edgePosition) return;
 
-            store.visibleNodesMap.set(sourceNode.id, sourceNode);
-            store.visibleNodesMap.set(targetNode.id, targetNode);
-          }
-
-          const edgePosition = getEdgePosition({
-            id: edge.id,
-            sourceNode,
-            targetNode,
-            sourceHandle: edge.sourceHandle || null,
-            targetHandle: edge.targetHandle || null,
-            connectionMode: store.connectionMode as ConnectionMode,
-            onError: store.onError,
-          });
-
-          if (!edgePosition) return;
-
-          layoutedEdgesMap.set(edge.id, {
-            ...store.defaultEdgeOptions,
-            ...edge,
-            ...edgePosition,
-            zIndex: getElevatedEdgeZIndex({
-              selected: edge.selected,
-              zIndex: edge.zIndex ?? store.defaultEdgeOptions.zIndex,
+            layoutedEdgesMap.set(edge.id, {
+              ...store.defaultEdgeOptions,
+              ...edge,
+              ...edgePosition,
+              zIndex: getElevatedEdgeZIndex({
+                selected: edge.selected,
+                zIndex: edge.zIndex ?? store.defaultEdgeOptions.zIndex,
+                sourceNode,
+                targetNode,
+                elevateOnSelect: store.elevateEdgesOnSelect,
+                zIndexMode: store.zIndexMode,
+              }),
               sourceNode,
               targetNode,
-              elevateOnSelect: store.elevateEdgesOnSelect,
-              zIndexMode: store.zIndexMode,
-            }),
-            sourceNode,
-            targetNode,
-            edge,
-          });
-        });
+              edge,
+            });
+          },
+          () => {},
+        );
 
         onCleanup(() => {
-          batch(() => {
+          {
             edgeLookup.delete(edge.id);
             layoutedEdgesMap.delete(edge.id);
 
@@ -1000,22 +1061,26 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
               targetNodeId,
               targetHandle,
             );
-          });
+          }
         });
       },
     ),
+    () => {},
   );
 
-  createEffect(() => {
-    const currentIds = new Set(store.edges.map((e) => e.id));
-    for (const id of Array.from(edgeLookup.keys())) {
-      if (!currentIds.has(id)) {
-        edgeLookup.delete(id);
-        connectionLookup.delete(id);
-        layoutedEdgesMap.delete(id);
+  createEffect(
+    () => {
+      const currentIds = new Set((store.edges as EdgeType[]).map((e) => e.id));
+      for (const id of Array.from(edgeLookup.keys())) {
+        if (!currentIds.has(id)) {
+          edgeLookup.delete(id);
+          connectionLookup.delete(id);
+          layoutedEdgesMap.delete(id);
+        }
       }
-    }
-  });
+    },
+    () => {},
+  );
 
   // TODO: Add viewportInitialized to store
   return {
@@ -1038,13 +1103,13 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       setDomNode,
       setDragging,
       get setEdges() {
-        return edgesMemo.set;
+        return setEdgesStore;
       },
       setElementsSelectable,
       setHeight,
       setMultiselectionKeyPressed,
       get setNodes() {
-        return nodesMemo.set;
+        return setNodesStore;
       },
       setNodesConnectable,
       setNodesDraggable,
@@ -1054,7 +1119,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       setSelectionRect,
       setSelectionRectMode,
       get setViewport() {
-        return viewportMemo.set;
+        return (viewport: Viewport) => setViewportStore(() => viewport);
       },
       setWidth,
       setZoomActivationKeyPressed,

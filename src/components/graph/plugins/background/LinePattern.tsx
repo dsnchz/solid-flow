@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { mergeProps } from "solid-js";
+import { merge } from "solid-js";
 
 import type { BackgroundVariant } from ".";
 
@@ -11,7 +11,7 @@ type LinePatternProps = {
 };
 
 export const LinePattern = (props: LinePatternProps) => {
-  const _props = mergeProps({ lineWidth: 1 }, props);
+  const _props = merge({ lineWidth: 1 }, props);
 
   return (
     <path
