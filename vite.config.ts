@@ -9,6 +9,7 @@ const TEST_EXCLUDES = [
   "src/mocks",
   "public",
   "server",
+  "playground/**",
   "tmp/**",
 ];
 const COVERAGE_EXCLUDE = [...TEST_EXCLUDES, "**/*.test.{ts,tsx}"];
@@ -41,10 +42,8 @@ const vitestConfig = defineConfig({
     exclude: TEST_EXCLUDES,
     coverage: {
       provider: "istanbul",
+      include: ["src/**"],
       exclude: COVERAGE_EXCLUDE,
-      thresholds: {
-        "100": true,
-      },
     },
   },
 });

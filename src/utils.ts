@@ -88,3 +88,12 @@ export function createWritableStore<T extends object>(accessor: Accessor<T>) {
     },
   };
 }
+
+/**
+ * Schedules a callback during idle time, falling back to a macrotask where
+ * `requestIdleCallback` is unavailable (Safari, jsdom).
+ */
+export const scheduleIdleCallback: (callback: () => void) => void =
+  typeof requestIdleCallback === "function"
+    ? requestIdleCallback
+    : (callback) => setTimeout(callback, 0);

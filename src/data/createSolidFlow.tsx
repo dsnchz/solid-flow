@@ -73,7 +73,7 @@ import type {
   NodeGraph,
   NodeTypes,
 } from "~/types";
-import { createWritable, createWritableStore } from "~/utils";
+import { createWritable, createWritableStore, scheduleIdleCallback } from "~/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
@@ -494,7 +494,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
     pendingEntries = updateEntries;
 
-    requestIdleCallback(() => {
+    // eslint-disable-next-line solid/reactivity -- deferred like requestIdleCallback, reads latest state on purpose
+    scheduleIdleCallback(() => {
       batch(() => {
         const updates = new Map(pendingEntries);
         pendingEntries = undefined;
