@@ -20,7 +20,7 @@ import { NodeIdContext } from "../../contexts/nodeId";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
   readonly nodeId: string;
-  readonly resizeObserver: ResizeObserver;
+  readonly resizeObserver: ResizeObserver | undefined;
   readonly nodeClickDistance: number;
 };
 
@@ -117,11 +117,11 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     }
 
     if (prevNodeRef) {
-      props.resizeObserver.unobserve(prevNodeRef);
+      props.resizeObserver?.unobserve(prevNodeRef);
     }
 
     if (currentNodeRef) {
-      props.resizeObserver.observe(currentNodeRef);
+      props.resizeObserver?.observe(currentNodeRef);
     }
 
     return currentNodeRef;

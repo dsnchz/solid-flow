@@ -89,7 +89,8 @@
     "start": "vite",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:ssr": "vitest run --config vite.config.ssr.ts"
   },
   "dependencies": {
     "@solid-primitives/map": "^0.7.4",

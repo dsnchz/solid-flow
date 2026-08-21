@@ -250,8 +250,12 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
   };
 
   const cleanupAutoPan = () => {
-    cancelAnimationFrame(autoPanId);
-    autoPanId = 0;
+    // autoPanId is only ever set in the browser; guarding also keeps the
+    // disposal path SSR-safe (no cancelAnimationFrame on the server)
+    if (autoPanId) {
+      cancelAnimationFrame(autoPanId);
+      autoPanId = 0;
+    }
     autoPanStarted = false;
   };
 

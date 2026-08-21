@@ -11,6 +11,8 @@ const TEST_EXCLUDES = [
   "server",
   "playground/**",
   "tmp/**",
+  // SSR tests run in their own node-environment lane (vite.config.ssr.ts)
+  "**/*.ssr.test.*",
 ];
 const COVERAGE_EXCLUDE = [...TEST_EXCLUDES, "**/*.test.{ts,tsx}"];
 

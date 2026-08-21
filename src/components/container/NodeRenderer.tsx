@@ -1,4 +1,5 @@
 import { For, type JSX, onCleanup } from "solid-js";
+import { isServer } from "solid-js/web";
 
 import type { Node, NodeEvents } from "../../types";
 import { useInternalSolidFlow } from "../contexts";
@@ -13,24 +14,28 @@ export const NodeRenderer = <NodeType extends Node = Node>(
 ): JSX.Element => {
   const { actions, store } = useInternalSolidFlow<NodeType>();
 
-  const resizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
-    actions.requestUpdateNodeInternals(
-      entries.map((entry: ResizeObserverEntry) => {
-        const id = entry.target.getAttribute("data-id") as string;
-        return [
-          id,
-          {
-            id,
-            nodeElement: entry.target as HTMLDivElement,
-            force: true,
-          },
-        ];
-      }),
-    );
-  });
+  // Nodes are measured in the browser only; during SSR the observer is absent
+  // and NodeWrapper's measurement effect never runs.
+  const resizeObserver = isServer
+    ? undefined
+    : new ResizeObserver((entries: ResizeObserverEntry[]) => {
+        actions.requestUpdateNodeInternals(
+          entries.map((entry: ResizeObserverEntry) => {
+            const id = entry.target.getAttribute("data-id") as string;
+            return [
+              id,
+              {
+                id,
+                nodeElement: entry.target as HTMLDivElement,
+                force: true,
+              },
+            ];
+          }),
+        );
+      });
 
   onCleanup(() => {
-    resizeObserver.disconnect();
+    resizeObserver?.disconnect();
   });
 
   return (
