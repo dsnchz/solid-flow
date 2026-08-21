@@ -2,7 +2,6 @@ import type {
   AriaLabelConfig,
   ColorMode,
   CoordinateExtent,
-  IsValidConnection,
   NodeOrigin,
   OnConnectEnd,
   OnConnectStart,
@@ -17,6 +16,7 @@ import type {
   ProOptions,
   SnapGrid,
   Viewport,
+  ZIndexMode,
 } from "@xyflow/system";
 import type { JSX } from "solid-js";
 import type { Store } from "solid-js/store";
@@ -31,6 +31,7 @@ import type {
   EdgeEvents,
   EdgeTypes,
   FitViewOptions,
+  IsValidConnection,
   KeyDefinition,
   Node,
   NodeEvents,
@@ -244,7 +245,7 @@ export type SolidFlowProps<
      * You can pass `null` to use the CSS variable `--xy-edge-stroke` for the marker color.
      * @example "#b1b1b7"
      */
-    readonly defaultMarkerColor?: string;
+    readonly defaultMarkerColor?: string | null;
     /**
      * Controls if all nodes should be draggable
      * @default true
@@ -255,6 +256,11 @@ export type SolidFlowProps<
      * @default true
      */
     readonly autoPanOnNodeFocus?: boolean;
+    /**
+     * When `true`, the viewport will pan when a drag selection approaches the edges of the flow container.
+     * @default true
+     */
+    readonly autoPanOnSelection?: boolean;
     /**
      * Controls if all nodes should be connectable to each other
      * @default true
@@ -385,6 +391,14 @@ export type SolidFlowProps<
      */
     readonly elevateNodesOnSelect?: boolean;
     /**
+     * Controls how z-indexes are calculated for nodes and edges.
+     * 'auto' automatically manages z-indexing for selections and sub flows,
+     * 'basic' manages z-indexing for selections only, and
+     * 'manual' does not apply any automatic z-indexing.
+     * @default "basic"
+     */
+    readonly zIndexMode?: ZIndexMode;
+    /**
      * Enabling this option will raise the z-index of edges when they are selected,
      * or when the connected nodes are selected.
      * @default true
@@ -438,7 +452,7 @@ export type SolidFlowProps<
      * before doing so.
      */
     readonly proOptions?: ProOptions;
-    readonly isValidConnection?: IsValidConnection;
+    readonly isValidConnection?: IsValidConnection<EdgeType>;
     /** This event handler is called when the user begins to pan or zoom the viewport */
     readonly onMoveStart?: OnMoveStart;
     /** This event handler is called when the user pans or zooms the viewport */

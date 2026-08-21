@@ -10,6 +10,7 @@ import {
   type HandleProps as SystemHandleProps,
   type HandleType,
   type InternalNodeBase,
+  type IsValidConnection as SystemIsValidConnection,
   type Optional,
   type UpdateConnection,
   XYHandle,
@@ -137,7 +138,8 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       lib: store.lib,
       autoPanOnConnect: store.autoPanOnConnect,
       flowId: store.id,
-      isValidConnection: local.isValidConnection ?? store.isValidConnection,
+      isValidConnection: (local.isValidConnection ??
+        store.isValidConnection) as SystemIsValidConnection,
       updateConnection: actions.setConnection as UpdateConnection<InternalNodeBase>,
       cancelConnection: actions.cancelConnection,
       panBy: actions.panBy,
@@ -173,7 +175,8 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     }
 
     const doc = getHostForElement(event.target);
-    const isValidConnectionHandler = local.isValidConnection ?? store.isValidConnection;
+    const isValidConnectionHandler = (local.isValidConnection ??
+      store.isValidConnection) as SystemIsValidConnection;
 
     const { connection, isValid } = XYHandle.isValid(event, {
       handle: {

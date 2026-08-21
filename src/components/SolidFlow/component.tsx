@@ -5,12 +5,14 @@ import {
   batch,
   type Context,
   createEffect,
+  createMemo,
   type JSX,
   mergeProps,
   onCleanup,
   onMount,
   type ParentProps,
   splitProps,
+  untrack,
   useContext,
 } from "solid-js";
 
@@ -83,6 +85,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "nodeClickDistance",
     "minZoom",
     "maxZoom",
+    "zIndexMode",
     "initialViewport",
     "viewport",
     "translateExtent",
@@ -108,6 +111,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     "autoPanOnConnect",
     "autoPanOnNodeDrag",
     "autoPanOnNodeFocus",
+    "autoPanOnSelection",
     "autoPanSpeed",
 
     // Connection and validation
@@ -245,6 +249,24 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     });
   });
 
+  // Fires only when the set of selected ids changes, not on unrelated node/edge updates
+  const selectedElements = createMemo(
+    () => ({ nodes: store.selectedNodes, edges: store.selectedEdges }),
+    undefined,
+    {
+      equals: (a, b) =>
+        a.nodes.length === b.nodes.length &&
+        a.edges.length === b.edges.length &&
+        a.nodes.every((node, i) => node.id === b.nodes[i]!.id) &&
+        a.edges.every((edge, i) => edge.id === b.edges[i]!.id),
+    },
+  );
+
+  createEffect(() => {
+    const params = selectedElements();
+    untrack(() => flowProps.onSelectionChange)?.(params);
+  });
+
   const rootStyle = (): JSX.CSSProperties => ({
     width: toPxString(flowProps.width),
     height: toPxString(flowProps.height),
@@ -295,6 +317,8 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
             onSelectionEnd={flowProps.onSelectionEnd}
             panOnDrag={flowProps.panOnDrag}
             selectionOnDrag={flowProps.selectionOnDrag}
+            paneClickDistance={flowProps.paneClickDistance}
+            autoPanOnSelection={flowProps.autoPanOnSelection}
           >
             <Viewport>
               <div class="solid-flow__container solid-flow__viewport-back" />

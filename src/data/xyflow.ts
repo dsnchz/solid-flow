@@ -26,14 +26,23 @@ import {
   type Rect,
   type Transform,
   type XYPosition,
+  type ZIndexMode,
 } from "@xyflow/system";
+
+const SELECTED_NODE_Z = 1000;
+const ROOT_PARENT_Z_INCREMENT = 10;
 
 const defaultOptions = {
   nodeOrigin: [0, 0] as NodeOrigin,
   nodeExtent: infiniteExtent,
   elevateNodesOnSelect: true,
   defaults: {},
+  zIndexMode: "basic" as ZIndexMode,
 };
+
+export function isManualZIndexMode(zIndexMode?: ZIndexMode): boolean {
+  return zIndexMode === "manual";
+}
 
 const adoptUserNodesDefaultOptions = {
   ...defaultOptions,
@@ -75,6 +84,7 @@ type UpdateNodesOptions<NodeType extends NodeBase> = {
   nodeExtent?: CoordinateExtent;
   elevateNodesOnSelect?: boolean;
   defaults?: Partial<NodeType>;
+  zIndexMode?: ZIndexMode;
   checkEquality?: boolean;
 };
 
@@ -87,8 +97,12 @@ export function adoptUserNodes<NodeType extends NodeBase>(
   const _options = mergeObjects(adoptUserNodesDefaultOptions, options);
 
   let nodesInitialized = nodes.length > 0;
+  const rootParentIndex = { i: 0 };
   const tmpLookup = new Map(nodeLookup);
-  const selectedNodeZ: number = _options?.elevateNodesOnSelect ? 1000 : 0;
+  const selectedNodeZ: number =
+    _options?.elevateNodesOnSelect && !isManualZIndexMode(_options.zIndexMode)
+      ? SELECTED_NODE_Z
+      : 0;
 
   nodeLookup.clear();
   parentLookup.clear();
@@ -118,7 +132,7 @@ export function adoptUserNodes<NodeType extends NodeBase>(
           positionAbsolute: clampedPosition,
           // if user re-initializes the node or removes `measured` for whatever reason, we reset the handleBounds so that the node gets re-measured
           handleBounds: !userNode.measured ? undefined : internalNode?.internals.handleBounds,
-          z: calculateZ(userNode, selectedNodeZ),
+          z: calculateZ(userNode, selectedNodeZ, _options.zIndexMode),
           userNode,
         },
       };
@@ -136,7 +150,7 @@ export function adoptUserNodes<NodeType extends NodeBase>(
     }
 
     if (userNode.parentId) {
-      updateChildNode(internalNode, nodeLookup, parentLookup, options);
+      updateChildNode(internalNode, nodeLookup, parentLookup, options, rootParentIndex);
     }
   }
 
@@ -168,8 +182,12 @@ export function updateChildNode<NodeType extends NodeBase>(
   nodeLookup: NodeLookup<InternalNodeBase<NodeType>>,
   parentLookup: ParentLookup<InternalNodeBase<NodeType>>,
   options?: UpdateNodesOptions<NodeType>,
+  rootParentIndex?: { i: number },
 ) {
-  const { elevateNodesOnSelect, nodeOrigin, nodeExtent } = mergeObjects(defaultOptions, options);
+  const { elevateNodesOnSelect, nodeOrigin, nodeExtent, zIndexMode } = mergeObjects(
+    defaultOptions,
+    options,
+  );
   const parentId = node.parentId!;
   const parentNode = nodeLookup.get(parentId);
 
@@ -182,8 +200,32 @@ export function updateChildNode<NodeType extends NodeBase>(
 
   updateParentLookup(node, parentLookup);
 
-  const selectedNodeZ = elevateNodesOnSelect ? 1000 : 0;
-  const { x, y, z } = calculateChildXYZ(node, parentNode, nodeOrigin, nodeExtent, selectedNodeZ);
+  // We just want to set the rootParentIndex for the first child
+  if (
+    rootParentIndex &&
+    !parentNode.parentId &&
+    parentNode.internals.rootParentIndex === undefined &&
+    zIndexMode === "auto"
+  ) {
+    parentNode.internals.rootParentIndex = ++rootParentIndex.i;
+    parentNode.internals.z = parentNode.internals.z + rootParentIndex.i * ROOT_PARENT_Z_INCREMENT;
+  }
+
+  // But we need to update rootParentIndex.i also when parent has not been updated
+  if (rootParentIndex && parentNode.internals.rootParentIndex !== undefined) {
+    rootParentIndex.i = parentNode.internals.rootParentIndex;
+  }
+
+  const selectedNodeZ =
+    elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
+  const { x, y, z } = calculateChildXYZ(
+    node,
+    parentNode,
+    nodeOrigin,
+    nodeExtent,
+    selectedNodeZ,
+    zIndexMode,
+  );
   const { positionAbsolute } = node.internals;
   const positionChanged = x !== positionAbsolute.x || y !== positionAbsolute.y;
 
@@ -200,8 +242,14 @@ export function updateChildNode<NodeType extends NodeBase>(
   }
 }
 
-export function calculateZ(node: NodeBase, selectedNodeZ: number) {
-  return (isNumeric(node.zIndex) ? node.zIndex : 0) + (node.selected ? selectedNodeZ : 0);
+export function calculateZ(node: NodeBase, selectedNodeZ: number, zIndexMode?: ZIndexMode) {
+  const zIndex = isNumeric(node.zIndex) ? node.zIndex : 0;
+
+  if (isManualZIndexMode(zIndexMode)) {
+    return zIndex;
+  }
+
+  return zIndex + (node.selected ? selectedNodeZ : 0);
 }
 
 function calculateChildXYZ<NodeType extends NodeBase>(
@@ -210,6 +258,7 @@ function calculateChildXYZ<NodeType extends NodeBase>(
   nodeOrigin: NodeOrigin,
   nodeExtent: CoordinateExtent,
   selectedNodeZ: number,
+  zIndexMode?: ZIndexMode,
 ) {
   const { x: parentX, y: parentY } = parentNode.internals.positionAbsolute;
   const childDimensions = getNodeDimensions(childNode);
@@ -228,7 +277,7 @@ function calculateChildXYZ<NodeType extends NodeBase>(
     absolutePosition = clampPositionToParent(absolutePosition, childDimensions, parentNode);
   }
 
-  const childZ = calculateZ(childNode, selectedNodeZ);
+  const childZ = calculateZ(childNode, selectedNodeZ, zIndexMode);
   const parentZ = parentNode.internals.z ?? 0;
 
   return {

@@ -139,6 +139,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       nodeOrigin: _props.nodeOrigin,
       // eslint-disable-next-line solid/reactivity
       elevateNodesOnSelect: _props.elevateNodesOnSelect,
+      // eslint-disable-next-line solid/reactivity
+      zIndexMode: _props.zIndexMode,
       checkEquality: true,
     });
   });
@@ -212,6 +214,21 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const transform = createMemo(
     () => [viewportMemo.get().x, viewportMemo.get().y, viewportMemo.get().zoom] as Transform,
   );
+
+  // Mirrors upstream adoptUserNodes semantics: true once every non-hidden node has been measured
+  const nodesInitialized = createMemo(() => {
+    const nodes = nodesMemo.get();
+    if (nodes.length === 0) return false;
+
+    for (const node of nodes) {
+      if (node.hidden) continue;
+      if (node.measured?.width === undefined || node.measured?.height === undefined) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   /**********************************************************************************/
   /*                                                                                */
@@ -307,10 +324,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       return panZoom();
     },
     get selectedNodes() {
-      return config().nodes.filter((node) => node.selected);
+      return nodesMemo.get().filter((node) => node.selected);
     },
     get selectedEdges() {
-      return config().edges.filter((edge) => edge.selected);
+      return edgesMemo.get().filter((edge) => edge.selected);
     },
     get selectionRect() {
       return selectionRect();
@@ -326,6 +343,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
     get viewportInitialized() {
       return panZoom() !== null;
+    },
+    get nodesInitialized() {
+      return nodesInitialized();
     },
     get visibleEdgeIds() {
       return visibleEdgeIds();
@@ -491,6 +511,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         updateAbsolutePositions(nodeLookup, parentLookup, {
           nodeOrigin: store.nodeOrigin,
           nodeExtent: store.nodeExtent,
+          zIndexMode: store.zIndexMode,
         });
 
         const nodeToChange = changes.reduce<Map<string, NodeDimensionChange | NodePositionChange>>(
@@ -794,7 +815,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       (userNode) => {
         createComputed(() => {
           const internalNode = untrack(() => nodeLookup.get(userNode.id));
-          const selectedNodeZ: number = store.elevateNodesOnSelect ? 1000 : 0;
+          const selectedNodeZ: number =
+            store.elevateNodesOnSelect && store.zIndexMode !== "manual" ? 1000 : 0;
 
           const clampedPosition = clampPosition(
             getNodePositionWithOrigin(userNode, store.nodeOrigin),
@@ -824,7 +846,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
                 !userNode.measured && !internalNode?.measured
                   ? undefined
                   : internalNode?.internals.handleBounds,
-              z: calculateZ(userNode, selectedNodeZ),
+              z: calculateZ(userNode, selectedNodeZ, store.zIndexMode),
               userNode,
             },
           } as InternalNode<NodeType>;
@@ -836,6 +858,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
               nodeOrigin: store.nodeOrigin,
               nodeExtent: store.nodeExtent,
               elevateNodesOnSelect: store.elevateNodesOnSelect,
+              zIndexMode: store.zIndexMode,
               checkEquality: true,
             });
           }
@@ -948,6 +971,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
               sourceNode,
               targetNode,
               elevateOnSelect: store.elevateEdgesOnSelect,
+              zIndexMode: store.zIndexMode,
             }),
             sourceNode,
             targetNode,

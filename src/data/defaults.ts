@@ -5,6 +5,7 @@ import {
   type IsValidConnection,
   type NodeOrigin,
   type OnError,
+  type ZIndexMode,
 } from "@xyflow/system";
 import type { JSX } from "solid-js";
 
@@ -41,6 +42,7 @@ export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends
     autoPanOnNodeDrag: true,
     autoPanOnConnect: true,
     autoPanOnNodeFocus: true,
+    autoPanOnSelection: true,
     autoPanSpeed: 15,
     elevateEdgesOnSelect: true,
     nodesDraggable: true,
@@ -50,6 +52,7 @@ export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends
     elementsSelectable: true,
     selectNodesOnDrag: true,
     elevateNodesOnSelect: true,
+    zIndexMode: "basic" as ZIndexMode,
     onlyRenderVisibleElements: false,
     disableKeyboardA11y: false,
     defaultMarkerColor: "#b1b1b7",
