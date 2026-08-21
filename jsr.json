@@ -4,7 +4,16 @@
   "license": "MIT",
   "exports": "./src/index.tsx",
   "imports": {
-    "~/": "./src/"
+    "~/": "./src/",
+    "@solid-primitives/map": "npm:@solid-primitives/map@^0.7.4",
+    "@solid-primitives/media": "npm:@solid-primitives/media@^2.3.6",
+    "@solid-primitives/resize-observer": "npm:@solid-primitives/resize-observer@^2.2.0",
+    "@xyflow/system": "npm:@xyflow/system@^0.0.80",
+    "clsx": "npm:clsx@^2.1.1",
+    "solid-js": "npm:solid-js@^1.8.0",
+    "solid-js/store": "npm:solid-js@^1.8.0/store",
+    "solid-js/web": "npm:solid-js@^1.8.0/web",
+    "solid-js/jsx-runtime": "npm:solid-js@^1.8.0/jsx-runtime"
   },
   "publish": {
     "include": ["LICENSE", "README.md", "CHANGELOG.md", "src/**/*.tsx", "src/**/*.ts"],
