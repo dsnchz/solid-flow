@@ -205,19 +205,17 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const [panActivationKeyPressed, setPanActivationKeyPressed] = createSignal(false);
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
-  // Plain writable stores seeded from the user's graph. A change of the
-  // supplied array identity resets the store (matching 1.x behavior, where the
+  // Plain writable stores seeded from the user's graph, reset by the effects
+  // below when the supplied array identity changes (matching 1.x, where the
   // backing store was recreated whenever the accessor value changed); all
-  // other mutations are local drafts. The store core rewrite (P3.2) replaces
-  // this input boundary with projections.
-  const [nodesStore, setNodesStore] = createStore<NodeType[]>(
-    untrack(() => config().nodes as NodeType[]) as never,
-  );
-  const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(
-    untrack(() => config().edges as EdgeType[]) as never,
-  );
+  // other writes are local drafts. NOT the projection form of createStore:
+  // deriving from a store-proxy source rewraps every element on structural
+  // writes, so a single addEdge/addNode would churn all row identities and
+  // recreate the whole mapArray pipeline (verified empirically on rc.1).
+  const [nodesStore, setNodesStore] = createStore<NodeType[]>(_props.nodes as NodeType[]);
+  const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(_props.edges as EdgeType[]);
   const [viewportStore, setViewportStore] = createStore<Viewport>(
-    untrack(() => config().viewport ?? initialViewport) as never,
+    _props.viewport ?? initialViewport,
   );
 
   createEffect(
@@ -234,6 +232,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
     { defer: true },
   );
+  // A controlled viewport prop resets the store; when absent, hold the current value
   createEffect(
     () => config().viewport,
     (next) => {
@@ -338,11 +337,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     get minZoom() {
       return minZoom();
     },
-    get edges() {
-      return edgesStore;
+    get edges(): EdgeType[] {
+      return edgesStore as EdgeType[];
     },
-    get nodes() {
-      return nodesStore;
+    get nodes(): NodeType[] {
+      return nodesStore as NodeType[];
     },
     get nodesConnectable() {
       return nodesConnectable();
@@ -644,7 +643,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       });
     }
 
-    const edgesToUnselect = new Set((edges ?? (store.edges as EdgeType[])).map(({ id }) => id));
+    const edgesToUnselect = new Set((edges ?? store.edges).map(({ id }) => id));
 
     if (edgesToUnselect.size) {
       setEdgesStore((edges) => {
@@ -940,7 +939,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   createRenderEffect(
     mapArray(
-      () => store.edges as EdgeType[],
+      () => store.edges,
       (edge) => {
         const {
           source: sourceNodeId,
@@ -1070,7 +1069,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   createEffect(
     () => {
-      const currentIds = new Set((store.edges as EdgeType[]).map((e) => e.id));
+      const currentIds = new Set(store.edges.map((e) => e.id));
       for (const id of Array.from(edgeLookup.keys())) {
         if (!currentIds.has(id)) {
           edgeLookup.delete(id);

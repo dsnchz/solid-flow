@@ -368,10 +368,9 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     setCenter: actions.setCenter,
     fitView: actions.fitView,
     getNode: (id) => getInternalNode(id)?.internals.userNode,
-    getNodes: (ids) =>
-      !ids ? (store.nodes as unknown as NodeType[]) : getElements(nodeLookup, ids),
+    getNodes: (ids) => (!ids ? store.nodes : getElements(nodeLookup, ids)),
     getEdge: (id) => edgeLookup.get(id),
-    getEdges: (ids) => (!ids ? (store.edges as EdgeType[]) : getElements(edgeLookup, ids)),
+    getEdges: (ids) => (!ids ? store.edges : getElements(edgeLookup, ids)),
     addNodes,
     addEdges,
     getViewport: () => snapshot(store.viewport),
@@ -471,8 +470,8 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
       >({
         nodesToRemove,
         edgesToRemove,
-        nodes: store.nodes as unknown as NodeType[],
-        edges: store.edges as EdgeType[],
+        nodes: store.nodes,
+        edges: store.edges,
         onBeforeDelete: store.onBeforeDelete,
       });
 
