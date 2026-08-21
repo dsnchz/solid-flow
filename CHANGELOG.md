@@ -1,5 +1,12 @@
 # @dschz/solid-flow
 
+## 0.2.3
+
+### Patch Changes
+
+- 4bcb530: Migrate the build pipeline from tsup to tsdown (Rolldown). The published artifacts keep the same shape and paths — Solid-compiled ESM, a JSX-preserved `.jsx` entry for the `solid` export condition, type declarations, and the stylesheet — with `console.*`/`debugger` still stripped from production builds. `babel-preset-solid` is pinned to 1.9.6 so the compiled output stays compatible with the full `solid-js >=1.8.0` peer range.
+- 89ef9f6: Fix server-side rendering: `<SolidFlow>` can now be rendered with `renderToString` (e.g. in SolidStart) without crashing. The node `ResizeObserver` was constructed during render (it is now browser-only), and the selection auto-pan cleanup called `cancelAnimationFrame` on disposal even on the server. Nodes that declare `width`/`height` render server-side with correct positions and visibility, and `fitView` with explicit flow `width`/`height` props is computed on the server — matching React Flow 12's SSR contract.
+
 ## 0.2.2
 
 ### Patch Changes
