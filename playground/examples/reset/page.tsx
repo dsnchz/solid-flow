@@ -4,7 +4,7 @@ export const Reset = () => {
   const [nodes, setNodes] = createNodeStore([]);
 
   const resetNodesArray = () => {
-    setNodes([
+    setNodes(() => [
       {
         id: "c1",
         type: "default",

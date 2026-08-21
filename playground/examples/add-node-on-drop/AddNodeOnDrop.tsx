@@ -31,9 +31,12 @@ export const AddNodeOnDropExample = () => {
 
   const connections = useNodeConnections(() => ({ id: "0", handleType: "source" }));
 
-  createEffect(() => {
-    console.log("Node connections:", connections());
-  });
+  createEffect(
+    () => {
+      console.log("Node connections:", connections());
+    },
+    () => {},
+  );
 
   const handleConnectEnd: OnConnectEnd = (event) => {
     const nodeId = connectingNodeId();

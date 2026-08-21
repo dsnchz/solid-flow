@@ -30,9 +30,12 @@ export const MultiHandleNode = (props: NodeProps) => {
     // },
   }));
 
-  createEffect(() => {
-    console.log("connections:", connections());
-  });
+  createEffect(
+    () => {
+      console.log("connections:", connections());
+    },
+    () => {},
+  );
 
   return (
     <div class="custom">

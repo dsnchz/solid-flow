@@ -1,4 +1,4 @@
-import { createStore } from "solid-js/store";
+import { createStore } from "solid-js";
 
 import {
   Background,
@@ -43,7 +43,9 @@ export const TwoWayViewport = () => {
   const flowViewport = useViewport();
 
   const updateViewport = () => {
-    setViewport("x", (prev) => prev + 10);
+    setViewport((vp) => {
+      vp.x += 10;
+    });
   };
 
   return (

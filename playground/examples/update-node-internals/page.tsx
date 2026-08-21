@@ -54,13 +54,12 @@ export const UpdateNodeInternals = () => {
   const { updateNode: _updateNode } = useSolidFlow();
 
   const updateNodePosition = () => {
-    setNodes(
-      (node) => node.id === "1",
-      (node) => ({
-        ...node,
-        position: { x: node.position.x + 10, y: node.position.y },
-      }),
-    );
+    setNodes((nodes) => {
+      for (const node of nodes) {
+        if (node.id !== "1") continue;
+        node.position = { x: node.position.x + 10, y: node.position.y };
+      }
+    });
   };
 
   return (

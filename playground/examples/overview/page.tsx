@@ -1,5 +1,3 @@
-import { produce } from "solid-js/store";
-
 import {
   Background,
   ControlButton,
@@ -220,21 +218,21 @@ export const Overview = () => {
   ]);
 
   const moveNode = () => {
-    setNodes(
-      (node) => node.id === "1",
-      produce((node) => {
+    setNodes((items) => {
+      for (const node of items) {
+        if (!(node.id === "1")) continue;
         node.position.x += 20;
-      }),
-    );
+      }
+    });
   };
 
   const changeEdgeType = () => {
-    setEdges(
-      (edge) => edge.id === "1-2",
-      produce((edge) => {
+    setEdges((items) => {
+      for (const edge of items) {
+        if (!(edge.id === "1-2")) continue;
         edge.type = edge.type === "default" ? "smoothstep" : "default";
-      }),
-    );
+      }
+    });
   };
 
   const hideUnhide = () => {
@@ -248,7 +246,7 @@ export const Overview = () => {
       targetPosition: node.targetPosition === Position.Left ? Position.Top : Position.Left,
     }));
 
-    setNodes(updatedNodes);
+    setNodes(() => updatedNodes);
   };
 
   return (

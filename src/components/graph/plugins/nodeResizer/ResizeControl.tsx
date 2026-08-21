@@ -6,10 +6,11 @@ import {
   type XYResizerChildChange,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, createSignal, merge, omit, type ParentProps } from "solid-js";
+import { createEffect, createSignal, omit, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow, useNodeId } from "~/components/contexts";
 import type { Node, ResizeControlVariant } from "~/types";
+import { propDefaults } from "~/utils";
 
 import type { NodeResizerProps } from "./NodeResizer";
 
@@ -45,19 +46,16 @@ type ResizeControlProps = NodeResizerSubProps & {
 export const ResizeControl = <NodeType extends Node = Node>(
   props: ParentProps<ResizeControlProps>,
 ): JSX.Element => {
-  const _props = merge(
-    {
-      variant: "handle" as ResizeControlVariant,
-      minWidth: 10,
-      minHeight: 10,
-      maxWidth: Number.MAX_VALUE,
-      maxHeight: Number.MAX_VALUE,
-      keepAspectRatio: false,
-      autoScale: true,
-      style: {} as JSX.CSSProperties,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    variant: "handle" as ResizeControlVariant,
+    minWidth: 10,
+    minHeight: 10,
+    maxWidth: Number.MAX_VALUE,
+    maxHeight: Number.MAX_VALUE,
+    keepAspectRatio: false,
+    autoScale: true,
+    style: {} as JSX.CSSProperties,
+  });
 
   const rest = omit(
     _props,

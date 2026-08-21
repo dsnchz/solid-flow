@@ -33,6 +33,5 @@
       "~/*": ["./src/*"]
     }
   },
-  // TODO(P3.2): re-include playground once its examples are migrated to Solid 2.0
-  "exclude": ["node_modules", "coverage", "dist", "tmp", "playground"]
+  "exclude": ["node_modules", "coverage", "dist", "tmp"]
 }

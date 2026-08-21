@@ -1,9 +1,10 @@
 import type { JSX } from "@solidjs/web";
 import type { PanelPosition } from "@xyflow/system";
 import clsx from "clsx";
-import { merge, omit, type ParentProps } from "solid-js";
+import { omit, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
+import { propDefaults } from "~/utils";
 
 export type PanelProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
   /** Set position of the panel
@@ -18,13 +19,10 @@ export type PanelProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
 export const Panel = (props: ParentProps<PanelProps>): JSX.Element => {
   const { store } = useInternalSolidFlow();
 
-  const _props = merge(
-    {
-      position: "top-right",
-      style: {} as JSX.CSSProperties,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    position: "top-right",
+    style: {} as JSX.CSSProperties,
+  });
 
   const rest = omit(_props, "class", "position", "style", "children");
 

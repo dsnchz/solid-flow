@@ -1,7 +1,8 @@
 import type { JSX } from "@solidjs/web";
 import { Position } from "@xyflow/system";
 import clsx from "clsx";
-import { merge } from "solid-js";
+
+import { propDefaults } from "~/utils";
 
 export type EdgeAnchorProps = {
   readonly type: string;
@@ -15,7 +16,7 @@ export type EdgeAnchorProps = {
 };
 
 export const EdgeAnchor = (props: EdgeAnchorProps) => {
-  const _props = merge({ radius: 10 }, props);
+  const _props = propDefaults(props, { radius: 10 });
 
   const shiftX = (x: number, shift: number, position: Position): number => {
     if (position === Position.Left) return x - shift;

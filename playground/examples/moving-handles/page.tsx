@@ -1,6 +1,5 @@
 import { Position } from "@xyflow/system";
 import { createEffect } from "solid-js";
-import { produce } from "solid-js/store";
 
 import {
   Background,
@@ -25,21 +24,24 @@ const NodeUpdater = () => {
   const { getNodes } = useSolidFlow();
   const updateNodeInternals = useUpdateNodeInternals();
 
-  createEffect(() => {
-    if (connection()) {
-      const startTime = Date.now();
-      const nodeIds = getNodes().map((n) => n.id);
+  createEffect(
+    () => {
+      if (connection()) {
+        const startTime = Date.now();
+        const nodeIds = getNodes().map((n) => n.id);
 
-      const update = () => {
-        if (Date.now() - startTime < 500) {
-          updateNodeInternals(nodeIds);
-          requestAnimationFrame(update);
-        }
-      };
+        const update = () => {
+          if (Date.now() - startTime < 500) {
+            updateNodeInternals(nodeIds);
+            requestAnimationFrame(update);
+          }
+        };
 
-      update();
-    }
-  });
+        update();
+      }
+    },
+    () => {},
+  );
 
   return null;
 };
@@ -67,12 +69,12 @@ export const MovingHandles = () => {
   const [edges, setEdges] = createEdgeStore([]);
 
   const onConnect = (connection: EdgeConnection) => {
-    setEdges(
-      (edge) => edge.id === connection.id,
-      produce((edge) => {
+    setEdges((items) => {
+      for (const edge of items) {
+        if (!(edge.id === connection.id)) continue;
         edge.animated = true;
-      }),
-    );
+      }
+    });
   };
 
   return (

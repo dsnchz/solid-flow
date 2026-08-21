@@ -1,7 +1,9 @@
 import type { JSX } from "@solidjs/web";
 import { Portal } from "@solidjs/web";
 import { type Align, getNodeToolbarTransform, Position as SystemPosition } from "@xyflow/system";
-import { merge, omit, type ParentComponent, Show, useContext } from "solid-js";
+import { omit, type ParentComponent, Show, useContext } from "solid-js";
+
+import { propDefaults } from "~/utils";
 
 import { useSolidFlow } from "../../../hooks";
 import type { InternalNode, Position } from "../../../types";
@@ -32,15 +34,12 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
   const { store } = useInternalSolidFlow();
   const { getNodes, getNodesBounds, getInternalNode } = useSolidFlow();
 
-  const _props = merge(
-    {
-      offset: 10,
-      position: "top" as Position,
-      align: "center" as Align,
-      style: {} as Omit<JSX.CSSProperties, "z-index" | "position" | "transform">,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    offset: 10,
+    position: "top" as Position,
+    align: "center" as Align,
+    style: {} as Omit<JSX.CSSProperties, "z-index" | "position" | "transform">,
+  });
 
   const divProps = omit(
     _props,

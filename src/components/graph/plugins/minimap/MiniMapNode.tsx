@@ -1,6 +1,7 @@
 import type { JSX } from "@solidjs/web";
 import clsx from "clsx";
-import { merge } from "solid-js";
+
+import { propDefaults } from "~/utils";
 
 type MinimapNodeProps = {
   readonly class?: string;
@@ -17,14 +18,11 @@ type MinimapNodeProps = {
 };
 
 export const MiniMapNode = (props: MinimapNodeProps) => {
-  const _props = merge(
-    {
-      borderRadius: 5,
-      width: 0,
-      height: 0,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    borderRadius: 5,
+    width: 0,
+    height: 0,
+  });
 
   const style = () =>
     Object.entries({

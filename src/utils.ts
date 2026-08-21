@@ -40,3 +40,29 @@ export const scheduleIdleCallback: (callback: () => void) => void =
   typeof requestIdleCallback === "function"
     ? requestIdleCallback
     : (callback) => setTimeout(callback, 0);
+
+/**
+ * Reactive prop defaulting with skip-undefined semantics: a prop counts as
+ * "absent" when it reads `undefined`, so parents forwarding optional props
+ * (e.g. `<Handle position={props.targetPosition} />`) do not clobber defaults.
+ * This is deliberate policy on top of Solid 2.0's `merge`, where `undefined`
+ * is a real value that overrides.
+ */
+export function propDefaults<T extends object, D extends Partial<T>>(
+  props: T,
+  defaults: D,
+): T & Required<Pick<T, keyof D & keyof T>> {
+  const out = {} as T & Required<Pick<T, keyof D & keyof T>>;
+  const keys = new Set([...Object.keys(defaults), ...Object.keys(props)]);
+  for (const key of keys) {
+    Object.defineProperty(out, key, {
+      get: () =>
+        (props as Record<string, unknown>)[key] !== undefined
+          ? (props as Record<string, unknown>)[key]
+          : (defaults as Record<string, unknown>)[key],
+      enumerable: true,
+      configurable: true,
+    });
+  }
+  return out;
+}

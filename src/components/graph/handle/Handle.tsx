@@ -17,8 +17,10 @@ import {
   XYHandle,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { createEffect, merge, omit, type ParentProps } from "solid-js";
+import { createEffect, flush, omit, type ParentProps } from "solid-js";
 import { snapshot } from "solid-js";
+
+import { propDefaults } from "~/utils";
 
 import { getEdgeId } from "../../../data/utils";
 import type { Edge, Node, Position } from "../../../types";
@@ -36,16 +38,12 @@ type HandleProps = Omit<SystemHandleProps, "position"> & {
 export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<HandleProps>,
 ): JSX.Element => {
-  const _props = merge(
-    {
-      id: null,
-      type: "source" as HandleType,
-      position: "top" as Position,
-      isConnectableStart: true,
-      isConnectableEnd: true,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    type: "source" as HandleType,
+    position: "top" as Position,
+    isConnectableStart: true,
+    isConnectableEnd: true,
+  });
 
   const { store, nodeLookup, connectionLookup, actions } = useInternalSolidFlow<
     NodeType,
@@ -145,7 +143,11 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       flowId: store.id,
       isValidConnection: (_props.isValidConnection ??
         store.isValidConnection) as SystemIsValidConnection,
-      updateConnection: actions.setConnection as UpdateConnection<InternalNodeBase>,
+      // XYHandle reads connection state back synchronously in the same task
+      updateConnection: ((connection) => {
+        actions.setConnection(connection as never);
+        flush();
+      }) as UpdateConnection<InternalNodeBase>,
       cancelConnection: actions.cancelConnection,
       panBy: actions.panBy,
       onConnect: onConnectExtended,
@@ -228,6 +230,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
 
   return (
     <div
+      {...rest}
       role="button"
       aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
       tabindex={-1}
@@ -256,7 +259,6 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
           connectionindicator: connectionIndicator(),
         },
       )}
-      {...rest}
     >
       {_props.children}
     </div>

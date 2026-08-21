@@ -1,5 +1,4 @@
 import { createSignal } from "solid-js";
-import { produce } from "solid-js/store";
 
 import {
   createEdgeStore,
@@ -104,58 +103,58 @@ export const UpdateNode = () => {
   // Update functions
   const updateLabel = () => {
     const newLabel = nodeLabel();
-    setNodes(
-      (node) => node.id === "2",
-      produce((node) => {
+    setNodes((items) => {
+      for (const node of items) {
+        if (!(node.id === "2")) continue;
         node.data.label = newLabel;
-      }),
-    );
+      }
+    });
   };
 
   const updateBackground = () => {
     const newBg = nodeBackground();
-    setNodes(
-      (node) => node.id === "2",
-      produce((node) => {
+    setNodes((items) => {
+      for (const node of items) {
+        if (!(node.id === "2")) continue;
         node.style = { ...node.style, "background-color": newBg };
-      }),
-    );
+      }
+    });
   };
 
   const updateVisibility = () => {
     const hidden = nodeHidden();
 
-    setNodes(
-      (node) => node.id === "2",
-      produce((node) => {
+    setNodes((items) => {
+      for (const node of items) {
+        if (!(node.id === "2")) continue;
         node.hidden = hidden;
-      }),
-    );
+      }
+    });
 
-    setEdges(
-      (edge) => edge.id === "e1-2",
-      produce((edge) => {
+    setEdges((items) => {
+      for (const edge of items) {
+        if (!(edge.id === "e1-2")) continue;
         edge.hidden = hidden;
-      }),
-    );
+      }
+    });
   };
 
   const updatePosition = () => {
-    setNodes(
-      (node) => node.id === "2",
-      produce((node) => {
+    setNodes((items) => {
+      for (const node of items) {
+        if (!(node.id === "2")) continue;
         node.position = {
           x: node.position.x + 10,
           y: node.position.y,
         };
-      }),
-    );
+      }
+    });
   };
 
   const changeType = () => {
-    setNodes(
-      (node) => node.id === "2",
-      produce((node) => {
+    setNodes((items) => {
+      for (const node of items) {
+        if (!(node.id === "2")) continue;
         const currentIndex = nodeTypeCycle.indexOf(
           node.type as Exclude<typeof node.type, "input" | "group">,
         );
@@ -183,8 +182,8 @@ export const UpdateNode = () => {
         const newColor = typeColors[nextType]!;
         node.style = { ...node.style, "background-color": newColor };
         setNodeBackground(newColor);
-      }),
-    );
+      }
+    });
   };
 
   const fitView = () => {

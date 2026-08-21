@@ -1,7 +1,9 @@
 import type { JSX } from "@solidjs/web";
 import type { PanelPosition } from "@xyflow/system";
 import clsx from "clsx";
-import { merge, omit, type ParentProps, Show } from "solid-js";
+import { omit, type ParentProps, Show } from "solid-js";
+
+import { propDefaults } from "~/utils";
 
 import type { FitViewOptions } from "../../../../types";
 import { Panel } from "../../../container";
@@ -39,16 +41,13 @@ type ControlsProps = {
 export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
   const { store, actions } = useInternalSolidFlow();
 
-  const _props = merge(
-    {
-      position: "bottom-left" as PanelPosition,
-      showZoom: true,
-      showFitView: true,
-      showLock: true,
-      orientation: "vertical" as ControlsOrientation,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    position: "bottom-left" as PanelPosition,
+    showZoom: true,
+    showFitView: true,
+    showLock: true,
+    orientation: "vertical" as ControlsOrientation,
+  });
 
   const rest = omit(
     _props,

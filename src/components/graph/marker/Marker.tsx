@@ -1,6 +1,8 @@
 import type { JSX } from "@solidjs/web";
 import type { MarkerProps as SystemMarkerProps } from "@xyflow/system";
-import { merge, Show } from "solid-js";
+import { Show } from "solid-js";
+
+import { propDefaults } from "~/utils";
 
 export type MarkerProps = SystemMarkerProps & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse";
@@ -9,16 +11,13 @@ export type MarkerProps = SystemMarkerProps & {
 };
 
 export const Marker = (props: MarkerProps): JSX.Element => {
-  const _props = merge(
-    {
-      markerUnits: "strokeWidth" as JSX.MarkerSVGAttributes<SVGElement>["markerUnits"],
-      orient: "auto-start-reverse",
-      width: 12.5,
-      height: 12.5,
-      color: "none",
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    markerUnits: "strokeWidth" as const,
+    orient: "auto-start-reverse",
+    width: 12.5,
+    height: 12.5,
+    color: "none",
+  });
 
   const color = () => _props.color ?? "var(--xy-edge-stroke)";
 

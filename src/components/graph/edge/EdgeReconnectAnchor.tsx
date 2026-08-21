@@ -1,11 +1,11 @@
 import type { JSX } from "@solidjs/web";
 import { ConnectionMode, type HandleType, XYHandle, type XYPosition } from "@xyflow/system";
 import clsx from "clsx";
-import { createSignal, merge, omit, type ParentProps, Show } from "solid-js";
+import { createSignal, omit, type ParentProps, Show } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
 import type { Edge } from "~/types";
-import { toPxString } from "~/utils";
+import { propDefaults, toPxString } from "~/utils";
 
 import { EdgeLabel } from "./EdgeLabel";
 
@@ -19,14 +19,11 @@ export type EdgeReconnectAnchorProps = {
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
 export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>): JSX.Element => {
-  const _props = merge(
-    {
-      size: 25,
-      reconnecting: false,
-      style: {} as JSX.CSSProperties,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    size: 25,
+    reconnecting: false,
+    style: {} as JSX.CSSProperties,
+  });
 
   const rest = omit(
     _props,

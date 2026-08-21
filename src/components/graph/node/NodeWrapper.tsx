@@ -6,7 +6,6 @@ import {
   getNodesInside,
   isInputDOMNode,
   nodeHasDimensions,
-  Position,
 } from "@xyflow/system";
 import clsx from "clsx";
 import { createEffect, createSignal, Show } from "solid-js";
@@ -81,19 +80,25 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     () => {},
   );
 
-  createEffect<{
-    sourcePosition: Position | undefined;
-    targetPosition: Position | undefined;
-    nodeType: string;
-  }>(
-    (prev) => {
+  createEffect(
+    () => ({
+      nodeElement: nodeRef(),
+      nodeType: nodeType(),
+      sourcePosition: node().sourcePosition,
+      targetPosition: node().targetPosition,
+    }),
+    (current, prev) => {
+      // Nothing to measure until the node's element has mounted
+      if (!current.nodeElement) return;
+
       if (
         prev &&
-        prev.sourcePosition === node().sourcePosition &&
-        prev.targetPosition === node().targetPosition &&
-        prev.nodeType === nodeType()
+        prev.nodeElement === current.nodeElement &&
+        prev.sourcePosition === current.sourcePosition &&
+        prev.targetPosition === current.targetPosition &&
+        prev.nodeType === current.nodeType
       ) {
-        return prev;
+        return;
       }
 
       actions.requestUpdateNodeInternals([
@@ -101,19 +106,12 @@ export const NodeWrapper = <NodeType extends Node = Node>(
           node().id,
           {
             id: node().id,
-            nodeElement: nodeRef()!,
+            nodeElement: current.nodeElement,
             force: true,
           },
         ],
       ]);
-
-      return {
-        nodeType: nodeType(),
-        sourcePosition: node().sourcePosition,
-        targetPosition: node().targetPosition,
-      };
     },
-    () => {},
   );
 
   createEffect<HTMLDivElement | undefined>(

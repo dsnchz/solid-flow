@@ -1,17 +1,16 @@
 import type { JSX } from "@solidjs/web";
 import clsx from "clsx";
-import { merge, omit, type ParentProps, Show } from "solid-js";
+import { omit, type ParentProps, Show } from "solid-js";
+
+import { propDefaults } from "~/utils";
 
 import type { BaseEdgeProps } from "../../../types";
 import { EdgeLabel } from "./EdgeLabel";
 
 export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
-  const _props = merge(
-    {
-      interactionWidth: 20,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    interactionWidth: 20,
+  });
 
   const rest = omit(
     _props,

@@ -1,4 +1,4 @@
-import { reconcile } from "solid-js/store";
+import { reconcile } from "solid-js";
 
 import { Background, Controls, createNodeStore, SolidFlow, useSolidFlow } from "~/index";
 

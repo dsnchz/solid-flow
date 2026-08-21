@@ -15,11 +15,14 @@ export const UppercaseNode = (props: NodeProps<{ text: string }, "uppercase">) =
   const nodeData = useNodesData<MyNode>(() => connections()[0]?.source);
   const textNodeData = createMemo(() => (isTextNode(nodeData()) ? nodeData()!.data.text : null));
 
-  createEffect(() => {
-    const input = textNodeData()?.toUpperCase() ?? "";
-    // Use untrack to prevent the effect from being triggered by updateNodeData
-    untrack(() => updateNodeData(props.id, { text: input }));
-  });
+  createEffect(
+    () => {
+      const input = textNodeData()?.toUpperCase() ?? "";
+      // Use untrack to prevent the effect from being triggered by updateNodeData
+      untrack(() => updateNodeData(props.id, { text: input }));
+    },
+    () => {},
+  );
 
   return (
     <div class="custom">

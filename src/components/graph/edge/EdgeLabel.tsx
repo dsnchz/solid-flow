@@ -1,10 +1,10 @@
 import type { JSX } from "@solidjs/web";
 import clsx from "clsx";
 import type { ParentProps } from "solid-js";
-import { merge, omit } from "solid-js";
+import { omit } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "~/components/contexts";
-import { toPxString } from "~/utils";
+import { propDefaults, toPxString } from "~/utils";
 
 import { EdgeLabelRenderer } from "./EdgeLabelRenderer";
 
@@ -19,16 +19,13 @@ type EdgeLabelProps = {
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
 export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
-  const _props = merge(
-    {
-      x: 0,
-      y: 0,
-      selectEdgeOnClick: false,
-      transparent: false,
-      style: {} as JSX.CSSProperties,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    x: 0,
+    y: 0,
+    selectEdgeOnClick: false,
+    transparent: false,
+    style: {} as JSX.CSSProperties,
+  });
 
   const rest = omit(
     _props,

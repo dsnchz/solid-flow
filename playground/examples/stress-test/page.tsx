@@ -1,4 +1,4 @@
-import { createStore } from "solid-js/store";
+import { createStore } from "solid-js";
 
 import { Background, Controls, type Edge, MiniMap, type Node, SolidFlow } from "~/index";
 

@@ -1,5 +1,6 @@
-import { useSearchParams } from "@solidjs/router";
-import { For, type JSX } from "solid-js";
+import { useExampleParam } from "./exampleParam";
+import type { JSX } from "@solidjs/web";
+import { For } from "solid-js";
 
 import { useSolidFlow } from "~/index";
 
@@ -17,11 +18,10 @@ const HEADER_STYLE = {
 } as JSX.CSSProperties;
 
 export const AppStateBar = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [example, setExample] = useExampleParam();
   const { getNodes, getEdges } = useSolidFlow();
 
-  const exampleKey = () =>
-    (searchParams.example as keyof typeof SolidFlowExamplesMap) || "Overview";
+  const exampleKey = () => (example() as keyof typeof SolidFlowExamplesMap) || "Overview";
 
   return (
     <header style={HEADER_STYLE}>
@@ -32,7 +32,7 @@ export const AppStateBar = () => {
           "margin-right": "1rem",
         }}
         onChange={(event) => {
-          setSearchParams({ example: event.target.value });
+          setExample(event.target.value);
         }}
       >
         <For each={EXAMPLE_KEYS}>

@@ -1,4 +1,4 @@
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 import { Handle, type NodeProps, useConnection } from "~/index";
 

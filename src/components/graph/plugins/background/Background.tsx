@@ -1,8 +1,9 @@
 import type { JSX } from "@solidjs/web";
 import clsx from "clsx";
-import { merge, Show } from "solid-js";
+import { Show } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
+import { propDefaults } from "~/utils";
 
 import { DotPattern } from "./DotPattern";
 import { LinePattern } from "./LinePattern";
@@ -39,16 +40,13 @@ export type BackgroundProps = {
 };
 
 export const Background = (props: BackgroundProps): JSX.Element => {
-  const _props = merge(
-    {
-      variant: "dots" as BackgroundVariant,
-      gap: 20,
-      size: 1,
-      lineWidth: 1,
-      style: {} as JSX.CSSProperties,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    variant: "dots" as BackgroundVariant,
+    gap: 20,
+    size: 1,
+    lineWidth: 1,
+    style: {} as JSX.CSSProperties,
+  });
 
   const { store } = useInternalSolidFlow();
 

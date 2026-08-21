@@ -13,7 +13,6 @@ import {
   createMemo,
   createSignal,
   For,
-  merge,
   omit,
   type ParentProps,
   Show,
@@ -22,6 +21,7 @@ import {
 import { Panel } from "~/components/container";
 import { useInternalSolidFlow } from "~/components/contexts";
 import type { Node } from "~/types";
+import { propDefaults } from "~/utils";
 
 import { MiniMapNode } from "./MiniMapNode";
 
@@ -81,21 +81,18 @@ export const MiniMap = <NodeType extends Node>(
 ): JSX.Element => {
   const { store, nodeLookup } = useInternalSolidFlow<NodeType>();
 
-  const _props = merge(
-    {
-      position: "bottom-right" as PanelPosition,
-      nodeClass: "",
-      nodeStrokeColor: "transparent",
-      pannable: true,
-      zoomable: true,
-      width: 200,
-      height: 150,
-      nodeBorderRadius: 5,
-      nodeStrokeWidth: 2,
-      style: {} as JSX.CSSProperties,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    position: "bottom-right" as PanelPosition,
+    nodeClass: "",
+    nodeStrokeColor: "transparent",
+    pannable: true,
+    zoomable: true,
+    width: 200,
+    height: 150,
+    nodeBorderRadius: 5,
+    nodeStrokeWidth: 2,
+    style: {} as JSX.CSSProperties,
+  });
 
   const paneProps = omit(
     _props,
@@ -203,12 +200,12 @@ export const MiniMap = <NodeType extends Node>(
           const [minimap, setMinimap] = createSignal<ReturnType<typeof XYMinimap>>();
 
           createEffect(
-            () => ref(),
-            (el) => {
+            () => ({ el: ref(), panZoom: panZoom() }),
+            ({ el, panZoom }) => {
               if (!el) return;
               const instance = XYMinimap({
                 domNode: el,
-                panZoom: panZoom(),
+                panZoom,
                 getTransform: () => store.transform,
                 getViewScale,
               });

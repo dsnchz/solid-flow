@@ -133,13 +133,13 @@ export const Dagre = () => {
   const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements("TB");
 
   // Update the stores with layouted elements
-  setNodes(layoutedNodes);
-  setEdges(layoutedEdges);
+  setNodes(() => layoutedNodes);
+  setEdges(() => [...layoutedEdges]);
 
   const onLayout = (direction: string) => {
     const { nodes: newNodes, edges: newEdges } = getLayoutedElements(direction);
-    setNodes(newNodes);
-    setEdges(newEdges);
+    setNodes(() => newNodes);
+    setEdges(() => [...newEdges]);
   };
 
   return (

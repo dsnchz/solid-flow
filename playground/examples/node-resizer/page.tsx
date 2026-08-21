@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createStore } from "solid-js";
 
 import { Background, Controls, createNodeStore, Panel, SolidFlow } from "~/index";
 

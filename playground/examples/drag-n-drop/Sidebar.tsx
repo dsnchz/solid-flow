@@ -30,7 +30,7 @@ export function Sidebar() {
           cursor: "grab",
         }}
         onDragStart={(event) => onDragStart(event, "input")}
-        draggable={true}
+        draggable="true"
       >
         Input Node
       </div>
@@ -44,7 +44,7 @@ export function Sidebar() {
           cursor: "grab",
         }}
         onDragStart={(event) => onDragStart(event, "default")}
-        draggable={true}
+        draggable="true"
       >
         Default Node
       </div>
@@ -58,7 +58,7 @@ export function Sidebar() {
           cursor: "grab",
         }}
         onDragStart={(event) => onDragStart(event, "output")}
-        draggable={true}
+        draggable="true"
       >
         Output Node
       </div>

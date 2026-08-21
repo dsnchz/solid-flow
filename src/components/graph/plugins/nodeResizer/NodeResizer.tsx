@@ -7,7 +7,9 @@ import {
   XY_RESIZER_HANDLE_POSITIONS,
   XY_RESIZER_LINE_POSITIONS,
 } from "@xyflow/system";
-import { For, merge, omit, Show } from "solid-js";
+import { For, omit, Show } from "solid-js";
+
+import { propDefaults } from "~/utils";
 
 import { ResizeControl } from "./ResizeControl";
 
@@ -49,13 +51,10 @@ export type NodeResizerProps = {
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
 export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
-  const _props = merge(
-    {
-      autoScale: true,
-      visible: true,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    autoScale: true,
+    visible: true,
+  });
 
   const rest = omit(props, "handleClass", "handleStyle", "lineClass", "lineStyle");
 

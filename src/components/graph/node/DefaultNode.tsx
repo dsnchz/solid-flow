@@ -1,17 +1,16 @@
 import type { JSX } from "@solidjs/web";
-import { merge } from "solid-js";
+import { Position } from "@xyflow/system";
 
-import type { NodeProps, Position } from "../../../types";
+import { propDefaults } from "~/utils";
+
+import type { NodeProps } from "../../../types";
 import { Handle } from "../handle";
 
 export const DefaultNode = (props: NodeProps<{ label: string }, "default">): JSX.Element => {
-  const _props = merge(
-    {
-      targetPosition: "top" as Position,
-      sourcePosition: "bottom" as Position,
-    },
-    props,
-  );
+  const _props = propDefaults(props, {
+    targetPosition: Position.Top,
+    sourcePosition: Position.Bottom,
+  });
 
   return (
     <>
