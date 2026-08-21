@@ -278,8 +278,10 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
           zoomOnDoubleClick={flowProps.zoomOnDoubleClick}
           zoomOnPinch={flowProps.zoomOnPinch}
           panOnScroll={flowProps.panOnScroll}
+          panOnScrollSpeed={flowProps.panOnScrollSpeed}
           panOnDrag={flowProps.panOnDrag}
           paneClickDistance={flowProps.paneClickDistance}
+          selectionOnDrag={flowProps.selectionOnDrag}
           onMoveStart={flowProps.onMoveStart}
           onMove={flowProps.onMove}
           onMoveEnd={flowProps.onMoveEnd}

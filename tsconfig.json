@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     /* Base Options: */
+    "ignoreDeprecations": "6.0",
     "outDir": "dist",
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -33,5 +34,5 @@
       "~/*": ["./src/*"]
     }
   },
-  "exclude": ["node_modules", "coverage", "dist"]
+  "exclude": ["node_modules", "coverage", "dist", "tmp"]
 }

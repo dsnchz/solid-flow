@@ -1,6 +1,6 @@
 import {
   type ColorMode,
-  devWarn,
+  createDevWarn,
   infiniteExtent,
   type IsValidConnection,
   type NodeOrigin,
@@ -56,5 +56,5 @@ export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends
     ariaLiveMessage: "" as string,
     style: {} as JSX.CSSProperties,
     isValidConnection: (() => true) as IsValidConnection,
-    onFlowError: devWarn as OnError,
+    onFlowError: createDevWarn("Solid Flow", "https://solidflow.dev/") as OnError,
   }) as const;

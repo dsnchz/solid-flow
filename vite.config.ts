@@ -3,7 +3,14 @@ import solidPlugin from "vite-plugin-solid";
 import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
 
 // We exclude the server directory because we use Bun (not Vitest) to run those tests
-const TEST_EXCLUDES = [...configDefaults.exclude, "src/index.tsx", "src/mocks", "public", "server"];
+const TEST_EXCLUDES = [
+  ...configDefaults.exclude,
+  "src/index.tsx",
+  "src/mocks",
+  "public",
+  "server",
+  "tmp/**",
+];
 const COVERAGE_EXCLUDE = [...TEST_EXCLUDES, "**/*.test.{ts,tsx}"];
 
 const viteConfig = defineConfig({

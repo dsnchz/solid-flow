@@ -397,7 +397,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const fitView = async (options?: FitViewOptions<NodeType>) => {
     if (!store.panZoom) return false;
 
-    return fitViewport(
+    const result = await fitViewport(
       {
         nodes: nodeLookup,
         width: store.width,
@@ -408,6 +408,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       },
       options ?? config().fitViewOptions,
     );
+
+    return result;
   };
 
   const resetStoreValues = () => {
@@ -432,9 +434,21 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   let initialFitViewApplied = false;
+  let initialNodesMeasured = false;
 
   const applyInitialFitView = (initialFitView: boolean) => {
     initialFitViewApplied = !initialFitView;
+  };
+
+  // The initial fitView needs both the measured nodes (reported through
+  // requestUpdateNodeInternals) and the container dimensions (reported through the
+  // resize observer). Their order is not guaranteed, so whichever arrives last fires it.
+  const tryInitialFitView = () => {
+    if (initialFitViewApplied || !initialNodesMeasured) return;
+    if (!untrack(() => store.panZoom && store.width && store.height)) return;
+
+    initialFitViewApplied = true;
+    void untrack(() => fitView());
   };
 
   const updateNodePositions = (
@@ -514,10 +528,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           }),
         );
 
-        if (!initialFitViewApplied) {
-          initialFitViewApplied = true;
-          void fitView();
-        }
+        initialNodesMeasured = true;
+        tryInitialFitView();
       });
     });
   };
@@ -754,6 +766,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   /*                                     Effects                                    */
   /*                                                                                */
   /**********************************************************************************/
+
+  createEffect(() => {
+    if (width() && height() && panZoom()) tryInitialFitView();
+  });
 
   createEffect(() => {
     store.panZoom?.syncViewport(store.viewport);

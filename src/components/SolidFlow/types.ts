@@ -474,7 +474,7 @@ export type SolidFlowProps<
     /** This event gets fired when a user starts to reconnect an edge */
     readonly onReconnectStart?: OnReconnectStart<EdgeType>;
     /** This event gets fired when a user stops reconnecting an edge */
-    readonly onReconnectEnd?: OnReconnectEnd<EdgeType>;
+    readonly onReconnectEnd?: OnReconnectEnd<NodeType, EdgeType>;
     /** This handler gets called when an edge is reconnected. You can use it to modify the edge before the update is applied. */
     readonly onBeforeReconnect?: OnBeforeReconnect<EdgeType>;
     /** A connection is started by clicking on a handle */

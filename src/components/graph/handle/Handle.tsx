@@ -3,6 +3,7 @@ import {
   type Connection,
   ConnectionMode,
   type ConnectionState,
+  type FinalConnectionState,
   getHostForElement,
   type HandleConnection,
   handleConnectionChange,
@@ -206,7 +207,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       ? connectionClone.toHandle.position
       : null;
 
-    store.onClickConnectEnd?.(event, connectionClone);
+    store.onClickConnectEnd?.(event, connectionClone as FinalConnectionState);
     actions.setClickConnectStartHandle(undefined);
   };
 

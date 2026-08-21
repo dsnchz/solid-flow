@@ -17,13 +17,7 @@ export type CreateDraggableParams = {
   readonly onNodeMouseDown: (id: string) => void;
 };
 
-type OnNodeDrag<NodeType extends Node> = (
-  event: MouseEvent,
-  node: NodeType,
-  nodes: NodeType[],
-) => void;
-
-const createDraggable = <NodeType extends Node>(
+const createDraggable = (
   elem: Accessor<HTMLElement | undefined>,
   params: Accessor<Partial<CreateDraggableParams>>,
 ) => {
@@ -33,7 +27,7 @@ const createDraggable = <NodeType extends Node>(
   onMount(() => {
     const { onDrag, onDragStart, onDragStop, onNodeMouseDown } = params();
 
-    const dragInstance = XYDrag<OnNodeDrag<NodeType>>({
+    const dragInstance = XYDrag<Node>({
       onDrag,
       onDragStart: (event, dragItems, node, nodes) => {
         setDragging(true);

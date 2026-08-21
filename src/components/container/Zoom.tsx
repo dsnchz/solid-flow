@@ -24,8 +24,10 @@ export type ZoomProps = {
   readonly zoomOnDoubleClick: boolean;
   readonly zoomOnPinch: boolean;
   readonly panOnScroll: boolean;
+  readonly panOnScrollSpeed: number;
   readonly panOnDrag: boolean | number[];
   readonly paneClickDistance: number;
+  readonly selectionOnDrag?: boolean;
 };
 
 export const Zoom = (props: ParentProps<ZoomProps>) => {
@@ -48,7 +50,6 @@ export const Zoom = (props: ParentProps<ZoomProps>) => {
       maxZoom: store.maxZoom,
       translateExtent: store.translateExtent,
       viewport: viewPort(),
-      paneClickDistance: props.paneClickDistance,
       onDraggingChange: actions.setDragging,
       onPanZoomStart: props.onMoveStart,
       onPanZoom: props.onMove,
@@ -71,11 +72,12 @@ export const Zoom = (props: ParentProps<ZoomProps>) => {
     createEffect(() => {
       panZoomInstance.update({
         lib: store.lib,
+        panActivationKeyPressed: store.panActivationKeyPressed,
         zoomActivationKeyPressed: store.zoomActivationKeyPressed,
         noPanClassName: store.noPanClass,
         noWheelClassName: store.noWheelClass,
         userSelectionActive: !!store.selectionRect,
-        panOnScrollSpeed: 0.5,
+        panOnScrollSpeed: props.panOnScrollSpeed,
         panOnDrag: panOnDrag(),
         panOnScroll: panOnScroll(),
         zoomOnScroll: props.zoomOnScroll,
@@ -84,6 +86,9 @@ export const Zoom = (props: ParentProps<ZoomProps>) => {
         panOnScrollMode: props.panOnScrollMode as SystemPanOnScrollMode,
         preventScrolling:
           typeof props.preventScrolling === "boolean" ? props.preventScrolling : true,
+        paneClickDistance: props.paneClickDistance,
+        selectionOnDrag: props.selectionOnDrag,
+        connectionInProgress: store.connection.inProgress,
         onTransformChange,
       });
     });

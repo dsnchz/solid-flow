@@ -69,6 +69,12 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
   };
 
   const onPointerDown = (event: PointerEvent) => {
+    // Mouse button arrays only restrict mouse input. Let touch panning handle this gesture
+    // unless the user explicitly activated selection with the selection key.
+    if (event.pointerType === "touch" && _panOnDrag() !== false && !store.selectionKeyPressed) {
+      return;
+    }
+
     containerBounds = container?.getBoundingClientRect() ?? null;
 
     if (
