@@ -1,5 +1,11 @@
 # @dschz/solid-flow
 
+## 0.2.2
+
+### Patch Changes
+
+- 6c58745: Fix Safari compatibility: `requestIdleCallback` is not available in Safari, which broke node measurement. Internal scheduling now falls back to a macrotask where the API is missing. (#19)
+
 ## 0.2.1
 
 ### Patch Changes
