@@ -5,18 +5,26 @@ import {
   type Connection,
   type ConnectionState,
   errorMessages,
+  evaluateAbsolutePosition,
   fitViewport,
+  getElementsToRemove,
   getInternalNodesBounds,
+  getNodesBounds as systemGetNodesBounds,
+  getOverlappingArea,
   getViewportForBounds,
   type Handle,
   infiniteExtent,
   initialConnection,
+  isRectObject,
   mergeAriaLabelConfig,
   type NodeDragItem,
   type NodeLookup,
+  nodeToRect,
   panBy as panBySystem,
   type PanZoomInstance,
   pointToRendererPoint,
+  type Rect,
+  rendererPointToPoint,
   type SelectionRect,
   type SetCenterOptions,
   snapPosition,
@@ -32,6 +40,7 @@ import {
   createStore,
   flush,
   merge,
+  snapshot,
   untrack,
 } from "solid-js";
 
@@ -49,6 +58,9 @@ import {
   createInternalNodes,
   createLayoutedEdges,
   createParentIds,
+  type FlowCommands,
+  type FlowSelection,
+  type FlowState,
   type NodeMeasurements,
   RecordMapFacade,
 } from "~/core";
@@ -63,7 +75,7 @@ import type {
   NodeGraph,
   NodeTypes,
 } from "~/types";
-import { scheduleIdleCallback } from "~/utils";
+import { isEdge, isNode, scheduleIdleCallback } from "~/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
@@ -876,6 +888,329 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   /**********************************************************************************/
   /*                                                                                */
+  /*                           FlowState / FlowCommands                             */
+  /*                                                                                */
+  /**********************************************************************************/
+
+  // The public read surface: the whole data graph as ONE reactive struct.
+  // `flow` and `selection` are stable identities — reactivity lives inside
+  // the property reads — so consumers can destructure them safely.
+  const selection: FlowSelection<NodeType, EdgeType> = {
+    get nodes(): readonly NodeType[] {
+      return store.selectedNodes;
+    },
+    get edges(): readonly EdgeType[] {
+      return store.selectedEdges;
+    },
+  };
+
+  const flow: FlowState<NodeType, EdgeType> = {
+    get nodes(): readonly NodeType[] {
+      return store.nodes;
+    },
+    get edges(): readonly EdgeType[] {
+      return store.edges;
+    },
+    get internalNodes() {
+      return internalNodes;
+    },
+    get layoutedEdges() {
+      return layoutedEdges;
+    },
+    get connections() {
+      return connections;
+    },
+    selection,
+    get nodesInitialized() {
+      return store.nodesInitialized;
+    },
+    get viewportInitialized() {
+      return store.viewportInitialized;
+    },
+    get viewport() {
+      return store.viewport;
+    },
+    get width() {
+      return store.width;
+    },
+    get height() {
+      return store.height;
+    },
+    get colorMode() {
+      return store.colorMode;
+    },
+    get connection() {
+      return store.connection;
+    },
+    get dragging() {
+      return store.dragging;
+    },
+    get minZoom() {
+      return store.minZoom;
+    },
+    get maxZoom() {
+      return store.maxZoom;
+    },
+    get nodesDraggable() {
+      return store.nodesDraggable;
+    },
+    get nodesConnectable() {
+      return store.nodesConnectable;
+    },
+    get elementsSelectable() {
+      return store.elementsSelectable;
+    },
+    get snapGrid() {
+      return store.snapGrid;
+    },
+  };
+
+  // The public write surface. Implementations live here (not in the hook) so
+  // the struct is the canonical capability surface and hooks stay aliases.
+  const getNodeRect = (node: NodeType | { id: NodeType["id"] }): Rect | null => {
+    const nodeToUse = isNode<NodeType>(node) ? node : nodeLookup.get(node.id)!;
+    const position = nodeToUse.parentId
+      ? evaluateAbsolutePosition(
+          nodeToUse.position,
+          nodeToUse.measured,
+          nodeToUse.parentId,
+          nodeLookup,
+          store.nodeOrigin,
+        )
+      : nodeToUse.position;
+
+    const nodeWithPosition = {
+      ...nodeToUse,
+      position,
+      width: nodeToUse.measured?.width ?? nodeToUse.width,
+      height: nodeToUse.measured?.height ?? nodeToUse.height,
+    };
+
+    return nodeToRect(nodeWithPosition);
+  };
+
+  const updateNode: FlowCommands<NodeType, EdgeType>["updateNode"] = (
+    id,
+    nodeUpdate,
+    options = { replace: false },
+  ) => {
+    setNodesStore((nodes) => {
+      const index = nodes.findIndex((node) => node.id === id);
+      if (index === -1) return undefined;
+
+      const node = nodes[index]!;
+      const nextNode = typeof nodeUpdate === "function" ? nodeUpdate(node) : nodeUpdate;
+      nodes[index] =
+        options?.replace && isNode<NodeType>(nextNode) ? nextNode : { ...node, ...nextNode };
+      return undefined;
+    });
+  };
+
+  const commands: FlowCommands<NodeType, EdgeType> = {
+    fitView,
+    fitBounds: async (bounds, options) => {
+      if (!store.panZoom) return false;
+
+      const viewport = getViewportForBounds(
+        bounds,
+        store.width,
+        store.height,
+        store.minZoom,
+        store.maxZoom,
+        options?.padding ?? 0.1,
+      );
+
+      await store.panZoom.setViewport(viewport, {
+        duration: options?.duration,
+        ease: options?.ease,
+        interpolate: options?.interpolate,
+      });
+
+      return true;
+    },
+    zoomIn,
+    zoomOut,
+    setZoom: (zoomLevel, options) => {
+      const currentPanZoom = store.panZoom;
+      return currentPanZoom
+        ? currentPanZoom.scaleTo(zoomLevel, { duration: options?.duration })
+        : Promise.resolve(false);
+    },
+    setCenter,
+    setViewport: async (nextViewport, options) => {
+      const currentViewport = store.viewport;
+
+      if (!store.panZoom) return false;
+
+      await store.panZoom.setViewport(
+        {
+          x: nextViewport.x ?? currentViewport.x,
+          y: nextViewport.y ?? currentViewport.y,
+          zoom: nextViewport.zoom ?? currentViewport.zoom,
+        },
+        options,
+      );
+
+      return true;
+    },
+    panBy,
+    screenToFlowPosition: (position, options = { snapToGrid: true }) => {
+      if (!store.domNode) return position;
+
+      const _snapGrid = options.snapToGrid ? store.snapGrid : false;
+      const { x, y, zoom } = store.viewport;
+      const { x: domX, y: domY } = store.domNode.getBoundingClientRect();
+      const correctedPosition = {
+        x: position.x - domX,
+        y: position.y - domY,
+      };
+
+      return pointToRendererPoint(
+        correctedPosition,
+        [x, y, zoom],
+        _snapGrid !== null,
+        _snapGrid || [1, 1],
+      );
+    },
+    flowToScreenPosition: (position) => {
+      if (!store.domNode) return position;
+
+      const { x, y, zoom } = store.viewport;
+      const { x: domX, y: domY } = store.domNode.getBoundingClientRect();
+      const rendererPosition = rendererPointToPoint(position, [x, y, zoom]);
+
+      return {
+        x: rendererPosition.x + domX,
+        y: rendererPosition.y + domY,
+      };
+    },
+    addNodes: (payload) => {
+      const newNodes = Array.isArray(payload) ? payload : [payload];
+      setNodesStore((nodes) => [...nodes, ...newNodes]);
+    },
+    addEdges: (payload) => {
+      const newEdges = Array.isArray(payload) ? payload : [payload];
+      setEdgesStore((edges) => [...edges, ...newEdges]);
+    },
+    setNodes: setNodesStore,
+    setEdges: setEdgesStore,
+    updateNode,
+    updateNodeData: (id, dataUpdate, options) => {
+      const node = nodeLookup.get(id)?.internals.userNode;
+      if (!node) return;
+
+      const nextData = typeof dataUpdate === "function" ? dataUpdate(node) : dataUpdate;
+      updateNode(id, (current) => ({
+        ...current,
+        data: options?.replace ? nextData : { ...current.data, ...nextData },
+      }));
+    },
+    updateEdge: (id, edgeUpdate, options = { replace: false }) => {
+      setEdgesStore((edges) => {
+        const index = edges.findIndex((edge) => edge.id === id);
+        if (index === -1) return undefined;
+
+        const edge = edges[index]!;
+        const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
+        edges[index] =
+          options.replace && isEdge<EdgeType>(nextEdge) ? nextEdge : { ...edge, ...nextEdge };
+        return undefined;
+      });
+    },
+    deleteElements: async ({ nodes: nodesToRemove = [], edges: edgesToRemove = [] }) => {
+      const { nodes: matchingNodes, edges: matchingEdges } = await getElementsToRemove<
+        NodeType,
+        EdgeType
+      >({
+        nodesToRemove,
+        edgesToRemove,
+        nodes: store.nodes,
+        edges: store.edges,
+        onBeforeDelete: store.onBeforeDelete,
+      });
+
+      if (matchingEdges) {
+        const remainingEdges = store.edges.filter(
+          (edge) => !matchingEdges.some(({ id }) => id === edge.id),
+        );
+
+        store.onEdgesDelete?.(matchingEdges);
+        setEdgesStore(() => remainingEdges);
+      }
+
+      if (matchingNodes) {
+        const remainingNodes = store.nodes.filter(
+          (node) => !matchingNodes.some(({ id }) => id === node.id),
+        );
+
+        store.onNodesDelete?.(matchingNodes);
+        setNodesStore(() => remainingNodes);
+      }
+
+      return {
+        deletedNodes: matchingNodes,
+        deletedEdges: matchingEdges,
+      };
+    },
+    getIntersectingNodes: (nodeOrRect, partially = true, nodesToIntersect) => {
+      const isRect = isRectObject(nodeOrRect);
+      const nodeRect = isRect ? nodeOrRect : getNodeRect(nodeOrRect);
+
+      if (!nodeRect) return [];
+
+      return (nodesToIntersect || store.nodes).filter((n) => {
+        const internalNode = nodeLookup.get(n.id);
+        if (!internalNode || (!isRect && n.id === nodeOrRect.id)) {
+          return false;
+        }
+
+        const currNodeRect = nodeToRect(internalNode);
+        const overlappingArea = getOverlappingArea(currNodeRect, nodeRect);
+        const partiallyVisible = partially && overlappingArea > 0;
+
+        return partiallyVisible || overlappingArea >= nodeRect.width * nodeRect.height;
+      });
+    },
+    isNodeIntersecting: (nodeOrRect, area, partially = true) => {
+      const isRect = isRectObject(nodeOrRect);
+      const nodeRect = isRect ? nodeOrRect : getNodeRect(nodeOrRect);
+
+      if (!nodeRect) return false;
+
+      const overlappingArea = getOverlappingArea(nodeRect, area);
+      const partiallyVisible = partially && overlappingArea > 0;
+
+      return partiallyVisible || overlappingArea >= nodeRect.width * nodeRect.height;
+    },
+    getNodesBounds: (nodesToMeasure) => {
+      return systemGetNodesBounds(nodesToMeasure, { nodeLookup, nodeOrigin: store.nodeOrigin });
+    },
+    updateNodeInternals: (id) => {
+      const updateIds = Array.isArray(id) ? id : [id];
+      const updates: InternalUpdateEntry[] = [];
+
+      for (const updateId of updateIds) {
+        const nodeElement = store.domNode?.querySelector<HTMLDivElement>(
+          `.solid-flow__node[data-id="${updateId}"]`,
+        );
+        if (!nodeElement) continue;
+
+        updates.push([updateId, { id: updateId, nodeElement, force: true }]);
+      }
+
+      requestUpdateNodeInternals(updates);
+    },
+    toObject: () => {
+      return structuredClone({
+        nodes: [...snapshot(store.nodes)],
+        edges: [...snapshot(store.edges)],
+        viewport: { ...snapshot(store.viewport) },
+      });
+    },
+  };
+
+  /**********************************************************************************/
+  /*                                                                                */
   /*                                     Effects                                    */
   /*                                                                                */
   /**********************************************************************************/
@@ -943,7 +1278,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   // TODO: Add viewportInitialized to store
   return {
     store,
+    flow,
+    commands,
     internalNodes,
+    layoutedEdges,
     nodeLookup,
     edgeLookup,
     parentIds,

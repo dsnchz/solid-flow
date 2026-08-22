@@ -12,6 +12,6 @@ import { useInternalSolidFlow } from "~/components/contexts";
  * @returns an accessor for the current color mode class
  */
 export function useColorMode(): () => ColorModeClass {
-  const { store } = useInternalSolidFlow();
-  return () => store.colorMode;
+  const { flow } = useInternalSolidFlow();
+  return () => flow.colorMode;
 }

@@ -33,6 +33,6 @@ export function useEdges<EdgeType extends Edge = Edge>(): Accessor<EdgeType[]> {
  * @returns store with the viewport object
  */
 export function useViewport(): Accessor<Viewport> {
-  const { store } = useInternalSolidFlow();
-  return () => store.viewport;
+  const { flow } = useInternalSolidFlow();
+  return () => flow.viewport;
 }

@@ -12,8 +12,8 @@ import { useInternalSolidFlow } from "~/components/contexts";
  * @returns an accessor that indicates whether the nodes are initialized
  */
 export function useNodesInitialized(): Accessor<boolean> {
-  const { store } = useInternalSolidFlow();
-  return () => store.nodesInitialized;
+  const { flow } = useInternalSolidFlow();
+  return () => flow.nodesInitialized;
 }
 
 /**
@@ -25,6 +25,6 @@ export function useNodesInitialized(): Accessor<boolean> {
  * @returns an accessor that indicates whether the viewport is initialized
  */
 export function useViewportInitialized(): Accessor<boolean> {
-  const { store } = useInternalSolidFlow();
-  return () => store.viewportInitialized;
+  const { flow } = useInternalSolidFlow();
+  return () => flow.viewportInitialized;
 }

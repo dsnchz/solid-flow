@@ -28,7 +28,7 @@ type UseNodeConnectionsParams = {
 export const useNodeConnections = (
   params: Accessor<UseNodeConnectionsParams>,
 ): Accessor<NodeConnection[]> => {
-  const { connections: connectionsRecord } = useInternalSolidFlow();
+  const { flow } = useInternalSolidFlow();
 
   const ctxNodeId = () => {
     // useNodeConnections can be rendered outside of NodeWrapper, so we need to use the context directly.
@@ -48,7 +48,7 @@ export const useNodeConnections = (
 
   createEffect(
     () => {
-      const rec = connectionsRecord[connectionKey(nodeId(), type(), id())];
+      const rec = flow.connections[connectionKey(nodeId(), type(), id())];
       const map = new Map<string, NodeConnection>();
       for (const key of Object.keys(rec ?? {})) map.set(key, { ...rec![key]! });
       return { connections: map };

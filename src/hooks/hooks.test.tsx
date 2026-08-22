@@ -38,6 +38,51 @@ const renderWithFlow = (
     </SolidFlow>
   ));
 
+describe("useSolidFlow: { flow, commands }", () => {
+  it("returns stable flow/commands identities with the commands spread as aliases", async () => {
+    let checked = false;
+
+    renderWithFlow(() => {
+      const api = useSolidFlow();
+      const again = useSolidFlow();
+
+      // stable identities: safe to destructure anywhere in the tree
+      expect(api.flow).toBe(again.flow);
+      expect(api.commands).toBe(again.commands);
+      // top-level aliases ARE the commands
+      expect(api.fitView).toBe(api.commands.fitView);
+      expect(api.updateNode).toBe(api.commands.updateNode);
+      expect(api.setNodes).toBe(api.commands.setNodes);
+      checked = true;
+      return null;
+    });
+    await tick();
+
+    expect(checked).toBe(true);
+  });
+
+  it("flow reads and commands writes round-trip; deprecated getters still work", async () => {
+    let api!: ReturnType<typeof useSolidFlow>;
+
+    renderWithFlow(() => {
+      api = useSolidFlow();
+      return null;
+    });
+    await tick();
+
+    api.commands.updateNodeData("a", { label: "updated" });
+    await tick();
+
+    expect(api.flow.internalNodes.a?.data).toMatchObject({ label: "updated" });
+    // deprecated aliases keep working through the deprecation cycle
+    expect(api.getNode("a")?.data).toMatchObject({ label: "updated" });
+    expect(api.getNodes().map((n) => n.id)).toEqual(["a"]);
+    expect(api.getViewport()).toEqual(api.flow.viewport);
+    expect(api.getZoom()).toBe(api.flow.viewport.zoom);
+    expect(api.getInternalNode("a")).toBe(api.flow.internalNodes.a);
+  });
+});
+
 describe("hooks", () => {
   it("useNodes and useEdges expose the graph reactively", async () => {
     let probedIds: string[] = [];

@@ -10,6 +10,7 @@
  * the FlowState struct stabilizes.
  */
 export { RecordMapFacade } from "./facades";
+export type { FlowCommands, FlowSelection, FlowState } from "./flowState";
 export {
   connectionKey,
   type ConnectionsRecord,

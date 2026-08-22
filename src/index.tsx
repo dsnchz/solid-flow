@@ -1,4 +1,11 @@
 export * from "./components";
+export {
+  connectionKey,
+  type ConnectionsRecord,
+  type FlowCommands,
+  type FlowSelection,
+  type FlowState,
+} from "./core";
 export { createEdgeStore } from "./data/createEdgeStore";
 export { createNodeStore } from "./data/createNodeStore";
 export * from "./hooks";
