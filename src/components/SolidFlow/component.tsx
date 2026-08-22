@@ -13,18 +13,18 @@ import {
   useContext,
 } from "solid-js";
 
-import { EdgeRenderer, NodeRenderer, Pane, Viewport, Zoom } from "~/components/container";
-import { ConnectionLine } from "~/components/graph/connection";
-import { NodeSelection, Selection } from "~/components/graph/selection";
-import { Attribution, KeyHandler } from "~/components/utility";
-import { getDefaultFlowStateProps } from "~/core/defaults";
-import type { Edge, Node, PanOnScrollMode } from "~/types";
-import { toPxString } from "~/utils";
+import { createSolidFlow } from "@/browser/createSolidFlow";
+import { ConnectionLine } from "@/components/connection";
+import { EdgeRenderer, NodeRenderer, Pane, Viewport, Zoom } from "@/components/container";
+import { NodeSelection, Selection } from "@/components/selection";
+import { Attribution, KeyHandler } from "@/components/utility";
+import { SolidFlowContext, type SolidFlowContextValue } from "@/contexts/flow";
+import { getDefaultFlowStateProps } from "@/core/defaults";
+import type { SolidFlowProps } from "@/core/flowProps";
+import type { Edge, Node, PanOnScrollMode } from "@/types";
+import { toPxString } from "@/utils";
 
 import { A11yDescriptions } from "../accessibility";
-import { SolidFlowContext, type SolidFlowContextValue } from "../contexts/flow";
-import { createSolidFlow } from "./createSolidFlow";
-import type { SolidFlowProps } from "./types";
 
 type SolidFlowComponentProps<
   NodeType extends Node = Node,

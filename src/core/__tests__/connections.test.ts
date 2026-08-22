@@ -2,7 +2,7 @@
 import { createEffect, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
-import type { Edge } from "~/types";
+import type { Edge } from "@/types";
 
 import { connectionKey, createConnections } from "../projections/connections";
 

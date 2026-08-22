@@ -1,6 +1,6 @@
 import type { ColorModeClass } from "@xyflow/system";
 
-import { useInternalSolidFlow } from "~/components/contexts";
+import { useInternalSolidFlow } from "@/contexts";
 
 /**
  * Hook for receiving the current color mode class ('dark' or 'light').

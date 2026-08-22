@@ -3,7 +3,7 @@ import type { PanZoomInstance } from "@xyflow/system";
 import { createRoot, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Edge, Node } from "~/types";
+import type { Edge, Node } from "@/types";
 
 import { createFlowState } from "../createFlowState";
 

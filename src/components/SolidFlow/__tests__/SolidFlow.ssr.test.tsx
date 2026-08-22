@@ -1,7 +1,7 @@
 import { renderToString } from "@solidjs/web";
 import { describe, expect, it } from "vitest";
 
-import type { Edge, Node } from "~/types";
+import type { Edge, Node } from "@/types";
 
 import { SolidFlow } from "..";
 

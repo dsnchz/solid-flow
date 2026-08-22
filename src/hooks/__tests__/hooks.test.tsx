@@ -3,8 +3,8 @@ import type { JSX } from "@solidjs/web";
 import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
-import { SolidFlow } from "~/components/SolidFlow";
-import type { Node } from "~/types";
+import { SolidFlow } from "@/components/SolidFlow";
+import type { Node } from "@/types";
 
 import { useColorMode } from "../useColorMode";
 import { useEdges, useNodes, useViewport } from "../useGraph";

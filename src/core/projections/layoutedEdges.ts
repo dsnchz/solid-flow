@@ -9,7 +9,7 @@ import {
 } from "@xyflow/system";
 import { createProjection, mapArray } from "solid-js";
 
-import type { DefaultEdgeOptions, Edge, EdgeLayouted, InternalNode, Node } from "~/types";
+import type { DefaultEdgeOptions, Edge, EdgeLayouted, InternalNode, Node } from "@/types";
 
 /**
  * The reactive inputs of the layout join, expressed structurally so the

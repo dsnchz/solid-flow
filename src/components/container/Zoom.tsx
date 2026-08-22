@@ -10,8 +10,8 @@ import {
 } from "@xyflow/system";
 import { createEffect, createSignal, type ParentProps, untrack } from "solid-js";
 
-import type { PanOnScrollMode } from "../../types";
-import { useInternalSolidFlow } from "../contexts";
+import { useInternalSolidFlow } from "@/contexts";
+import type { PanOnScrollMode } from "@/types";
 
 export type ZoomProps = {
   readonly initialViewport?: Viewport;

@@ -1,7 +1,8 @@
 import { type OnDrag, XYDrag } from "@xyflow/system";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 
-import { useInternalSolidFlow } from "../components/contexts/flow";
+import { useInternalSolidFlow } from "@/contexts/flow";
+
 import type { Node } from "../types";
 
 export type CreateDraggableParams = {

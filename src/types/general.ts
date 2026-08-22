@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import type {
   Connection,
   ConnectionLineType as SystemConnectionLineType,
@@ -13,11 +14,34 @@ import type {
 } from "@xyflow/system";
 
 import type { Edge } from "./edge";
-import type { Node } from "./node";
+import type { InternalNode, Node } from "./node";
 
 export type Position = `${SystemPosition}`;
 export type ConnectionMode = `${SystemConnectionMode}`;
 export type ConnectionLineType = `${SystemConnectionLineType}`;
+
+/**
+ * If you want to render a custom component for connection lines, you can set the
+ * `connectionLineComponent` prop on the [`<SolidFlow />`](/api-reference/react-flow#connection-connectionLineComponent)
+ * component. The `ConnectionLineComponentProps` are passed to your custom component.
+ *
+ * @public
+ */
+export type ConnectionLineComponentProps<NodeType extends Node = Node> = {
+  readonly connectionLineStyle?: JSX.CSSProperties;
+  readonly connectionLineType: ConnectionLineType;
+  readonly fromNode: InternalNode<NodeType>;
+  readonly fromHandle: Handle;
+  readonly fromX: number;
+  readonly fromY: number;
+  readonly toX: number;
+  readonly toY: number;
+  readonly fromPosition: Position;
+  readonly toPosition: Position;
+  readonly connectionStatus: "valid" | "invalid" | null;
+  readonly toNode: InternalNode<NodeType> | null;
+  readonly toHandle: Handle | null;
+};
 export type SelectionMode = `${SystemSelectionMode}`;
 export type PanOnScrollMode = `${SystemPanOnScrollMode}`;
 export type ResizeControlVariant = `${SystemResizeControlVariant}`;

@@ -1,6 +1,6 @@
 import type { UpdateNodeInternals } from "@xyflow/system";
 
-import { useInternalSolidFlow } from "~/components/contexts";
+import { useInternalSolidFlow } from "@/contexts";
 
 /**
  * Hook for updating node internals. Sugar for `commands.updateNodeInternals`.

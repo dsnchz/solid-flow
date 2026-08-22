@@ -1,6 +1,6 @@
 import { createProjection } from "solid-js";
 
-import type { Node } from "~/types";
+import type { Node } from "@/types";
 
 export type ParentIdsSource<NodeType extends Node = Node> = {
   readonly nodes: readonly NodeType[];

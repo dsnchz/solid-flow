@@ -1,7 +1,7 @@
 import type { JSX } from "@solidjs/web";
 import type { ParentProps } from "solid-js";
 
-import { useInternalSolidFlow } from "~/components/contexts";
+import { useInternalSolidFlow } from "@/contexts";
 
 export const Viewport = (props: ParentProps): JSX.Element => {
   const { store } = useInternalSolidFlow();

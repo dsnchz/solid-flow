@@ -19,7 +19,7 @@ export default defineConfig({
         find: /^solid-js$/,
         replacement: path.resolve(__dirname, "node_modules/solid-js/dist/server.js"),
       },
-      { find: "~", replacement: path.resolve(__dirname, "./src") },
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
     ],
   },
   test: {

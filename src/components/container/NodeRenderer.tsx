@@ -2,9 +2,9 @@ import type { JSX } from "@solidjs/web";
 import { isServer } from "@solidjs/web";
 import { For, onCleanup } from "solid-js";
 
-import type { Node, NodeEvents } from "../../types";
-import { useInternalSolidFlow } from "../contexts";
-import { NodeWrapper } from "../graph/node/NodeWrapper";
+import { NodeWrapper } from "@/components/node/NodeWrapper";
+import { useInternalSolidFlow } from "@/contexts";
+import type { Node, NodeEvents } from "@/types";
 
 export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
   readonly nodeClickDistance: number;

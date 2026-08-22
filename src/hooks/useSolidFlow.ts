@@ -1,9 +1,9 @@
 import type { HandleConnection, HandleType, Viewport } from "@xyflow/system";
 import { snapshot } from "solid-js";
 
-import { useInternalSolidFlow } from "~/components/contexts";
-import { connectionKey, type FlowCommands, type FlowState } from "~/core";
-import type { Edge, InternalNode, Node } from "~/types";
+import { useInternalSolidFlow } from "@/contexts";
+import { connectionKey, type FlowCommands, type FlowState } from "@/core";
+import type { Edge, InternalNode, Node } from "@/types";
 
 /**
  * The canonical flow API: the reactive {@link FlowState} struct plus the

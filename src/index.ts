@@ -5,9 +5,12 @@ export {
   type FlowCommands,
   type FlowSelection,
   type FlowState,
+  type SolidFlowInitialProps,
+  type SolidFlowProps,
 } from "./core";
 export { createEdgeStore, createNodeStore } from "./core";
 export * from "./hooks";
+export * from "./plugins";
 
 // types
 export type {

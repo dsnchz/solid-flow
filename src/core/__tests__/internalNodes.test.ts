@@ -3,7 +3,7 @@ import { infiniteExtent, type NodeOrigin, Position, type ZIndexMode } from "@xyf
 import { createEffect, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
-import type { Node } from "~/types";
+import type { Node } from "@/types";
 
 import {
   calculateZ,

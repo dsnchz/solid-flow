@@ -1,8 +1,8 @@
 import type { Viewport } from "@xyflow/system";
 import type { Accessor } from "solid-js";
 
-import { useInternalSolidFlow } from "~/components/contexts";
-import type { Edge, Node } from "~/types";
+import { useInternalSolidFlow } from "@/contexts";
+import type { Edge, Node } from "@/types";
 
 /**
  * Hook for getting the current nodes from the store.

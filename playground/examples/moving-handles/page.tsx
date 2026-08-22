@@ -11,7 +11,7 @@ import {
   useConnection,
   useSolidFlow,
   useUpdateNodeInternals,
-} from "~/index";
+} from "@/index";
 
 import { MovingHandleNode } from "./MovingHandleNode";
 

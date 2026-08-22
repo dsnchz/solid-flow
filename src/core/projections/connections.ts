@@ -1,7 +1,7 @@
 import type { HandleConnection, HandleType } from "@xyflow/system";
 import { createProjection } from "solid-js";
 
-import type { Edge } from "~/types";
+import type { Edge } from "@/types";
 
 /**
  * Lookup keys for the connection index. Each edge is registered under six

@@ -2,7 +2,7 @@
 import { createEffect, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
-import type { Node } from "~/types";
+import type { Node } from "@/types";
 
 import { createParentIds } from "../projections/parentIds";
 

@@ -1,7 +1,7 @@
 import { type StoreSetter } from "solid-js";
 import { createStore, type Store } from "solid-js";
 
-import type { BuiltInEdgeTypes, Edge, EdgeProps, EdgeTypes } from "~/types";
+import type { BuiltInEdgeTypes, Edge, EdgeProps, EdgeTypes } from "@/types";
 
 // Extract the data and type from a node component's props
 type ExtractEdgeInfo<T> = T extends (props: EdgeProps<infer TData, infer TType>) => unknown

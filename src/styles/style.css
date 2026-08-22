@@ -2,16 +2,18 @@
 @import "../components/container/styles.css";
 @import "../components/accessibility/styles.css";
 
-/* Graph Styles */
-@import "../components/graph/connection/styles.css";
-@import "../components/graph/edge/styles.css";
-@import "../components/graph/handle/styles.css";
-@import "../components/graph/node/styles.css";
-@import "../components/graph/plugins/background/styles.css";
-@import "../components/graph/plugins/controls/styles.css";
-@import "../components/graph/plugins/minimap/styles.css";
-@import "../components/graph/plugins/nodeResizer/styles.css";
-@import "../components/graph/selection/styles.css";
+/* Graph Element Styles */
+@import "../components/connection/styles.css";
+@import "../components/edge/styles.css";
+@import "../components/handle/styles.css";
+@import "../components/node/styles.css";
+@import "../components/selection/styles.css";
+
+/* Plugin Styles */
+@import "../plugins/background/styles.css";
+@import "../plugins/controls/styles.css";
+@import "../plugins/minimap/styles.css";
+@import "../plugins/nodeResizer/styles.css";
 
 /* Utility Styles */
 @import "../components/utility/styles.css";

@@ -3,7 +3,7 @@ import { Position } from "@xyflow/system";
 import { createEffect, createMemo, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
-import type { Edge, Node } from "~/types";
+import type { Edge, Node } from "@/types";
 
 import { RecordMapFacade } from "../facades";
 import { createInternalNodes, type NodeMeasurements } from "../projections/internalNodes";

@@ -3,9 +3,9 @@ import { isServer } from "@solidjs/web";
 import { isInputDOMNode, isMacOs } from "@xyflow/system";
 import { flush } from "solid-js";
 
-import { useInternalSolidFlow } from "~/components/contexts";
-import { useSolidFlow } from "~/hooks/useSolidFlow";
-import type { KeyDefinition, KeyDefinitionObject } from "~/types";
+import { useInternalSolidFlow } from "@/contexts";
+import { useSolidFlow } from "@/hooks/useSolidFlow";
+import type { KeyDefinition, KeyDefinitionObject } from "@/types";
 
 export type KeyHandlerProps = {
   readonly selectionKey?: KeyDefinition | KeyDefinition[] | null;

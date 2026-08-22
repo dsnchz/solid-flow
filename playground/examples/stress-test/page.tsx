@@ -1,5 +1,5 @@
 import { flush } from "solid-js";
-import { Background, Controls, type Edge, MiniMap, type Node, SolidFlow } from "~/index";
+import { Background, Controls, type Edge, MiniMap, type Node, SolidFlow } from "@/index";
 
 // Benchmark-instrumented stress grid. URL params:
 //   x, y     grid dimensions (default 25x25 = 625 nodes, 624 chained edges)

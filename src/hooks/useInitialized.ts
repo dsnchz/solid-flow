@@ -1,6 +1,6 @@
 import type { Accessor } from "solid-js";
 
-import { useInternalSolidFlow } from "~/components/contexts";
+import { useInternalSolidFlow } from "@/contexts";
 
 /**
  * Hook for seeing if all nodes have been measured.

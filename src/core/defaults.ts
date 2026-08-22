@@ -16,7 +16,7 @@ import type {
   Edge,
   Node,
   SelectionMode,
-} from "~/types";
+} from "@/types";
 
 export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends Edge>() =>
   ({

@@ -47,7 +47,7 @@ export default defineConfig((cli) => {
     outDir: "dist",
     platform: "neutral",
     format: "esm",
-    alias: { "~": "./src" },
+    alias: { "@": "./src" },
     // Strip `console.*` and `debugger` in prod builds only. mangle/codegen
     // stay off so the output remains readable.
     minify: watching

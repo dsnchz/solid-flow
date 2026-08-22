@@ -11,8 +11,8 @@ import {
 } from "@xyflow/system";
 import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
-import type { Edge, Node, PaneEvents } from "../../types";
-import { useInternalSolidFlow } from "../contexts";
+import { useInternalSolidFlow } from "@/contexts";
+import type { Edge, Node, PaneEvents } from "@/types";
 
 const isSetEqual = (a: Set<string>, b: Set<string>) => {
   if (a.size !== b.size) return false;

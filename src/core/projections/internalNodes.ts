@@ -12,7 +12,7 @@ import {
 } from "@xyflow/system";
 import { type Accessor, createMemo, createProjection, mapArray, onCleanup } from "solid-js";
 
-import type { InternalNode, Node } from "~/types";
+import type { InternalNode, Node } from "@/types";
 
 const SELECTED_NODE_Z = 1000;
 const ROOT_PARENT_Z_INCREMENT = 10;

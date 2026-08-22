@@ -1,10 +1,10 @@
 import type { JSX } from "@solidjs/web";
 import { For } from "solid-js";
 
-import type { DefaultEdgeOptions, Edge, EdgeEvents, Node } from "../../types";
-import { useInternalSolidFlow } from "../contexts";
-import { EdgeWrapper } from "../graph/edge";
-import { MarkerDefinition } from "../graph/marker";
+import { EdgeWrapper } from "@/components/edge";
+import { MarkerDefinition } from "@/components/marker";
+import { useInternalSolidFlow } from "@/contexts";
+import type { DefaultEdgeOptions, Edge, EdgeEvents, Node } from "@/types";
 
 type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
   readonly defaultEdgeOptions?: DefaultEdgeOptions;

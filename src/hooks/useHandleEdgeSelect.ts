@@ -1,6 +1,6 @@
 import { errorMessages } from "@xyflow/system";
 
-import { useInternalSolidFlow } from "~/components/contexts";
+import { useInternalSolidFlow } from "@/contexts";
 
 export function useHandleEdgeSelect(): (id: string) => void {
   const { store, edgeLookup, actions } = useInternalSolidFlow();

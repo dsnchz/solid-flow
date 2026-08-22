@@ -1,9 +1,9 @@
-import "~/styles/style.css";
+import "@/styles/style.css";
 
 import { Errored } from "solid-js";
 import { Dynamic } from "@solidjs/web";
 
-import { SolidFlowProvider } from "~/index";
+import { SolidFlowProvider } from "@/index";
 
 import { AppStateBar } from "./AppStateBar";
 import { SolidFlowExamplesMap } from "./constants";

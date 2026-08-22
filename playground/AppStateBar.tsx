@@ -2,7 +2,7 @@ import { useExampleParam } from "./exampleParam";
 import type { JSX } from "@solidjs/web";
 import { For } from "solid-js";
 
-import { useSolidFlow } from "~/index";
+import { useSolidFlow } from "@/index";
 
 import { SolidFlowExamplesMap } from "./constants";
 

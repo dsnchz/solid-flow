@@ -2,8 +2,8 @@ import { render } from "@solidjs/testing-library";
 import { fireEvent } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
 
-import { useSolidFlow } from "~/hooks/useSolidFlow";
-import type { Edge, Node, OnSelectionChange } from "~/types";
+import { useSolidFlow } from "@/hooks/useSolidFlow";
+import type { Edge, Node, OnSelectionChange } from "@/types";
 
 import { SolidFlow } from "..";
 

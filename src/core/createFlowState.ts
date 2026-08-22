@@ -47,8 +47,6 @@ import {
   untrack,
 } from "solid-js";
 
-// type-only: the props contract lives with the component surface
-import type { SolidFlowProps } from "~/components/SolidFlow/types";
 import type {
   BuiltInEdgeTypes,
   BuiltInNodeTypes,
@@ -59,11 +57,12 @@ import type {
   Node,
   NodeGraph,
   NodeTypes,
-} from "~/types";
-import { isEdge, isNode } from "~/utils";
+} from "@/types";
+import { isEdge, isNode } from "@/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import { RecordMapFacade } from "./facades";
+import type { SolidFlowProps } from "./flowProps";
 import { type FlowCommands, type FlowSelection, type FlowState } from "./flowState";
 import { createConnections } from "./projections/connections";
 import { createEdgeLookup } from "./projections/edgeLookup";

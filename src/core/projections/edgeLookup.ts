@@ -1,6 +1,6 @@
 import { createProjection } from "solid-js";
 
-import type { Edge } from "~/types";
+import type { Edge } from "@/types";
 
 export type EdgeLookupSource<EdgeType extends Edge = Edge> = {
   readonly edges: readonly EdgeType[];

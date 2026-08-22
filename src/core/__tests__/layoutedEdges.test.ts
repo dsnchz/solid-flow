@@ -3,7 +3,7 @@ import { Position } from "@xyflow/system";
 import { createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
-import type { Edge, InternalNode, Node } from "~/types";
+import type { Edge, InternalNode, Node } from "@/types";
 
 import { createLayoutedEdges, type LayoutedEdgesSource } from "../projections/layoutedEdges";
 

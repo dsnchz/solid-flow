@@ -12,7 +12,7 @@ import type {
 } from "@xyflow/system";
 import type { StoreSetter } from "solid-js";
 
-import type { Edge, EdgeLayouted, FitViewOptions, InternalNode, Node } from "~/types";
+import type { Edge, EdgeLayouted, FitViewOptions, InternalNode, Node } from "@/types";
 
 import type { ConnectionsRecord } from "./projections/connections";
 

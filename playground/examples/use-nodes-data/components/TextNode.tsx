@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 
-import { Handle, type NodeProps, useSolidFlow } from "~/index";
+import { Handle, type NodeProps, useSolidFlow } from "@/index";
 
 export const TextNode = (props: NodeProps<{ text: string }, "text">) => {
   const { updateNodeData } = useSolidFlow();
