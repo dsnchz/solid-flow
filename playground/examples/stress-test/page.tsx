@@ -1,11 +1,21 @@
-import { createStore } from "solid-js";
+import { flush } from "solid-js";
 
 import { Background, Controls, type Edge, MiniMap, type Node, SolidFlow } from "~/index";
 
-const yNodes = 25;
-const xNodes = 25;
-
+// Benchmark-instrumented stress grid. URL params:
+//   x, y     grid dimensions (default 25x25 = 625 nodes, 624 chained edges)
+//   minimap  "1" to include the MiniMap (default off, to isolate the graph pipeline)
+//
+// window.__bench.flush lets the driver force synchronous completion of a
+// dispatched interaction (Solid 2.0 defers to microtask flush; the 0.2.3
+// twin app stubs this with a no-op because 1.x updates synchronously).
 export const StressTest = () => {
+  const params = new URLSearchParams(window.location.search);
+  const xNodes = Number(params.get("x") ?? 25);
+  const yNodes = Number(params.get("y") ?? 25);
+  const withMiniMap = params.get("minimap") === "1";
+  const withEdges = params.get("edges") !== "0";
+
   const nodeItems: Node[] = [];
   const edgeItems: Edge[] = [];
 
@@ -24,8 +34,7 @@ export const StressTest = () => {
       };
       nodeItems.push(node);
 
-      // Edges removed for performance testing
-      if (source) {
+      if (source && withEdges) {
         const edge: Edge = {
           id: `${source.id}-${id}`,
           source: source.id,
@@ -38,23 +47,21 @@ export const StressTest = () => {
     }
   }
 
-  const [_nodes] = createStore(nodeItems);
-  const [edges] = createStore(edgeItems);
+  (window as Window & { __bench?: unknown }).__bench = { flush };
 
   return (
     <SolidFlow
       nodes={nodeItems}
-      edges={edges}
+      edges={edgeItems}
       fitView
-      minZoom={0.2}
-      onlyRenderVisibleElements
+      minZoom={0.1}
       onFlowError={(id, message) => {
         console.error(id, message);
       }}
     >
       <Controls />
       <Background variant="lines" />
-      <MiniMap />
+      {withMiniMap && <MiniMap />}
     </SolidFlow>
   );
 };
