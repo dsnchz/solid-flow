@@ -1,5 +1,37 @@
 # @dschz/solid-flow
 
+## 0.3.0-next.1
+
+### Minor Changes
+
+- The data graph is now one public reactive struct. `useSolidFlow()` returns
+  `{ flow, commands }` — `flow` is the canonical read surface (`FlowState`:
+  graph roots, `internalNodes`/`layoutedEdges`/`connections` records,
+  `selection`, viewport, interaction and config state; every property read in a
+  tracked scope is a live subscription) and `commands` is the write surface
+  (`FlowCommands`), with every command also spread onto the returned object for
+  upstream familiarity. New public commands: `setNodes`, `setEdges`, `panBy`,
+  and `updateNodeInternals`. The imperative getters (`getNode`, `getNodes`,
+  `getEdge`, `getEdges`, `getViewport`, `getZoom`, `getInternalNode`,
+  `getHandleConnections`) are deprecated in favor of `flow` reads and will be
+  removed before 0.3.0 stable. The sugar hooks remain as one-line conveniences
+  over the struct. `FlowState`, `FlowSelection`, `FlowCommands`,
+  `ConnectionsRecord`, and `connectionKey` are exported from the package
+  entrypoint.
+
+### Patch Changes
+
+- Fix the broken `./styles` export (also released as 0.2.4): the build shipped
+  `dist/styles/index.css` with relative `@import`s pointing at files not in the
+  package. The import tree is now inlined into one flat file and the build
+  fails if any `@import` survives.
+- Per-row sub-store architecture for the internal node and edge projections:
+  each row is its own keyed projection and the public records are shallow
+  projections of the row proxies. Dragging one node now costs O(changed) work —
+  0.51ms per move at 625 nodes and 1.37ms at 1600 (from 19.4ms), at parity with
+  the 0.2.x line at every scale measured, with identical fine-grained DOM
+  output.
+
 ## 0.3.0-next.0
 
 ### Minor Changes

@@ -4,5 +4,10 @@
   "initialVersions": {
     "@dschz/solid-flow": "0.2.3"
   },
-  "changesets": ["solid-2-migration"]
+  "changesets": [
+    "css-export-bundling",
+    "flowstate-struct-api",
+    "solid-2-migration",
+    "sub-store-performance"
+  ]
 }
