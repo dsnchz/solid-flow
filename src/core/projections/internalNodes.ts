@@ -63,25 +63,28 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
 const EMPTY_AUTO_INDEX: ReadonlyMap<string, number> = new Map();
 
 /**
- * The adoption pass as a projection: user nodes joined with the measurements
- * root into `Record<string, InternalNode>` — absolute positions (origin,
- * extent clamping, parent offsets), z ordering (selection elevation, parent
- * stacking), and measured dimensions/handle bounds.
+ * The adoption pass, decomposed into SUB-STORES (spike 13): each row is its
+ * own keyed projection — user node joined with the measurements root into an
+ * InternalNode (absolute position with origin/extent clamping and parent
+ * offsets, z ordering, measured dimensions/handle bounds) — and the public
+ * record is a SHALLOW projection holding the row-store proxies by reference.
  *
- * Row identity is stable across derives (keyed reconcile), and unlike the old
- * ReactiveMap adoption pipeline there is no write side: nodes-array resets,
- * membership changes, and measurement updates all converge by derivation.
+ * Reads chain: `record[id].internals.positionAbsolute.x` goes through the
+ * shallow slot into the row's own store, so every materialized leaf signal
+ * hangs off its ROW's computed, not one monolithic record computed. This is
+ * what defeats rc.1's per-update companion walk (`updateChildCompanions`
+ * walks a store computed's entire `_child` chain on every update — O(all
+ * materialized signals) for a monolithic record, O(one row) here). A node
+ * move re-runs one row projection (plus its children's); the record computed
+ * re-runs only on membership changes.
  *
- * Each row is its own memo (spike 10, strategy D): fine-grained tracking does
- * the invalidation, so one node's change re-runs one memo (plus its
- * children's), and the projection derive just reads N memo values. Unchanged
- * rows keep their previous OBJECT, which the keyed reconcile skips by
- * identity — a single node move costs O(changed), not O(N) (the drag-perf
- * regression found by the 0.2.3 bench).
+ * Row proxy identity is stable for a row's lifetime, and there is no write
+ * side: nodes-array resets, membership changes, and measurement updates all
+ * converge by derivation.
  *
  * Nodes must come before their children in the array (upstream contract);
  * a child whose parent has not been adopted yet keeps its own position and
- * warns, matching @xyflow/system. Links only point backwards in the array,
+ * warns, matching @xyflow/system. Rows link only backwards in the array,
  * which also makes parentId cycles unrepresentable.
  */
 export const createInternalNodes = <NodeType extends Node = Node>(
@@ -105,109 +108,154 @@ export const createInternalNodes = <NodeType extends Node = Node>(
     return index;
   });
 
-  // id → row memo (+ array position, to enforce the parents-first contract).
+  // id → row store (+ array position, to enforce the parents-first contract).
   const entryById = new Map<
     string,
-    { memo: Accessor<InternalNode<NodeType>>; index: Accessor<number> }
+    { store: { row: InternalNode<NodeType> }; index: Accessor<number> }
   >();
 
-  const rowMemos = mapArray(
+  const rowStores = mapArray(
     () => source.nodes,
-    (userNode, index) => {
-      const memo = createMemo((): InternalNode<NodeType> => {
-        const { nodeOrigin, nodeExtent, zIndexMode } = source;
-        const selectedNodeZ =
-          source.elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
+    (userNodeAccessor, index) => {
+      const id = userNodeAccessor().id;
+      // The row rides in a `{ row }` wrapper (matching layoutedEdges): the
+      // wrapper is what keeps TS happy across the Store<T>=Readonly<T>
+      // mapped type with an unresolved NodeType generic, and the inner
+      // `.row` proxy is what the public record holds.
+      const store: { row: InternalNode<NodeType> } = createProjection<{
+        row: InternalNode<NodeType>;
+      }>(
+        () => {
+          // the accessor tracks the item slot: a controlled array reset swaps
+          // the user node object while THIS row store (keyed by id) survives,
+          // so downstream subscriptions never strand on disposed stores
+          const userNode = userNodeAccessor();
+          const { nodeOrigin, nodeExtent, zIndexMode } = source;
+          const selectedNodeZ =
+            source.elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
 
-        // `in` guard: subscribes even while the key is absent, so the first
-        // measurement of a node re-runs (computation absent-key footgun).
-        const measurement =
-          userNode.id in source.measurements ? source.measurements[userNode.id] : undefined;
+          // `in` guard: subscribes even while the key is absent, so the first
+          // measurement of a node re-runs (computation absent-key footgun).
+          const measurement =
+            userNode.id in source.measurements ? source.measurements[userNode.id] : undefined;
 
-        // User-provided dimensions win; otherwise the last DOM measurement.
-        const measured = {
-          width: userNode.measured?.width ?? measurement?.measured.width,
-          height: userNode.measured?.height ?? measurement?.measured.height,
-        };
-        const dimensions = getNodeDimensions({
-          measured,
-          width: userNode.width,
-          height: userNode.height,
-          initialWidth: userNode.initialWidth,
-          initialHeight: userNode.initialHeight,
-        });
+          // User-provided dimensions win; otherwise the last DOM measurement.
+          const measured = {
+            width: userNode.measured?.width ?? measurement?.measured.width,
+            height: userNode.measured?.height ?? measurement?.measured.height,
+          };
+          const dimensions = getNodeDimensions({
+            measured,
+            width: userNode.width,
+            height: userNode.height,
+            initialWidth: userNode.initialWidth,
+            initialHeight: userNode.initialHeight,
+          });
 
-        const rootParentIndex = autoIndex().get(userNode.id);
-        const row = {
-          ...userNode,
-          measured,
-          internals: {
-            positionAbsolute: clampPosition(
-              getNodePositionWithOrigin(userNode, nodeOrigin),
-              isCoordinateExtent(userNode.extent) ? userNode.extent : nodeExtent,
-              dimensions,
-            ),
-            handleBounds: measurement?.handleBounds,
-            z:
-              calculateZ(userNode, selectedNodeZ, zIndexMode) +
-              (rootParentIndex !== undefined ? rootParentIndex * ROOT_PARENT_Z_INCREMENT : 0),
-            ...(rootParentIndex !== undefined ? { rootParentIndex } : {}),
-            userNode,
-          },
-        } as InternalNode<NodeType>;
+          const rootParentIndex = autoIndex().get(userNode.id);
+          const row = {
+            ...userNode,
+            measured,
+            internals: {
+              positionAbsolute: clampPosition(
+                getNodePositionWithOrigin(userNode, nodeOrigin),
+                isCoordinateExtent(userNode.extent) ? userNode.extent : nodeExtent,
+                dimensions,
+              ),
+              handleBounds: measurement?.handleBounds,
+              z:
+                calculateZ(userNode, selectedNodeZ, zIndexMode) +
+                (rootParentIndex !== undefined ? rootParentIndex * ROOT_PARENT_Z_INCREMENT : 0),
+              ...(rootParentIndex !== undefined ? { rootParentIndex } : {}),
+              userNode,
+            },
+          } as InternalNode<NodeType>;
 
-        if (userNode.parentId) {
-          const parentEntry = entryById.get(userNode.parentId);
-          // Only link backwards: matches the upstream parents-first contract
-          // and rules out parentId-cycle recursion.
-          if (parentEntry && parentEntry.index() < index()) {
-            const parent = parentEntry.memo();
-            const { x, y, z } = calculateChildXYZ(
-              row,
-              parent,
-              nodeOrigin,
-              nodeExtent,
-              selectedNodeZ,
-              zIndexMode,
-            );
-            row.internals.positionAbsolute = { x, y };
-            row.internals.z = z;
-          } else {
-            // Subscribe to membership so the row re-runs if the parent is
-            // added (or reordered to the front) later.
-            void source.nodes.length;
-            console.warn(
-              `Parent node ${userNode.parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
-            );
+          if (userNode.parentId) {
+            const parentEntry = entryById.get(userNode.parentId);
+            // Only link backwards: matches the upstream parents-first contract
+            // and rules out parentId-cycle recursion. Reading the parent's row
+            // store subscribes to exactly the parent leaves the child's
+            // geometry depends on.
+            if (parentEntry && parentEntry.index() < index()) {
+              const { x, y, z } = calculateChildXYZ(
+                row,
+                parentEntry.store.row,
+                nodeOrigin,
+                nodeExtent,
+                selectedNodeZ,
+                zIndexMode,
+              );
+              row.internals.positionAbsolute = { x, y };
+              row.internals.z = z;
+            } else {
+              // Subscribe to membership so the row re-runs if the parent is
+              // added (or reordered to the front) later.
+              void source.nodes.length;
+              console.warn(
+                `Parent node ${userNode.parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
+              );
+            }
           }
-        }
 
-        return row;
-      });
+          if (userNode.parentId) {
+            // Same re-assert as layoutedEdges: reads made inside the build can
+            // fail to register during the FIRST nested derive; the child's
+            // geometry depends on these parent leaves.
+            const parent = entryById.get(userNode.parentId);
+            void parent?.store.row.internals.positionAbsolute.x;
+            void parent?.store.row.internals.z;
+          }
+          return { row };
+        },
+        {},
+        { key: "id" },
+      );
 
-      const entry = { memo, index };
-      entryById.set(userNode.id, entry);
+      const entry = { store, index };
+      entryById.set(id, entry);
       // mapArray creates replacement rows BEFORE disposing removed ones, so
       // only delete the registration this row actually owns.
       onCleanup(() => {
-        if (entryById.get(userNode.id) === entry) entryById.delete(userNode.id);
+        if (entryById.get(id) === entry) entryById.delete(id);
       });
 
-      return memo;
+      return { id, store };
     },
+    { keyed: (userNode) => userNode.id },
   );
 
+  // The public record: SHALLOW, holding each row's proxy by reference —
+  // row-content reads chain into the row stores; this computed updates only
+  // when membership changes (present→present content updates merge into the
+  // same backing object, so the `.row` slot read here does not fire for
+  // them). Slots are re-assigned by ROW-PROXY reference, so a same-id node
+  // replacement (array reset recreates the row store) repoints the slot
+  // instead of leaving it on the disposed store. Draft form: removed ids
+  // must be deleted explicitly (assigning undefined would keep the own key —
+  // spike 09).
+  const assigned = new Map<string, InternalNode<NodeType>>();
   return createProjection<Record<string, InternalNode<NodeType>>>(
-    () => {
-      const out: Record<string, InternalNode<NodeType>> = {};
-      for (const memo of rowMemos()) {
-        const row = memo();
-        out[row.id] = row;
+    (draft) => {
+      const seen = new Set<string>();
+      for (const { id, store } of rowStores()) {
+        seen.add(id);
+        const row = store.row;
+        if (assigned.get(id) !== row) {
+          assigned.set(id, row);
+          draft[id] = row;
+        }
       }
-      return out;
+      for (const id of assigned.keys()) {
+        if (!seen.has(id)) {
+          assigned.delete(id);
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
+          delete draft[id];
+        }
+      }
     },
     {},
-    { key: "id" },
+    { key: null, shallow: true },
   );
 };
 

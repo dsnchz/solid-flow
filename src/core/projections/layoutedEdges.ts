@@ -7,7 +7,7 @@ import {
   type Transform,
   type ZIndexMode,
 } from "@xyflow/system";
-import { createMemo, createProjection, mapArray } from "solid-js";
+import { createProjection, mapArray } from "solid-js";
 
 import type { DefaultEdgeOptions, Edge, EdgeLayouted, InternalNode, Node } from "~/types";
 
@@ -27,21 +27,24 @@ export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends E
   readonly height: number;
   readonly transform: Transform;
   readonly onError?: OnError;
-  readonly nodeLookup: Pick<Map<string, InternalNode<NodeType>>, "get">;
+  readonly nodeLookup: Pick<Map<string, InternalNode<NodeType>>, "get" | "size">;
 };
 
 /**
  * Edge layout join: user edges × internal nodes → screen-space edge geometry,
- * as an id-keyed record projection. Keyed reconciliation preserves row
- * identity across derive re-runs, so downstream per-edge subscribers only
- * re-run when their own row's leaves change.
+ * decomposed into SUB-STORES (spike 13): each edge is its own keyed
+ * projection holding `{ row }` — the layouted row, or null while the edge
+ * produces none (missing/unready endpoints, culled) — and the public record
+ * is a SHALLOW projection holding the PRESENT rows' proxies by reference.
  *
- * Each row is its own memo (spike 10, strategy D): the memo tracks exactly
- * what the join reads — the edge's props and its endpoints' geometry leaves
- * through nodeLookup — so one node move re-runs only the adjacent edges'
- * memos, and the projection derive just reads E memo values. Unchanged rows
- * keep their previous OBJECT, which the keyed reconcile skips by identity:
- * one node move costs O(adjacent edges), not O(E).
+ * Reads chain: `record[id].sourceX` goes through the shallow slot into the
+ * edge's own store, so every materialized leaf signal hangs off its EDGE's
+ * computed (defeating rc.1's per-update companion walk — see
+ * internalNodes.ts). The edge projection tracks exactly what the join reads —
+ * the edge's props and its endpoints' geometry leaves through nodeLookup
+ * (which chains into the node row stores) — so one node move re-runs only
+ * the adjacent edges' projections; the record computed re-runs only when
+ * membership or presence changes.
  *
  * The viewport participates only while onlyRenderVisibleElements is active —
  * panning must not touch edge rows otherwise.
@@ -52,25 +55,66 @@ export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends E
 export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   source: LayoutedEdgesSource<NodeType, EdgeType>,
 ): Record<string, EdgeLayouted<EdgeType>> => {
-  const rowMemos = mapArray(
+  const rowStores = mapArray(
     () => source.edges,
-    (edge) => {
-      const memo = createMemo((): EdgeLayouted<EdgeType> | null => buildRow(source, edge));
-      return { edge, memo };
+    (edgeAccessor) => {
+      const id = edgeAccessor().id;
+      const store: { row: EdgeLayouted<EdgeType> | null } = createProjection<{
+        row: EdgeLayouted<EdgeType> | null;
+      }>(
+        // the accessor tracks the item slot: a controlled array reset swaps
+        // the edge object while THIS row store (keyed by id) survives, so
+        // downstream subscriptions never strand on disposed stores
+        () => {
+          const edge = edgeAccessor();
+          const row = buildRow(source, edge);
+          // Re-assert the node-side dependencies AFTER the build: during the
+          // FIRST nested derive (while the node record commits lazily beneath
+          // this read) reads made inside buildRow can fail to register —
+          // browser-verified: the first edge stranded with zero
+          // subscriptions. Reading the presence-deciding leaves here, at the
+          // end, reliably registers them. Upstream issue candidate.
+          void source.nodeLookup.get(edge.source)?.internals.handleBounds;
+          void source.nodeLookup.get(edge.target)?.internals.handleBounds;
+          return { row };
+        },
+        { row: null },
+        { key: "id" },
+      );
+      return { id, store };
     },
+    { keyed: (edge) => edge.id },
   );
 
+  // The public record: SHALLOW, holding the PRESENT rows' proxies by
+  // reference. Slots are re-assigned by ROW-PROXY reference: present→present
+  // content updates merge into the same backing object (no reassignment, no
+  // record update); presence flips and same-id edge replacements repoint or
+  // drop the slot. Draft form: removed ids must be deleted explicitly
+  // (assigning undefined would keep the own key — spike 09).
+  const assigned = new Map<string, EdgeLayouted<EdgeType>>();
   return createProjection<Record<string, EdgeLayouted<EdgeType>>>(
-    () => {
-      const out: Record<string, EdgeLayouted<EdgeType>> = {};
-      for (const { edge, memo } of rowMemos()) {
-        const row = memo();
-        if (row) out[edge.id] = row;
+    (draft) => {
+      const seen = new Set<string>();
+      for (const { id, store } of rowStores()) {
+        const row = store.row;
+        if (!row) continue;
+        seen.add(id);
+        if (assigned.get(id) !== row) {
+          assigned.set(id, row);
+          draft[id] = row;
+        }
       }
-      return out;
+      for (const id of assigned.keys()) {
+        if (!seen.has(id)) {
+          assigned.delete(id);
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
+          delete draft[id];
+        }
+      }
     },
     {},
-    { key: "id" },
+    { key: null, shallow: true },
   );
 };
 
@@ -81,7 +125,16 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   const sourceNode = source.nodeLookup.get(edge.source);
   const targetNode = source.nodeLookup.get(edge.target);
 
-  if (!sourceNode || !targetNode) return null;
+  if (!sourceNode || !targetNode) {
+    // Membership subscription: a get/`in` on an ABSENT key does not subscribe
+    // inside a projection derive (the absent-key footgun) — and during the
+    // first nested derive the shallow node record's keys may not even have
+    // committed yet, which permanently stranded the first edge (no node-side
+    // subscriptions at all). A structural read (size ~ Object.keys) reliably
+    // re-runs this row when node membership changes.
+    void source.nodeLookup.size;
+    return null;
+  }
 
   if (source.onlyRenderVisibleElements) {
     const edgeVisible = isEdgeVisible({

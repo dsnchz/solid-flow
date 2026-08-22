@@ -1,5 +1,4 @@
 import { flush } from "solid-js";
-
 import { Background, Controls, type Edge, MiniMap, type Node, SolidFlow } from "~/index";
 
 // Benchmark-instrumented stress grid. URL params:
