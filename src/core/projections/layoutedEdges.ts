@@ -68,14 +68,9 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
         () => {
           const edge = edgeAccessor();
           const row = buildRow(source, edge);
-          // Re-assert the node-side dependencies AFTER the build: during the
-          // FIRST nested derive (while the node record commits lazily beneath
-          // this read) reads made inside buildRow can fail to register —
-          // browser-verified: the first edge stranded with zero
-          // subscriptions. Reading the presence-deciding leaves here, at the
-          // end, reliably registers them. Upstream issue candidate.
-          void source.nodeLookup.get(edge.source)?.internals.handleBounds;
-          void source.nodeLookup.get(edge.target)?.internals.handleBounds;
+          // ISSUE-2 REPRO BRANCH: the shipped workaround (re-asserting the
+          // endpoint handleBounds reads here, after the build) is REMOVED on
+          // this branch so the dead-computed bug reproduces. See repro/.
           return { row };
         },
         { row: null },

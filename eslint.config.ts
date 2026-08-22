@@ -9,6 +9,7 @@ export default tseslint.config(
     // config with just ignores is the replacement for `.eslintignore`
     ignores: [
       ".agent/**",
+      "repro/**",
       "**/build/**",
       "**/coverage/**",
       "**/dist/**",
