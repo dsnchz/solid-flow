@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Node } from "~/types";
 
-import { createParentIds } from "./parentIds";
+import { createParentIds } from "../parentIds";
 
 const makeNode = (id: string, parentId?: string): Node => ({
   id,
@@ -59,7 +59,11 @@ describe("createParentIds (core, headless)", () => {
   });
 
   it("does not re-run a parent's subscriber for unrelated membership changes", () => {
-    const [nodes, setNodes] = createStore<Node[]>([makeNode("g1"), makeNode("c1", "g1"), makeNode("g2")]);
+    const [nodes, setNodes] = createStore<Node[]>([
+      makeNode("g1"),
+      makeNode("c1", "g1"),
+      makeNode("g2"),
+    ]);
     let g1Runs = 0;
 
     createRoot((dispose) => {

@@ -9,6 +9,7 @@
  * Internal only — nothing here is exported from the package entrypoint until
  * the FlowState struct stabilizes.
  */
+export { RecordMapFacade } from "./facades";
 export {
   connectionKey,
   type ConnectionsRecord,
@@ -16,5 +17,13 @@ export {
   createConnections,
 } from "./projections/connections";
 export { createEdgeLookup, type EdgeLookupSource } from "./projections/edgeLookup";
+export {
+  calculateZ,
+  createInternalNodes,
+  type InternalNodesSource,
+  isManualZIndexMode,
+  type NodeMeasurement,
+  type NodeMeasurements,
+} from "./projections/internalNodes";
 export { createLayoutedEdges, type LayoutedEdgesSource } from "./projections/layoutedEdges";
 export { createParentIds, type ParentIdsSource } from "./projections/parentIds";

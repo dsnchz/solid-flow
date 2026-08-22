@@ -293,6 +293,77 @@ describe("createSolidFlow", () => {
     });
   });
 
+  it("exposes internal nodes both as a record and through the Map facade", () => {
+    withFlow(
+      { nodes: [makeNode({ id: "a", position: { x: 5, y: 6 } })], edges: [] },
+      ({ internalNodes, nodeLookup }) => {
+        expect(internalNodes.a?.internals.positionAbsolute).toEqual({ x: 5, y: 6 });
+        // same row through both views
+        expect(nodeLookup.get("a")).toBe(internalNodes.a);
+        expect(() => (nodeLookup as Map<string, unknown>).set("x", {})).toThrow(/read-only/);
+      },
+    );
+  });
+
+  it("makes selection visible through nodeLookup synchronously (gesture boundary)", () => {
+    // XYDrag reads node.selected via nodeLookup right after selection, without
+    // awaiting a flush — addSelectedNodes must flush the projection itself.
+    withFlow(
+      { nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })], edges: [] },
+      ({ nodeLookup, actions }) => {
+        actions.addSelectedNodes(["a"]);
+
+        expect(nodeLookup.get("a")?.selected).toBe(true);
+        expect(nodeLookup.get("b")?.selected).toBe(false);
+
+        actions.unselectNodesAndEdges();
+        expect(nodeLookup.get("a")?.selected).toBe(false);
+      },
+    );
+  });
+
+  it("moveSelectedNodes writes the user graph and re-derives child absolutes", () => {
+    withFlow(
+      {
+        nodes: [
+          makeNode({ id: "parent", position: { x: 100, y: 100 }, selected: true }),
+          makeNode({ id: "child", position: { x: 10, y: 10 }, parentId: "parent" }),
+        ],
+        edges: [],
+      },
+      ({ store, nodeLookup, actions }) => {
+        actions.moveSelectedNodes({ x: 1, y: 0 }, 1);
+        flush();
+
+        // default velocity is 5px per keypress
+        expect(store.nodes[0]!.position).toEqual({ x: 105, y: 100 });
+        expect(nodeLookup.get("parent")?.internals.positionAbsolute).toEqual({ x: 105, y: 100 });
+        // the unselected child derives its absolute position from the parent
+        expect(store.nodes[1]!.position).toEqual({ x: 10, y: 10 });
+        expect(nodeLookup.get("child")?.internals.positionAbsolute).toEqual({ x: 115, y: 110 });
+      },
+    );
+  });
+
+  it("does not move unselected or non-draggable nodes", () => {
+    withFlow(
+      {
+        nodes: [
+          makeNode({ id: "a", position: { x: 0, y: 0 }, selected: true, draggable: false }),
+          makeNode({ id: "b", position: { x: 50, y: 0 } }),
+        ],
+        edges: [],
+      },
+      ({ store, actions }) => {
+        actions.moveSelectedNodes({ x: 1, y: 1 }, 1);
+        flush();
+
+        expect(store.nodes[0]!.position).toEqual({ x: 0, y: 0 });
+        expect(store.nodes[1]!.position).toEqual({ x: 50, y: 0 });
+      },
+    );
+  });
+
   it("syncs viewport writes to the panZoom instance", () => {
     withFlow({ nodes: [], edges: [] }, ({ actions }) => {
       const syncViewport = vi.fn();

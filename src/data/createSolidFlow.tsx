@@ -1,27 +1,19 @@
-import { ReactiveMap } from "@solid-primitives/map";
 import { createMediaQuery } from "@solid-primitives/media";
 import {
   addEdge as systemAddEdge,
   calculateNodePosition,
-  clampPosition,
   type Connection,
   type ConnectionState,
   errorMessages,
   fitViewport,
   getInternalNodesBounds,
-  getNodeDimensions,
-  getNodePositionWithOrigin,
   getViewportForBounds,
   type Handle,
   infiniteExtent,
   initialConnection,
-  type InternalNodeBase,
-  isCoordinateExtent,
   mergeAriaLabelConfig,
-  type NodeDimensionChange,
   type NodeDragItem,
   type NodeLookup,
-  type NodePositionChange,
   panBy as panBySystem,
   type PanZoomInstance,
   pointToRendererPoint,
@@ -29,8 +21,6 @@ import {
   type SetCenterOptions,
   snapPosition,
   type Transform,
-  updateAbsolutePositions,
-  updateNodeInternals as systemUpdateNodeInternals,
   type Viewport,
   type ViewportHelperFunctionOptions,
   type XYPosition,
@@ -38,13 +28,10 @@ import {
 import {
   createEffect,
   createMemo,
-  createRenderEffect,
   createSignal,
   createStore,
   flush,
-  mapArray,
   merge,
-  onCleanup,
   untrack,
 } from "solid-js";
 
@@ -56,7 +43,15 @@ import {
 } from "~/components/graph/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "~/components/graph/node";
 import type { SolidFlowProps } from "~/components/SolidFlow/types";
-import { createConnections, createEdgeLookup, createLayoutedEdges, createParentIds } from "~/core";
+import {
+  createConnections,
+  createEdgeLookup,
+  createInternalNodes,
+  createLayoutedEdges,
+  createParentIds,
+  type NodeMeasurements,
+  RecordMapFacade,
+} from "~/core";
 import type {
   BuiltInEdgeTypes,
   BuiltInNodeTypes,
@@ -72,7 +67,7 @@ import { scheduleIdleCallback } from "~/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
-import { adoptUserNodes, calculateZ, updateChildNode } from "./xyflow";
+import { handleExpandParent, measureNodeInternals } from "./xyflow";
 
 export const InitialNodeTypesMap = {
   input: InputNode,
@@ -89,8 +84,6 @@ export const InitialEdgeTypesMap = {
 } satisfies BuiltInEdgeTypes;
 
 const getInitialViewport = (
-  // This is just used to make sure adoptUserNodes is called before we calculate the viewport
-  _nodesInitialized: boolean,
   fitView: boolean | undefined,
   initialViewport: Viewport | undefined,
   width: number,
@@ -112,37 +105,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   props: SolidFlowProps<NodeType, EdgeType>,
 ) => {
   const _props = merge(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
-
-  const nodeLookup = new ReactiveMap<string, InternalNode<NodeType>>();
-  // Plain (non-reactive) scratch for the imperative adoption/measurement
-  // passes — its reactive role is served by the parentIds projection below.
-  // Dissolves entirely with the internalNodes conversion.
-  const parentLookup = new Map<string, Map<string, InternalNode<NodeType>>>();
-
-  const startNodesInitialized = untrack(() => {
-    return adoptUserNodes(_props.nodes as NodeType[], nodeLookup, parentLookup, {
-      nodeExtent: _props.nodeExtent,
-
-      nodeOrigin: _props.nodeOrigin,
-
-      elevateNodesOnSelect: _props.elevateNodesOnSelect,
-
-      zIndexMode: _props.zIndexMode,
-      checkEquality: true,
-    });
-  });
-
-  const initialViewport = getInitialViewport(
-    startNodesInitialized,
-
-    _props.fitView,
-    _props.initialViewport,
-
-    _props.width ?? 0,
-
-    _props.height ?? 0,
-    nodeLookup,
-  );
 
   const mediaPrefersDark = createMediaQuery(
     "(prefers-color-scheme: dark)",
@@ -203,6 +165,49 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   // recreate the whole mapArray pipeline (verified empirically on rc.1).
   const [nodesStore, setNodesStore] = createStore<NodeType[]>(_props.nodes as NodeType[]);
   const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(_props.edges as EdgeType[]);
+
+  // The measurements root: DOM-derived per-node state (measured dimensions,
+  // handle bounds), written only by the measurement ingest below. Kept apart
+  // from the user graph so a controlled nodes-array reset does not wipe
+  // measurements (two-root architecture).
+  const [measurementsStore, setMeasurementsStore] = createStore<NodeMeasurements>({});
+
+  // The adoption pass as a projection: user nodes joined with measurements
+  // into internal nodes (absolute positions, z ordering, handle bounds).
+  // Replaces the ReactiveMap + mapArray adoption pipeline — no write side.
+  const internalNodes = createInternalNodes<NodeType>({
+    get nodes() {
+      return nodesStore;
+    },
+    get measurements() {
+      return measurementsStore;
+    },
+    get nodeOrigin() {
+      return config().nodeOrigin;
+    },
+    get nodeExtent() {
+      return config().nodeExtent;
+    },
+    get elevateNodesOnSelect() {
+      return config().elevateNodesOnSelect;
+    },
+    get zIndexMode() {
+      return config().zIndexMode;
+    },
+  });
+
+  // Read-only Map view over internalNodes for @xyflow/system interop; reads
+  // pass through reactively, so tracked scopes subscribe as before.
+  const nodeLookup = new RecordMapFacade<InternalNode<NodeType>>(internalNodes);
+
+  const initialViewport = getInitialViewport(
+    _props.fitView,
+    _props.initialViewport,
+    _props.width ?? 0,
+    _props.height ?? 0,
+    nodeLookup,
+  );
+
   const [viewportStore, setViewportStore] = createStore<Viewport>(
     _props.viewport ?? initialViewport,
   );
@@ -555,7 +560,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const updateNodePositions = (
-    nodeDragItems: Map<string, NodeDragItem | InternalNodeBase<NodeType>>,
+    nodeDragItems: Map<string, Pick<NodeDragItem, "position">>,
     dragging = false,
   ) => {
     setNodesStore((nodes) => {
@@ -579,42 +584,51 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     pendingEntries = updateEntries;
 
     scheduleIdleCallback(() => {
-      {
-        const updates = new Map(pendingEntries);
-        pendingEntries = undefined;
-        const { changes, updatedInternals } = systemUpdateNodeInternals(
-          updates,
-          nodeLookup,
-          parentLookup,
-          store.domNode,
-          store.nodeOrigin,
+      const updates = new Map(pendingEntries);
+      pendingEntries = undefined;
+
+      // DOM measurement pass: reads element geometry against the current
+      // internal nodes and reports it as data — no lookup writes.
+      const { updatedInternals, measurementWrites, changes, parentExpandChildren } =
+        measureNodeInternals(updates, nodeLookup, store.domNode);
+
+      if (!updatedInternals) return;
+
+      setMeasurementsStore((draft) => {
+        for (const write of measurementWrites) {
+          if (write.hidden) {
+            // Clear handle bounds (keep dimensions) so unhiding re-measures.
+            const entry = draft[write.id];
+            if (entry) entry.handleBounds = undefined;
+          } else {
+            draft[write.id] = { measured: write.measured, handleBounds: write.handleBounds };
+          }
+        }
+        return undefined;
+      });
+      // Re-derive internalNodes now so parent expansion sees this pass's geometry.
+      flush();
+
+      if (parentExpandChildren.length > 0) {
+        changes.push(
+          ...handleExpandParent(
+            parentExpandChildren,
+            nodeLookup,
+            (parentId) => nodesStore.filter((node) => node.parentId === parentId),
+            store.nodeOrigin,
+          ),
         );
+      }
 
-        if (!updatedInternals) return;
-
-        updateAbsolutePositions(nodeLookup, parentLookup, {
-          nodeOrigin: store.nodeOrigin,
-          nodeExtent: store.nodeExtent,
-          zIndexMode: store.zIndexMode,
-        });
-
-        const nodeToChange = changes.reduce<Map<string, NodeDimensionChange | NodePositionChange>>(
-          (acc, change) => {
-            const node = nodeLookup.get(change.id)?.internals.userNode;
-
-            if (!node) return acc;
-
-            acc.set(node.id, change);
-
-            return acc;
-          },
-          new Map(),
-        );
-
+      if (changes.length > 0) {
         setNodesStore((nodes) => {
-          for (const node of nodes) {
-            const change = nodeToChange.get(node.id);
-            if (!change) continue;
+          const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+          // Applied in order: parent expansion can emit BOTH a position and a
+          // dimensions change for the same node, and both must land.
+          for (const change of changes) {
+            const node = nodeById.get(change.id);
+            if (!node) continue;
 
             switch (change.type) {
               case "dimensions": {
@@ -633,11 +647,11 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           }
           return undefined;
         });
-
-        flush();
-        initialNodesMeasured = true;
-        tryInitialFitView();
       }
+
+      flush();
+      initialNodesMeasured = true;
+      tryInitialFitView();
     });
   };
 
@@ -697,11 +711,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         return undefined;
       });
     }
+
+    // Gesture boundary: XYDrag reads selection through nodeLookup right after
+    // calling this, so the internalNodes projection must re-derive now.
+    flush();
   };
 
   const addSelectedNodes = (ids: string[]) => {
     const isMultiSelection = store.multiselectionKeyPressed;
-    const selectState = new Map<string, boolean>();
 
     setNodesStore((nodes) => {
       for (const node of nodes) {
@@ -710,13 +727,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           ? node.selected || nodeWillBeSelected
           : nodeWillBeSelected;
 
-        selectState.set(node.id, selected);
-        if (node.selected === selected) continue;
-
-        // we need to mutate the internal node here in order to have the correct selected state in the drag handler
-        const internalNode = nodeLookup.get(node.id);
-        if (internalNode) internalNode.selected = selected;
-        node.selected = selected;
+        if (node.selected !== selected) node.selected = selected;
       }
       return undefined;
     });
@@ -724,11 +735,14 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     if (!isMultiSelection) {
       unselectNodesAndEdges({ nodes: [] });
     }
+
+    // Gesture boundary: the drag handler reads the selected state through
+    // nodeLookup synchronously after selection (selectNodesOnDrag).
+    flush();
   };
 
   const addSelectedEdges = (ids: string[]) => {
     const isMultiSelection = store.multiselectionKeyPressed;
-    const edgeSelectState = new Map<string, boolean>();
 
     setEdgesStore((edges) => {
       for (const edge of edges) {
@@ -737,7 +751,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           ? edge.selected || edgeWillBeSelected
           : edgeWillBeSelected;
 
-        edgeSelectState.set(edge.id, selected);
         if (edge.selected !== selected) edge.selected = selected;
       }
       return undefined;
@@ -746,6 +759,8 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     if (!isMultiSelection) {
       unselectNodesAndEdges({ edges: [] });
     }
+
+    flush();
   };
 
   const handleNodeSelection = (id: string, unselect?: boolean, nodeRef?: HTMLDivElement | null) => {
@@ -792,7 +807,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const moveSelectedNodes = (direction: XYPosition, factor: number) => {
-    const nodeUpdates = new Map<string, InternalNode<NodeType>>();
+    const nodeUpdates = new Map<string, Pick<NodeDragItem, "position">>();
     /*
      * by default a node moves 5px on each key press
      * if snap grid is enabled, we use that for the velocity
@@ -821,7 +836,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         nextPosition = snapPosition(nextPosition, store.snapGrid);
       }
 
-      const { position, positionAbsolute } = calculateNodePosition({
+      const { position } = calculateNodePosition({
         nodeId: node.id,
         nextPosition,
         nodeLookup,
@@ -830,10 +845,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         onError: store.onError,
       });
 
-      node.position = position;
-      node.internals.positionAbsolute = positionAbsolute;
-
-      nodeUpdates.set(node.id, node);
+      // The user-graph write is the whole move: absolute positions re-derive
+      // in the internalNodes projection.
+      nodeUpdates.set(node.id, { position });
     }
 
     updateNodePositions(nodeUpdates);
@@ -903,93 +917,28 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
   );
 
-  // Adoption pipeline (P3.2 rewrite target): mapArray IS the compute and the
-  // per-row render effects write the lookups from their computes, so the noop
-  // applies here are structural, not unsplit effects.
-  createRenderEffect(
-    mapArray(
-      () => store.nodes,
-      (userNode) => {
-        createRenderEffect(
-          () => {
-            const internalNode = untrack(() => nodeLookup.get(userNode.id));
-            const selectedNodeZ: number =
-              store.elevateNodesOnSelect && store.zIndexMode !== "manual" ? 1000 : 0;
-
-            const clampedPosition = clampPosition(
-              getNodePositionWithOrigin(userNode, store.nodeOrigin),
-              isCoordinateExtent(userNode.extent) ? userNode.extent : store.nodeExtent,
-              getNodeDimensions(userNode),
-            );
-
-            /*
-             * We preserve the measured dimensions of the node if the user has provided them.
-             * If the user has not provided them, we use the previously measured dimensions.
-             * If the user has not provided them and there are no previously measured dimensions,
-             * we reset the handleBounds so that the node gets re-measured.
-             */
-            const preservedMeasured = {
-              width: userNode.measured?.width ?? internalNode?.measured?.width,
-              height: userNode.measured?.height ?? internalNode?.measured?.height,
-            };
-
-            const updatedNodeInternals = {
-              ...userNode,
-              measured: preservedMeasured,
-              internals: {
-                positionAbsolute: clampedPosition,
-                // If there is neither a user-provided nor a previously measured size,
-                // reset handleBounds so that the node gets re-measured.
-                handleBounds:
-                  !userNode.measured && !internalNode?.measured
-                    ? undefined
-                    : internalNode?.internals.handleBounds,
-                z: calculateZ(userNode, selectedNodeZ, store.zIndexMode),
-                userNode,
-              },
-            } as InternalNode<NodeType>;
-
-            nodeLookup.set(userNode.id, updatedNodeInternals);
-
-            if (userNode.parentId) {
-              updateChildNode(updatedNodeInternals, nodeLookup, parentLookup, {
-                nodeOrigin: store.nodeOrigin,
-                nodeExtent: store.nodeExtent,
-                elevateNodesOnSelect: store.elevateNodesOnSelect,
-                zIndexMode: store.zIndexMode,
-                checkEquality: true,
-              });
-            }
-          },
-          () => {},
-        );
-
-        // Do not delete here; we garbage-collect removed nodes in a separate effect
-        onCleanup(() => {
-          /* noop */
-        });
-      },
-    ),
-    () => {},
-  );
-
-  // Garbage-collect nodeLookup entries for nodes that no longer exist in the
-  // store. Entries only appear via the adoption pipeline (also driven by
-  // store.nodes), so tracking the node ids is sufficient.
+  // Garbage-collect measurements for nodes that no longer exist in the user
+  // graph. Entries only appear via the measurement ingest, keyed by node id,
+  // so tracking the node ids is sufficient.
   createEffect(
     () => new Set(store.nodes.map((n) => n.id)),
     (currentIds) => {
-      for (const id of untrack(() => Array.from(nodeLookup.keys()))) {
-        if (!currentIds.has(id)) {
-          nodeLookup.delete(id);
+      setMeasurementsStore((draft) => {
+        for (const id of Object.keys(draft)) {
+          if (!currentIds.has(id)) {
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
+            delete draft[id];
+          }
         }
-      }
+        return undefined;
+      });
     },
   );
 
   // TODO: Add viewportInitialized to store
   return {
     store,
+    internalNodes,
     nodeLookup,
     edgeLookup,
     parentIds,

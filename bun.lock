@@ -6,7 +6,6 @@
       "name": "@dschz/solid-flow",
       "dependencies": {
         "@solid-primitives/event-listener": "3.0.0-next.3",
-        "@solid-primitives/map": "1.0.0-next.2",
         "@solid-primitives/media": "4.0.0-next.2",
         "@solidjs/web": "2.0.0-rc.1",
         "@xyflow/system": "^0.0.80",
@@ -300,15 +299,11 @@
 
     "@solid-primitives/event-listener": ["@solid-primitives/event-listener@3.0.0-next.3", "", { "dependencies": { "@solid-primitives/utils": "^7.0.0-next.4" }, "peerDependencies": { "@solidjs/web": "^2.0.0-rc.0", "solid-js": "^2.0.0-rc.0" } }, "sha512-DU89Vh/z7F1RTvL69RDDOyIoZ0TeYc/Mrdf+pSIGL5WORjL8TxKc91weBRJUrbeA4Co9bHJs+buSd3NPWbxWAg=="],
 
-    "@solid-primitives/map": ["@solid-primitives/map@1.0.0-next.2", "", { "dependencies": { "@solid-primitives/trigger": "^3.0.0-next.2" }, "peerDependencies": { "@solidjs/web": "^2.0.0-rc.0", "solid-js": "^2.0.0-rc.0" } }, "sha512-9TipViAZvtT9sNCJuriC7SbKTDA9THKseAxeGWmtvEcWEupwdCTsb/mA8qoobmo+rTgkkhYLyc2N+jHGH4KykQ=="],
-
     "@solid-primitives/media": ["@solid-primitives/media@4.0.0-next.2", "", { "dependencies": { "@solid-primitives/event-listener": "^3.0.0-next.3", "@solid-primitives/rootless": "^2.0.0-next.2", "@solid-primitives/static-store": "^1.0.0-next.2", "@solid-primitives/utils": "^7.0.0-next.4" }, "peerDependencies": { "@solidjs/web": "^2.0.0-rc.0", "solid-js": "^2.0.0-rc.0" } }, "sha512-jTua+YRSAe2u3z1kZRPIunANI+JSQl0U2pOsDVqCzKgp/nzZC1WsodyFluiSARD9SICgFnzHqlD+EmXzKgp/Mg=="],
 
     "@solid-primitives/rootless": ["@solid-primitives/rootless@2.0.0-next.2", "", { "dependencies": { "@solid-primitives/utils": "^7.0.0-next.4" }, "peerDependencies": { "@solidjs/web": "^2.0.0-rc.0", "solid-js": "^2.0.0-rc.0" } }, "sha512-QGoy8R+8v+9I8mET50wMwu0uawkQvFFcv67S+vKJ8xP5jPrQXdxuNMckUTKUy2shR3rIRpR0oLzss0Vy0oLkPg=="],
 
     "@solid-primitives/static-store": ["@solid-primitives/static-store@1.0.0-next.2", "", { "dependencies": { "@solid-primitives/utils": "^7.0.0-next.4" }, "peerDependencies": { "@solidjs/web": "^2.0.0-rc.0", "solid-js": "^2.0.0-rc.0" } }, "sha512-cyMzFe39VMVF9zVYgZEck1TESbIB4Tnpp00vNQlaOYuhOr4nstRBSS3zsBqZMuF+a5qWlKqS0RHO48FwLScX9w=="],
-
-    "@solid-primitives/trigger": ["@solid-primitives/trigger@3.0.0-next.2", "", { "dependencies": { "@solid-primitives/utils": "^7.0.0-next.4" }, "peerDependencies": { "@solidjs/web": "^2.0.0-rc.0", "solid-js": "^2.0.0-rc.0" } }, "sha512-YhTGBKEPP7XI7Bk6/2gWxfZmwMWQEwfZsTiMO2dt9X/AQ9bmLk+xuRbT2QDOPg2IBe0D3uh/uguHUMYOLYGpbQ=="],
 
     "@solid-primitives/utils": ["@solid-primitives/utils@7.0.0-next.4", "", { "peerDependencies": { "@solidjs/web": "^2.0.0-rc.0", "solid-js": "^2.0.0-rc.0" } }, "sha512-9KyRe6eu4hdhxxGOyS9vAa2s/T8FZ1sMJtk3UuV3W1Gi0f4if+o1n7S1M6l/MMjn8+m3+I3VB1KzFa9gNDkDsg=="],
 
