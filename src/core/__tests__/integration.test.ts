@@ -93,10 +93,6 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
         defaultEdgeOptions: {},
         elevateEdgesOnSelect: true,
         zIndexMode: undefined,
-        onlyRenderVisibleElements: false,
-        width: 800,
-        height: 600,
-        transform: [0, 0, 1],
         nodeLookup,
       });
 

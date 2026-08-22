@@ -1,11 +1,12 @@
 import type { JSX } from "@solidjs/web";
 import { Dynamic } from "@solidjs/web";
 import { elementSelectionKeys, getMarkerId } from "@xyflow/system";
-import { Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
+import { isEdgeCulled } from "@/core";
 import type { Edge, EdgeEvents, Node } from "@/types";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
@@ -70,10 +71,21 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
 
   const ariaLabel = () => edge().ariaLabel ?? `Edge from ${edge().source} to ${edge().target}`;
 
+  // #15 culling flag: the drawn segment's AABB against the quantized culling
+  // viewport. CSS-only — the edge row and its subscriptions stay live.
+  const culled = createMemo(() => isEdgeCulled(edge(), store.cullingViewport));
+
   return (
     <EdgeIdContext value={edgeId}>
       <Show when={!edge().hidden}>
-        <svg class="solid-flow__edge-wrapper" style={{ "z-index": edge().zIndex }}>
+        <svg
+          class="solid-flow__edge-wrapper"
+          style={{
+            "z-index": edge().zIndex,
+            visibility: culled() ? "hidden" : undefined,
+            "pointer-events": culled() ? "none" : undefined,
+          }}
+        >
           <g
             ref={edgeRef}
             data-id={edge().id}

@@ -2,9 +2,7 @@ import {
   type ConnectionMode,
   getEdgePosition,
   getElevatedEdgeZIndex,
-  isEdgeVisible,
   type OnError,
-  type Transform,
   type ZIndexMode,
 } from "@xyflow/system";
 import { createProjection, mapArray } from "solid-js";
@@ -22,10 +20,6 @@ export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends E
   readonly defaultEdgeOptions: DefaultEdgeOptions;
   readonly elevateEdgesOnSelect: boolean;
   readonly zIndexMode?: ZIndexMode;
-  readonly onlyRenderVisibleElements: boolean;
-  readonly width: number;
-  readonly height: number;
-  readonly transform: Transform;
   readonly onError?: OnError;
   readonly nodeLookup: Pick<Map<string, InternalNode<NodeType>>, "get" | "size">;
 };
@@ -46,8 +40,10 @@ export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends E
  * the adjacent edges' projections; the record computed re-runs only when
  * membership or presence changes.
  *
- * The viewport participates only while onlyRenderVisibleElements is active —
- * panning must not touch edge rows otherwise.
+ * The viewport never participates here: #15 culling is CSS-only, applied by
+ * EdgeWrapper from the quantized culling viewport — panning must not touch
+ * edge rows, and the record's membership must not change as edges cross the
+ * viewport (no mount/unmount churn).
  *
  * Rows whose endpoints are missing or unmeasured simply drop out of the
  * record — the same "no entry" contract the ReactiveMap pipeline had.
@@ -134,18 +130,6 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
     // re-runs this row when node membership changes.
     void source.nodeLookup.size;
     return null;
-  }
-
-  if (source.onlyRenderVisibleElements) {
-    const edgeVisible = isEdgeVisible({
-      sourceNode,
-      targetNode,
-      width: source.width ?? 0,
-      height: source.height ?? 0,
-      transform: source.transform,
-    });
-
-    if (!edgeVisible) return null;
   }
 
   const edgePosition = getEdgePosition({

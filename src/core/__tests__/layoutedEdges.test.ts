@@ -61,10 +61,6 @@ const makeSource = (edges: Edge[], nodes: InternalNode[]) => {
     defaultEdgeOptions: {},
     elevateEdgesOnSelect: true,
     zIndexMode: "auto",
-    onlyRenderVisibleElements: false,
-    width: 800,
-    height: 600,
-    transform: [0, 0, 1],
     nodeLookup,
   };
   return { source, setEdgesStore, nodeLookup };
@@ -231,10 +227,6 @@ describe("createLayoutedEdges (core, headless)", () => {
       defaultEdgeOptions: {},
       elevateEdgesOnSelect: false,
       zIndexMode: "auto",
-      onlyRenderVisibleElements: false,
-      width: 800,
-      height: 600,
-      transform: [0, 0, 1],
       nodeLookup,
     };
 

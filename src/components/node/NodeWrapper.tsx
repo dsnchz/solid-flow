@@ -7,13 +7,14 @@ import {
   isInputDOMNode,
   nodeHasDimensions,
 } from "@xyflow/system";
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, Show } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
 import { ARIA_NODE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { NodeConnectableContext } from "@/contexts/nodeConnectable";
 import { NodeIdContext } from "@/contexts/nodeId";
+import { isNodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
@@ -61,11 +62,17 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     };
   };
 
+  // #15 culling flag: arithmetic re-runs only when this node's geometry,
+  // selection, or the quantized culling viewport change; the style only
+  // rewrites visibility when the flag actually flips.
+  const culled = createMemo(() => isNodeCulled(node(), store.cullingViewport));
+
   const style = () =>
     ({
       "z-index": node().internals.z,
       transform: transform(),
-      visibility: nodeHasDimensions(node()) ? "visible" : "hidden",
+      visibility: culled() || !nodeHasDimensions(node()) ? "hidden" : "visible",
+      "pointer-events": culled() ? "none" : undefined,
       ...sizeStyle(),
       ...(node().style ?? {}),
     }) as const;

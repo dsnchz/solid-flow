@@ -60,6 +60,7 @@ import type {
 } from "@/types";
 import { isEdge, isNode } from "@/utils";
 
+import { createCullingViewport } from "./culling";
 import { getDefaultFlowStateProps } from "./defaults";
 import { RecordMapFacade } from "./facades";
 import type { SolidFlowProps } from "./flowProps";
@@ -390,8 +391,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     get visibleNodeIds() {
       return visibleNodeIds();
     },
-    get visibleNodesMap() {
-      return visibleNodesMap();
+    get cullingViewport() {
+      return cullingViewport();
     },
     get transform() {
       return transform();
@@ -427,17 +428,29 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const visibleNodesMap = createMemo<Map<string, InternalNode>>(() => {
-    // TODO: Refine onlyRenderVisibleElements implementation
-    // if (store.onlyRenderVisibleElements) {
-    //   return getVisibleNodes(nodeLookup, transform(), store.width ?? 0, store.height ?? 0);
-    // }
-    return nodeLookup;
+  // The #15 culling viewport: quantized/overscanned flow-space rect, null
+  // while culling is off. Per-element culled memos in NodeWrapper/EdgeWrapper
+  // read it; the renderers' id lists stay full — culling is CSS-only and
+  // never changes DOM membership (design doc §4).
+  const cullingViewport = createCullingViewport({
+    get onlyRenderVisibleElements() {
+      return store.onlyRenderVisibleElements;
+    },
+    get width() {
+      return store.width;
+    },
+    get height() {
+      return store.height;
+    },
+    get transform() {
+      return transform();
+    },
   });
 
   // Structural read only (record keys = node ids): row-level changes — e.g.
   // the dragged node's row rebuilding every move — must not re-run this.
-  // #15 culling will replace this with the visibility projection.
+  // Always the FULL id list: culling hides elements with CSS, it never
+  // changes list membership (no mount/unmount churn).
   const visibleNodeIds = createMemo(() => Object.keys(internalNodes));
 
   // Which nodes currently have children (reactive "is parent" answers)
@@ -478,18 +491,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
     get zIndexMode() {
       return store.zIndexMode;
-    },
-    get onlyRenderVisibleElements() {
-      return store.onlyRenderVisibleElements;
-    },
-    get width() {
-      return store.width;
-    },
-    get height() {
-      return store.height;
-    },
-    get transform() {
-      return store.transform;
     },
     get onError() {
       return store.onError;

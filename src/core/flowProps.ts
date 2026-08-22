@@ -343,9 +343,13 @@ export type SolidFlowProps<
      */
     readonly selectionOnDrag?: boolean;
     /**
-     * You can enable this optimization to instruct Solid Flow to only render nodes and edges that would be visible in the viewport.
-     * This might improve performance when you have a large number of nodes and edges but also adds an overhead.
-     * @default false
+     * Viewport culling: elements outside the (overscanned) viewport are hidden
+     * with CSS (`visibility: hidden` + `pointer-events: none`). Everything
+     * stays mounted — custom nodes keep their DOM state off-screen, and
+     * measurement/fitView/minimap are unaffected. Selected elements are never
+     * culled. Set to `false` to keep every element visible; note that culled
+     * elements leave the accessibility tree and tab order while off-screen.
+     * @default true
      */
     readonly onlyRenderVisibleElements?: boolean;
     /**

@@ -16,6 +16,13 @@ export {
   type MeasureRequestEntry,
 } from "./createFlowState";
 export { createNodeStore } from "./createNodeStore";
+export {
+  createCullingViewport,
+  type CullingSource,
+  isEdgeCulled,
+  isNodeCulled,
+  rectsOverlap,
+} from "./culling";
 export { getDefaultFlowStateProps } from "./defaults";
 export { RecordMapFacade } from "./facades";
 export type { SolidFlowInitialProps, SolidFlowProps } from "./flowProps";

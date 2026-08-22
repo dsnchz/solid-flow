@@ -53,7 +53,7 @@ export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends
     selectNodesOnDrag: true,
     elevateNodesOnSelect: true,
     zIndexMode: "basic" as ZIndexMode,
-    onlyRenderVisibleElements: false,
+    onlyRenderVisibleElements: true,
     disableKeyboardA11y: false,
     defaultMarkerColor: "#b1b1b7",
     ariaLiveMessage: "" as string,
