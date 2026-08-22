@@ -5,12 +5,9 @@ import {
   calculateNodePosition,
   clampPosition,
   type Connection,
-  ConnectionMode,
   type ConnectionState,
   errorMessages,
   fitViewport,
-  getEdgePosition,
-  getElevatedEdgeZIndex,
   getInternalNodesBounds,
   getNodeDimensions,
   getNodePositionWithOrigin,
@@ -21,7 +18,6 @@ import {
   initialConnection,
   type InternalNodeBase,
   isCoordinateExtent,
-  isEdgeVisible,
   mergeAriaLabelConfig,
   type NodeDimensionChange,
   type NodeDragItem,
@@ -61,11 +57,11 @@ import {
 } from "~/components/graph/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "~/components/graph/node";
 import type { SolidFlowProps } from "~/components/SolidFlow/types";
+import { createLayoutedEdges } from "~/core";
 import type {
   BuiltInEdgeTypes,
   BuiltInNodeTypes,
   Edge,
-  EdgeLayouted,
   EdgeTypes,
   FitViewOptions,
   InternalNode,
@@ -128,7 +124,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const parentLookup = new ReactiveMap<string, Map<string, InternalNode<NodeType>>>();
   const edgeLookup = new ReactiveMap<string, EdgeType>();
   const connectionLookup = new ReactiveMap<string, Map<string, HandleConnection>>();
-  const layoutedEdgesMap = new ReactiveMap<string, EdgeLayouted<EdgeType>>();
 
   const startNodesInitialized = untrack(() => {
     return adoptUserNodes(_props.nodes as NodeType[], nodeLookup, parentLookup, {
@@ -434,11 +429,45 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     return Array.from(visibleNodesMap().values()).map((edge) => edge.id);
   });
 
-  const visibleEdgeIds = createMemo(() => {
-    return Array.from(layoutedEdgesMap.values()).map((edge) => edge.id);
+  // Edge layout join (core projection): id-keyed record, row identity stable
+  // across derive re-runs. Replaces the mapArray layout effect + ReactiveMap.
+  const layoutedEdges = createLayoutedEdges<NodeType, EdgeType>({
+    get edges() {
+      return store.edges;
+    },
+    get connectionMode() {
+      return store.connectionMode;
+    },
+    get defaultEdgeOptions() {
+      return store.defaultEdgeOptions;
+    },
+    get elevateEdgesOnSelect() {
+      return store.elevateEdgesOnSelect;
+    },
+    get zIndexMode() {
+      return store.zIndexMode;
+    },
+    get onlyRenderVisibleElements() {
+      return store.onlyRenderVisibleElements;
+    },
+    get width() {
+      return store.width;
+    },
+    get height() {
+      return store.height;
+    },
+    get transform() {
+      return store.transform;
+    },
+    get onError() {
+      return store.onError;
+    },
+    nodeLookup,
   });
 
-  const getEdge = (id: string) => layoutedEdgesMap.get(id);
+  const visibleEdgeIds = createMemo(() => Object.keys(layoutedEdges));
+
+  const getEdge = (id: string) => layoutedEdges[id];
 
   /**********************************************************************************/
   /*                                                                                */
@@ -993,64 +1022,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
           () => {},
         );
 
-        createRenderEffect(
-          () => {
-            const sourceNode = nodeLookup.get(edge.source);
-            const targetNode = nodeLookup.get(edge.target);
-
-            if (!sourceNode || !targetNode) return;
-
-            if (store.onlyRenderVisibleElements) {
-              const edgeVisible = isEdgeVisible({
-                sourceNode,
-                targetNode,
-                width: store.width ?? 0,
-                height: store.height ?? 0,
-                transform: store.transform,
-              });
-
-              if (!edgeVisible) return;
-
-              store.visibleNodesMap.set(sourceNode.id, sourceNode);
-              store.visibleNodesMap.set(targetNode.id, targetNode);
-            }
-
-            const edgePosition = getEdgePosition({
-              id: edge.id,
-              sourceNode,
-              targetNode,
-              sourceHandle: edge.sourceHandle || null,
-              targetHandle: edge.targetHandle || null,
-              connectionMode: store.connectionMode as ConnectionMode,
-              onError: store.onError,
-            });
-
-            if (!edgePosition) return;
-
-            layoutedEdgesMap.set(edge.id, {
-              ...store.defaultEdgeOptions,
-              ...edge,
-              ...edgePosition,
-              zIndex: getElevatedEdgeZIndex({
-                selected: edge.selected,
-                zIndex: edge.zIndex ?? store.defaultEdgeOptions.zIndex,
-                sourceNode,
-                targetNode,
-                elevateOnSelect: store.elevateEdgesOnSelect,
-                zIndexMode: store.zIndexMode,
-              }),
-              sourceNode,
-              targetNode,
-              edge,
-            });
-          },
-          () => {},
-        );
-
         onCleanup(() => {
           {
             edgeLookup.delete(edge.id);
-            layoutedEdgesMap.delete(edge.id);
 
             removeConnectionFromLookup(
               "source",
@@ -1083,7 +1057,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
         if (!currentIds.has(id)) {
           edgeLookup.delete(id);
           connectionLookup.delete(id);
-          layoutedEdgesMap.delete(id);
         }
       }
     },
