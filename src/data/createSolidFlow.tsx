@@ -56,7 +56,7 @@ import {
 } from "~/components/graph/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "~/components/graph/node";
 import type { SolidFlowProps } from "~/components/SolidFlow/types";
-import { createConnections, createEdgeLookup, createLayoutedEdges } from "~/core";
+import { createConnections, createEdgeLookup, createLayoutedEdges, createParentIds } from "~/core";
 import type {
   BuiltInEdgeTypes,
   BuiltInNodeTypes,
@@ -114,7 +114,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   const _props = merge(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
 
   const nodeLookup = new ReactiveMap<string, InternalNode<NodeType>>();
-  const parentLookup = new ReactiveMap<string, Map<string, InternalNode<NodeType>>>();
+  // Plain (non-reactive) scratch for the imperative adoption/measurement
+  // passes — its reactive role is served by the parentIds projection below.
+  // Dissolves entirely with the internalNodes conversion.
+  const parentLookup = new Map<string, Map<string, InternalNode<NodeType>>>();
 
   const startNodesInitialized = untrack(() => {
     return adoptUserNodes(_props.nodes as NodeType[], nodeLookup, parentLookup, {
@@ -418,6 +421,13 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   const visibleNodeIds = createMemo(() => {
     return Array.from(visibleNodesMap().values()).map((edge) => edge.id);
+  });
+
+  // Which nodes currently have children (reactive "is parent" answers)
+  const parentIds = createParentIds<NodeType>({
+    get nodes() {
+      return store.nodes;
+    },
   });
 
   // Edge-derived indexes (core projections): fully derived from the edges
@@ -982,7 +992,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     store,
     nodeLookup,
     edgeLookup,
-    parentLookup,
+    parentIds,
     connections,
     actions: {
       getEdge,

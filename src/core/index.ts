@@ -17,3 +17,4 @@ export {
 } from "./projections/connections";
 export { createEdgeLookup, type EdgeLookupSource } from "./projections/edgeLookup";
 export { createLayoutedEdges, type LayoutedEdgesSource } from "./projections/layoutedEdges";
+export { createParentIds, type ParentIdsSource } from "./projections/parentIds";
