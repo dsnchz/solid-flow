@@ -926,6 +926,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       setMeasurementsStore((draft) => {
         for (const id of Object.keys(draft)) {
           if (!currentIds.has(id)) {
+            // `delete` is required: unlike the 1.x path setter, assigning
+            // undefined in a 2.0 draft KEEPS the own key — visible to `in`
+            // guards and Object.keys, and skips structural notification
+            // (spike 09).
             // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
             delete draft[id];
           }
