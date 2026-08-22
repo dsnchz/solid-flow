@@ -424,9 +424,10 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     return nodeLookup;
   });
 
-  const visibleNodeIds = createMemo(() => {
-    return Array.from(visibleNodesMap().values()).map((edge) => edge.id);
-  });
+  // Structural read only (record keys = node ids): row-level changes — e.g.
+  // the dragged node's row rebuilding every move — must not re-run this.
+  // #15 culling will replace this with the visibility projection.
+  const visibleNodeIds = createMemo(() => Object.keys(internalNodes));
 
   // Which nodes currently have children (reactive "is parent" answers)
   const parentIds = createParentIds<NodeType>({

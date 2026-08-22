@@ -10,7 +10,7 @@ import {
   type NodeOrigin,
   type ZIndexMode,
 } from "@xyflow/system";
-import { createProjection } from "solid-js";
+import { type Accessor, createMemo, createProjection, mapArray, onCleanup } from "solid-js";
 
 import type { InternalNode, Node } from "~/types";
 
@@ -60,6 +60,8 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly zIndexMode?: ZIndexMode;
 };
 
+const EMPTY_AUTO_INDEX: ReadonlyMap<string, number> = new Map();
+
 /**
  * The adoption pass as a projection: user nodes joined with the measurements
  * root into `Record<string, InternalNode>` — absolute positions (origin,
@@ -70,24 +72,55 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
  * ReactiveMap adoption pipeline there is no write side: nodes-array resets,
  * membership changes, and measurement updates all converge by derivation.
  *
+ * Each row is its own memo (spike 10, strategy D): fine-grained tracking does
+ * the invalidation, so one node's change re-runs one memo (plus its
+ * children's), and the projection derive just reads N memo values. Unchanged
+ * rows keep their previous OBJECT, which the keyed reconcile skips by
+ * identity — a single node move costs O(changed), not O(N) (the drag-perf
+ * regression found by the 0.2.3 bench).
+ *
  * Nodes must come before their children in the array (upstream contract);
  * a child whose parent has not been adopted yet keeps its own position and
- * warns, matching @xyflow/system.
+ * warns, matching @xyflow/system. Links only point backwards in the array,
+ * which also makes parentId cycles unrepresentable.
  */
 export const createInternalNodes = <NodeType extends Node = Node>(
   source: InternalNodesSource<NodeType>,
 ): Record<string, InternalNode<NodeType>> => {
-  return createProjection<Record<string, InternalNode<NodeType>>>(
-    () => {
-      const { nodeOrigin, nodeExtent, zIndexMode } = source;
-      const selectedNodeZ =
-        source.elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
-      const out: Record<string, InternalNode<NodeType>> = {};
-      let rootParentCount = 0;
+  // Root parents get staggered z blocks in "auto" mode, indexed in order of
+  // first-child appearance (upstream: rootParentIndex). Depends only on
+  // membership and parentId slots — node moves do not re-run it.
+  const autoIndex: Accessor<ReadonlyMap<string, number>> = createMemo(() => {
+    if (source.zIndexMode !== "auto") return EMPTY_AUTO_INDEX;
 
-      for (const userNode of source.nodes) {
+    const index = new Map<string, number>();
+    const rootIds = new Set<string>();
+    for (const node of source.nodes) {
+      if (!node.parentId) {
+        rootIds.add(node.id);
+      } else if (rootIds.has(node.parentId) && !index.has(node.parentId)) {
+        index.set(node.parentId, index.size + 1);
+      }
+    }
+    return index;
+  });
+
+  // id → row memo (+ array position, to enforce the parents-first contract).
+  const entryById = new Map<
+    string,
+    { memo: Accessor<InternalNode<NodeType>>; index: Accessor<number> }
+  >();
+
+  const rowMemos = mapArray(
+    () => source.nodes,
+    (userNode, index) => {
+      const memo = createMemo((): InternalNode<NodeType> => {
+        const { nodeOrigin, nodeExtent, zIndexMode } = source;
+        const selectedNodeZ =
+          source.elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
+
         // `in` guard: subscribes even while the key is absent, so the first
-        // measurement of a node re-derives (projection absent-key footgun).
+        // measurement of a node re-runs (computation absent-key footgun).
         const measurement =
           userNode.id in source.measurements ? source.measurements[userNode.id] : undefined;
 
@@ -104,6 +137,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           initialHeight: userNode.initialHeight,
         });
 
+        const rootParentIndex = autoIndex().get(userNode.id);
         const row = {
           ...userNode,
           measured,
@@ -114,30 +148,20 @@ export const createInternalNodes = <NodeType extends Node = Node>(
               dimensions,
             ),
             handleBounds: measurement?.handleBounds,
-            z: calculateZ(userNode, selectedNodeZ, zIndexMode),
+            z:
+              calculateZ(userNode, selectedNodeZ, zIndexMode) +
+              (rootParentIndex !== undefined ? rootParentIndex * ROOT_PARENT_Z_INCREMENT : 0),
+            ...(rootParentIndex !== undefined ? { rootParentIndex } : {}),
             userNode,
           },
         } as InternalNode<NodeType>;
 
         if (userNode.parentId) {
-          const parent = out[userNode.parentId];
-
-          if (!parent) {
-            console.warn(
-              `Parent node ${userNode.parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
-            );
-          } else {
-            // Root parents get staggered z blocks in "auto" mode, assigned in
-            // order of first-child appearance (upstream: rootParentIndex).
-            if (
-              !parent.parentId &&
-              zIndexMode === "auto" &&
-              parent.internals.rootParentIndex === undefined
-            ) {
-              parent.internals.rootParentIndex = ++rootParentCount;
-              parent.internals.z += rootParentCount * ROOT_PARENT_Z_INCREMENT;
-            }
-
+          const parentEntry = entryById.get(userNode.parentId);
+          // Only link backwards: matches the upstream parents-first contract
+          // and rules out parentId-cycle recursion.
+          if (parentEntry && parentEntry.index() < index()) {
+            const parent = parentEntry.memo();
             const { x, y, z } = calculateChildXYZ(
               row,
               parent,
@@ -148,12 +172,38 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             );
             row.internals.positionAbsolute = { x, y };
             row.internals.z = z;
+          } else {
+            // Subscribe to membership so the row re-runs if the parent is
+            // added (or reordered to the front) later.
+            void source.nodes.length;
+            console.warn(
+              `Parent node ${userNode.parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
+            );
           }
         }
 
-        out[userNode.id] = row;
-      }
+        return row;
+      });
 
+      const entry = { memo, index };
+      entryById.set(userNode.id, entry);
+      // mapArray creates replacement rows BEFORE disposing removed ones, so
+      // only delete the registration this row actually owns.
+      onCleanup(() => {
+        if (entryById.get(userNode.id) === entry) entryById.delete(userNode.id);
+      });
+
+      return memo;
+    },
+  );
+
+  return createProjection<Record<string, InternalNode<NodeType>>>(
+    () => {
+      const out: Record<string, InternalNode<NodeType>> = {};
+      for (const memo of rowMemos()) {
+        const row = memo();
+        out[row.id] = row;
+      }
       return out;
     },
     {},

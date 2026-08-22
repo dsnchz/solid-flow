@@ -306,6 +306,169 @@ describe("createInternalNodes (core, headless)", () => {
     });
   });
 
+  // Row-cache invalidation classes (spike 10): every kind of input change
+  // must invalidate the cached row — these pin the snapshot's coverage.
+
+  it("catches an IN-PLACE position mutation (same object identity)", () => {
+    createRoot((dispose) => {
+      const { internalNodes, setNodes } = setup([makeNode({ id: "a", position: { x: 1, y: 1 } })]);
+      flush();
+
+      setNodes((draft) => {
+        draft[0]!.position.x = 99;
+        return undefined;
+      });
+      flush();
+
+      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 99, y: 1 });
+      dispose();
+    });
+  });
+
+  it("catches a pass-through prop change (draggable)", () => {
+    createRoot((dispose) => {
+      const { internalNodes, setNodes } = setup([makeNode({ id: "a", draggable: false })]);
+      flush();
+      expect(internalNodes.a!.draggable).toBe(false);
+
+      setNodes((draft) => {
+        draft[0]!.draggable = true;
+        return undefined;
+      });
+      flush();
+
+      expect(internalNodes.a!.draggable).toBe(true);
+      dispose();
+    });
+  });
+
+  it("catches a key that gets ADDED to the node after adoption", () => {
+    createRoot((dispose) => {
+      const { internalNodes, setNodes } = setup([makeNode({ id: "a" })]);
+      flush();
+      expect(internalNodes.a!.zIndex).toBeUndefined();
+
+      setNodes((draft) => {
+        draft[0]!.zIndex = 7;
+        return undefined;
+      });
+      flush();
+
+      expect(internalNodes.a!.zIndex).toBe(7);
+      expect(internalNodes.a!.internals.z).toBe(7);
+      dispose();
+    });
+  });
+
+  it("catches an in-place coordinate-extent mutation", () => {
+    createRoot((dispose) => {
+      const { internalNodes, setNodes } = setup([
+        makeNode({
+          id: "a",
+          position: { x: 50, y: 50 },
+          extent: [
+            [0, 0],
+            [100, 100],
+          ],
+          measured: { width: 10, height: 10 },
+        }),
+      ]);
+      flush();
+      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 50, y: 50 });
+
+      setNodes((draft) => {
+        (draft[0]!.extent as [[number, number], [number, number]])[1][0] = 30;
+        return undefined;
+      });
+      flush();
+
+      // clamped against the mutated extent: x <= 30 - width
+      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 20, y: 50 });
+      dispose();
+    });
+  });
+
+  it("replaced data repoints the row; deep data writes flow through unrebuilt", () => {
+    createRoot((dispose) => {
+      const { internalNodes, setNodes } = setup([makeNode({ id: "a", data: { label: "first" } })]);
+      flush();
+      expect(internalNodes.a!.data.label).toBe("first");
+
+      // deep write: chained backing — visible through the row with no rebuild
+      setNodes((draft) => {
+        draft[0]!.data.label = "deep";
+        return undefined;
+      });
+      flush();
+      expect(internalNodes.a!.data.label).toBe("deep");
+
+      // slot replacement: row must repoint at the new object
+      setNodes((draft) => {
+        draft[0]!.data = { label: "replaced" };
+        return undefined;
+      });
+      flush();
+      expect(internalNodes.a!.data.label).toBe("replaced");
+      dispose();
+    });
+  });
+
+  it("recomputes every row when a shared config input (nodeOrigin) changes", () => {
+    createRoot((dispose) => {
+      const [nodes] = createStore<Node[]>([
+        makeNode({ id: "a", position: { x: 100, y: 100 }, measured: { width: 50, height: 20 } }),
+      ]);
+      const [measurements] = createStore<NodeMeasurements>({});
+      const [config, setConfig] = createStore<{ nodeOrigin: NodeOrigin }>({ nodeOrigin: [0, 0] });
+
+      const internalNodes = createInternalNodes({
+        get nodes() {
+          return nodes;
+        },
+        get measurements() {
+          return measurements;
+        },
+        get nodeOrigin() {
+          return config.nodeOrigin;
+        },
+        nodeExtent: infiniteExtent,
+        elevateNodesOnSelect: true,
+      });
+      flush();
+      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 100, y: 100 });
+
+      setConfig((draft) => {
+        draft.nodeOrigin = [0.5, 0.5];
+        return undefined;
+      });
+      flush();
+
+      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 75, y: 90 });
+      dispose();
+    });
+  });
+
+  it("updates a parent's auto z block when it gains its first child", () => {
+    createRoot((dispose) => {
+      const { internalNodes, setNodes } = setup(
+        [makeNode({ id: "p1" }), makeNode({ id: "c1", parentId: "p1" }), makeNode({ id: "p2" })],
+        { zIndexMode: "auto" },
+      );
+      flush();
+      expect(internalNodes.p2!.internals.z).toBe(0);
+
+      setNodes((draft) => {
+        draft.push(makeNode({ id: "c2", parentId: "p2" }));
+        return undefined;
+      });
+      flush();
+
+      expect(internalNodes.p2!.internals.z).toBe(20);
+      expect(internalNodes.c2!.internals.z).toBeGreaterThan(20);
+      dispose();
+    });
+  });
+
   it("re-runs subscribers of an absent key when the node appears", () => {
     createRoot((dispose) => {
       const { internalNodes, setNodes } = setup([makeNode({ id: "a" })]);

@@ -136,6 +136,77 @@ describe("createLayoutedEdges (core, headless)", () => {
     });
   });
 
+  // Row-cache invalidation classes (spike 10): in-place node-geometry
+  // mutations keep every object reference stable, so the per-node geometry
+  // snapshot must capture VALUES for the join to see them.
+
+  it("catches an in-place endpoint position mutation on the next derive", () => {
+    const { source, setEdgesStore, nodeLookup } = makeSource(
+      [{ id: "e1", source: "a", target: "b" }] as Edge[],
+      [internalNode("a", 0, 0), internalNode("b", 200, 100)],
+    );
+
+    createRoot((dispose) => {
+      const layouted = createLayoutedEdges(source);
+      flush();
+      const sourceXBefore = layouted.e1!.sourceX;
+
+      // same objects, mutated in place (as reconcile does to projection rows)
+      nodeLookup.get("a")!.internals.positionAbsolute.x = 500;
+      // any derive trigger (nodes are a plain Map in this fixture)
+      setEdgesStore((draft) => {
+        draft[0]!.animated = true;
+      });
+      flush();
+
+      expect(layouted.e1!.sourceX).toBe(sourceXBefore + 500);
+      dispose();
+    });
+  });
+
+  it("catches an in-place handle-bounds mutation on the next derive", () => {
+    const { source, setEdgesStore, nodeLookup } = makeSource(
+      [{ id: "e1", source: "a", target: "b" }] as Edge[],
+      [internalNode("a", 0, 0), internalNode("b", 200, 100)],
+    );
+
+    createRoot((dispose) => {
+      const layouted = createLayoutedEdges(source);
+      flush();
+      const sourceXBefore = layouted.e1!.sourceX;
+
+      nodeLookup.get("a")!.internals.handleBounds!.source![0]!.x += 40;
+      setEdgesStore((draft) => {
+        draft[0]!.animated = true;
+      });
+      flush();
+
+      expect(layouted.e1!.sourceX).toBe(sourceXBefore + 40);
+      dispose();
+    });
+  });
+
+  it("re-elevates an edge when its own selected flag changes", () => {
+    const { source, setEdgesStore } = makeSource(
+      [{ id: "e1", source: "a", target: "b" }] as Edge[],
+      [internalNode("a", 0, 0), internalNode("b", 200, 100)],
+    );
+
+    createRoot((dispose) => {
+      const layouted = createLayoutedEdges(source);
+      flush();
+      const zBefore = layouted.e1!.zIndex ?? 0;
+
+      setEdgesStore((draft) => {
+        draft[0]!.selected = true;
+      });
+      flush();
+
+      expect(layouted.e1!.zIndex).toBe(zBefore + 1000);
+      dispose();
+    });
+  });
+
   it("derives once on creation and once per source change, read or not", () => {
     // Documents the actual laziness semantics on rc.1: the initial derive runs
     // at flush even with no readers, and each source change re-derives on
