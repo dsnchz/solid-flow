@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { createEffect, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 

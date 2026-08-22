@@ -1,8 +1,8 @@
 import type { JSX } from "@solidjs/web";
 import { type Context, merge, onCleanup, type ParentProps } from "solid-js";
 
+import { getDefaultFlowStateProps } from "~/core/defaults";
 import { createSolidFlow } from "~/data/createSolidFlow";
-import { getDefaultFlowStateProps } from "~/data/defaults";
 import type { Edge, Node } from "~/types";
 
 import { SolidFlowContext, type SolidFlowContextValue } from "../contexts/flow";

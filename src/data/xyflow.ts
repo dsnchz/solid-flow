@@ -11,7 +11,6 @@ import {
   isCoordinateExtent,
   type NodeBase,
   type NodeDimensionChange,
-  type NodeHandleBounds,
   type NodeOrigin,
   type NodePositionChange,
   nodeToRect,
@@ -22,19 +21,7 @@ import {
   type XYPosition,
 } from "@xyflow/system";
 
-/**
- * A measurement produced by {@link measureNodeInternals}, destined for the
- * measurements root. A `hidden` write clears the node's handle bounds (so
- * unhiding triggers a re-measure) without dropping its measured dimensions.
- */
-export type NodeMeasurementWrite =
-  | { id: string; hidden: true }
-  | {
-      id: string;
-      hidden?: undefined;
-      measured: { width: number; height: number };
-      handleBounds: NodeHandleBounds;
-    };
+import type { NodeMeasurementWrite } from "~/core";
 
 /**
  * The DOM side of the measurement pipeline (fork of @xyflow/system's

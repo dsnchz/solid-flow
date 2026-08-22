@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { Position } from "@xyflow/system";
 import { createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";

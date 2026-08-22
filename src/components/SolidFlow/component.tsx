@@ -17,8 +17,8 @@ import { EdgeRenderer, NodeRenderer, Pane, Viewport, Zoom } from "~/components/c
 import { ConnectionLine } from "~/components/graph/connection";
 import { NodeSelection, Selection } from "~/components/graph/selection";
 import { Attribution, KeyHandler } from "~/components/utility";
+import { getDefaultFlowStateProps } from "~/core/defaults";
 import { createSolidFlow } from "~/data/createSolidFlow";
-import { getDefaultFlowStateProps } from "~/data/defaults";
 import type { Edge, Node, PanOnScrollMode } from "~/types";
 import { toPxString } from "~/utils";
 

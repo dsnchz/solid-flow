@@ -6,9 +6,15 @@
  * The UI layer (src/components) subscribes to it and owns every DOM seam
  * (measurement ingest, gesture controllers, resize observers).
  *
- * Internal only — nothing here is exported from the package entrypoint until
- * the FlowState struct stabilizes.
+ * The FlowState/FlowCommands types (and connectionKey/ConnectionsRecord) are
+ * re-exported from the package entrypoint; the rest is internal.
  */
+export {
+  createFlowState,
+  type FlowStateInjections,
+  type MeasureRequestEntry,
+} from "./createFlowState";
+export { getDefaultFlowStateProps } from "./defaults";
 export { RecordMapFacade } from "./facades";
 export type { FlowCommands, FlowSelection, FlowState } from "./flowState";
 export {
@@ -25,6 +31,7 @@ export {
   isManualZIndexMode,
   type NodeMeasurement,
   type NodeMeasurements,
+  type NodeMeasurementWrite,
 } from "./projections/internalNodes";
 export { createLayoutedEdges, type LayoutedEdgesSource } from "./projections/layoutedEdges";
 export { createParentIds, type ParentIdsSource } from "./projections/parentIds";

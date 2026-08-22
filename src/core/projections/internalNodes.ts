@@ -43,6 +43,21 @@ export type NodeMeasurement = {
 };
 
 /**
+ * A measurement produced by the DOM ingest (measureNodeInternals), destined
+ * for the measurements root. A `hidden` write clears the node's handle bounds
+ * (so unhiding triggers a re-measure) without dropping its measured
+ * dimensions.
+ */
+export type NodeMeasurementWrite =
+  | { id: string; hidden: true }
+  | {
+      id: string;
+      hidden?: undefined;
+      measured: { width: number; height: number };
+      handleBounds: NodeHandleBounds;
+    };
+
+/**
  * The measurements root: DOM-derived state keyed by node id, kept OUTSIDE the
  * user graph. Keyed reconcile strips keys a derive doesn't produce, so state
  * that outlives a controlled nodes-array reset (measured dimensions, handle

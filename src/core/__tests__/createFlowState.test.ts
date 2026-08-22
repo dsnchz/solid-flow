@@ -1,10 +1,11 @@
+// @vitest-environment node
 import type { PanZoomInstance } from "@xyflow/system";
 import { createRoot, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Edge, Node } from "~/types";
 
-import { createSolidFlow } from "../createSolidFlow";
+import { createFlowState } from "../createFlowState";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },
@@ -17,17 +18,18 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
 const makeEdge = (overrides: Partial<Edge> & { id: string; source: string; target: string }) =>
   ({ ...overrides }) as Edge;
 
-// Async-aware harness: keeps the root alive until the (possibly async) run
-// callback settles. Writes happen outside the root's owned scope.
-const withFlow = async <T,>(
-  props: Parameters<typeof createSolidFlow>[0],
-  run: (flow: ReturnType<typeof createSolidFlow>) => T | Promise<T>,
+// Headless harness (node environment — no DOM, no injections): keeps the
+// root alive until the (possibly async) run callback settles. Writes happen
+// outside the root's owned scope.
+const withFlow = async <T>(
+  props: Parameters<typeof createFlowState>[0],
+  run: (flow: ReturnType<typeof createFlowState>) => T | Promise<T>,
 ): Promise<T> => {
-  let bundle!: ReturnType<typeof createSolidFlow>;
+  let bundle!: ReturnType<typeof createFlowState>;
   let dispose!: () => void;
   createRoot((d) => {
     dispose = d;
-    bundle = createSolidFlow(props);
+    bundle = createFlowState(props);
   });
   try {
     flush();
