@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Edge } from "~/types";
 
-import { connectionKey, createConnections } from "../connections";
+import { connectionKey, createConnections } from "../projections/connections";
 
 describe("createConnections (core, headless)", () => {
   it("indexes every edge under node, node-type, and node-type-handle keys", () => {

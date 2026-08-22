@@ -10,7 +10,7 @@ import {
   createInternalNodes,
   isManualZIndexMode,
   type NodeMeasurements,
-} from "../internalNodes";
+} from "../projections/internalNodes";
 
 // Headless core tests for the adoption projection: user nodes + the
 // measurements root derive into internal nodes without any DOM.

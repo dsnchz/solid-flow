@@ -22,25 +22,25 @@ export type UseSolidFlowReturn<
   EdgeType extends Edge = Edge,
 > = FlowCommands<NodeType, EdgeType> & {
   /** The flow's data graph as one reactive struct — the canonical read surface. */
-  flow: FlowState<NodeType, EdgeType>;
+  readonly flow: FlowState<NodeType, EdgeType>;
   /** The flow's write surface (same functions as the spread members). */
-  commands: FlowCommands<NodeType, EdgeType>;
+  readonly commands: FlowCommands<NodeType, EdgeType>;
   /** @deprecated Read `flow.internalNodes[id]` instead. */
-  getInternalNode: (id: string) => InternalNode<NodeType> | undefined;
+  readonly getInternalNode: (id: string) => InternalNode<NodeType> | undefined;
   /** @deprecated Read `flow.internalNodes[id]?.internals.userNode` (or find in `flow.nodes`) instead. */
-  getNode: (id: string) => NodeType | undefined;
+  readonly getNode: (id: string) => NodeType | undefined;
   /** @deprecated Read `flow.nodes` (or map ids over `flow.internalNodes`) instead. */
-  getNodes: (ids?: string[]) => NodeType[];
+  readonly getNodes: (ids?: string[]) => NodeType[];
   /** @deprecated Read `flow.edges` (or find by id) instead. */
-  getEdge: (id: string) => EdgeType | undefined;
+  readonly getEdge: (id: string) => EdgeType | undefined;
   /** @deprecated Read `flow.edges` (or filter by ids) instead. */
-  getEdges: (ids?: string[]) => EdgeType[];
+  readonly getEdges: (ids?: string[]) => EdgeType[];
   /** @deprecated Read `flow.viewport` instead. */
-  getViewport: () => Viewport;
+  readonly getViewport: () => Viewport;
   /** @deprecated Read `flow.viewport.zoom` instead. */
-  getZoom: () => number;
+  readonly getZoom: () => number;
   /** @deprecated Read `flow.connections[connectionKey(nodeId, type, id)]` (or use `useNodeConnections`) instead. */
-  getHandleConnections: (params: {
+  readonly getHandleConnections: (params: {
     type: HandleType;
     nodeId: string;
     id?: string | null;

@@ -96,81 +96,87 @@ export type FlowState<NodeType extends Node = Node, EdgeType extends Edge = Edge
 export type FlowCommands<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   // ── viewport ──
   /** Fits the view to the graph (or to `options.nodes`). */
-  fitView: (options?: FitViewOptions<NodeType>) => Promise<boolean>;
+  readonly fitView: (options?: FitViewOptions<NodeType>) => Promise<boolean>;
   /** Fits the view to the given bounds. */
-  fitBounds: (bounds: Rect, options?: FitBoundsOptions) => Promise<boolean>;
+  readonly fitBounds: (bounds: Rect, options?: FitBoundsOptions) => Promise<boolean>;
   /** Zooms in by 1.2. */
-  zoomIn: ZoomInOut;
+  readonly zoomIn: ZoomInOut;
   /** Zooms out by 1 / 1.2. */
-  zoomOut: ZoomInOut;
+  readonly zoomOut: ZoomInOut;
   /** Sets the zoom level. */
-  setZoom: (zoomLevel: number, options?: ViewportHelperFunctionOptions) => Promise<boolean>;
+  readonly setZoom: (
+    zoomLevel: number,
+    options?: ViewportHelperFunctionOptions,
+  ) => Promise<boolean>;
   /** Centers the view on the given flow position. */
-  setCenter: (x: number, y: number, options?: SetCenterOptions) => Promise<boolean>;
+  readonly setCenter: (x: number, y: number, options?: SetCenterOptions) => Promise<boolean>;
   /** Sets the viewport. */
-  setViewport: (viewport: Viewport, options?: ViewportHelperFunctionOptions) => Promise<boolean>;
+  readonly setViewport: (
+    viewport: Viewport,
+    options?: ViewportHelperFunctionOptions,
+  ) => Promise<boolean>;
   /** Pans the viewport by the given delta. */
-  panBy: (delta: XYPosition) => Promise<boolean>;
+  readonly panBy: (delta: XYPosition) => Promise<boolean>;
   /** Converts a screen/client position to a flow position. */
-  screenToFlowPosition: (
+  readonly screenToFlowPosition: (
     clientPosition: XYPosition,
     options?: { snapToGrid: boolean },
   ) => XYPosition;
   /** Converts a flow position to a screen/client position. */
-  flowToScreenPosition: (flowPosition: XYPosition) => XYPosition;
+  readonly flowToScreenPosition: (flowPosition: XYPosition) => XYPosition;
 
   // ── graph writes ──
   /** Appends one or many nodes. */
-  addNodes: (payload: NodeType[] | NodeType) => void;
+  readonly addNodes: (payload: NodeType[] | NodeType) => void;
   /** Appends one or many edges. */
-  addEdges: (payload: EdgeType[] | EdgeType) => void;
+  readonly addEdges: (payload: EdgeType[] | EdgeType) => void;
   /** Writes the nodes root (canonical Solid store setter — mutate the draft or return a new array). */
-  setNodes: StoreSetter<NodeType[]>;
+  readonly setNodes: StoreSetter<NodeType[]>;
   /** Writes the edges root (canonical Solid store setter — mutate the draft or return a new array). */
-  setEdges: StoreSetter<EdgeType[]>;
+  readonly setEdges: StoreSetter<EdgeType[]>;
   /** Merges (or replaces, with `options.replace`) a node by id. */
-  updateNode: (
+  readonly updateNode: (
     id: string,
     nodeUpdate: Partial<NodeType> | ((node: NodeType) => Partial<NodeType>),
     options?: { replace: boolean },
   ) => void;
   /** Merges (or replaces, with `options.replace`) a node's `data` by id. */
-  updateNodeData: (
+  readonly updateNodeData: (
     id: string,
     dataUpdate: Partial<NodeType["data"]> | ((node: NodeType) => Partial<NodeType["data"]>),
     options?: { replace: boolean },
   ) => void;
   /** Merges (or replaces, with `options.replace`) an edge by id. */
-  updateEdge: (
+  readonly updateEdge: (
     id: string,
     edgeUpdate: Partial<EdgeType> | ((edge: EdgeType) => Partial<EdgeType>),
     options?: { replace: boolean },
   ) => void;
   /** Deletes the given nodes/edges plus connected edges, honoring `onBeforeDelete`. */
-  deleteElements: (params: {
+  readonly deleteElements: (params: {
     nodes?: (Partial<NodeType> & { id: string })[];
     edges?: (Partial<EdgeType> & { id: string })[];
   }) => Promise<{ deletedNodes: NodeType[]; deletedEdges: EdgeType[] }>;
 
   // ── geometry & measurement ──
   /** All nodes intersecting the given node or rect. */
-  getIntersectingNodes: (
+  readonly getIntersectingNodes: (
     nodeOrRect: NodeType | { id: NodeType["id"] } | Rect,
     partially?: boolean,
     nodesToIntersect?: NodeType[],
   ) => NodeType[];
   /** Whether the given node or rect intersects the area. */
-  isNodeIntersecting: (
+  readonly isNodeIntersecting: (
     nodeOrRect: NodeType | { id: NodeType["id"] } | Rect,
     area: Rect,
     partially?: boolean,
   ) => boolean;
   /** The bounding rect of the given nodes (or node ids). */
-  getNodesBounds: (nodes: (NodeType | InternalNode<NodeType> | string)[]) => Rect;
+  readonly getNodesBounds: (nodes: (NodeType | InternalNode<NodeType> | string)[]) => Rect;
   /** Requests a DOM re-measure of the given node id(s). */
-  updateNodeInternals: (id: string | string[]) => void;
+  readonly updateNodeInternals: (id: string | string[]) => void;
 
   // ── serialization ──
   /** The nodes, edges, and viewport as a plain JSON-safe object. */
-  toObject: () => { nodes: NodeType[]; edges: EdgeType[]; viewport: Viewport };
+  readonly toObject: () => { nodes: NodeType[]; edges: EdgeType[]; viewport: Viewport };
 };

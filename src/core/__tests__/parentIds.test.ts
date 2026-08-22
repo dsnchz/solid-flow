@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Node } from "~/types";
 
-import { createParentIds } from "../parentIds";
+import { createParentIds } from "../projections/parentIds";
 
 const makeNode = (id: string, parentId?: string): Node => ({
   id,

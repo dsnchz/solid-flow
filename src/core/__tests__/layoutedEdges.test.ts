@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Edge, InternalNode, Node } from "~/types";
 
-import { createLayoutedEdges, type LayoutedEdgesSource } from "../layoutedEdges";
+import { createLayoutedEdges, type LayoutedEdgesSource } from "../projections/layoutedEdges";
 
 // Headless core test: the layout join runs entirely without a DOM. Internal
 // nodes are fed directly (simulating the adoption + measurement pipeline).

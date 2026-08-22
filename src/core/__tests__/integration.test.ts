@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 
 import type { Edge, Node } from "~/types";
 
-import { RecordMapFacade } from "../../facades";
-import { createInternalNodes, type NodeMeasurements } from "../internalNodes";
-import { createLayoutedEdges } from "../layoutedEdges";
+import { RecordMapFacade } from "../facades";
+import { createInternalNodes, type NodeMeasurements } from "../projections/internalNodes";
+import { createLayoutedEdges } from "../projections/layoutedEdges";
 
 const makeNode = (id: string, x: number): Node => ({
   id,
