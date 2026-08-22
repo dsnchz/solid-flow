@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { Edge, Node } from "~/types";
 
-import { createSolidFlow } from "./createSolidFlow";
+import { createSolidFlow } from "../createSolidFlow";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },
@@ -17,7 +17,7 @@ const makeEdge = (overrides: Partial<Edge> & { id: string; source: string; targe
 
 // The callback runs OUTSIDE the root's owned scope: signal writes (setConfig,
 // setPanZoom, ...) throw REACTIVE_WRITE_IN_OWNED_SCOPE when performed inside it.
-const withFlow = <T,>(
+const withFlow = <T>(
   props: Parameters<typeof createSolidFlow>[0],
   run: (flow: ReturnType<typeof createSolidFlow>) => T,
 ): T => {

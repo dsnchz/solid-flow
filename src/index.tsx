@@ -6,8 +6,7 @@ export {
   type FlowSelection,
   type FlowState,
 } from "./core";
-export { createEdgeStore } from "./data/createEdgeStore";
-export { createNodeStore } from "./data/createNodeStore";
+export { createEdgeStore, createNodeStore } from "./core";
 export * from "./hooks";
 
 // types

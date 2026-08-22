@@ -21,8 +21,8 @@ import { snapshot } from "solid-js";
 
 import { connectionKey } from "~/core";
 import { propDefaults } from "~/utils";
+import { getEdgeId } from "~/utils";
 
-import { getEdgeId } from "../../../data/utils";
 import type { Edge, InternalNode, Node, Position } from "../../../types";
 import { useInternalSolidFlow, useNodeId } from "../../contexts";
 import { useNodeConnectable } from "../../contexts/nodeConnectable";

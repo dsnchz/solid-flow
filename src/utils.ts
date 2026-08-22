@@ -66,3 +66,34 @@ export function propDefaults<T extends object, D extends Partial<T>>(
   }
   return out;
 }
+
+import {
+  type Connection,
+  type EdgeBase,
+  getNodesInside,
+  type NodeLookup,
+  type Transform,
+} from "@xyflow/system";
+
+import type { InternalNode } from "./types";
+
+export const getEdgeId = (connection: Connection | EdgeBase): string => {
+  const { source, sourceHandle, target, targetHandle } = connection;
+  return `xy-edge__${source}${sourceHandle || ""}-${target}${targetHandle || ""}`;
+};
+
+/** Viewport-culled node set (the #15 onlyRenderVisibleElements primitive). */
+export function getVisibleNodes<NodeType extends Node = Node>(
+  nodeLookup: NodeLookup<InternalNode<NodeType>>,
+  transform: Transform,
+  width: number,
+  height: number,
+): Map<string, InternalNode<NodeType>> {
+  const visibleNodes = new Map<string, InternalNode<NodeType>>();
+  getNodesInside(nodeLookup, { x: 0, y: 0, width: width, height: height }, transform, true).forEach(
+    (node) => {
+      visibleNodes.set(node.id, node);
+    },
+  );
+  return visibleNodes;
+}

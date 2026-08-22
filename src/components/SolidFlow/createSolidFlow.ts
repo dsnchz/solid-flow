@@ -8,13 +8,12 @@ import {
   StraightEdgeInternal,
 } from "~/components/graph/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "~/components/graph/node";
-import type { SolidFlowProps } from "~/components/SolidFlow/types";
-import { createFlowState } from "~/core";
+import { createFlowState, type MeasureRequestEntry } from "~/core";
 import type { BuiltInEdgeTypes, BuiltInNodeTypes, Edge, Node } from "~/types";
 import { scheduleIdleCallback } from "~/utils";
 
-import type { InternalUpdateEntry } from "./types";
-import { handleExpandParent, measureNodeInternals } from "./xyflow";
+import { handleExpandParent, measureNodeInternals } from "./measure";
+import type { SolidFlowProps } from "./types";
 
 export const InitialNodeTypesMap = {
   input: InputNode,
@@ -51,9 +50,9 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   // idle, and feed the results into the graph via the core seams. The order
   // matters: measurement writes flush first so parent expansion computes
   // against this pass's geometry, then the user-graph changes land.
-  let pendingEntries: InternalUpdateEntry[] | undefined = undefined;
+  let pendingEntries: MeasureRequestEntry[] | undefined = undefined;
 
-  const requestUpdateNodeInternals = (updateEntries: InternalUpdateEntry[]) => {
+  const requestUpdateNodeInternals = (updateEntries: MeasureRequestEntry[]) => {
     if (pendingEntries) {
       pendingEntries.push(...updateEntries);
       return;

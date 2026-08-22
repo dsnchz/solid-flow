@@ -14,11 +14,8 @@ import {
   type NodeOrigin,
   type NodePositionChange,
   nodeToRect,
-  type PanZoomInstance,
   type ParentExpandChild,
   type Rect,
-  type Transform,
-  type XYPosition,
 } from "@xyflow/system";
 
 import type { NodeMeasurementWrite } from "~/core";
@@ -232,45 +229,4 @@ export function handleExpandParent(
   }
 
   return changes;
-}
-
-export async function panBy({
-  delta,
-  panZoom,
-  transform,
-  translateExtent,
-  width,
-  height,
-}: {
-  delta: XYPosition;
-  panZoom: PanZoomInstance | null;
-  transform: Transform;
-  translateExtent: CoordinateExtent;
-  width: number;
-  height: number;
-}): Promise<boolean> {
-  if (!panZoom || (!delta.x && !delta.y)) {
-    return Promise.resolve(false);
-  }
-
-  const nextViewport = await panZoom.setViewportConstrained(
-    {
-      x: transform[0] + delta.x,
-      y: transform[1] + delta.y,
-      zoom: transform[2],
-    },
-    [
-      [0, 0],
-      [width, height],
-    ],
-    translateExtent,
-  );
-
-  const transformChanged =
-    !!nextViewport &&
-    (nextViewport.x !== transform[0] ||
-      nextViewport.y !== transform[1] ||
-      nextViewport.k !== transform[2]);
-
-  return Promise.resolve(transformChanged);
 }

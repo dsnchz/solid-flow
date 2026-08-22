@@ -18,12 +18,12 @@ import { ConnectionLine } from "~/components/graph/connection";
 import { NodeSelection, Selection } from "~/components/graph/selection";
 import { Attribution, KeyHandler } from "~/components/utility";
 import { getDefaultFlowStateProps } from "~/core/defaults";
-import { createSolidFlow } from "~/data/createSolidFlow";
 import type { Edge, Node, PanOnScrollMode } from "~/types";
 import { toPxString } from "~/utils";
 
 import { A11yDescriptions } from "../accessibility";
 import { SolidFlowContext, type SolidFlowContextValue } from "../contexts/flow";
+import { createSolidFlow } from "./createSolidFlow";
 import type { SolidFlowProps } from "./types";
 
 type SolidFlowComponentProps<
