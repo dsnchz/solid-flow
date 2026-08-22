@@ -43,8 +43,17 @@ To see it live at app scale: `bun run dev`, open
 
 ## Issue 2 — first nested projection derive registers ZERO dependencies
 
-Real browser only (does NOT reproduce in jsdom/node — same wiring passes
-there; that negative result is part of the report):
+Fully automated check (spawns its own dev server + HEADLESS Chrome; the bug
+needs real-browser scheduling — jsdom/node pass — but headless Chrome
+reproduces it):
+
+```sh
+node repro/check-dead-computed.mjs
+# on this branch: "rendered edges: 2 of 3 expected ... BUG REPRODUCED" (exit 0)
+# on the fixed `next` branch: 3 of 3 (exit 1)
+```
+
+Or watch it happen:
 
 ```sh
 bun run dev
@@ -72,3 +81,10 @@ return { row };
 — even though `buildRow` performs those same reads earlier in the same
 derive. Reads made early in the first nested derive fail to register; reads
 made at the end register. Diff against the fix: `git diff next -- src/`.
+
+## For automated analysis
+
+`AGENTS.md` at the repo root of this branch is a self-contained context pack:
+verification commands with expected outputs, the relevant source coordinates
+in this repo and inside `@solidjs/signals` (searchable internal function
+names), the full evidence chain, and what was ruled out.
