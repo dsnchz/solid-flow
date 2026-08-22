@@ -13,7 +13,6 @@ import {
   getNodePositionWithOrigin,
   getViewportForBounds,
   type Handle,
-  type HandleConnection,
   infiniteExtent,
   initialConnection,
   type InternalNodeBase,
@@ -57,7 +56,7 @@ import {
 } from "~/components/graph/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "~/components/graph/node";
 import type { SolidFlowProps } from "~/components/SolidFlow/types";
-import { createLayoutedEdges } from "~/core";
+import { createConnections, createEdgeLookup, createLayoutedEdges } from "~/core";
 import type {
   BuiltInEdgeTypes,
   BuiltInNodeTypes,
@@ -73,13 +72,7 @@ import { scheduleIdleCallback } from "~/utils";
 
 import { getDefaultFlowStateProps } from "./defaults";
 import type { InternalUpdateEntry } from "./types";
-import {
-  addConnectionToLookup,
-  adoptUserNodes,
-  calculateZ,
-  removeConnectionFromLookup,
-  updateChildNode,
-} from "./xyflow";
+import { adoptUserNodes, calculateZ, updateChildNode } from "./xyflow";
 
 export const InitialNodeTypesMap = {
   input: InputNode,
@@ -122,8 +115,6 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   const nodeLookup = new ReactiveMap<string, InternalNode<NodeType>>();
   const parentLookup = new ReactiveMap<string, Map<string, InternalNode<NodeType>>>();
-  const edgeLookup = new ReactiveMap<string, EdgeType>();
-  const connectionLookup = new ReactiveMap<string, Map<string, HandleConnection>>();
 
   const startNodesInitialized = untrack(() => {
     return adoptUserNodes(_props.nodes as NodeType[], nodeLookup, parentLookup, {
@@ -427,6 +418,20 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   const visibleNodeIds = createMemo(() => {
     return Array.from(visibleNodesMap().values()).map((edge) => edge.id);
+  });
+
+  // Edge-derived indexes (core projections): fully derived from the edges
+  // store — no write side, no GC, no adoption pipeline.
+  const edgeLookup = createEdgeLookup<EdgeType>({
+    get edges() {
+      return store.edges;
+    },
+  });
+
+  const connections = createConnections<EdgeType>({
+    get edges() {
+      return store.edges;
+    },
   });
 
   // Edge layout join (core projection): id-keyed record, row identity stable
@@ -754,7 +759,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const handleEdgeSelection = (id: string) => {
-    const edge = edgeLookup.get(id);
+    const edge = edgeLookup[id];
 
     if (!edge) {
       console.warn("012", errorMessages["error012"](id));
@@ -972,103 +977,13 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     },
   );
 
-  // Edge layout pipeline — same deliberate shape as the node adoption pipeline above
-  createRenderEffect(
-    mapArray(
-      () => store.edges,
-      (edge) => {
-        const {
-          source: sourceNodeId,
-          target: targetNodeId,
-          sourceHandle = null,
-          targetHandle = null,
-        } = edge;
-
-        const connection = {
-          edgeId: edge.id,
-          source: sourceNodeId,
-          target: targetNodeId,
-          sourceHandle,
-          targetHandle,
-        };
-
-        const sourceKey = `${sourceNodeId}-${sourceHandle}--${targetNodeId}-${targetHandle}`;
-        const targetKey = `${targetNodeId}-${targetHandle}--${sourceNodeId}-${sourceHandle}`;
-
-        createRenderEffect(
-          () => {
-            {
-              addConnectionToLookup(
-                "source",
-                connection,
-                targetKey,
-                connectionLookup,
-                sourceNodeId,
-                sourceHandle,
-              );
-
-              addConnectionToLookup(
-                "target",
-                connection,
-                sourceKey,
-                connectionLookup,
-                targetNodeId,
-                targetHandle,
-              );
-
-              edgeLookup.set(edge.id, edge);
-            }
-          },
-          () => {},
-        );
-
-        onCleanup(() => {
-          {
-            edgeLookup.delete(edge.id);
-
-            removeConnectionFromLookup(
-              "source",
-              targetKey,
-              connectionLookup,
-              sourceNodeId,
-              sourceHandle,
-            );
-
-            removeConnectionFromLookup(
-              "target",
-              sourceKey,
-              connectionLookup,
-              targetNodeId,
-              targetHandle,
-            );
-          }
-        });
-      },
-    ),
-    () => {},
-  );
-
-  createEffect(
-    () => {
-      return new Set(store.edges.map((e) => e.id));
-    },
-    (currentIds) => {
-      for (const id of untrack(() => Array.from(edgeLookup.keys()))) {
-        if (!currentIds.has(id)) {
-          edgeLookup.delete(id);
-          connectionLookup.delete(id);
-        }
-      }
-    },
-  );
-
   // TODO: Add viewportInitialized to store
   return {
     store,
     nodeLookup,
     edgeLookup,
     parentLookup,
-    connectionLookup,
+    connections,
     actions: {
       getEdge,
       applyInitialFitView,

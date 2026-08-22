@@ -35,7 +35,7 @@ export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element =
   const edgeId = useEdgeId();
 
   const isActive = () =>
-    typeof props.isVisible === "boolean" ? props.isVisible : !!edgeLookup.get(edgeId())?.selected;
+    typeof props.isVisible === "boolean" ? props.isVisible : !!edgeLookup[edgeId()]?.selected;
 
   const transform = () =>
     getEdgeToolbarTransform(

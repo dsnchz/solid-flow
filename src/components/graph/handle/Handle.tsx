@@ -19,6 +19,7 @@ import {
 import { createEffect, flush, omit, type ParentProps } from "solid-js";
 import { snapshot } from "solid-js";
 
+import { connectionKey } from "~/core";
 import { propDefaults } from "~/utils";
 
 import { getEdgeId } from "../../../data/utils";
@@ -44,10 +45,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     isConnectableEnd: true,
   });
 
-  const { store, nodeLookup, connectionLookup, actions } = useInternalSolidFlow<
-    NodeType,
-    EdgeType
-  >();
+  const { store, nodeLookup, connections, actions } = useInternalSolidFlow<NodeType, EdgeType>();
 
   const rest = omit(
     _props,
@@ -96,28 +94,30 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
 
   let prevConnections: Map<string, HandleConnection> | null = null;
 
-  // The compute wraps the map in a fresh object so the apply runs on every
-  // lookup mutation; the user callbacks fire from the (untracked) apply.
+  // The compute snapshots this handle's connection sub-record into a Map (the
+  // reads — key structure + leaves — are tracked there; leaves are immutable
+  // per key, so this re-runs exactly when the connection set changes). The
+  // user callbacks fire from the (untracked) apply.
   createEffect(
     () => {
       if (!_props.onConnect && !_props.onDisconnect) return null;
 
-      const connectionKey = `${nodeId()}-${_props.type}${_props.id ? `-${_props.id}` : ""}`;
-      return { connections: connectionLookup.get(connectionKey) };
+      const rec = connections[connectionKey(nodeId(), _props.type, _props.id)];
+      const map = new Map<string, HandleConnection>();
+      for (const key of Object.keys(rec ?? {})) map.set(key, { ...rec![key]! });
+      return { connections: map };
     },
     (current) => {
       if (!current) return;
 
-      const { connections } = current;
+      const { connections: next } = current;
 
-      if (prevConnections && !areConnectionMapsEqual(connections, prevConnections)) {
-        const _connections = connections ?? new Map();
-
-        handleConnectionChange(prevConnections, _connections, props.onDisconnect);
-        handleConnectionChange(_connections, prevConnections, props.onConnect);
+      if (prevConnections && !areConnectionMapsEqual(next, prevConnections)) {
+        handleConnectionChange(prevConnections, next, props.onDisconnect);
+        handleConnectionChange(next, prevConnections, props.onConnect);
       }
 
-      prevConnections = connections ?? new Map();
+      prevConnections = next;
     },
   );
 

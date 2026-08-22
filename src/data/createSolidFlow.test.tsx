@@ -64,10 +64,10 @@ describe("createSolidFlow", () => {
         nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })],
         edges: [makeEdge({ id: "e1", source: "a", target: "b" })],
       },
-      ({ edgeLookup, connectionLookup }) => {
-        expect(edgeLookup.get("e1")?.id).toBe("e1");
-        expect(connectionLookup.get("a")?.size).toBe(1);
-        expect(connectionLookup.get("b")?.size).toBe(1);
+      ({ edgeLookup, connections }) => {
+        expect(edgeLookup.e1?.id).toBe("e1");
+        expect(Object.keys(connections.a ?? {})).toHaveLength(1);
+        expect(Object.keys(connections.b ?? {})).toHaveLength(1);
       },
     );
   });
@@ -206,8 +206,8 @@ describe("createSolidFlow", () => {
         flush();
         expect(store.edges).toHaveLength(2);
         expect(store.edges[0]).toBe(existing);
-        expect(edgeLookup.has("e1")).toBe(true);
-        expect(edgeLookup.has("xy-edge__b-a")).toBe(true);
+        expect(edgeLookup.e1).toBeDefined();
+        expect(edgeLookup["xy-edge__b-a"]).toBeDefined();
       },
     );
   });
@@ -256,9 +256,9 @@ describe("createSolidFlow", () => {
         flush();
 
         expect(store.edges.map((e) => e.id)).toEqual(["e9"]);
-        expect(edgeLookup.has("e1")).toBe(false);
-        expect(edgeLookup.has("xy-edge__b-c")).toBe(false);
-        expect(edgeLookup.has("e9")).toBe(true);
+        expect(edgeLookup.e1).toBeUndefined();
+        expect(edgeLookup["xy-edge__b-c"]).toBeUndefined();
+        expect(edgeLookup.e9).toBeDefined();
       },
     );
   });

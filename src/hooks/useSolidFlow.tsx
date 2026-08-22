@@ -21,6 +21,7 @@ import {
 import { snapshot } from "solid-js";
 
 import { useInternalSolidFlow } from "~/components/contexts";
+import { connectionKey } from "~/core";
 import type { Edge, FitViewOptions, InternalNode, Node } from "~/types";
 import { isEdge, isNode } from "~/utils";
 
@@ -288,7 +289,7 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     id?: string | null;
   }) => HandleConnection[];
 } {
-  const { store, actions, nodeLookup, edgeLookup, connectionLookup } = useInternalSolidFlow<
+  const { store, actions, nodeLookup, edgeLookup, connections } = useInternalSolidFlow<
     NodeType,
     EdgeType
   >();
@@ -369,8 +370,9 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
     fitView: actions.fitView,
     getNode: (id) => getInternalNode(id)?.internals.userNode,
     getNodes: (ids) => (!ids ? store.nodes : getElements(nodeLookup, ids)),
-    getEdge: (id) => edgeLookup.get(id),
-    getEdges: (ids) => (!ids ? store.edges : getElements(edgeLookup, ids)),
+    getEdge: (id) => edgeLookup[id],
+    getEdges: (ids) =>
+      !ids ? store.edges : ids.flatMap((id) => (edgeLookup[id] ? [edgeLookup[id]!] : [])),
     addNodes,
     addEdges,
     getViewport: () => snapshot(store.viewport),
@@ -569,7 +571,7 @@ export function useSolidFlow<NodeType extends Node = Node, EdgeType extends Edge
       return getNodesBounds(nodes, { nodeLookup: nodeLookup, nodeOrigin: store.nodeOrigin });
     },
     getHandleConnections: ({ type, id, nodeId }) =>
-      Array.from(connectionLookup.get(`${nodeId}-${type}-${id ?? null}`)?.values() ?? []),
+      Object.values(connections[connectionKey(nodeId, type, id ?? null)] ?? {}),
   };
 }
 

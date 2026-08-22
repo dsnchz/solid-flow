@@ -3,6 +3,7 @@ import { type Accessor, createEffect, createSignal, useContext } from "solid-js"
 
 import { useInternalSolidFlow } from "~/components/contexts";
 import { NodeIdContext } from "~/components/contexts/nodeId";
+import { connectionKey } from "~/core";
 
 type UseNodeConnectionsParams = {
   id?: string;
@@ -27,7 +28,7 @@ type UseNodeConnectionsParams = {
 export const useNodeConnections = (
   params: Accessor<UseNodeConnectionsParams>,
 ): Accessor<NodeConnection[]> => {
-  const { connectionLookup } = useInternalSolidFlow();
+  const { connections: connectionsRecord } = useInternalSolidFlow();
 
   const ctxNodeId = () => {
     // useNodeConnections can be rendered outside of NodeWrapper, so we need to use the context directly.
@@ -41,19 +42,21 @@ export const useNodeConnections = (
 
   const [connections, setConnections] = createSignal<NodeConnection[]>([]);
 
-  const lookupKey = () =>
-    `${nodeId()}${type() ? (id() ? `-${type()}-${id()}` : `-${type()}`) : ""}`;
-
-  // The compute wraps the map in a fresh object so the apply runs on every
-  // lookup mutation; the diff gate below keeps the signal writes minimal.
+  // The compute snapshots the sub-record into a Map (key structure + leaves
+  // tracked there); the diff gate below keeps the signal writes minimal.
   let prevConnections: Map<string, NodeConnection> | undefined;
 
   createEffect(
-    () => ({ connections: connectionLookup.get(lookupKey()) }),
+    () => {
+      const rec = connectionsRecord[connectionKey(nodeId(), type(), id())];
+      const map = new Map<string, NodeConnection>();
+      for (const key of Object.keys(rec ?? {})) map.set(key, { ...rec![key]! });
+      return { connections: map };
+    },
     ({ connections: nextConnections }) => {
       if (!areConnectionMapsEqual(nextConnections, prevConnections)) {
         prevConnections = nextConnections;
-        setConnections(Array.from(nextConnections?.values() ?? []));
+        setConnections(Array.from(nextConnections.values()));
       }
     },
   );

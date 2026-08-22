@@ -6,7 +6,7 @@ export function useHandleEdgeSelect(): (id: string) => void {
   const { store, edgeLookup, actions } = useInternalSolidFlow();
 
   return (id: string) => {
-    const edge = edgeLookup.get(id);
+    const edge = edgeLookup[id];
 
     if (!edge) {
       console.warn("012", errorMessages["error012"](id));

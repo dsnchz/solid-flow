@@ -38,7 +38,7 @@ export type PaneProps = PaneEvents & {
 export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<PaneProps>,
 ): JSX.Element => {
-  const { store, nodeLookup, edgeLookup, connectionLookup, actions } = useInternalSolidFlow<
+  const { store, nodeLookup, edgeLookup, connections, actions } = useInternalSolidFlow<
     NodeType,
     EdgeType
   >();
@@ -184,11 +184,11 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     // We look for all edges connected to the selected nodes
     for (const nodeId of selectedNodeIds) {
-      const connections = connectionLookup.get(nodeId);
-      if (!connections) continue;
+      const nodeConnections = connections[nodeId];
+      if (!nodeConnections) continue;
 
-      for (const { edgeId } of connections.values()) {
-        const edge = edgeLookup.get(edgeId);
+      for (const { edgeId } of Object.values(nodeConnections)) {
+        const edge = edgeLookup[edgeId];
         if (edge && (edge.selectable ?? edgesSelectable)) {
           selectedEdgeIds.add(edgeId);
         }

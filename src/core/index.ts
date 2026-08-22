@@ -9,4 +9,11 @@
  * Internal only — nothing here is exported from the package entrypoint until
  * the FlowState struct stabilizes.
  */
+export {
+  connectionKey,
+  type ConnectionsRecord,
+  type ConnectionsSource,
+  createConnections,
+} from "./projections/connections";
+export { createEdgeLookup, type EdgeLookupSource } from "./projections/edgeLookup";
 export { createLayoutedEdges, type LayoutedEdgesSource } from "./projections/layoutedEdges";

@@ -1,14 +1,12 @@
 import {
   clampPosition,
   clampPositionToParent,
-  type ConnectionLookup,
   type CoordinateExtent,
   getBoundsOfRects,
   getDimensions,
   getHandleBounds,
   getNodeDimensions,
   getNodePositionWithOrigin,
-  type HandleConnection,
   infiniteExtent,
   type InternalNodeBase,
   type InternalNodeUpdate,
@@ -28,7 +26,6 @@ import {
   type XYPosition,
   type ZIndexMode,
 } from "@xyflow/system";
-import { untrack } from "solid-js";
 
 const SELECTED_NODE_Z = 1000;
 const ROOT_PARENT_Z_INCREMENT = 10;
@@ -539,71 +536,4 @@ export async function panBy({
       nextViewport.k !== transform[2]);
 
   return Promise.resolve(transformChanged);
-}
-
-/**
- * this function adds the connection to the connectionLookup
- * at the following keys: nodeId-type-handleId, nodeId-type and nodeId
- * @param type type of the connection
- * @param connection connection that should be added to the lookup
- * @param connectionKey at which key the connection should be added
- * @param connectionLookup reference to the connection lookup
- * @param nodeId nodeId of the connection
- * @param handleId handleId of the conneciton
- */
-export function addConnectionToLookup(
-  type: "source" | "target",
-  connection: HandleConnection,
-  connectionKey: string,
-  connectionLookup: ConnectionLookup,
-  nodeId: string,
-  handleId: string | null,
-) {
-  /*
-   * We add the connection to the connectionLookup at the following keys
-   * 1. nodeId, 2. nodeId-type, 3. nodeId-type-handleId
-   * The stored maps are treated as immutable snapshots: ReactiveMap only
-   * notifies subscribers of set() when the VALUE identity changes, and
-   * readers (Handle callbacks, useNodeConnections) keep references to the
-   * previous map for diffing — mutating in place would both skip the
-   * notification and corrupt those diffs.
-   */
-  // untrack: this is a read-for-write — the callers are effects, and a
-  // tracked read of the key being written would retrigger them forever
-  const add = (key: string) => {
-    const next = new Map(untrack(() => connectionLookup.get(key)));
-    next.set(connectionKey, connection);
-    connectionLookup.set(key, next);
-  };
-
-  add(nodeId);
-  add(`${nodeId}-${type}`);
-  if (handleId) add(`${nodeId}-${type}-${handleId}`);
-}
-
-export function removeConnectionFromLookup(
-  type: "source" | "target",
-  connectionKey: string,
-  connectionLookup: ConnectionLookup,
-  nodeId: string,
-  handleId: string | null,
-) {
-  // Same immutable-snapshot discipline as addConnectionToLookup
-  const remove = (key: string) => {
-    const current = untrack(() => connectionLookup.get(key));
-    if (!current) return;
-
-    const next = new Map(current);
-    next.delete(connectionKey);
-
-    if (next.size === 0) {
-      connectionLookup.delete(key);
-    } else {
-      connectionLookup.set(key, next);
-    }
-  };
-
-  remove(nodeId);
-  remove(`${nodeId}-${type}`);
-  if (handleId) remove(`${nodeId}-${type}-${handleId}`);
 }

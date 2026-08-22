@@ -44,7 +44,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     throw new Error("[solid-flow]: EdgeReconnectAnchor must be used within an Edge component");
   }
 
-  const edge = () => edgeLookup.get(edgeId())!;
+  const edge = () => edgeLookup[edgeId()]!;
 
   const onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0) {
