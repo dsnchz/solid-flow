@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SolidFlow } from "~/components/SolidFlow";
 import type { Node } from "~/types";
 
-import type { PaneProps } from "./Pane";
+import type { PaneProps } from "../Pane";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { useSolidFlow } from "~/hooks/useSolidFlow";
 import type { Edge, Node, OnSelectionChange } from "~/types";
 
-import { SolidFlow } from "./SolidFlow";
+import { SolidFlow } from "..";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },

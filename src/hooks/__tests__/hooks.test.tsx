@@ -6,11 +6,11 @@ import { describe, expect, it, vi } from "vitest";
 import { SolidFlow } from "~/components/SolidFlow";
 import type { Node } from "~/types";
 
-import { useColorMode } from "./useColorMode";
-import { useEdges, useNodes, useViewport } from "./useGraph";
-import { useNodesInitialized, useViewportInitialized } from "./useInitialized";
-import { useNodeConnections } from "./useNodeConnections";
-import { useSolidFlow } from "./useSolidFlow";
+import { useColorMode } from "../useColorMode";
+import { useEdges, useNodes, useViewport } from "../useGraph";
+import { useNodesInitialized, useViewportInitialized } from "../useInitialized";
+import { useNodeConnections } from "../useNodeConnections";
+import { useSolidFlow } from "../useSolidFlow";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },
