@@ -5,7 +5,7 @@ import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
 // We exclude the server directory because we use Bun (not Vitest) to run those tests
 const TEST_EXCLUDES = [
   ...configDefaults.exclude,
-  "src/index.tsx",
+  "src/index.ts",
   "src/mocks",
   "public",
   "server",

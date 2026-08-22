@@ -63,7 +63,7 @@ export default defineConfig((cli) => {
     // Solid-compiled ESM + type declarations (the `import` condition)
     {
       ...shared,
-      entry: { "index/index": "src/index.tsx" },
+      entry: { "index/index": "src/index.ts" },
       dts: true,
       plugins: [solidNativeCompiler()],
       // The stylesheet is a tree of relative `@import`s into src/components,
@@ -101,7 +101,7 @@ export default defineConfig((cli) => {
     // so SolidStart/SSR can compile the JSX with the right generate mode
     {
       ...shared,
-      entry: { "index/index": "src/index.tsx" },
+      entry: { "index/index": "src/index.ts" },
       dts: false,
       inputOptions: { transform: { jsx: "preserve" } },
       outExtensions: () => ({ js: ".jsx" }),
