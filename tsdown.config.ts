@@ -27,11 +27,35 @@ export default defineConfig((cli) => {
       entry: { "index/index": "src/index.tsx" },
       dts: true,
       plugins: [solid()],
-      // `copy` treats `to` as a directory, so rename the stylesheet ourselves
+      // The stylesheet is a tree of relative `@import`s into src/components,
+      // which are NOT shipped — a plain copy publishes dead imports (the 0.2.3
+      // regression). Inline the whole tree into one flat file, as the tsup
+      // pipeline used to.
       onSuccess: async () => {
-        const { mkdir, copyFile } = await import("node:fs/promises");
+        const { mkdir, readFile, writeFile } = await import("node:fs/promises");
+        const { dirname, join, relative } = await import("node:path");
+
+        const inlineCss = async (file: string): Promise<string> => {
+          const source = await readFile(file, "utf8");
+          const parts: string[] = [];
+          for (const line of source.split("\n")) {
+            const match = /^@import\s+"(.+)";\s*$/.exec(line.trim());
+            if (match) {
+              const target = join(dirname(file), match[1]!);
+              parts.push(`/* ${relative(".", target)} */`, await inlineCss(target));
+            } else {
+              parts.push(line);
+            }
+          }
+          return parts.join("\n");
+        };
+
         await mkdir("dist/styles", { recursive: true });
-        await copyFile("src/styles/style.css", "dist/styles/index.css");
+        const bundled = await inlineCss("src/styles/style.css");
+        if (bundled.includes("@import")) {
+          throw new Error("dist/styles/index.css still contains @import after inlining");
+        }
+        await writeFile("dist/styles/index.css", bundled);
       },
     },
     // Type-stripped, JSX-preserved build for the `solid` export condition,
