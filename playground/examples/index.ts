@@ -7,6 +7,7 @@ export { CustomNode } from "./custom-node/page";
 export { Dagre } from "./dagre/page";
 export { DragNDrop } from "./drag-n-drop/page";
 export { EasyConnect } from "./easy-connect/page";
+export { EdgeReconnect } from "./edge-reconnect/page";
 export { Edges } from "./edges/page";
 export { HandleConnect } from "./handle-connect/page";
 export { Interaction } from "./interaction/page";

@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { ConnectionMode, type HandleType, XYHandle, type XYPosition } from "@xyflow/system";
-import { createSignal, omit, type ParentProps, Show } from "solid-js";
+import { createSignal, flush, omit, type ParentProps, Show } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
 import type { Edge } from "@/types";
@@ -14,7 +14,12 @@ export type EdgeReconnectAnchorProps = {
   readonly style?: JSX.CSSProperties;
   readonly position?: XYPosition;
   readonly size?: number;
+  /** Externally mark the anchor as reconnecting (hides its children), in
+   * addition to the gesture-driven internal state. */
   readonly reconnecting?: boolean;
+  /** Called when a reconnect gesture on this anchor starts/ends — the Solid
+   * translation of Svelte Flow's `bind:reconnecting`. */
+  readonly onReconnectingChange?: (reconnecting: boolean) => void;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
 /** Grab area that lets an edge end be dragged off its handle and reconnected. */
@@ -33,6 +38,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     "position",
     "size",
     "reconnecting",
+    "onReconnectingChange",
     "children",
   );
 
@@ -46,13 +52,19 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
   }
 
   const edge = () => edgeLookup[edgeId()]!;
+  const isReconnecting = () => _props.reconnecting || reconnecting();
+
+  const setReconnectingState = (next: boolean) => {
+    setReconnecting(next);
+    _props.onReconnectingChange?.(next);
+  };
 
   const onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0) {
       return;
     }
 
-    setReconnecting(true);
+    setReconnectingState(true);
     store.onReconnectStart?.(event, edge(), _props.type);
 
     const opposite =
@@ -82,7 +94,13 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
       edgeUpdaterType: opposite.type,
       cancelConnection: actions.cancelConnection,
       panBy: actions.panBy,
-      updateConnection: actions.setConnection,
+      // XYHandle reads connection state back synchronously in the same task
+      // (same seam as Handle.tsx) — without the flush, fromHandle stays null
+      // and the gesture never matches a drop handle.
+      updateConnection: (connection) => {
+        actions.setConnection(connection);
+        flush();
+      },
       isValidConnection: store.isValidConnection,
       onConnectStart: store.onConnectStart,
       onConnectEnd: store.onConnectEnd,
@@ -97,7 +115,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
         store.onReconnect?.(edge(), connection);
       },
       onReconnectEnd: (event, connectionState) => {
-        setReconnecting(false);
+        setReconnectingState(false);
         store.onReconnectEnd?.(event, edge(), opposite.type, connectionState);
       },
       getTransform: () => store.transform,
@@ -127,7 +145,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
           ..._props.style,
         }}
       >
-        <Show when={!reconnecting()}>{_props.children}</Show>
+        <Show when={!isReconnecting()}>{_props.children}</Show>
       </div>
     </EdgeLabel>
   );
