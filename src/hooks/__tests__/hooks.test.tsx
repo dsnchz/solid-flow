@@ -4,11 +4,13 @@ import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
+import { useNodeId } from "@/hooks";
 import type { Node } from "@/types";
 
 import { useColorMode } from "../useColorMode";
 import { useEdges, useNodes, useViewport } from "../useGraph";
 import { useNodesInitialized, useViewportInitialized } from "../useInitialized";
+import { useInternalNode } from "../useInternalNode";
 import { useNodeConnections } from "../useNodeConnections";
 import { useSolidFlow } from "../useSolidFlow";
 
@@ -156,6 +158,49 @@ describe("hooks", () => {
     await tick();
 
     expect(read!()).toBe(true);
+  });
+
+  it("useInternalNode resolves the enriched node through an id accessor", async () => {
+    let read!: ReturnType<typeof useInternalNode>;
+
+    renderWithFlow(() => {
+      read = useInternalNode(() => "a");
+      return null;
+    });
+    await tick();
+
+    expect(read()?.id).toBe("a");
+    expect(read()?.internals.positionAbsolute).toEqual({ x: 0, y: 0 });
+  });
+
+  it("useNodeId resolves the surrounding node inside a custom node component", async () => {
+    let seenId: string | undefined;
+
+    const ProbeNode = () => {
+      seenId = useNodeId()();
+      return <div>probe</div>;
+    };
+
+    render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "a", type: "probe" })]}
+        edges={[]}
+        nodeTypes={{ probe: ProbeNode }}
+        width={800}
+        height={600}
+      />
+    ));
+    await tick();
+
+    expect(seenId).toBe("a");
+  });
+
+  it("useNodeId throws outside a node subtree", async () => {
+    renderWithFlow(() => {
+      expect(() => useNodeId()).toThrow(/inside a node component/);
+      return null;
+    });
+    await tick();
   });
 
   it("useSolidFlow exposes the graph through flow", async () => {

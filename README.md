@@ -184,7 +184,25 @@ const nodeData = useNodesData(["node-1", "node-2"]);
 
 // Node connection information
 const connections = useNodeConnections("node-1");
+
+// Which node/edge a nested component is rendered inside (for building
+// composable custom nodes and edge labels without prop drilling)
+const nodeId = useNodeId();
+const edgeId = useEdgeId();
 ```
+
+#### Coming from React Flow?
+
+Some React Flow hooks intentionally have no Solid Flow equivalent, because
+Solid's fine-grained reactivity makes them unnecessary:
+
+- `useOnSelectionChange` / `useOnViewportChange` — reading `flow.selection`
+  or `flow.viewport` (from `useSolidFlow()`) in a tracked scope IS the
+  subscription; wrap side effects in `createEffect` over those reads.
+- `useNodesState` / `useEdgesState` — use `createNodeStore` /
+  `createEdgeStore` instead.
+- `useStore` — the reactive `flow` struct is the supported read surface;
+  there is no public escape hatch into internals.
 
 ### Utility Functions
 
