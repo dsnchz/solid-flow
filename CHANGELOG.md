@@ -1,5 +1,19 @@
 # @dschz/solid-flow
 
+## 0.2.5
+
+### Patch Changes
+
+- 0028f20: Fix the in-progress connection line clipping at a hard boundary and
+  rendering beneath nodes: a mangled CSS selector (`connectionline` instead of
+  `.solid-flow__connectionline`) meant the line's svg never received
+  `overflow: visible`, `z-index: 1001`, or `position: absolute`, so the path
+  scissored at the svg box (flow-origin) and its near-node segment hid behind
+  the node body.
+- f8a1a46: Fix the `cross` background variant rendering as a blank pane: a flat
+  `size: 1` prop default preempted the per-variant default size (cross needs
+  6), shrinking each cross to an invisible ~1px speck.
+
 ## 0.2.4
 
 ### Patch Changes
