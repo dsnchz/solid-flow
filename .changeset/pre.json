@@ -8,6 +8,7 @@
     "css-export-bundling",
     "flowstate-struct-api",
     "solid-2-migration",
-    "sub-store-performance"
+    "sub-store-performance",
+    "viewport-culling-default"
   ]
 }
