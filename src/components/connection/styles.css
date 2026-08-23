@@ -8,7 +8,7 @@
   --xy-connectionline-stroke-width-default: 1;
 }
 
-connectionline {
+.solid-flow__connectionline {
   z-index: 1001;
   overflow: visible;
   position: absolute;
