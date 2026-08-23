@@ -29,7 +29,10 @@ export type Node<
   ariaRole?: JSX.HTMLAttributes<HTMLDivElement>["role"];
 
   /**
-   * General escape hatch for adding custom attributes to the node's DOM element.
+   * General escape hatch for adding custom attributes to the node's DOM
+   * element. Event handlers, refs, and content-injection props are excluded
+   * (Svelte Flow parity: their omit of `keyof DOMAttributes`); interaction
+   * belongs on the node component, not here.
    */
   domAttributes?: Omit<
     JSX.HTMLAttributes<HTMLDivElement>,
@@ -39,7 +42,12 @@ export type Node<
     | "draggable"
     | "role"
     | "aria-label"
-    | keyof JSX.HTMLAttributes<HTMLDivElement>
+    | "innerHTML"
+    | "textContent"
+    | "children"
+    | keyof JSX.CustomAttributes<HTMLDivElement>
+    | keyof JSX.EventHandlersElement<HTMLDivElement>
+    | keyof JSX.EventHandlersWindow<HTMLDivElement>
   >;
 };
 
