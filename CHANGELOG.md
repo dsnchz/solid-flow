@@ -1,5 +1,13 @@
 # @dschz/solid-flow
 
+## 0.3.0-next.3
+
+### Patch Changes
+
+- Documentation: every exported symbol now carries JSDoc, including documented
+  re-declarations of the `@xyflow/system` types whose upstream declarations are
+  undocumented (new `types/system` module). No runtime changes.
+
 ## 0.3.0-next.2
 
 ### Minor Changes
