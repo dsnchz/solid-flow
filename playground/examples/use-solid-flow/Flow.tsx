@@ -3,17 +3,8 @@ import { For } from "solid-js";
 import { useEdges, useNodes, useSolidFlow, useViewport } from "@/index";
 
 export const Flow = () => {
-  const {
-    zoomIn,
-    zoomOut,
-    setZoom,
-    fitView,
-    setCenter,
-    setViewport,
-    getViewport,
-    toObject,
-    deleteElements,
-  } = useSolidFlow();
+  const { zoomIn, zoomOut, setZoom, fitView, setCenter, setViewport, toObject, deleteElements } =
+    useSolidFlow();
 
   const nodes = useNodes();
   const edges = useEdges();
@@ -76,7 +67,7 @@ export const Flow = () => {
       </button>
       <button
         style={{ display: "block", "margin-bottom": "0.5rem", "font-size": "12px" }}
-        onClick={() => console.log(getViewport())}
+        onClick={() => console.log({ ...viewport() })}
       >
         getViewport
       </button>

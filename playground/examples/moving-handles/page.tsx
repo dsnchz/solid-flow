@@ -21,14 +21,14 @@ const nodeTypes = {
 
 const NodeUpdater = () => {
   const connection = useConnection();
-  const { getNodes } = useSolidFlow();
+  const { flow } = useSolidFlow();
   const updateNodeInternals = useUpdateNodeInternals();
 
   createEffect(
     () => {
       if (connection()) {
         const startTime = Date.now();
-        const nodeIds = getNodes().map((n) => n.id);
+        const nodeIds = flow.nodes.map((n) => n.id);
 
         const update = () => {
           if (Date.now() - startTime < 500) {

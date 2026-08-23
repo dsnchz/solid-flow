@@ -33,7 +33,7 @@ export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">
 /** Toolbar attached to a node, rendered above the graph so it does not scale with zoom. */
 export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) => {
   const { store } = useInternalSolidFlow();
-  const { getNodes, getNodesBounds, getInternalNode } = useSolidFlow();
+  const { flow, getNodesBounds } = useSolidFlow();
 
   const _props = propDefaults(props, {
     offset: 10,
@@ -63,7 +63,7 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
     const nodeIds = Array.isArray(_props.nodeId) ? _props.nodeId : [_props.nodeId ?? ctxNodeId()];
 
     return nodeIds.reduce<InternalNode[]>((res, nodeId) => {
-      const node = getInternalNode(nodeId);
+      const node = flow.internalNodes[nodeId];
       if (node) res.push(node);
       return res;
     }, []);
@@ -88,7 +88,7 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
     return nodes.length === 0 ? 1 : Math.max(...nodes.map((node) => (node.internals.z || 5) + 1));
   };
 
-  const selectedNodesCount = () => getNodes().filter((node) => node.selected).length;
+  const selectedNodesCount = () => flow.selection.nodes.length;
 
   const isActive = () => {
     const nodes = toolbarNodes();

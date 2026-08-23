@@ -61,7 +61,7 @@ describe("useSolidFlow: { flow, commands }", () => {
     expect(checked).toBe(true);
   });
 
-  it("flow reads and commands writes round-trip; deprecated getters still work", async () => {
+  it("flow reads and commands writes round-trip", async () => {
     let api!: ReturnType<typeof useSolidFlow>;
 
     renderWithFlow(() => {
@@ -74,12 +74,11 @@ describe("useSolidFlow: { flow, commands }", () => {
     await tick();
 
     expect(api.flow.internalNodes.a?.data).toMatchObject({ label: "updated" });
-    // deprecated aliases keep working through the deprecation cycle
-    expect(api.getNode("a")?.data).toMatchObject({ label: "updated" });
-    expect(api.getNodes().map((n) => n.id)).toEqual(["a"]);
-    expect(api.getViewport()).toEqual(api.flow.viewport);
-    expect(api.getZoom()).toBe(api.flow.viewport.zoom);
-    expect(api.getInternalNode("a")).toBe(api.flow.internalNodes.a);
+    expect(api.flow.internalNodes.a?.internals.userNode.data).toMatchObject({ label: "updated" });
+    expect(api.flow.nodes.map((n) => n.id)).toEqual(["a"]);
+    // the deprecated imperative getters are gone: flow IS the read surface
+    expect("getNode" in api).toBe(false);
+    expect("getViewport" in api).toBe(false);
   });
 });
 
@@ -159,7 +158,7 @@ describe("hooks", () => {
     expect(read!()).toBe(true);
   });
 
-  it("useSolidFlow exposes graph helpers", async () => {
+  it("useSolidFlow exposes the graph through flow", async () => {
     let helpers: ReturnType<typeof useSolidFlow> | undefined;
 
     renderWithFlow(() => {
@@ -168,9 +167,9 @@ describe("hooks", () => {
     });
     await tick();
 
-    expect(helpers!.getNode("a")?.id).toBe("a");
-    expect(helpers!.getNodes().map((n) => n.id)).toEqual(["a"]);
-    expect(helpers!.getEdges()).toHaveLength(0);
+    expect(helpers!.flow.internalNodes.a?.id).toBe("a");
+    expect(helpers!.flow.nodes.map((n) => n.id)).toEqual(["a"]);
+    expect(helpers!.flow.edges).toHaveLength(0);
   });
 
   it("useNodeConnections tracks connections for a node as edges come and go", async () => {

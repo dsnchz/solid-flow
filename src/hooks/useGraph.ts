@@ -10,7 +10,7 @@ import type { Edge, Node } from "@/types";
  * @public
  * @returns store with an array of nodes
  */
-export function useNodes<NodeType extends Node = Node>(): Accessor<NodeType[]> {
+export function useNodes<NodeType extends Node = Node>(): Accessor<readonly NodeType[]> {
   const { store } = useInternalSolidFlow<NodeType>();
   return () => store.nodes;
 }
@@ -21,7 +21,7 @@ export function useNodes<NodeType extends Node = Node>(): Accessor<NodeType[]> {
  * @public
  * @returns store with an array of edges
  */
-export function useEdges<EdgeType extends Edge = Edge>(): Accessor<EdgeType[]> {
+export function useEdges<EdgeType extends Edge = Edge>(): Accessor<readonly EdgeType[]> {
   const { store } = useInternalSolidFlow<Node, EdgeType>();
   return () => store.edges;
 }

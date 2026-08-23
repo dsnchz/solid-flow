@@ -19,7 +19,7 @@ const HEADER_STYLE = {
 
 export const AppStateBar = () => {
   const [example, setExample] = useExampleParam();
-  const { getNodes, getEdges } = useSolidFlow();
+  const { flow } = useSolidFlow();
 
   const exampleKey = () => (example() as keyof typeof SolidFlowExamplesMap) || "Overview";
 
@@ -40,8 +40,8 @@ export const AppStateBar = () => {
         </For>
       </select>
       <div style={{ "margin-left": "auto", display: "flex", gap: "1rem" }}>
-        <div>Nodes: {getNodes().length}</div>
-        <div>Edges: {getEdges().length}</div>
+        <div>Nodes: {flow.nodes.length}</div>
+        <div>Edges: {flow.edges.length}</div>
       </div>
     </header>
   );

@@ -1,9 +1,6 @@
-import type { HandleConnection, HandleType, Viewport } from "@xyflow/system";
-import { snapshot } from "solid-js";
-
 import { useInternalSolidFlow } from "@/contexts";
-import { connectionKey, type FlowCommands, type FlowState } from "@/core";
-import type { Edge, InternalNode, Node } from "@/types";
+import type { FlowCommands, FlowState } from "@/core";
+import type { Edge, Node } from "@/types";
 
 /**
  * The canonical flow API: the reactive {@link FlowState} struct plus the
@@ -12,10 +9,10 @@ import type { Edge, InternalNode, Node } from "@/types";
  * familiarity — `useSolidFlow().fitView()` and
  * `useSolidFlow().commands.fitView()` are the same function.
  *
- * The imperative getters are deprecated: event handlers are untracked scopes
- * in Solid, so reading `flow.viewport.zoom` (or `flow.internalNodes[id]`)
- * inside one already IS the imperative read — no wrapper needed — while the
- * same read in a tracked scope subscribes.
+ * There are no imperative getters: event handlers are untracked scopes in
+ * Solid, so reading `flow.viewport.zoom` (or `flow.internalNodes[id]`) inside
+ * one already IS the imperative read — while the same read in a tracked scope
+ * subscribes.
  */
 export type UseSolidFlowReturn<
   NodeType extends Node = Node,
@@ -25,26 +22,6 @@ export type UseSolidFlowReturn<
   readonly flow: FlowState<NodeType, EdgeType>;
   /** The flow's write surface (same functions as the spread members). */
   readonly commands: FlowCommands<NodeType, EdgeType>;
-  /** @deprecated Read `flow.internalNodes[id]` instead. */
-  readonly getInternalNode: (id: string) => InternalNode<NodeType> | undefined;
-  /** @deprecated Read `flow.internalNodes[id]?.internals.userNode` (or find in `flow.nodes`) instead. */
-  readonly getNode: (id: string) => NodeType | undefined;
-  /** @deprecated Read `flow.nodes` (or map ids over `flow.internalNodes`) instead. */
-  readonly getNodes: (ids?: string[]) => NodeType[];
-  /** @deprecated Read `flow.edges` (or find by id) instead. */
-  readonly getEdge: (id: string) => EdgeType | undefined;
-  /** @deprecated Read `flow.edges` (or filter by ids) instead. */
-  readonly getEdges: (ids?: string[]) => EdgeType[];
-  /** @deprecated Read `flow.viewport` instead. */
-  readonly getViewport: () => Viewport;
-  /** @deprecated Read `flow.viewport.zoom` instead. */
-  readonly getZoom: () => number;
-  /** @deprecated Read `flow.connections[connectionKey(nodeId, type, id)]` (or use `useNodeConnections`) instead. */
-  readonly getHandleConnections: (params: {
-    type: HandleType;
-    nodeId: string;
-    id?: string | null;
-  }) => HandleConnection[];
 };
 
 /**
@@ -55,35 +32,17 @@ export type UseSolidFlowReturn<
  * `const { flow, commands } = useSolidFlow()`.
  *
  * @public
- * @returns the flow's read struct, write surface, and deprecated aliases
+ * @returns the flow's read struct and write surface
  */
 export function useSolidFlow<
   NodeType extends Node = Node,
   EdgeType extends Edge = Edge,
 >(): UseSolidFlowReturn<NodeType, EdgeType> {
-  const { flow, commands, store, edgeLookup } = useInternalSolidFlow<NodeType, EdgeType>();
-
-  const getInternalNode = (id: string) => flow.internalNodes[id];
+  const { flow, commands } = useInternalSolidFlow<NodeType, EdgeType>();
 
   return {
     ...commands,
     flow,
     commands,
-    getInternalNode,
-    getNode: (id) => getInternalNode(id)?.internals.userNode,
-    getNodes: (ids) =>
-      !ids
-        ? [...flow.nodes]
-        : ids.flatMap((id) => {
-            const userNode = flow.internalNodes[id]?.internals.userNode;
-            return userNode ? [userNode] : [];
-          }),
-    getEdge: (id) => edgeLookup[id],
-    getEdges: (ids) =>
-      !ids ? [...flow.edges] : ids.flatMap((id) => (edgeLookup[id] ? [edgeLookup[id]!] : [])),
-    getViewport: () => snapshot(store.viewport),
-    getZoom: () => flow.viewport.zoom,
-    getHandleConnections: ({ type, id, nodeId }) =>
-      Object.values(flow.connections[connectionKey(nodeId, type, id ?? null)] ?? {}),
   };
 }
