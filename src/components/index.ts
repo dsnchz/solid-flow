@@ -5,4 +5,5 @@ export * from "./handle";
 export * from "./marker";
 export * from "./node";
 export * from "./selection";
-export * from "./SolidFlow";
+export { SolidFlow } from "./SolidFlow";
+export { SolidFlowProvider } from "./SolidFlowProvider";

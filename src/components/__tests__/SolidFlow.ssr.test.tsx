@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Edge, Node } from "@/types";
 
-import { SolidFlow } from "..";
+import { SolidFlow } from "../SolidFlow";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },

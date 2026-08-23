@@ -24,7 +24,7 @@ import type { SolidFlowProps } from "@/core/flowProps";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
 import { toPxString } from "@/utils";
 
-import { A11yDescriptions } from "../accessibility";
+import { A11yDescriptions } from "./accessibility";
 
 type SolidFlowComponentProps<
   NodeType extends Node = Node,
