@@ -1,5 +1,5 @@
-import { render } from "@solidjs/testing-library";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render } from "@solidjs/testing-library";
+import { describe, expect, it, vi } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Node } from "@/types";
@@ -63,5 +63,52 @@ describe("MiniMap", () => {
     });
     expect(a.style).toMatchObject({ background: "rgb(255, 0, 0)" });
     expect(a.shapeRendering).toBeDefined();
+  });
+
+  it("onNodeClick fires with the clicked user node", async () => {
+    const onNodeClick = vi.fn();
+
+    const { container } = render(() => (
+      <SolidFlow nodes={nodes} edges={[]} width={800} height={600}>
+        <MiniMap onNodeClick={onNodeClick} />
+      </SolidFlow>
+    ));
+    await tick();
+
+    const rects = container.querySelectorAll(".solid-flow__minimap-node");
+    fireEvent.click(rects[1]!);
+
+    expect(onNodeClick).toHaveBeenCalledTimes(1);
+    expect(onNodeClick.mock.calls[0]![1]).toMatchObject({ id: "b" });
+  });
+
+  it("onClick fires with a flow-space position", async () => {
+    const onClick = vi.fn();
+
+    const { container } = render(() => (
+      <SolidFlow nodes={nodes} edges={[]} width={800} height={600}>
+        <MiniMap onClick={onClick} />
+      </SolidFlow>
+    ));
+    await tick();
+
+    fireEvent.click(container.querySelector(".solid-flow__minimap-svg")!);
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+    const position = onClick.mock.calls[0]![1];
+    expect(typeof position.x).toBe("number");
+    expect(typeof position.y).toBe("number");
+  });
+
+  it("attaches no node click handlers when onNodeClick is absent", async () => {
+    const { container } = render(() => (
+      <SolidFlow nodes={nodes} edges={[]} width={800} height={600}>
+        <MiniMap />
+      </SolidFlow>
+    ));
+    await tick();
+
+    // clicking a default rect without onNodeClick must not throw
+    fireEvent.click(container.querySelector(".solid-flow__minimap-node")!);
   });
 });

@@ -23,6 +23,8 @@ export type MiniMapNodeProps = {
   readonly selected?: boolean;
   /** The node's own style; its background feeds the default fill fallback. */
   readonly style?: JSX.CSSProperties;
+  /** Click handler (wired when the `MiniMap` has `onNodeClick`); call with the node id. */
+  readonly onClick?: (event: MouseEvent, id: string) => void;
 };
 
 /** The default minimap node: a rounded rect. Custom `nodeComponent`s can wrap it. */
@@ -60,6 +62,7 @@ export const MiniMapNode = (props: MiniMapNodeProps): JSX.Element => {
       height={_props.height}
       shape-rendering={_props.shapeRendering}
       style={style()}
+      onClick={_props.onClick ? (event) => _props.onClick!(event, _props.id) : undefined}
     />
   );
 };

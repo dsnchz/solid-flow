@@ -7,6 +7,7 @@ import {
   nodeHasDimensions,
   type PanelPosition,
   XYMinimap,
+  type XYPosition,
 } from "@xyflow/system";
 import {
   createEffect,
@@ -31,7 +32,7 @@ export type GetMiniMapNodeAttribute<NodeType extends Node> = (node: NodeType) =>
 /** Props for the `MiniMap` plugin. */
 export type MiniMapProps<NodeType extends Node> = Omit<
   JSX.HTMLAttributes<HTMLDivElement>,
-  "style"
+  "style" | "onClick"
 > & {
   /** Background color of minimap */
   readonly bgColor?: string;
@@ -64,8 +65,10 @@ export type MiniMapProps<NodeType extends Node> = Omit<
   readonly width?: number;
   /** Height of minimap */
   readonly height?: number;
-  // onClick: (event: MouseEvent, position: XYPosition) => void;
-  // onNodeClick: (event: MouseEvent, node: Node) => void;
+  /** Called when the minimap pane is clicked, with the position in flow coordinates. */
+  readonly onClick?: (event: MouseEvent, position: XYPosition) => void;
+  /** Called when a node on the minimap is clicked. */
+  readonly onNodeClick?: (event: MouseEvent, node: NodeType) => void;
   readonly pannable?: boolean;
   readonly zoomable?: boolean;
   /**
@@ -123,6 +126,8 @@ export const MiniMap = <NodeType extends Node>(
     "nodeBorderRadius",
     "nodeStrokeWidth",
     "nodeComponent",
+    "onClick",
+    "onNodeClick",
   );
 
   const nodeColorFunc = () =>
@@ -243,6 +248,17 @@ export const MiniMap = <NodeType extends Node>(
             },
           );
 
+          const onSvgClick = (event: MouseEvent) => {
+            if (!_props.onClick) return;
+            const [x, y] = minimap()?.pointer(event) ?? [0, 0];
+            _props.onClick(event, { x, y });
+          };
+
+          const onSvgNodeClick = (event: MouseEvent, nodeId: string) => {
+            const node = nodeLookup.get(nodeId)?.internals.userNode;
+            if (node) _props.onNodeClick?.(event, node);
+          };
+
           return (
             <svg
               ref={setRef}
@@ -252,6 +268,7 @@ export const MiniMap = <NodeType extends Node>(
               class="solid-flow__minimap-svg"
               role="img"
               aria-labelledby={labelledBy()}
+              onClick={_props.onClick ? onSvgClick : undefined}
               style={{
                 "--xy-minimap-mask-background-color-props": _props.maskColor,
                 "--xy-minimap-mask-stroke-color-props": _props.maskStrokeColor,
@@ -284,6 +301,7 @@ export const MiniMap = <NodeType extends Node>(
                           strokeColor={nodeStrokeColorFunc().call(null, node()!)}
                           class={nodeClassFunc().call(null, node()!)}
                           style={node()!.style}
+                          onClick={_props.onNodeClick ? onSvgNodeClick : undefined}
                         />
                       )}
                     </Show>
