@@ -17,6 +17,7 @@ export type EdgeReconnectAnchorProps = {
   readonly reconnecting?: boolean;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
+/** Grab area that lets an edge end be dragged off its handle and reconnected. */
 export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>): JSX.Element => {
   const _props = propDefaults(props, {
     size: 25,

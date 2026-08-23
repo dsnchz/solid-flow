@@ -32,6 +32,7 @@ type SolidFlowComponentProps<
 > = ParentProps<SolidFlowProps<NodeType, EdgeType>> &
   Omit<JSX.HTMLAttributes<HTMLDivElement>, "style" | "onselectionchange" | "onSelectionChange">;
 
+/** The flow canvas component: renders nodes and edges and wires up viewport and interactions. */
 export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: SolidFlowComponentProps<NodeType, EdgeType>,
 ): JSX.Element => {

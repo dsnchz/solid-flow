@@ -5,6 +5,7 @@ import type { SmoothStepEdgeProps } from "@/types";
 
 import { BaseEdge } from "./BaseEdge";
 
+/** Renderer-internal smooth-step edge variant. */
 export const SmoothStepEdgeInternal = (props: SmoothStepEdgeProps): JSX.Element => {
   const pathData = () => {
     const [path, labelX, labelY] = getSmoothStepPath({

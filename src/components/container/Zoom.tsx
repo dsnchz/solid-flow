@@ -31,6 +31,7 @@ export type ZoomProps = {
   readonly selectionOnDrag?: boolean;
 };
 
+/** Internal viewport controller wiring pan/zoom gestures (XYPanZoom) to the flow. */
 export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
   const [ref, setRef] = createSignal<HTMLDivElement>();
   const { store, actions } = useInternalSolidFlow();

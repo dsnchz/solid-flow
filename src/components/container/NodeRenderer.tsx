@@ -10,6 +10,7 @@ export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeTyp
   readonly nodeClickDistance: number;
 };
 
+/** Internal renderer iterating the node id list into `NodeWrapper`s; owns the shared measurement `ResizeObserver`. */
 export const NodeRenderer = <NodeType extends Node = Node>(
   props: NodeRendererProps<NodeType>,
 ): JSX.Element => {

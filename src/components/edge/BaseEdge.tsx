@@ -6,6 +6,7 @@ import { propDefaults } from "@/utils";
 
 import { EdgeLabel } from "./EdgeLabel";
 
+/** Lowest-level edge primitive: renders the SVG path, label, and interaction width. */
 export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
   const _props = propDefaults(props, {
     interactionWidth: 20,

@@ -24,6 +24,7 @@ export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType
   readonly nodeClickDistance: number;
 };
 
+/** Internal per-node wrapper: dragging, selection, a11y, measurement, viewport culling, and the dynamic node component. */
 export const NodeWrapper = <NodeType extends Node = Node>(
   props: NodeWrapperProps<NodeType>,
 ): JSX.Element => {

@@ -37,6 +37,7 @@ type ControlsProps = {
   readonly afterControls?: JSX.Element;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
+/** Viewport control panel: zoom in/out, fit view, and interactivity lock. */
 export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
   const { store, actions } = useInternalSolidFlow();
 

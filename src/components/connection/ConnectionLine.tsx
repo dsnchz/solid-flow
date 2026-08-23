@@ -17,6 +17,7 @@ type ConnectionLineProps<NodeType extends Node = Node> = {
   readonly containerStyle: string | JSX.CSSProperties;
 };
 
+/** Internal component rendering the in-progress connection line. */
 const ConnectionLine = <NodeType extends Node = Node>(
   props: ParentProps<Partial<ConnectionLineProps<NodeType>>>,
 ): JSX.Element => {

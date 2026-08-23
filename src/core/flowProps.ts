@@ -49,6 +49,7 @@ import type {
   SelectionMode,
 } from "@/types";
 
+/** Initial (uncontrolled) values used to seed a flow before the first measure/fit. */
 export type SolidFlowInitialProps = {
   readonly initialNodes: Node[];
   readonly initialEdges: Edge[];
@@ -58,6 +59,10 @@ export type SolidFlowInitialProps = {
   readonly nodeOrigin: NodeOrigin;
 };
 
+/**
+ * Props accepted by the `SolidFlow` component — the full configuration surface
+ * of a flow, and the config contract of the headless core (`createFlowState`).
+ */
 export type SolidFlowProps<
   NodeType extends Node = Node,
   EdgeType extends Edge = Edge,

@@ -86,15 +86,18 @@ export type BezierEdgeProps = EdgeProps<Record<string, unknown>, "default"> & {
   pathOptions?: BezierPathOptions;
 };
 
+/** Props for the built-in straight edge. */
 export type StraightEdgeProps = Omit<
   EdgeProps<Record<string, unknown>, "straight">,
   "sourcePosition" | "targetPosition"
 >;
 
+/** Props for the built-in step edge. */
 export type StepEdgeProps = EdgeProps<Record<string, unknown>, "step"> & {
   pathOptions?: StepPathOptions;
 };
 
+/** Props for the built-in smooth-step edge. */
 export type SmoothStepEdgeProps = EdgeProps<Record<string, unknown>, "smoothstep"> & {
   pathOptions?: SmoothStepPathOptions;
 };
@@ -123,6 +126,7 @@ export type EdgeTypes = {
   }["bivarianceHack"];
 };
 
+/** Defaults applied to every new edge added to the flow. */
 export type DefaultEdgeOptions = DefaultEdgeOptionsBase<Edge>;
 
 export type EdgeLayouted<EdgeType extends Edge = Edge> = EdgeType &

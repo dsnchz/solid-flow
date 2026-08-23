@@ -10,6 +10,7 @@ export type MarkerProps = SystemMarkerProps & {
   readonly strokeWidth?: number;
 };
 
+/** Internal SVG `<marker>` definition for one edge marker configuration. */
 export const Marker = (props: MarkerProps): JSX.Element => {
   const _props = propDefaults(props, {
     markerUnits: "strokeWidth" as const,

@@ -5,6 +5,7 @@ import { omit, type ParentProps, Show } from "solid-js";
 import { EdgeLabel } from "@/components/edge";
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
 
+/** Props for the `EdgeToolbar` plugin. */
 export type EdgeToolbarProps = EdgeToolbarBaseProps & {
   /** If `true`, clicking the toolbar selects the edge it belongs to. */
   readonly selectEdgeOnClick?: boolean;

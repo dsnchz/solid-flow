@@ -15,6 +15,7 @@ export type PanelProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
   readonly "data-message"?: string;
 };
 
+/** Positioned overlay container for UI placed above the flow (used by `Controls`, `MiniMap`, attribution). */
 export const Panel = (props: ParentProps<PanelProps>): JSX.Element => {
   const { store } = useInternalSolidFlow();
 

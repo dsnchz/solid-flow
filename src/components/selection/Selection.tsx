@@ -11,6 +11,7 @@ type SelectionProps = {
   readonly isVisible?: boolean;
 };
 
+/** Internal selection-rectangle visual. */
 export const Selection = (props: SelectionProps): JSX.Element => {
   const _props = propDefaults(props, { isVisible: true });
 

@@ -5,6 +5,7 @@ import { Show } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 
+/** Portals children into graph coordinate space so they pan and zoom with the viewport. */
 export const ViewportPortal = (props: ParentProps): JSX.Element => {
   const { store } = useInternalSolidFlow();
 

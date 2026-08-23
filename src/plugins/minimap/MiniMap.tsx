@@ -75,6 +75,7 @@ export type MiniMapProps<NodeType extends Node> = Omit<
 const getAttrFunction = <NodeType extends Node>(func: any): GetMiniMapNodeAttribute<NodeType> =>
   func instanceof Function ? func : () => func;
 
+/** Miniature overview map of the whole flow, with optional pan/zoom interaction. */
 export const MiniMap = <NodeType extends Node>(
   props: ParentProps<Partial<MiniMapProps<NodeType>>>,
 ): JSX.Element => {

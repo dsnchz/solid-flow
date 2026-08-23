@@ -23,6 +23,7 @@ const pairKey = (
   bHandle: string | null,
 ): string => `${aNode}-${aHandle}--${bNode}-${bHandle}`;
 
+/** The connections index: a handle's `connectionKey` mapped to its live `HandleConnection`s. */
 export type ConnectionsRecord = Record<string, Record<string, HandleConnection>>;
 
 export type ConnectionsSource<EdgeType extends Edge = Edge> = {

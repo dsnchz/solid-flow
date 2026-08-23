@@ -5,6 +5,7 @@ import type { StraightEdgeProps } from "@/types";
 
 import { BaseEdge } from "./BaseEdge";
 
+/** Renderer-internal straight edge variant. */
 export const StraightEdgeInternal = (
   props: Omit<StraightEdgeProps, "sourcePosition" | "targetPosition">,
 ): JSX.Element => {

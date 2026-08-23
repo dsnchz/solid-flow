@@ -14,6 +14,7 @@ const DEFAULT_SIZE: Record<BackgroundVariant, number> = {
   cross: 6,
 };
 
+/** Props for the `Background` plugin. */
 export type BackgroundProps = {
   readonly id?: string;
   /** Variant of the pattern
@@ -38,6 +39,7 @@ export type BackgroundProps = {
   readonly style?: JSX.CSSProperties;
 };
 
+/** Canvas background pattern (lines, dots, or cross) rendered beneath the graph. */
 export const Background = (props: BackgroundProps): JSX.Element => {
   const _props = propDefaults(props, {
     variant: "dots" as BackgroundVariant,

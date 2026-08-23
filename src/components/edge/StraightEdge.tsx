@@ -6,6 +6,7 @@ import type { StraightEdgeProps } from "@/types";
 
 import { BaseEdge } from "./BaseEdge";
 
+/** Built-in straight edge component. */
 export const StraightEdge = (props: StraightEdgeProps): JSX.Element => {
   const pathData = createMemo(() => {
     const [path, labelX, labelY] = getStraightPath({

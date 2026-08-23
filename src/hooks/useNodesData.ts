@@ -15,6 +15,7 @@ type NodeData<NodeType extends Node> = Pick<NodeType, "id" | "data" | "type">;
 export function useNodesData<NodeType extends Node = Node>(
   nodeId: Accessor<string | undefined | null>,
 ): Accessor<NodeData<NodeType> | undefined>;
+/** Reactive accessor for the `data` of one or many nodes by id. */
 export function useNodesData<NodeType extends Node = Node>(
   nodeIds: Accessor<string[] | undefined | null>,
 ): Accessor<NodeData<NodeType>[]>;

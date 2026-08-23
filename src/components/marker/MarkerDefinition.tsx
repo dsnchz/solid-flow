@@ -7,6 +7,7 @@ import type { Edge } from "@/types";
 
 import { Marker, type MarkerProps } from "./Marker";
 
+/** Internal collector rendering every unique edge marker into one SVG defs block. */
 export const MarkerDefinition = (): JSX.Element => {
   const { store } = useInternalSolidFlow();
 

@@ -35,13 +35,11 @@ export type {
   NodeTypes,
 } from "./types/node";
 
-// system utilities
+// system utilities (documented upstream)
 export {
   addEdge,
-  getBezierEdgeCenter,
   getBezierPath,
   getConnectedEdges,
-  getEdgeCenter,
   getIncomers,
   getNodesBounds,
   getOutgoers,
@@ -50,7 +48,7 @@ export {
   getViewportForBounds,
 } from "@xyflow/system";
 
-// system enums
+// system enums (documented upstream)
 export {
   ConnectionLineType,
   ConnectionMode,
@@ -58,64 +56,31 @@ export {
   PanOnScrollMode,
   Position,
   ResizeControlVariant,
-  SelectionMode,
 } from "@xyflow/system";
 
-// system types
+// system types (documented upstream)
 export type {
-  Align,
-  AriaLabelConfig,
-  BezierPathOptions,
-  Box,
-  ColorMode,
-  ColorModeClass,
   Connection,
   ControlLinePosition,
   ControlPosition,
   CoordinateExtent,
-  Dimensions,
   EdgeMarker,
-  EdgeMarkerType,
   FitBounds,
-  FitBoundsOptions,
-  GetBezierPathParams,
-  GetSmoothStepPathParams,
-  GetStraightPathParams,
   HandleConnection,
-  IsValidConnection,
   NodeConnection,
   NodeOrigin,
-  OnConnect,
-  OnConnectEnd,
-  OnConnectStart,
-  OnConnectStartParams,
-  OnError,
   OnMove,
-  OnMoveEnd,
-  OnMoveStart,
-  OnReconnect,
-  OnReconnectEnd,
-  OnReconnectStart,
-  OnResize,
-  OnResizeEnd,
-  OnResizeStart,
-  OnSelectionDrag,
   PanelPosition,
-  ProOptions,
-  Rect,
-  ResizeDragEvent,
-  ResizeParams,
-  ResizeParamsWithDirection,
-  SelectionRect,
   SetCenter,
-  SetCenterOptions,
   SetViewport,
   ShouldResize,
-  SmoothStepPathOptions,
-  SnapGrid,
-  Transform,
   Viewport,
-  ViewportHelperFunctionOptions,
   XYPosition,
-  XYZPosition,
 } from "@xyflow/system";
+
+// system symbols re-declared with docs (undocumented upstream); the explicit
+// re-exports resolve name collisions with ./types/general and ./types/events
+// in favor of the system-shaped versions (matching the pre-existing API)
+export type { IsValidConnection, OnSelectionDrag } from "./types/system";
+export * from "./types/system";
+export { SelectionMode } from "./types/system";

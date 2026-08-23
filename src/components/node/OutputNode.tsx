@@ -6,6 +6,7 @@ import { propDefaults } from "@/utils";
 
 import { Handle } from "../handle";
 
+/** Built-in output node: label with a target handle only. */
 export const OutputNode = (props: NodeProps<{ label: string }>): JSX.Element => {
   const _props = propDefaults(props, {
     targetPosition: Position.Top,

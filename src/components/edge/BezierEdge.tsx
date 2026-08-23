@@ -5,6 +5,7 @@ import type { BezierEdgeProps } from "@/types";
 
 import { BaseEdge } from "./BaseEdge";
 
+/** Built-in bezier edge component. */
 export const BezierEdge = (props: BezierEdgeProps): JSX.Element => {
   const pathData = () => {
     const [path, labelX, labelY] = getBezierPath({

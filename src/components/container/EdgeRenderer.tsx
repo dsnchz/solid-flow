@@ -11,6 +11,7 @@ type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
   readonly reconnectRadius: number;
 };
 
+/** Internal renderer iterating the edge id list into `EdgeWrapper`s. */
 export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: EdgeRendererProps<EdgeType>,
 ): JSX.Element => {

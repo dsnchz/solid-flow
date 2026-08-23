@@ -12,6 +12,7 @@ import { Selection } from "./Selection";
 export type NodeSelectionProps<NodeType extends Node = Node> = NodeSelectionEvents<NodeType> &
   Pick<NodeEvents<NodeType>, "onNodeDrag" | "onNodeDragStart" | "onNodeDragStop">;
 
+/** Internal draggable bounding box rendered around multi-selected nodes. */
 export const NodeSelection = <NodeType extends Node = Node>(
   props: NodeSelectionProps<NodeType>,
 ): JSX.Element => {

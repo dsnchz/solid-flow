@@ -6,6 +6,7 @@ import { propDefaults } from "@/utils";
 
 import { Handle } from "../handle";
 
+/** Built-in default node: label with source and target handles. */
 export const DefaultNode = (props: NodeProps<{ label: string }, "default">): JSX.Element => {
   const _props = propDefaults(props, {
     targetPosition: Position.Top,

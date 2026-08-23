@@ -17,6 +17,7 @@ type EdgeLabelProps = {
   readonly style?: JSX.CSSProperties;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
+/** Renders an edge label positioned in graph coordinates. */
 export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
   const _props = propDefaults(props, {
     x: 0,

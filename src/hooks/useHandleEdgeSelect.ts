@@ -2,6 +2,7 @@ import { errorMessages } from "@xyflow/system";
 
 import { useInternalSolidFlow } from "@/contexts";
 
+/** Returns a callback applying edge-selection semantics for the given edge id. */
 export function useHandleEdgeSelect(): (id: string) => void {
   const { store, edgeLookup, actions } = useInternalSolidFlow();
 

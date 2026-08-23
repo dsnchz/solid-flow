@@ -29,6 +29,7 @@ type NodeTargetEventWithPointer<T = PointerEvent, NodeType extends Node = Node> 
   event: T;
 }) => void;
 
+/** Node pointer and drag event handlers accepted by the flow. */
 export type NodeEvents<NodeType extends Node = Node> = {
   /** This event handler is called when a user clicks on a node. */
   onNodeClick?: NodeEventWithPointer<MouseEvent | TouchEvent, NodeType>;
@@ -48,6 +49,7 @@ export type NodeEvents<NodeType extends Node = Node> = {
   onNodePointerMove?: NodeEventWithPointer<PointerEvent, NodeType>;
 };
 
+/** Selection-box event handlers. */
 export type NodeSelectionEvents<NodeType extends Node = Node> = {
   /** This event handler is called when a user right-clicks the selection box. */
   onSelectionContextMenu?: NodesEventWithPointer<PointerEvent, NodeType>;
@@ -55,6 +57,7 @@ export type NodeSelectionEvents<NodeType extends Node = Node> = {
   onSelectionClick?: NodesEventWithPointer<MouseEvent, NodeType>;
 };
 
+/** Pane (background) event handlers. */
 export type PaneEvents = {
   /** This event handler is called when a user clicks the pane. */
   onPaneClick?: ({ event }: { event: MouseEvent }) => void;
@@ -62,6 +65,7 @@ export type PaneEvents = {
   onPaneContextMenu?: ({ event }: { event: PointerEvent }) => void;
 };
 
+/** Edge pointer event handlers. */
 export type EdgeEvents<EdgeType extends Edge = Edge> = {
   /** This event handler is called when a user clicks an edge. */
   onEdgeClick?: ({ edge, event }: { edge: EdgeType; event: MouseEvent }) => void;
@@ -73,11 +77,13 @@ export type EdgeEvents<EdgeType extends Edge = Edge> = {
   onEdgePointerLeave?: ({ edge, event }: { edge: EdgeType; event: PointerEvent }) => void;
 };
 
+/** Handlers fired after node/edge deletions. */
 export type DeleteEvents<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   onNodesDelete?: (nodes: NodeType[]) => void;
   onEdgesDelete?: (edges: EdgeType[]) => void;
 };
 
+/** Handlers for edge reconnection gestures. */
 export type EdgeReconnectEvents<EdgeType extends Edge = Edge> = {
   /**
    * This handler is called when the source or target of a reconnectable edge is dragged from the

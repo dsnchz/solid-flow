@@ -13,6 +13,7 @@ export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType
   readonly edgeId: string;
 };
 
+/** Internal per-edge wrapper: interaction, a11y, viewport culling, and the dynamic edge component. */
 export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: EdgeWrapperProps<EdgeType>,
 ): JSX.Element => {

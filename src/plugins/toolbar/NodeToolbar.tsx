@@ -9,6 +9,7 @@ import { useSolidFlow } from "@/hooks";
 import type { InternalNode, Position } from "@/types";
 import { propDefaults } from "@/utils";
 
+/** Props for the `NodeToolbar` plugin. */
 export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
   /** The id of the node, or array of ids the toolbar should be displayed at */
   readonly nodeId: string | string[];
@@ -29,6 +30,7 @@ export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">
   readonly style: Omit<JSX.CSSProperties, "z-index" | "position" | "transform">;
 };
 
+/** Toolbar attached to a node, rendered above the graph so it does not scale with zoom. */
 export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) => {
   const { store } = useInternalSolidFlow();
   const { getNodes, getNodesBounds, getInternalNode } = useSolidFlow();

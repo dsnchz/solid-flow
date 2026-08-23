@@ -7,6 +7,7 @@ import { getDefaultFlowStateProps } from "@/core/defaults";
 import type { SolidFlowProps } from "@/core/flowProps";
 import type { Edge, Node } from "@/types";
 
+/** Hoists flow state above `SolidFlow` so hooks work outside the component (multi-panel UIs). */
 export const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<SolidFlowProps<NodeType, EdgeType>>,
 ): JSX.Element => {

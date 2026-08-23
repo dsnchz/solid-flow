@@ -50,6 +50,7 @@ export type NodeResizerProps = {
   readonly onResizeEnd?: OnResizeEnd;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
+/** Resize handles and lines around a node; place inside a custom node to make it resizable. */
 export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
   const _props = propDefaults(props, {
     autoScale: true,

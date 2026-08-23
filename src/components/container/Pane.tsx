@@ -35,6 +35,7 @@ export type PaneProps = PaneEvents & {
   readonly onSelectionEnd?: (event: PointerEvent) => void;
 };
 
+/** Internal interaction surface handling pane clicks, the selection box, and pan gestures. */
 export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<PaneProps>,
 ): JSX.Element => {

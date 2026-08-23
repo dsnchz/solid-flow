@@ -34,6 +34,7 @@ type HandleProps = Omit<SystemHandleProps, "position"> & {
   readonly onDisconnect?: (connections: Connection[]) => void;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
+/** Connection point on a node; place inside custom nodes to make them connectable. */
 export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<HandleProps>,
 ): JSX.Element => {

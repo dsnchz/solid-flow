@@ -4,6 +4,7 @@ import { type ParentProps, Show } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 
+/** Portals edge labels into a shared HTML layer rendered above the edge SVG. */
 export const EdgeLabelRenderer = (props: ParentProps): JSX.Element => {
   const { store } = useInternalSolidFlow();
 

@@ -43,6 +43,7 @@ export type Node<
   >;
 };
 
+/** Props passed to a node component (custom or built-in). */
 export type NodeProps<
   TData extends UnknownStruct = UnknownStruct,
   TType extends string | undefined = string | undefined,
@@ -62,10 +63,12 @@ export type NodeTypes = {
   }["bivarianceHack"];
 };
 
+/** Union of the built-in node shapes (input, output, default, group). */
 export type BuiltInNode =
   | Node<{ label: string }, "input" | "output" | "default">
   | Node<Record<string, never>, "group">;
 
+/** The built-in node renderer map, keyed by node type. */
 export type BuiltInNodeTypes = {
   input: (props: NodeProps<{ label: string }, "input">) => JSX.Element;
   output: (props: NodeProps<{ label: string }, "output">) => JSX.Element;
