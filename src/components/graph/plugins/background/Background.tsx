@@ -38,11 +38,13 @@ export type BackgroundProps = {
 };
 
 export const Background = (props: BackgroundProps): JSX.Element => {
+  // `size` deliberately has NO default here: its default is per-variant
+  // (DEFAULT_SIZE — cross needs 6), applied in scaledSize below. A flat
+  // `size: 1` default made the cross pattern a ~1px speck (issue #14).
   const _props = mergeProps(
     {
       variant: "dots" as BackgroundVariant,
       gap: 20,
-      size: 1,
       lineWidth: 1,
       style: {} as JSX.CSSProperties,
     },
