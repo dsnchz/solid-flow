@@ -9,13 +9,13 @@
  * The FlowState/FlowCommands types (and connectionKey/ConnectionsRecord) are
  * re-exported from the package entrypoint; the rest is internal.
  */
-export { createEdgeStore } from "./createEdgeStore";
+export { createEdgeStore, type EdgesFor } from "./createEdgeStore";
 export {
   createFlowState,
   type FlowStateInjections,
   type MeasureRequestEntry,
 } from "./createFlowState";
-export { createNodeStore } from "./createNodeStore";
+export { createNodeStore, type NodesFor } from "./createNodeStore";
 export {
   createCullingViewport,
   type CullingSource,

@@ -1,25 +1,42 @@
 import { type StoreSetter } from "solid-js";
 import { createStore, type Store } from "solid-js";
 
-import type { BuiltInEdgeTypes, Edge, EdgeProps, EdgeTypes } from "@/types";
+import type { BuiltInEdgeTypes, Edge, EdgeProps, EdgeTypes, UnknownStruct } from "@/types";
 
-// Extract the data and type from a node component's props
-type ExtractEdgeInfo<T> = T extends (props: EdgeProps<infer TData, infer TType>) => unknown
-  ? { data: TData; type: TType }
-  : never;
+// Extract the data type from an edge component's props; components whose
+// signature doesn't match the EdgeProps shape degrade gracefully to an
+// unconstrained data record instead of collapsing their map key to `never`.
+type EdgeDataOf<T> = T extends (props: EdgeProps<infer TData, infer _TType>) => unknown
+  ? TData
+  : UnknownStruct;
 
-// Create a discriminated union of all possible node configurations
+// Create a discriminated union of all possible edge configurations
 type AllEdgeTypes<TUserEdgeTypes extends EdgeTypes> =
   TUserEdgeTypes extends Record<string, never>
     ? BuiltInEdgeTypes
     : BuiltInEdgeTypes & TUserEdgeTypes;
 
-type EdgesInput<TUserEdgeTypes extends EdgeTypes> = {
+/**
+ * The discriminated union of edge configurations for a renderer map: one
+ * member per built-in and custom edge type, with `data` narrowed by the
+ * `type` discriminant (the MAP KEY — what the renderer actually matches).
+ * Use it to carry `createEdgeStore`'s guided typing anywhere a plain array
+ * or vanilla store is typed:
+ *
+ * ```typescript
+ * const initialEdges = [
+ *   { id: "e1", source: "1", target: "2", type: "labeled", data: { label: "hi" } },
+ * ] satisfies EdgesFor<typeof edgeTypes>[];
+ * ```
+ */
+export type EdgesFor<TUserEdgeTypes extends EdgeTypes = Record<string, never>> = {
   [K in keyof AllEdgeTypes<TUserEdgeTypes>]: Edge<
-    ExtractEdgeInfo<AllEdgeTypes<TUserEdgeTypes>[K]>["data"],
-    ExtractEdgeInfo<AllEdgeTypes<TUserEdgeTypes>[K]>["type"]
+    EdgeDataOf<AllEdgeTypes<TUserEdgeTypes>[K]>,
+    K & string
   >;
 }[keyof AllEdgeTypes<TUserEdgeTypes>];
+
+type EdgesInput<TUserEdgeTypes extends EdgeTypes> = EdgesFor<TUserEdgeTypes>;
 
 /**
  * Creates a type-safe reactive store of edges for use in Solid Flow.
@@ -98,7 +115,7 @@ type EdgesInput<TUserEdgeTypes extends EdgeTypes> = {
  * - Type errors prevent invalid type names or incorrect data structures
  */
 export const createEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
-  edges: EdgesInput<TUserEdgeTypes>[],
+  edges: NoInfer<EdgesInput<TUserEdgeTypes>>[],
 ): readonly [Store<EdgesInput<TUserEdgeTypes>[]>, StoreSetter<EdgesInput<TUserEdgeTypes>[]>] => {
   const [store, setStore] = createStore(edges);
   return [store, setStore] as const;

@@ -95,3 +95,34 @@ describe("createEdgeStore type contract", () => {
     expect(edges).toHaveLength(3);
   });
 });
+
+describe("NodesFor / EdgesFor (exported guided unions)", () => {
+  it("carries the guided typing to plain arrays via satisfies", async () => {
+    const { createStore } = await import("solid-js");
+    type MyNodes = import("../createNodeStore").NodesFor<typeof _nodeTypes>;
+
+    const good = [
+      { id: "a", position: { x: 0, y: 0 }, type: "text", data: { content: "hi" } },
+    ] satisfies MyNodes[];
+    const bad = [
+      // @ts-expect-error - counter nodes require { count: number }
+      { id: "b", position: { x: 0, y: 0 }, type: "counter", data: { content: "no" } },
+    ] satisfies MyNodes[];
+    void bad;
+
+    const [store] = createStore<MyNodes[]>([...good]);
+    expect(store).toHaveLength(1);
+  });
+
+  it("components with odd-but-legal signatures degrade to open data, not never", () => {
+    const _oddTypes = {
+      // takes no props at all — must not collapse this key to `never`
+      static: () => "static",
+    };
+
+    const [nodes] = createNodeStore<typeof _oddTypes>([
+      { id: "a", position: { x: 0, y: 0 }, type: "static", data: { free: "form" } },
+    ]);
+    expect(nodes).toHaveLength(1);
+  });
+});

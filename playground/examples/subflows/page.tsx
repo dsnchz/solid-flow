@@ -66,7 +66,7 @@ export function Subflows() {
     {
       id: "5",
       type: "group",
-      data: { label: "Node 5" },
+      data: {},
       position: { x: 650, y: 250 },
       style: { width: "400px", height: "150px" },
       zIndex: 1000,

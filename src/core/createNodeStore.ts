@@ -1,12 +1,15 @@
 import { type StoreSetter } from "solid-js";
 import { createStore, type Store } from "solid-js";
 
-import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes } from "@/types";
+import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes, UnknownStruct } from "@/types";
 
-// Extract the data and type from a node component's props
-type ExtractNodeInfo<T> = T extends (props: NodeProps<infer TData, infer TType>) => unknown
-  ? { data: TData; type: TType }
-  : never;
+// Extract the data type from a node component's props; components whose
+// signature doesn't match the NodeProps shape (extra props, wrappers, no
+// props at all) degrade gracefully to an unconstrained data record instead
+// of collapsing their map key to `never`.
+type NodeDataOf<T> = T extends (props: NodeProps<infer TData, infer _TType>) => unknown
+  ? TData
+  : UnknownStruct;
 
 // Create a discriminated union of all possible node configurations
 type AllNodeTypes<TUserNodeTypes extends NodeTypes> =
@@ -14,12 +17,27 @@ type AllNodeTypes<TUserNodeTypes extends NodeTypes> =
     ? BuiltInNodeTypes
     : BuiltInNodeTypes & TUserNodeTypes;
 
-type NodesInput<TUserNodeTypes extends NodeTypes> = {
+/**
+ * The discriminated union of node configurations for a renderer map: one
+ * member per built-in and custom node type, with `data` narrowed by the
+ * `type` discriminant (the MAP KEY — what the renderer actually matches).
+ * Use it to carry `createNodeStore`'s guided typing anywhere a plain array
+ * or vanilla store is typed:
+ *
+ * ```typescript
+ * const initialNodes = [
+ *   { id: "1", type: "custom", position: { x: 0, y: 0 }, data: { value: 1 } },
+ * ] satisfies NodesFor<typeof nodeTypes>[];
+ * ```
+ */
+export type NodesFor<TUserNodeTypes extends NodeTypes = Record<string, never>> = {
   [K in keyof AllNodeTypes<TUserNodeTypes>]: Node<
-    ExtractNodeInfo<AllNodeTypes<TUserNodeTypes>[K]>["data"],
-    ExtractNodeInfo<AllNodeTypes<TUserNodeTypes>[K]>["type"]
+    NodeDataOf<AllNodeTypes<TUserNodeTypes>[K]>,
+    K & string
   >;
 }[keyof AllNodeTypes<TUserNodeTypes>];
+
+type NodesInput<TUserNodeTypes extends NodeTypes> = NodesFor<TUserNodeTypes>;
 
 /**
  * Creates a type-safe reactive store of nodes for use in Solid Flow.
@@ -93,7 +111,7 @@ type NodesInput<TUserNodeTypes extends NodeTypes> = {
  * - Type errors prevent invalid type names or incorrect data structures
  */
 export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string, never>>(
-  nodes: NodesInput<TUserNodeTypes>[],
+  nodes: NoInfer<NodesInput<TUserNodeTypes>>[],
 ): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>] => {
   const [store, setStore] = createStore(nodes);
 
