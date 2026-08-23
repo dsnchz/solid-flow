@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { PanZoomInstance } from "@xyflow/system";
+import { type PanZoomInstance, Position } from "@xyflow/system";
 import { createRoot, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
@@ -292,5 +292,60 @@ describe("FlowCommands", () => {
       // no DOM: requesting a re-measure is a safe no-op
       expect(() => commands.updateNodeInternals(["a"])).not.toThrow();
     });
+  });
+});
+
+describe("controlled store-props (regression: provider-adopted flows)", () => {
+  it("wholesale replacement on a store prop reaches internalNodes after setConfig adoption", async () => {
+    // The playground shape: SolidFlowProvider creates the flow with NO
+    // nodes; SolidFlow pushes its props later via setConfig. The user's
+    // store proxy identity never changes, so the reset effect must track
+    // the array STRUCTURALLY or replacements are lost forever.
+    const { createStore, merge } = await import("solid-js");
+    const { getDefaultFlowStateProps } = await import("../defaults");
+    const [nodes, setNodes] = createStore<Node[]>([
+      makeNode({ id: "1", sourcePosition: Position.Bottom }),
+      makeNode({ id: "2", sourcePosition: Position.Bottom }),
+    ]);
+
+    await withFlow({}, async ({ flow, actions }) => {
+      actions.setConfig(merge(getDefaultFlowStateProps(), { nodes, edges: [] }));
+      flush();
+      expect(flow.internalNodes["1"]?.sourcePosition).toBe("bottom");
+
+      // React Flow-style toggle: map to NEW objects, replace wholesale
+      setNodes(() => nodes.map((n) => ({ ...n, sourcePosition: Position.Right })));
+      flush();
+      expect(flow.internalNodes["1"]?.sourcePosition).toBe("right");
+      expect(flow.internalNodes["2"]?.sourcePosition).toBe("right");
+
+      // draft mutation still flows (shared objects after the reset)
+      setNodes((draft) => {
+        draft[0]!.sourcePosition = Position.Left;
+      });
+      flush();
+      expect(flow.internalNodes["1"]?.sourcePosition).toBe("left");
+    });
+  });
+
+  it("wholesale replacement propagates on a directly-seeded store prop too", async () => {
+    const { createStore } = await import("solid-js");
+    const [edges, setEdges] = createStore<Edge[]>([
+      makeEdge({ id: "e1", source: "1", target: "2" }),
+    ]);
+
+    await withFlow(
+      { nodes: [makeNode({ id: "1" }), makeNode({ id: "2" })], edges },
+      async ({ flow }) => {
+        expect(flow.edges).toHaveLength(1);
+
+        setEdges(() => [
+          makeEdge({ id: "e1", source: "1", target: "2" }),
+          makeEdge({ id: "e2", source: "2", target: "1" }),
+        ]);
+        flush();
+        expect(flow.edges.map((e) => e.id)).toEqual(["e1", "e2"]);
+      },
+    );
   });
 });

@@ -228,16 +228,33 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     _props.viewport ?? initialViewport,
   );
 
+  // Controlled-graph resets. Track the supplied arrays STRUCTURALLY (length +
+  // element identity), not by reference: when the prop is a store (the
+  // documented createNodeStore pattern), its proxy identity never changes, so
+  // a wholesale replacement (`setNodes(() => nodes.map(...))`) would
+  // otherwise never reach an adopted flow's internal root (the provider
+  // seeds it before the component's props arrive). Field-level draft writes
+  // keep element identity, skip the reset, and flow through the shared node
+  // objects. The `{ next }` wrapper defeats the effect's equals check — the
+  // proxy identity is stable even when the contents changed.
   createEffect(
-    () => config().nodes as NodeType[],
-    (next) => {
+    () => {
+      const next = config().nodes as NodeType[];
+      for (const node of next) void node;
+      return { next };
+    },
+    ({ next }) => {
       setNodesStore(() => next);
     },
     { defer: true },
   );
   createEffect(
-    () => config().edges as EdgeType[],
-    (next) => {
+    () => {
+      const next = config().edges as EdgeType[];
+      for (const edge of next) void edge;
+      return { next };
+    },
+    ({ next }) => {
       setEdgesStore(() => next);
     },
     { defer: true },
