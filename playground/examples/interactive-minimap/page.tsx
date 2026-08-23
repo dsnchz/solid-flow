@@ -5,12 +5,27 @@ import {
   Controls,
   createNodeStore,
   MiniMap,
+  type MiniMapNodeProps,
   SolidFlow,
   SolidFlowProvider,
   useSolidFlow,
 } from "@/index";
 
 const defaultEdgeOptions = { zIndex: 0 };
+
+// Custom minimap node (issue #12): circles instead of the default rects,
+// tinted by selection.
+const CircleMiniMapNode: Component<MiniMapNodeProps> = (props) => (
+  <circle
+    class="minimap-circle-node"
+    cx={props.x + (props.width ?? 0) / 2}
+    cy={props.y + (props.height ?? 0) / 2}
+    r={Math.max(props.width ?? 0, props.height ?? 0) / 2}
+    fill={props.selected ? "#ff6666" : "#aaa4"}
+    stroke={props.strokeColor}
+    stroke-width={props.strokeWidth}
+  />
+);
 
 const InteractiveMinimapFlow: Component = () => {
   const { toObject, setViewport } = useSolidFlow();
@@ -139,7 +154,7 @@ const InteractiveMinimapFlow: Component = () => {
         fitView
       >
         <Background variant="dots" />
-        <MiniMap pannable zoomable inversePan={inverse()} />
+        <MiniMap pannable zoomable inversePan={inverse()} nodeComponent={CircleMiniMapNode} />
         <Controls />
 
         <div

@@ -1,4 +1,5 @@
 import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 import {
   getBoundsOfRects,
   getInternalNodesBounds,
@@ -22,10 +23,12 @@ import { useInternalSolidFlow } from "@/contexts";
 import type { Node } from "@/types";
 import { propDefaults } from "@/utils";
 
-import { MiniMapNode } from "./MiniMapNode";
+import { MiniMapNode, type MiniMapNodeProps } from "./MiniMapNode";
 
+/** Derives a per-node minimap attribute (color, stroke, class) from the node. */
 export type GetMiniMapNodeAttribute<NodeType extends Node> = (node: NodeType) => string;
 
+/** Props for the `MiniMap` plugin. */
 export type MiniMapProps<NodeType extends Node> = Omit<
   JSX.HTMLAttributes<HTMLDivElement>,
   "style"
@@ -65,6 +68,11 @@ export type MiniMapProps<NodeType extends Node> = Omit<
   // onNodeClick: (event: MouseEvent, node: Node) => void;
   readonly pannable?: boolean;
   readonly zoomable?: boolean;
+  /**
+   * Custom component rendering each node on the minimap (receives
+   * {@link MiniMapNodeProps}); defaults to the built-in rounded rect.
+   */
+  readonly nodeComponent?: (props: MiniMapNodeProps) => JSX.Element;
   /** Invert the direction when panning the minimap viewport */
   readonly inversePan?: boolean;
   /** Step size for zooming in/out */
@@ -114,6 +122,7 @@ export const MiniMap = <NodeType extends Node>(
     "maskStrokeWidth",
     "nodeBorderRadius",
     "nodeStrokeWidth",
+    "nodeComponent",
   );
 
   const nodeColorFunc = () =>
@@ -260,7 +269,9 @@ export const MiniMap = <NodeType extends Node>(
                   return (
                     <Show when={nodeVisible() && getNodeDimensions(node()!)}>
                       {(nodeDimensions) => (
-                        <MiniMapNode
+                        <Dynamic
+                          component={_props.nodeComponent ?? MiniMapNode}
+                          id={nodeId()}
                           x={node()!.internals.positionAbsolute.x}
                           y={node()!.internals.positionAbsolute.y}
                           borderRadius={_props.nodeBorderRadius}
@@ -272,6 +283,7 @@ export const MiniMap = <NodeType extends Node>(
                           color={nodeColorFunc()?.call(null, node()!)}
                           strokeColor={nodeStrokeColorFunc().call(null, node()!)}
                           class={nodeClassFunc().call(null, node()!)}
+                          style={node()!.style}
                         />
                       )}
                     </Show>
