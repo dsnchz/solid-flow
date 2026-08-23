@@ -18,6 +18,13 @@ const COVERAGE_EXCLUDE = [...TEST_EXCLUDES, "**/*.test.{ts,tsx}"];
 
 const viteConfig = defineConfig({
   plugins: [solidPlugin()],
+  optimizeDeps: {
+    // Vite's default scan treats EVERY html file under the root as an entry,
+    // which pulls the reference clones in tmp/ (xyflow, vite-plugin-solid,
+    // ...) into the dependency scan and fails on their imports. Pin the scan
+    // to the real playground entry.
+    entries: ["index.html"],
+  },
   server: {
     port: 3000,
     proxy: {
