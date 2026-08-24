@@ -213,17 +213,10 @@ export const KeyHandler = (props: KeyHandlerProps) => {
     const selectedNodes = store.nodes.filter((node) => node.selected);
     const selectedEdges = store.edges.filter((edge) => edge.selected);
 
-    const { deletedNodes, deletedEdges } = await deleteElements({
-      nodes: selectedNodes,
-      edges: selectedEdges,
-    });
-
-    if (deletedNodes.length > 0 || deletedEdges.length > 0) {
-      store.onDelete?.({
-        nodes: deletedNodes,
-        edges: deletedEdges,
-      });
-    }
+    // deleteElements fires onDelete (and the granular delete callbacks)
+    // itself, so the keyboard path and commands.deleteElements notify
+    // identically.
+    await deleteElements({ nodes: selectedNodes, edges: selectedEdges });
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {

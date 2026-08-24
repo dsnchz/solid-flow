@@ -75,14 +75,17 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   // rewrites visibility when the flag actually flips.
   const culled = createMemo(() => isNodeCulled(node(), store.cullingViewport));
 
+  // Ownership contract: the user's style (spread first, inside sizeStyle)
+  // controls everything cosmetic; the flow owns size, stacking, positioning,
+  // culling visibility, and pointer-events — those come LAST so no user
+  // style key can defeat measured size or resurrect a culled node.
   const style = () =>
     ({
+      ...sizeStyle(),
       "z-index": node().internals.z,
       transform: transform(),
       visibility: culled() || !nodeHasDimensions(node()) ? "hidden" : "visible",
       "pointer-events": culled() ? "none" : undefined,
-      ...sizeStyle(),
-      ...(node().style ?? {}),
     }) as const;
 
   createEffect(

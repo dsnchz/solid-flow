@@ -1,4 +1,10 @@
-import { isEdgeBase, isNodeBase, type XYPosition } from "@xyflow/system";
+import {
+  type Connection,
+  type EdgeBase,
+  isEdgeBase,
+  isNodeBase,
+  type XYPosition,
+} from "@xyflow/system";
 
 import type { Edge, Node } from "./types";
 
@@ -67,9 +73,22 @@ export function propDefaults<T extends object, D extends Partial<T>>(
   return out;
 }
 
-import type { Connection, EdgeBase } from "@xyflow/system";
-
 export const getEdgeId = (connection: Connection | EdgeBase): string => {
   const { source, sourceHandle, target, targetHandle } = connection;
   return `xy-edge__${source}${sourceHandle || ""}-${target}${targetHandle || ""}`;
 };
+
+/**
+ * The one edge-selectability rule, used by click selection, box selection,
+ * and connected-edge selection alike: the edge's own flag wins, then the
+ * flow's defaultEdgeOptions, then the global elementsSelectable switch.
+ * (These three paths once disagreed — box selection ignored
+ * elementsSelectable entirely; audit 2026-08-24 A7.)
+ */
+export const isEdgeSelectable = (
+  edge: Pick<Edge, "selectable">,
+  store: {
+    readonly elementsSelectable: boolean;
+    readonly defaultEdgeOptions: { readonly selectable?: boolean };
+  },
+): boolean => edge.selectable ?? store.defaultEdgeOptions.selectable ?? store.elementsSelectable;

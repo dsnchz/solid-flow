@@ -65,7 +65,7 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
       pendingEntries = undefined;
 
       const { updatedInternals, measurementWrites, changes, parentExpandChildren } =
-        measureNodeInternals(updates, nodeLookup, store.domNode);
+        measureNodeInternals(updates, nodeLookup, store.domNode, store.nodeExtent);
 
       if (!updatedInternals) return;
 

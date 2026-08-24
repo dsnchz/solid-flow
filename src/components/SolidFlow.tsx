@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { type ColorModeClass, infiniteExtent, isMacOs } from "@xyflow/system";
+import { type ColorModeClass, infiniteExtent } from "@xyflow/system";
 import {
   type Context,
   createEffect,
@@ -20,7 +20,7 @@ import { NodeSelection, Selection } from "@/components/selection";
 import { Attribution, KeyHandler } from "@/components/utility";
 import { SolidFlowContext, type SolidFlowContextValue } from "@/contexts/flow";
 import { getDefaultFlowStateProps } from "@/core/defaults";
-import type { SolidFlowProps } from "@/core/flowProps";
+import { FLOW_PROP_KEYS, type SolidFlowProps } from "@/core/flowProps";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
 import { toPxString } from "@/utils";
 
@@ -43,22 +43,15 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     {
       ...getDefaultFlowStateProps(),
       colorMode: "light" as ColorModeClass,
-      deleteKeyCode: "Backspace",
-      defaultViewport: { x: 0, y: 0, zoom: 1 },
-      multiSelectionKeyCode: isMacOs() ? "Meta" : "Control",
       nodeClickDistance: 0,
       panOnScroll: false,
-      panActivationKeyCode: "Space",
       preventScrolling: true,
       panOnDrag: true,
       panOnScrollSpeed: 0.5,
       panOnScrollMode: "free" as PanOnScrollMode,
       paneClickDistance: 0,
-      reconnectRadius: 10,
-      selectionKeyCode: "Shift",
       selectionOnDrag: false,
       translateExtent: infiniteExtent,
-      zoomActivationKeyCode: isMacOs() ? "Meta" : "Control",
       zoomOnPinch: true,
       zoomOnDoubleClick: true,
       zoomOnScroll: true,
@@ -66,129 +59,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     props,
   );
 
-  const htmlProps = omit(
-    _props,
-    "nodes",
-    "edges",
-    "defaultNodes",
-    "defaultEdges",
-    "nodeTypes",
-    "edgeTypes",
-    "width",
-    "height",
-    "fitView",
-    "fitViewOptions",
-    "nodeOrigin",
-    "nodeDragThreshold",
-    "paneClickDistance",
-    "nodeClickDistance",
-    "minZoom",
-    "maxZoom",
-    "zIndexMode",
-    "initialViewport",
-    "viewport",
-    "translateExtent",
-    "nodeExtent",
-    "selectionKey",
-    "panActivationKey",
-    "deleteKey",
-    "multiSelectionKey",
-    "zoomActivationKey",
-    "panOnDrag",
-    "panOnScroll",
-    "panOnScrollMode",
-    "panOnScrollSpeed",
-    "selectionOnDrag",
-    "selectNodesOnDrag",
-    "preventScrolling",
-    "zoomOnScroll",
-    "zoomOnDoubleClick",
-    "zoomOnPinch",
-    "onlyRenderVisibleElements",
-    "autoPanOnConnect",
-    "autoPanOnNodeDrag",
-    "autoPanOnNodeFocus",
-    "autoPanOnSelection",
-    "autoPanSpeed",
-    "connectionRadius",
-    "connectionMode",
-    "connectionLineType",
-    "connectionLineComponent",
-    "connectionLineStyle",
-    "connectionLineContainerStyle",
-    "connectionDragThreshold",
-    "isValidConnection",
-    "clickConnect",
-    "reconnectRadius",
-    "selectionMode",
-    "elementsSelectable",
-    "nodesDraggable",
-    "nodesConnectable",
-    "nodesFocusable",
-    "edgesFocusable",
-    "disableKeyboardA11y",
-    "ariaLabelConfig",
-    "ariaLiveMessage",
-    "colorMode",
-    "colorModeSSR",
-    "class",
-    "style",
-    "snapGrid",
-    "defaultMarkerColor",
-    "defaultEdgeOptions",
-    "elevateNodesOnSelect",
-    "elevateEdgesOnSelect",
-    "noDragClass",
-    "noPanClass",
-    "noWheelClass",
-    "attributionPosition",
-    "proOptions",
-    "onInit",
-    "onMoveStart",
-    "onMove",
-    "onMoveEnd",
-    "onFlowError",
-    "onNodeClick",
-    "onNodeContextMenu",
-    "onNodeDrag",
-    "onNodeDragStart",
-    "onNodeDragStop",
-    "onNodePointerEnter",
-    "onNodePointerMove",
-    "onNodePointerLeave",
-    "onEdgeClick",
-    "onEdgeContextMenu",
-    "onEdgePointerEnter",
-    "onEdgePointerLeave",
-    "onPaneClick",
-    "onPaneContextMenu",
-    "onSelectionChange",
-    "onSelectionClick",
-    "onSelectionContextMenu",
-    "onSelectionDrag",
-    "onSelectionDragStart",
-    "onSelectionDragStop",
-    "onSelectionStart",
-    "onSelectionEnd",
-    "onConnect",
-    "onConnectStart",
-    "onConnectEnd",
-    "onReconnect",
-    "onReconnectStart",
-    "onReconnectEnd",
-    "onClickConnectStart",
-    "onClickConnectEnd",
-    "onBeforeConnect",
-    "onBeforeReconnect",
-    "onDelete",
-    "onBeforeDelete",
-    "deleteKeyCode",
-    "selectionKeyCode",
-    "panActivationKeyCode",
-    "multiSelectionKeyCode",
-    "zoomActivationKeyCode",
-    "children",
-  );
+  const htmlProps = omit(_props, ...FLOW_PROP_KEYS, "children");
 
   // Since we cannot pass generic types info at the point of context creation, we need to cast it here
   const TypedSolidFlowContext = SolidFlowContext as unknown as Context<
@@ -309,12 +180,10 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
             <Viewport>
               <div class="solid-flow__container solid-flow__viewport-back" />
               <EdgeRenderer<NodeType, EdgeType>
-                reconnectRadius={_props.reconnectRadius}
                 onEdgeClick={_props.onEdgeClick}
                 onEdgeContextMenu={_props.onEdgeContextMenu}
                 onEdgePointerEnter={_props.onEdgePointerEnter}
                 onEdgePointerLeave={_props.onEdgePointerLeave}
-                defaultEdgeOptions={_props.defaultEdgeOptions}
               />
               <div class="solid-flow__container solid-flow__edge-labels" />
               <ConnectionLine<NodeType>

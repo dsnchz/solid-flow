@@ -8,6 +8,7 @@ import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { isEdgeCulled } from "@/core";
 import type { Edge, EdgeEvents, Node } from "@/types";
+import { isEdgeSelectable } from "@/utils";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
   readonly edgeId: string;
@@ -24,7 +25,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const edge = () => actions.getEdge(edgeId())!;
 
   const edgeType = () => edge().type ?? "default";
-  const selectable = () => edge().selectable ?? store.elementsSelectable;
+  const selectable = () => isEdgeSelectable(edge(), store);
   const focusable = () => edge().focusable ?? store.edgesFocusable;
 
   const edgeComponent = () => store.edgeTypes[edgeType()];

@@ -58,7 +58,7 @@ import type {
   NodeGraph,
   NodeTypes,
 } from "@/types";
-import { isEdge, isNode } from "@/utils";
+import { isEdge, isEdgeSelectable, isNode } from "@/utils";
 
 import { createCullingViewport } from "./culling";
 import { getDefaultFlowStateProps } from "./defaults";
@@ -154,7 +154,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const [height, setHeight] = createSignal(() => config().height);
   const [minZoom, _setMinZoom] = createSignal<number>(() => config().minZoom);
   const [maxZoom, _setMaxZoom] = createSignal<number>(() => config().maxZoom);
-  const [nodesConnectable, setNodesConnectable] = createSignal(() => config().nodesDraggable);
+  const [nodesConnectable, setNodesConnectable] = createSignal(() => config().nodesConnectable);
   const [nodesDraggable, setNodesDraggable] = createSignal(() => config().nodesDraggable);
   const [panZoom, setPanZoom] = createSignal<PanZoomInstance | null>(null);
   const [selectionRect, setSelectionRect] = createSignal<SelectionRect | undefined>();
@@ -861,10 +861,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return;
     }
 
-    const selectable =
-      edge.selectable || (store.elementsSelectable && typeof edge.selectable === "undefined");
-
-    if (!selectable) return;
+    if (!isEdgeSelectable(edge, store)) return;
 
     setSelectionRect(undefined);
     setSelectionRectMode(undefined);
@@ -1025,7 +1022,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // The public write surface. Implementations live here (not in the hook) so
   // the struct is the canonical capability surface and hooks stay aliases.
   const getNodeRect = (node: NodeType | { id: NodeType["id"] }): Rect | null => {
-    const nodeToUse = isNode<NodeType>(node) ? node : nodeLookup.get(node.id)!;
+    const nodeToUse = isNode<NodeType>(node) ? node : nodeLookup.get(node.id);
+    if (!nodeToUse) return null;
     const position = nodeToUse.parentId
       ? evaluateAbsolutePosition(
           nodeToUse.position,
@@ -1125,7 +1123,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return pointToRendererPoint(
         correctedPosition,
         [x, y, zoom],
-        _snapGrid !== null,
+        !!_snapGrid,
         _snapGrid || [1, 1],
       );
     },
@@ -1202,6 +1200,14 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
         store.onNodesDelete?.(matchingNodes);
         setNodesStore(() => remainingNodes);
+      }
+
+      // Every delete path (keyboard AND programmatic) notifies here, so
+      // commands.deleteElements never deletes silently.
+      const deletedNodes = matchingNodes ?? [];
+      const deletedEdges = matchingEdges ?? [];
+      if (deletedNodes.length > 0 || deletedEdges.length > 0) {
+        store.onDelete?.({ nodes: deletedNodes, edges: deletedEdges });
       }
 
       return {

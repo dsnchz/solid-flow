@@ -13,6 +13,7 @@ import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 import type { Edge, Node, PaneEvents } from "@/types";
+import { isEdgeSelectable } from "@/utils";
 
 const isSetEqual = (a: Set<string>, b: Set<string>) => {
   if (a.size !== b.size) return false;
@@ -180,7 +181,6 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       ).map((n) => n.id),
     );
 
-    const edgesSelectable = store.defaultEdgeOptions.selectable ?? true;
     selectedEdgeIds = new Set();
 
     // We look for all edges connected to the selected nodes
@@ -190,7 +190,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
       for (const { edgeId } of Object.values(nodeConnections)) {
         const edge = edgeLookup[edgeId];
-        if (edge && (edge.selectable ?? edgesSelectable)) {
+        if (edge && isEdgeSelectable(edge, store)) {
           selectedEdgeIds.add(edgeId);
         }
       }

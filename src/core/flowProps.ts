@@ -344,6 +344,12 @@ export type SolidFlowProps<
      */
     readonly panOnScroll?: boolean;
     /**
+     * Controls how fast the viewport pans while scrolling.
+     * Only applies when `panOnScroll` is enabled.
+     * @default 0.5
+     */
+    readonly panOnScrollSpeed?: number;
+    /**
      * This prop is used to limit the direction of panning when panOnScroll is enabled.
      * The "free" option allows panning in any direction.
      * @default "free"
@@ -399,6 +405,12 @@ export type SolidFlowProps<
      */
     readonly autoPanOnNodeDrag?: boolean;
     /**
+     * The speed at which the viewport auto-pans while dragging a node or a
+     * connection toward the edge of the viewport.
+     * @default 15
+     */
+    readonly autoPanSpeed?: number;
+    /**
      * Defaults to be applied to all new edges that are added to the flow.
      * Properties on a new edge will override these defaults if they exist.
      * @example
@@ -414,6 +426,11 @@ export type SolidFlowProps<
      * @example 'system' | 'light' | 'dark'
      */
     readonly colorMode?: ColorMode;
+    /**
+     * Static message announced to screen readers via the flow's aria-live
+     * region (in addition to the built-in keyboard-interaction messages).
+     */
+    readonly ariaLiveMessage?: string;
     /** Fallback color mode for SSR if colorMode is set to 'system' */
     readonly colorModeSSR?: Omit<ColorMode, "system">;
     /** Class to be applied to the flow container */
@@ -555,3 +572,130 @@ export type SolidFlowProps<
      */
     readonly ariaLabelConfig?: Partial<AriaLabelConfig>;
   };
+
+/**
+ * Every key of SolidFlowProps. SolidFlow strips these before spreading the
+ * remaining (DOM) props onto the root element — a flow prop reaching the DOM
+ * is a bug (the omit list once drifted: the flow `id` rendered as a DOM id
+ * on every flow, delete callbacks attached as bogus listeners, and five
+ * 1.x-era `*KeyCode` keys lingered; audit 2026-08-24 A2). `satisfies` rejects
+ * keys that don't exist; the compile-contract test asserts none are missing.
+ */
+export const FLOW_PROP_KEYS = [
+  "ariaLabelConfig",
+  "ariaLiveMessage",
+  "attributionPosition",
+  "autoPanOnConnect",
+  "autoPanOnNodeDrag",
+  "autoPanOnNodeFocus",
+  "autoPanOnSelection",
+  "autoPanSpeed",
+  "class",
+  "clickConnect",
+  "colorMode",
+  "colorModeSSR",
+  "connectionDragThreshold",
+  "connectionLineComponent",
+  "connectionLineContainerStyle",
+  "connectionLineStyle",
+  "connectionLineType",
+  "connectionMode",
+  "connectionRadius",
+  "defaultEdgeOptions",
+  "defaultEdges",
+  "defaultMarkerColor",
+  "defaultNodes",
+  "deleteKey",
+  "disableKeyboardA11y",
+  "edgeTypes",
+  "edges",
+  "edgesFocusable",
+  "elementsSelectable",
+  "elevateEdgesOnSelect",
+  "elevateNodesOnSelect",
+  "fitView",
+  "fitViewOptions",
+  "height",
+  "id",
+  "initialViewport",
+  "isValidConnection",
+  "maxZoom",
+  "minZoom",
+  "multiSelectionKey",
+  "noDragClass",
+  "noPanClass",
+  "noWheelClass",
+  "nodeClickDistance",
+  "nodeDragThreshold",
+  "nodeExtent",
+  "nodeOrigin",
+  "nodeTypes",
+  "nodes",
+  "nodesConnectable",
+  "nodesDraggable",
+  "nodesFocusable",
+  "onBeforeConnect",
+  "onBeforeDelete",
+  "onBeforeReconnect",
+  "onClickConnectEnd",
+  "onClickConnectStart",
+  "onConnect",
+  "onConnectEnd",
+  "onConnectStart",
+  "onDelete",
+  "onEdgeClick",
+  "onEdgeContextMenu",
+  "onEdgePointerEnter",
+  "onEdgePointerLeave",
+  "onEdgesDelete",
+  "onFlowError",
+  "onInit",
+  "onMove",
+  "onMoveEnd",
+  "onMoveStart",
+  "onNodeClick",
+  "onNodeContextMenu",
+  "onNodeDrag",
+  "onNodeDragStart",
+  "onNodeDragStop",
+  "onNodePointerEnter",
+  "onNodePointerLeave",
+  "onNodePointerMove",
+  "onNodesDelete",
+  "onPaneClick",
+  "onPaneContextMenu",
+  "onReconnect",
+  "onReconnectEnd",
+  "onReconnectStart",
+  "onSelectionChange",
+  "onSelectionClick",
+  "onSelectionContextMenu",
+  "onSelectionDrag",
+  "onSelectionDragStart",
+  "onSelectionDragStop",
+  "onSelectionEnd",
+  "onSelectionStart",
+  "onlyRenderVisibleElements",
+  "panActivationKey",
+  "panOnDrag",
+  "panOnScroll",
+  "panOnScrollMode",
+  "panOnScrollSpeed",
+  "paneClickDistance",
+  "preventScrolling",
+  "proOptions",
+  "selectNodesOnDrag",
+  "selectionKey",
+  "selectionMode",
+  "selectionOnDrag",
+  "snapGrid",
+  "style",
+  "translateExtent",
+  "viewport",
+  "width",
+  "zIndexMode",
+  "zoomActivationKey",
+  "zoomOnDoubleClick",
+  "zoomOnPinch",
+  "zoomOnScroll",
+] as const satisfies readonly (keyof SolidFlowProps)[];
