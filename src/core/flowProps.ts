@@ -360,7 +360,10 @@ export type SolidFlowProps<
      * Component-LOCAL state does not survive — signals created inside a
      * custom node, uncontrolled inputs, scroll positions of inner elements.
      * Keep state you care about in `node.data`. Never unmounted: selected
-     * elements, unmeasured nodes, and the node holding DOM focus.
+     * elements, unmeasured nodes, and the node holding DOM focus. Elements
+     * whose component-local state (or side effects) must keep running while
+     * off-screen can opt out entirely with `cullable: false` on the node or
+     * edge — they are then exempt from both tiers.
      *
      * Independent of this prop, off-viewport elements are always CSS-culled
      * (`visibility: hidden` + `pointer-events: none`, everything stays

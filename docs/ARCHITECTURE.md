@@ -893,10 +893,18 @@ worse than rendering everything (v1 autopsy in
     upstream #3038). The equality cut is the point: a geometry change
     recomputes one row's boolean; the id lists (`visibleNodeIds` /
     `visibleEdgeIds`) stay full and stable. Guards: selected, unmeasured,
-    and the focused element (renderer-local focusin/focusout tracking)
-    never unmount; `NodeWrapper` unobserves its element from the shared
-    ResizeObserver on dispose. The data graph is untouched — remounted
-    rows return at their cached measured size.
+    `cullable: false` (user opt-out, both tiers), the focused element
+    (renderer-local focusin/focusout tracking), and nodes whose
+    `internals.handleBounds` have not populated in THIS flow instance —
+    `measured` is written back to the user's node objects, so a persisted
+    layout or a remounted flow arrives "pre-measured", and trusting it
+    would cull the node before its one mount, permanently starving its
+    edges of `getEdgePosition` geometry (found via the cullable tests;
+    handle bounds live in the per-flow measurements store and survive
+    unmount-culling, so the guard cannot oscillate). `NodeWrapper`
+    unobserves its element from the shared ResizeObserver on dispose. The
+    data graph is untouched — remounted rows return at their cached
+    measured size.
 
 Either way there is still no derived collection: the central filtered-list
 shape re-reads every row per change and measured 5x slower at 10k than the

@@ -26,6 +26,13 @@ export type Edge<
   class?: string;
   focusable?: boolean;
   /**
+   * When `false`, the edge is exempt from viewport culling on both tiers:
+   * the always-on CSS tier never hides it and `onlyRenderVisibleElements`
+   * never unmounts it.
+   * @default true
+   */
+  cullable?: boolean;
+  /**
    * The ARIA role attribute for the edge, used for accessibility.
    * @default "group"
    */

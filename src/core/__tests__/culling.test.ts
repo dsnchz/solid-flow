@@ -15,10 +15,21 @@ const makeInternalNode = (
     height?: number;
     selected?: boolean;
     measured?: boolean;
+    mounted?: boolean;
+    cullable?: boolean;
   } = {},
 ): InternalNode => {
-  const { x = 0, y = 0, width = 100, height = 50, selected = false, measured = true } = overrides;
-  const node: Node = { id: "n", position: { x, y }, data: {}, selected };
+  const {
+    x = 0,
+    y = 0,
+    width = 100,
+    height = 50,
+    selected = false,
+    measured = true,
+    mounted = true,
+    cullable,
+  } = overrides;
+  const node: Node = { id: "n", position: { x, y }, data: {}, selected, cullable };
   return {
     ...node,
     measured: measured ? { width, height } : {},
@@ -26,6 +37,8 @@ const makeInternalNode = (
       positionAbsolute: { x, y },
       z: 0,
       userNode: node,
+      // Handle bounds only populate on first mount in this flow instance.
+      handleBounds: mounted ? { source: [], target: [] } : undefined,
     },
   } as InternalNode;
 };
@@ -172,6 +185,16 @@ describe("isNodeCulled", () => {
     expect(isNodeCulled(makeInternalNode({ x: 2000, measured: false }), rect)).toBe(false);
   });
 
+  it("never culls nodes whose handle bounds have not populated in this instance", () => {
+    // Pre-measured node (persisted layout / remounted flow): must still get
+    // its one mount so edges touching it can lay out.
+    expect(isNodeCulled(makeInternalNode({ x: 2000, mounted: false }), rect)).toBe(false);
+  });
+
+  it("never culls cullable: false nodes", () => {
+    expect(isNodeCulled(makeInternalNode({ x: 2000, cullable: false }), rect)).toBe(false);
+  });
+
   it("culls nothing while the culling viewport is null (container unmeasured)", () => {
     expect(isNodeCulled(makeInternalNode({ x: 2000 }), null)).toBe(false);
   });
@@ -201,6 +224,10 @@ describe("isEdgeCulled", () => {
 
   it("never culls selected edges", () => {
     expect(isEdgeCulled(edge(2000, 0, 3000, 0, true), rect)).toBe(false);
+  });
+
+  it("never culls cullable: false edges", () => {
+    expect(isEdgeCulled({ ...edge(2000, 0, 3000, 0), cullable: false }, rect)).toBe(false);
   });
 
   it("culls nothing while the culling viewport is null", () => {

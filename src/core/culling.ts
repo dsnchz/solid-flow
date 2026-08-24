@@ -84,17 +84,27 @@ export const createCullingViewport = (source: CullingSource): Accessor<Rect | nu
  * opt-in `onlyRenderVisibleElements` tier unmounts them entirely (the
  * renderer additionally never unmounts the node holding DOM focus). Selected
  * nodes are never culled (keyboard interaction and toolbars survive
- * off-screen), and unmeasured nodes are left to the pre-measurement
+ * off-screen), `cullable: false` nodes opt out of both tiers entirely, and
+ * unmeasured nodes are left to the pre-measurement
  * visibility path — culling must never starve the measurement pipeline.
  */
 export const isNodeCulled = <NodeType extends Node>(
   node: InternalNode<NodeType>,
   cullingViewport: Rect | null,
 ): boolean => {
-  if (!cullingViewport || node.selected) return false;
+  if (!cullingViewport || node.selected || node.cullable === false) return false;
 
   const { width, height } = node.measured;
   if (!width || !height) return false;
+
+  // A node can arrive pre-measured (persisted layout, SSR payload, a
+  // remounted flow writing `measured` back to shared node objects), but
+  // handle bounds are per-flow-instance and only populate on mount. Until
+  // they do, the node must not be culled — otherwise it never mounts, its
+  // handle bounds never materialize, and every edge touching it fails to
+  // lay out (getEdgePosition yields no row). Measurement ingest keeps handle
+  // bounds across unmount-culling, so this cannot oscillate.
+  if (!node.internals.handleBounds) return false;
 
   const { x, y } = node.internals.positionAbsolute;
   return !rectsOverlap({ x, y, width, height }, cullingViewport);
@@ -104,14 +114,15 @@ export const isNodeCulled = <NodeType extends Node>(
  * Whether an edge is outside the culling viewport: the AABB of its layouted
  * endpoints (the drawn segment's box) against the culling viewport. The CSS
  * tier hides culled edges; the opt-in `onlyRenderVisibleElements` tier
- * unmounts them. Selected edges are never culled. The overscan margin
+ * unmounts them. Selected edges are never culled; `cullable: false` edges
+ * opt out of both tiers entirely. The overscan margin
  * absorbs curvature overshoot beyond the endpoint box.
  */
 export const isEdgeCulled = (
-  row: Pick<EdgeLayouted, "sourceX" | "sourceY" | "targetX" | "targetY" | "selected">,
+  row: Pick<EdgeLayouted, "sourceX" | "sourceY" | "targetX" | "targetY" | "selected" | "cullable">,
   cullingViewport: Rect | null,
 ): boolean => {
-  if (!cullingViewport || row.selected) return false;
+  if (!cullingViewport || row.selected || row.cullable === false) return false;
 
   const x = Math.min(row.sourceX, row.targetX);
   const y = Math.min(row.sourceY, row.targetY);

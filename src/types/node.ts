@@ -23,6 +23,14 @@ export type Node<
   style?: JSX.CSSProperties;
   focusable?: boolean;
   /**
+   * When `false`, the node is exempt from viewport culling on both tiers:
+   * the always-on CSS tier never hides it and `onlyRenderVisibleElements`
+   * never unmounts it. Use for nodes whose content must keep running while
+   * off-screen (media playback, timers, third-party embeds).
+   * @default true
+   */
+  cullable?: boolean;
+  /**
    * The ARIA role attribute for the node element, used for accessibility.
    * @default "group"
    */

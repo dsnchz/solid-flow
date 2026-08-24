@@ -111,6 +111,40 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
     expect(container.querySelector('[data-id="far"]')).not.toBeNull();
   });
 
+  it("cullable: false opts an element out of both tiers", async () => {
+    // Two far nodes: one opted out, one control. The opted-out node must be
+    // neither CSS-hidden (default mode) nor unmounted (opt-in mode); the
+    // edge between them is opted out too and must survive with it.
+    const nodes = [
+      makeNode({ id: "near" }),
+      makeNode({ id: "farKeep", position: { x: FAR_X, y: 0 }, cullable: false }),
+      makeNode({ id: "farCull", position: { x: FAR_X + 200, y: 100 } }),
+    ];
+    const edges = [
+      makeEdge({ id: "eKeep", source: "farKeep", target: "farCull", cullable: false }),
+      makeEdge({ id: "eCull", source: "farKeep", target: "farCull" }),
+    ];
+
+    // CSS tier (default mode): opted-out element stays visible off-screen.
+    const cssTier = renderFlow({ nodes, edges });
+    await tick();
+    const keep = cssTier.container.querySelector<HTMLElement>('[data-id="farKeep"]')!;
+    expect(keep.style.visibility).toBe("visible");
+    expect(cssTier.container.querySelector<HTMLElement>('[data-id="farCull"]')!.style.visibility) //
+      .toBe("hidden");
+    cssTier.unmount();
+
+    // Unmount tier: opted-out node and edge stay mounted, controls unmount.
+    const unmountTier = renderFlow({ nodes, edges, onlyRenderVisibleElements: true });
+    await tick();
+    expect(unmountTier.container.querySelector('[data-id="farKeep"]')).not.toBeNull();
+    expect(unmountTier.container.querySelector('[data-id="farCull"]')).toBeNull();
+    expect(
+      unmountTier.container.querySelector('.solid-flow__edge[data-id="eKeep"]'),
+    ).not.toBeNull();
+    expect(unmountTier.container.querySelector('.solid-flow__edge[data-id="eCull"]')).toBeNull();
+  });
+
   it("never unmounts the node holding focus; releases it on focusout", async () => {
     let api!: ReturnType<typeof useSolidFlow>;
     const { container } = renderFlow({
@@ -150,6 +184,27 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
     expect(far).not.toBeNull();
     // Cached measurement: visible immediately, no unmeasured flash.
     expect(far!.style.visibility).toBe("visible");
+  });
+
+  it("mounts pre-measured nodes once so their edges can lay out (no starvation)", async () => {
+    // A first flow writes `measured` back onto the shared node objects
+    // (persisted-layout / remount scenario). The second flow starts with
+    // fresh per-instance handle bounds — if it trusted `measured` and culled
+    // the far node before its first mount, the bounds would never populate
+    // and eNear could never lay out (its row silently never builds).
+    const nodes = [makeNode({ id: "near" }), makeNode({ id: "far", position: { x: FAR_X, y: 0 } })];
+    const edges = [makeEdge({ id: "eNear", source: "near", target: "far" })];
+
+    const first = renderFlow({ nodes, edges });
+    await tick();
+    first.unmount();
+
+    const second = renderFlow({ nodes, edges, onlyRenderVisibleElements: true });
+    await tick();
+
+    expect(second.container.querySelector('.solid-flow__edge[data-id="eNear"]')).not.toBeNull();
+    // The far node mounted exactly once for measurement, then unmounted.
+    expect(second.container.querySelector('[data-id="far"]')).toBeNull();
   });
 
   it("keeps unmounted nodes on the MiniMap (data-graph driven, not DOM driven)", async () => {
