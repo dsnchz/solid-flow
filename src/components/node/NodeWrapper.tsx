@@ -7,7 +7,7 @@ import {
   isInputDOMNode,
   nodeHasDimensions,
 } from "@xyflow/system";
-import { createEffect, createMemo, createSignal, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
 import { ARIA_NODE_DESC_KEY } from "@/components/accessibility";
@@ -33,6 +33,13 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
   const node = () => nodeLookup.get(props.nodeId)!;
+
+  // The shared observer outlives this wrapper — without unobserve on dispose
+  // it pins the detached element in the observer's target list.
+  onCleanup(() => {
+    const el = nodeRef();
+    if (el) props.resizeObserver?.unobserve(el);
+  });
 
   const nodeId = () => node().id;
   const nodeType = () => node().type ?? "default";

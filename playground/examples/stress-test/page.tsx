@@ -1,10 +1,25 @@
 import { flush } from "solid-js";
-import { Background, Controls, type Edge, MiniMap, type Node, SolidFlow } from "@/index";
+import {
+  Background,
+  Controls,
+  type Edge,
+  MiniMap,
+  type Node,
+  SolidFlow,
+  useSolidFlow,
+} from "@/index";
+
+// Exposes the flow API to the bench driver (pan via commands.setViewport).
+const BenchProbe = () => {
+  const api = useSolidFlow();
+  (window as Window & { __bench?: unknown }).__bench = { flush, api };
+  return null;
+};
 
 // Benchmark-instrumented stress grid. URL params:
 //   x, y     grid dimensions (default 25x25 = 625 nodes, 624 chained edges)
 //   minimap  "1" to include the MiniMap (default off, to isolate the graph pipeline)
-//   cull     "0" to opt out of viewport culling (onlyRenderVisibleElements={false})
+//   unmount  "1" to opt into unmount culling (onlyRenderVisibleElements)
 //   fit      "0" to skip fitView so the grid overflows the viewport (culling visible)
 //
 // window.__bench.flush lets the driver force synchronous completion of a
@@ -16,7 +31,7 @@ export const StressTest = () => {
   const yNodes = Number(params.get("y") ?? 25);
   const withMiniMap = params.get("minimap") === "1";
   const withEdges = params.get("edges") !== "0";
-  const withCulling = params.get("cull") !== "0";
+  const withUnmountCulling = params.get("unmount") === "1";
   const withFitView = params.get("fit") !== "0";
 
   const nodeItems: Node[] = [];
@@ -57,12 +72,13 @@ export const StressTest = () => {
       nodes={nodeItems}
       edges={edgeItems}
       fitView={withFitView}
-      onlyRenderVisibleElements={withCulling}
+      onlyRenderVisibleElements={withUnmountCulling}
       minZoom={0.1}
       onFlowError={(id, message) => {
         console.error(id, message);
       }}
     >
+      <BenchProbe />
       <Controls />
       <Background variant="lines" />
       {withMiniMap && <MiniMap />}

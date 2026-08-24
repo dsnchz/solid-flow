@@ -446,13 +446,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /**********************************************************************************/
 
   // The #15 culling viewport: quantized/overscanned flow-space rect, null
-  // while culling is off. Per-element culled memos in NodeWrapper/EdgeWrapper
-  // read it; the renderers' id lists stay full — culling is CSS-only and
-  // never changes DOM membership (design doc §4).
+  // while the container is unmeasured. Two consumers: per-element culled
+  // memos in NodeWrapper/EdgeWrapper (always-on CSS tier), and the
+  // renderers' per-row unmount gates (opt-in onlyRenderVisibleElements
+  // tier, design doc §4 + bench round 6).
   const cullingViewport = createCullingViewport({
-    get onlyRenderVisibleElements() {
-      return store.onlyRenderVisibleElements;
-    },
     get width() {
       return store.width;
     },
@@ -466,8 +464,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   // Structural read only (record keys = node ids): row-level changes — e.g.
   // the dragged node's row rebuilding every move — must not re-run this.
-  // Always the FULL id list: culling hides elements with CSS, it never
-  // changes list membership (no mount/unmount churn).
+  // Always the FULL id list: the CSS tier hides elements without changing
+  // membership, and the opt-in unmount tier gates per row INSIDE the
+  // renderer's <For> (a Show around each wrapper) so this list stays stable.
   const visibleNodeIds = createMemo(() => Object.keys(internalNodes));
 
   // Which nodes currently have children (reactive "is parent" answers)

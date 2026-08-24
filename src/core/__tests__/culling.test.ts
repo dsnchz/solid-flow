@@ -34,7 +34,6 @@ const makeInternalNode = (
 // culling rect spans [-400, 1200] x [-300, 900] (bucketed dims + 0.5 overscan).
 const makeSource = (initial: { width?: number; height?: number; transform?: Transform } = {}) => {
   const [state, setState] = createStore({
-    onlyRenderVisibleElements: true,
     width: initial.width ?? 800,
     height: initial.height ?? 600,
     transform: initial.transform ?? ([0, 0, 1] as Transform),
@@ -47,9 +46,6 @@ const makeSource = (initial: { width?: number; height?: number; transform?: Tran
     },
     setState,
     source: {
-      get onlyRenderVisibleElements() {
-        return state.onlyRenderVisibleElements;
-      },
       get width() {
         return state.width;
       },
@@ -64,12 +60,9 @@ const makeSource = (initial: { width?: number; height?: number; transform?: Tran
 };
 
 describe("createCullingViewport (core, headless)", () => {
-  it("is null while culling is off, and reads no geometry", () => {
-    const { setTransform, setState, source } = makeSource();
+  it("is null while the container is unmeasured, and stays null across pans", () => {
+    const { setTransform, source } = makeSource({ width: 0, height: 0 });
     createRoot((dispose) => {
-      setState((draft) => {
-        draft.onlyRenderVisibleElements = false;
-      });
       const cullingViewport = createCullingViewport(source);
       let runs = 0;
       const rect = createMemo(() => {
@@ -80,21 +73,12 @@ describe("createCullingViewport (core, headless)", () => {
       expect(rect()).toBeNull();
       expect(runs).toBe(1);
 
-      // Geometry changes must not recompute the disabled memo's consumers.
+      // Geometry changes must not recompute the unmeasured memo's consumers
+      // (null-equals-null holds through the rect equality).
       setTransform([-100, -50, 1]);
       flush();
       expect(rect()).toBeNull();
       expect(runs).toBe(1);
-      dispose();
-    });
-  });
-
-  it("is null while the container is unmeasured", () => {
-    const { source } = makeSource({ width: 0, height: 0 });
-    createRoot((dispose) => {
-      const cullingViewport = createCullingViewport(source);
-      flush();
-      expect(cullingViewport()).toBeNull();
       dispose();
     });
   });
@@ -188,7 +172,7 @@ describe("isNodeCulled", () => {
     expect(isNodeCulled(makeInternalNode({ x: 2000, measured: false }), rect)).toBe(false);
   });
 
-  it("culls nothing while the culling viewport is null (feature off)", () => {
+  it("culls nothing while the culling viewport is null (container unmeasured)", () => {
     expect(isNodeCulled(makeInternalNode({ x: 2000 }), null)).toBe(false);
   });
 });

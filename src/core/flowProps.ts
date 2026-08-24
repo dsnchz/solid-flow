@@ -348,13 +348,25 @@ export type SolidFlowProps<
      */
     readonly selectionOnDrag?: boolean;
     /**
-     * Viewport culling: elements outside the (overscanned) viewport are hidden
-     * with CSS (`visibility: hidden` + `pointer-events: none`). Everything
-     * stays mounted — custom nodes keep their DOM state off-screen, and
-     * measurement/fitView/minimap are unaffected. Selected elements are never
-     * culled. Set to `false` to keep every element visible; note that culled
-     * elements leave the accessibility tree and tab order while off-screen.
-     * @default true
+     * Only render (mount) elements inside the overscanned viewport: nodes and
+     * edges outside it are unmounted entirely, and remount as the viewport
+     * reaches them. This is the heavy-duty tier for very large graphs — at
+     * 10k nodes it cuts the DOM by ~16x, roughly halves memory, and makes
+     * node drags ~3.7x faster (fewer live subscribers).
+     *
+     * The flow's data graph is unaffected: positions, selection, and cached
+     * measurements live outside the components, so an unmounted node comes
+     * back exactly as it left (at its measured size, still selected).
+     * Component-LOCAL state does not survive — signals created inside a
+     * custom node, uncontrolled inputs, scroll positions of inner elements.
+     * Keep state you care about in `node.data`. Never unmounted: selected
+     * elements, unmeasured nodes, and the node holding DOM focus.
+     *
+     * Independent of this prop, off-viewport elements are always CSS-culled
+     * (`visibility: hidden` + `pointer-events: none`, everything stays
+     * mounted) — that tier has no user-visible semantics beyond leaving the
+     * accessibility tree and tab order while off-screen.
+     * @default false
      */
     readonly onlyRenderVisibleElements?: boolean;
     /**

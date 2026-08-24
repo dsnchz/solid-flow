@@ -8,7 +8,6 @@ import type { EdgeLayouted, InternalNode, Node } from "@/types";
  * internal store satisfies it and headless tests can supply a plain object.
  */
 export type CullingSource = {
-  readonly onlyRenderVisibleElements: boolean;
   readonly width: number;
   readonly height: number;
   readonly transform: Transform;
@@ -39,15 +38,12 @@ export const rectsOverlap = (a: Rect, b: Rect): boolean =>
  *
  * Zoom is bucketed into powers of two so the rect's dimensions are stable
  * within a bucket; the bucket floor guarantees the rect always covers at
- * least the actual visible area. Returns `null` while culling is disabled or
- * the flow container is unmeasured — consumers treat `null` as "cull
- * nothing", which keeps the disabled path free of geometry reads.
+ * least the actual visible area. Returns `null` while the flow container is
+ * unmeasured — consumers treat `null` as "cull nothing".
  */
 export const createCullingViewport = (source: CullingSource): Accessor<Rect | null> =>
   createMemo(
     () => {
-      if (!source.onlyRenderVisibleElements) return null;
-
       const { width, height } = source;
       if (!width || !height) return null;
 
@@ -83,10 +79,13 @@ export const createCullingViewport = (source: CullingSource): Accessor<Rect | nu
   );
 
 /**
- * Whether a node's DOM element should be CSS-hidden (culled). Selected nodes
- * are never culled (keyboard focus and toolbars survive off-screen), and
- * unmeasured nodes are left to the pre-measurement visibility path — culling
- * must never starve the measurement pipeline.
+ * Whether a node is outside the culling viewport. The always-on CSS tier
+ * hides culled nodes (`visibility: hidden` + `pointer-events: none`); the
+ * opt-in `onlyRenderVisibleElements` tier unmounts them entirely (the
+ * renderer additionally never unmounts the node holding DOM focus). Selected
+ * nodes are never culled (keyboard interaction and toolbars survive
+ * off-screen), and unmeasured nodes are left to the pre-measurement
+ * visibility path — culling must never starve the measurement pipeline.
  */
 export const isNodeCulled = <NodeType extends Node>(
   node: InternalNode<NodeType>,
@@ -102,10 +101,11 @@ export const isNodeCulled = <NodeType extends Node>(
 };
 
 /**
- * Whether an edge's DOM element should be CSS-hidden (culled): the AABB of
- * its layouted endpoints (the drawn segment's box) against the culling
- * viewport. Selected edges are never culled. The overscan margin absorbs
- * curvature overshoot beyond the endpoint box.
+ * Whether an edge is outside the culling viewport: the AABB of its layouted
+ * endpoints (the drawn segment's box) against the culling viewport. The CSS
+ * tier hides culled edges; the opt-in `onlyRenderVisibleElements` tier
+ * unmounts them. Selected edges are never culled. The overscan margin
+ * absorbs curvature overshoot beyond the endpoint box.
  */
 export const isEdgeCulled = (
   row: Pick<EdgeLayouted, "sourceX" | "sourceY" | "targetX" | "targetY" | "selected">,

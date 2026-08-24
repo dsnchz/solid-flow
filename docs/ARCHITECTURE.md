@@ -883,11 +883,25 @@ worse than rendering everything (v1 autopsy in
 - The _determination_ is core-owned and headless-tested:
   `src/core/culling.ts` — the overscanned, quantized `cullingViewport` memo
   plus pure `isNodeCulled` / `isEdgeCulled` predicates.
-- The _application_ is a per-element flag memo in each wrapper writing
-  `visibility` + `pointer-events` only. Renderer id lists always stay full;
-  culling never changes DOM membership.
+- The _application_ is two tiers, both leaf-granular:
+  - **CSS tier (always on)**: a per-element flag memo in each wrapper
+    writing `visibility` + `pointer-events` only.
+  - **Unmount tier (opt-in `onlyRenderVisibleElements`, bench round 6)**: a
+    per-row flag memo in each renderer gating a `<Show>` around the wrapper.
+    Off-viewport rows are not mounted at all — at 10k that is 16x less DOM,
+    ~half the heap, and 3.7x faster drags (fewer live observers under
+    upstream #3038). The equality cut is the point: a geometry change
+    recomputes one row's boolean; the id lists (`visibleNodeIds` /
+    `visibleEdgeIds`) stay full and stable. Guards: selected, unmeasured,
+    and the focused element (renderer-local focusin/focusout tracking)
+    never unmount; `NodeWrapper` unobserves its element from the shared
+    ResizeObserver on dispose. The data graph is untouched — remounted
+    rows return at their cached measured size.
 
-This is §15 applied to §5 — do not "fix" it into a collection.
+Either way there is still no derived collection: the central filtered-list
+shape re-reads every row per change and measured 5x slower at 10k than the
+per-row gate (round 6). This is §15 applied to §5 — do not "fix" it into a
+collection.
 
 ## Verification discipline
 
@@ -900,5 +914,5 @@ This is §15 applied to §5 — do not "fix" it into a collection.
   delivery and rAF — convincingly impersonating "the build is broken"
   (dead container measurement, inert zoom/fitView, inert culling).
 - Benchmarks: prod build, visible tab, fully synchronous drivers
-  (`window.__bench.flush` seam in the stress example; `cull=0` / `fit=0`
-  params for A/B).
+  (`window.__bench.flush` + `window.__bench.api` seams in the stress
+  example; `unmount=1` / `fit=0` params for A/B).

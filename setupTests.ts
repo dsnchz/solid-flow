@@ -57,6 +57,20 @@ if (typeof HTMLElement !== "undefined") {
         return stylePx(this, "height");
       },
     },
+    // The flow container's ResizeObserver reads client dimensions
+    // (SolidFlow's width/height props land as inline styles on it).
+    clientWidth: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return stylePx(this, "width");
+      },
+    },
+    clientHeight: {
+      configurable: true,
+      get(this: HTMLElement) {
+        return stylePx(this, "height");
+      },
+    },
   });
 
   const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;

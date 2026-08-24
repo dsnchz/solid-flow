@@ -1,9 +1,10 @@
 import type { JSX } from "@solidjs/web";
 import { isServer } from "@solidjs/web";
-import { For, onCleanup } from "solid-js";
+import { createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 
 import { NodeWrapper } from "@/components/node/NodeWrapper";
 import { useInternalSolidFlow } from "@/contexts";
+import { isNodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
 
 export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
@@ -14,7 +15,7 @@ export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeTyp
 export const NodeRenderer = <NodeType extends Node = Node>(
   props: NodeRendererProps<NodeType>,
 ): JSX.Element => {
-  const { actions, store } = useInternalSolidFlow<NodeType>();
+  const { actions, store, nodeLookup } = useInternalSolidFlow<NodeType>();
 
   // Nodes are measured in the browser only; during SSR the observer is absent
   // and NodeWrapper's measurement effect never runs.
@@ -40,24 +41,51 @@ export const NodeRenderer = <NodeType extends Node = Node>(
     resizeObserver?.disconnect();
   });
 
+  // The unmount tier's focus guard: focusin bubbles from any descendant (a
+  // custom node's input included), so the node holding DOM focus is known
+  // here and never unmounted mid-interaction — focus cannot survive removal.
+  const [focusedNodeId, setFocusedNodeId] = createSignal<string | null>(null);
+
+  const onFocusIn = (event: FocusEvent) => {
+    const nodeElement = (event.target as Element).closest("[data-id]");
+    setFocusedNodeId(nodeElement?.getAttribute("data-id") ?? null);
+  };
+
   return (
-    <div class="solid-flow__container solid-flow__nodes">
+    <div
+      class="solid-flow__container solid-flow__nodes"
+      onFocusIn={onFocusIn}
+      onFocusOut={() => setFocusedNodeId(null)}
+    >
       <For each={store.visibleNodeIds}>
         {(nodeId) => {
+          // Opt-in unmount culling (onlyRenderVisibleElements): a per-row
+          // boolean with an equality cut, so a geometry change recomputes
+          // only this row's flag and nothing downstream runs unless it
+          // actually flips. A central filtered-list memo instead re-reads
+          // every row per change — measured 5x slower at 10k (bench round 6).
+          const unmounted = createMemo(() => {
+            if (!store.onlyRenderVisibleElements || focusedNodeId() === nodeId) return false;
+            const node = nodeLookup.get(nodeId);
+            return !!node && isNodeCulled(node, store.cullingViewport);
+          });
+
           return (
-            <NodeWrapper
-              nodeId={nodeId}
-              resizeObserver={resizeObserver}
-              nodeClickDistance={props.nodeClickDistance}
-              onNodeClick={props.onNodeClick}
-              onNodePointerEnter={props.onNodePointerEnter}
-              onNodePointerMove={props.onNodePointerMove}
-              onNodePointerLeave={props.onNodePointerLeave}
-              onNodeDrag={props.onNodeDrag}
-              onNodeDragStart={props.onNodeDragStart}
-              onNodeDragStop={props.onNodeDragStop}
-              onNodeContextMenu={props.onNodeContextMenu}
-            />
+            <Show when={!unmounted()}>
+              <NodeWrapper
+                nodeId={nodeId}
+                resizeObserver={resizeObserver}
+                nodeClickDistance={props.nodeClickDistance}
+                onNodeClick={props.onNodeClick}
+                onNodePointerEnter={props.onNodePointerEnter}
+                onNodePointerMove={props.onNodePointerMove}
+                onNodePointerLeave={props.onNodePointerLeave}
+                onNodeDrag={props.onNodeDrag}
+                onNodeDragStart={props.onNodeDragStart}
+                onNodeDragStop={props.onNodeDragStop}
+                onNodeContextMenu={props.onNodeContextMenu}
+              />
+            </Show>
           );
         }}
       </For>
