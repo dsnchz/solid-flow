@@ -27,17 +27,17 @@ type AllNodeTypes<TUserNodeTypes extends NodeTypes> =
  * ```typescript
  * const initialNodes = [
  *   { id: "1", type: "custom", position: { x: 0, y: 0 }, data: { value: 1 } },
- * ] satisfies NodesFor<typeof nodeTypes>[];
+ * ] satisfies SolidFlowNode<typeof nodeTypes>[];
  * ```
  */
-export type NodesFor<TUserNodeTypes extends NodeTypes = Record<string, never>> = {
+export type SolidFlowNode<TUserNodeTypes extends NodeTypes = Record<string, never>> = {
   [K in keyof AllNodeTypes<TUserNodeTypes>]: Node<
     NodeDataOf<AllNodeTypes<TUserNodeTypes>[K]>,
     K & string
   >;
 }[keyof AllNodeTypes<TUserNodeTypes>];
 
-type NodesInput<TUserNodeTypes extends NodeTypes> = NodesFor<TUserNodeTypes>;
+type NodesInput<TUserNodeTypes extends NodeTypes> = SolidFlowNode<TUserNodeTypes>;
 
 /**
  * Creates a type-safe reactive store of nodes for use in Solid Flow.

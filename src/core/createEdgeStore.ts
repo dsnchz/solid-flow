@@ -26,17 +26,17 @@ type AllEdgeTypes<TUserEdgeTypes extends EdgeTypes> =
  * ```typescript
  * const initialEdges = [
  *   { id: "e1", source: "1", target: "2", type: "labeled", data: { label: "hi" } },
- * ] satisfies EdgesFor<typeof edgeTypes>[];
+ * ] satisfies SolidFlowEdge<typeof edgeTypes>[];
  * ```
  */
-export type EdgesFor<TUserEdgeTypes extends EdgeTypes = Record<string, never>> = {
+export type SolidFlowEdge<TUserEdgeTypes extends EdgeTypes = Record<string, never>> = {
   [K in keyof AllEdgeTypes<TUserEdgeTypes>]: Edge<
     EdgeDataOf<AllEdgeTypes<TUserEdgeTypes>[K]>,
     K & string
   >;
 }[keyof AllEdgeTypes<TUserEdgeTypes>];
 
-type EdgesInput<TUserEdgeTypes extends EdgeTypes> = EdgesFor<TUserEdgeTypes>;
+type EdgesInput<TUserEdgeTypes extends EdgeTypes> = SolidFlowEdge<TUserEdgeTypes>;
 
 /**
  * Creates a type-safe reactive store of edges for use in Solid Flow.

@@ -135,11 +135,11 @@ const [nodes] = createNodeStore<typeof nodeTypes>([
 The same guided unions are exported as standalone types, so plain arrays, props, and vanilla stores get identical narrowing:
 
 ```tsx
-import type { EdgesFor, NodesFor } from "@dschz/solid-flow";
+import type { SolidFlowEdge, SolidFlowNode } from "@dschz/solid-flow";
 
 const initialNodes = [
   { id: "a", type: "counter", data: { count: 1 }, position: { x: 0, y: 0 } },
-] satisfies NodesFor<typeof nodeTypes>[];
+] satisfies SolidFlowNode<typeof nodeTypes>[];
 ```
 
 ## Who owns the data

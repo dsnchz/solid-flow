@@ -96,10 +96,10 @@ describe("createEdgeStore type contract", () => {
   });
 });
 
-describe("NodesFor / EdgesFor (exported guided unions)", () => {
+describe("SolidFlowNode / SolidFlowEdge (exported guided unions)", () => {
   it("carries the guided typing to plain arrays via satisfies", async () => {
     const { createStore } = await import("solid-js");
-    type MyNodes = import("../createNodeStore").NodesFor<typeof _nodeTypes>;
+    type MyNodes = import("../createNodeStore").SolidFlowNode<typeof _nodeTypes>;
 
     const good = [
       { id: "a", position: { x: 0, y: 0 }, type: "text", data: { content: "hi" } },

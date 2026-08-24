@@ -5,8 +5,8 @@ import {
   ConnectionLineType,
   createEdgeStore,
   createNodeStore,
-  type EdgesFor,
-  type NodesFor,
+  type SolidFlowEdge,
+  type SolidFlowNode,
   Panel,
   Position,
   SolidFlow,
@@ -129,7 +129,7 @@ const initialNodes = [
     data: { label: "output" },
     position: { x: 0, y: 0 },
   },
-] satisfies NodesFor[];
+] satisfies SolidFlowNode[];
 
 const initialEdges = [
   { id: "e12", source: "1", target: "2", type: "smoothstep", animated: true },
@@ -141,7 +141,7 @@ const initialEdges = [
   { id: "e45", source: "4", target: "5", type: "smoothstep", animated: true },
   { id: "e56", source: "5", target: "6", type: "smoothstep", animated: true },
   { id: "e57", source: "5", target: "7", type: "smoothstep", animated: true },
-] satisfies EdgesFor[];
+] satisfies SolidFlowEdge[];
 
 export const Dagre = () => {
   // Seed the stores with the layout already applied — no setup-time writes.
