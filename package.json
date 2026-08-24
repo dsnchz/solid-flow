@@ -87,6 +87,7 @@
     "start": "vite",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "test:ssr": "vitest run --config vite.config.ssr.ts"
   },
@@ -100,6 +101,7 @@
     "@changesets/cli": "2.31.1",
     "@dagrejs/dagre": "^1.1.5",
     "@dom-expressions/compiler": "0.50.0-next.43",
+    "@playwright/test": "1.62.1",
     "@solidjs/testing-library": "1.0.0-beta.2",
     "@solidjs/vite-plugin": "3.0.0-next.28",
     "@testing-library/jest-dom": "7.0.0",

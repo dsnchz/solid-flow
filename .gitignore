@@ -7,3 +7,7 @@ tmp
 
 .DS_Store
 /*.tgz
+
+# playwright
+test-results/
+playwright-report/

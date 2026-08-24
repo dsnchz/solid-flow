@@ -11,6 +11,8 @@ const TEST_EXCLUDES = [
   "server",
   "playground/**",
   "tmp/**",
+  // Playwright owns e2e/ (bun run test:e2e) — vitest must not pick it up
+  "e2e/**",
   // SSR tests run in their own node-environment lane (vite.config.ssr.ts)
   "**/*.ssr.test.*",
 ];
