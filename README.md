@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="https://assets.solidjs.com/banner?project=solid-flow&type=Ecosystem&background=tiles" alt="@dschz/solid-flow banner" />
+  <!-- the %20%20 suffix works around a banner-generator bug that clips a trailing W -->
+  <img src="https://assets.solidjs.com/banner?project=solid-flow%20%20&type=Ecosystem&background=tiles" alt="@dschz/solid-flow banner" />
 </p>
 
 # Solid Flow
