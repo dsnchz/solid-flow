@@ -1,5 +1,19 @@
 # @dschz/solid-flow
 
+## 0.3.0-next.5
+
+### Minor Changes
+
+- defdaae: Add `cullable: false` on nodes and edges to exempt an element from viewport culling on both tiers: the always-on CSS tier never hides it and `onlyRenderVisibleElements` never unmounts it. Use it for elements whose content must keep running off-screen (media playback, timers, third-party embeds). Fills the gap tracked upstream as xyflow/xyflow#5487.
+
+### Patch Changes
+
+- defdaae: Fix `onlyRenderVisibleElements` starving pre-measured nodes of their first mount. A node arriving with `measured` already set (persisted layout, SSR payload, or a remounted flow reusing the same node objects) was unmount-culled before ever mounting, so its handle bounds never populated in that flow instance and every edge touching it silently failed to lay out. Off-viewport nodes now always mount once until their handle bounds exist.
+- 2c56a55: Harden input state against focus loss (fixes two long-standing upstream xyflow bugs on our side):
+
+  - Stuck modifier keys self-heal (xyflow/xyflow#5679): OS overlays like the macOS screenshot HUD swallow the keyup without blurring the window, leaving selection/multi-selection/zoom-activation state stuck "held". Every subsequent keyboard, pointer, or wheel event now reconciles stored key state against the event's actual modifier flags before anything reads it.
+  - Window blur finalizes in-flight pointer gestures (xyflow/xyflow#5852): Alt+Tab while holding the mouse button meant the window-level release never arrived, so the node (or pan, or connection line) kept chasing the cursor after refocus. Blur now dispatches a synthetic window release that cleanly ends any active d3-drag/d3-zoom/XYHandle gesture at its last position.
+
 ## 0.3.0-next.4
 
 ### Minor Changes

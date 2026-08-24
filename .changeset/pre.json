@@ -6,10 +6,13 @@
   },
   "changesets": [
     "css-export-bundling",
+    "cullable-opt-out",
+    "culling-premeasured-starvation",
     "edge-reconnect",
     "fix-connectionline-clipping",
     "fix-cross-background",
     "flowstate-struct-api",
+    "focus-loss-hardening",
     "guided-union-types",
     "hooks-surface-cleanup",
     "jsdoc-symbol-docs",
