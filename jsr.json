@@ -1,6 +1,6 @@
 {
   "name": "@dschz/solid-flow",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "license": "MIT",
   "exports": "./src/index.tsx",
   "imports": {
