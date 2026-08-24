@@ -5,6 +5,8 @@ import {
   ConnectionLineType,
   createEdgeStore,
   createNodeStore,
+  type EdgesFor,
+  type NodesFor,
   Panel,
   Position,
   SolidFlow,
@@ -16,130 +18,139 @@ dagreGraph.setDefaultEdgeLabel(() => ({}));
 const nodeWidth = 172;
 const nodeHeight = 36;
 
+type LayoutInput = {
+  readonly id: string;
+  readonly source?: string;
+  readonly target?: string;
+};
+
+/**
+ * Pure dagre pass over plain arrays: dagre only needs ids, structure, and
+ * the constant node dimensions, so the initial layout runs BEFORE the
+ * stores are seeded. (Writing the layout back via setNodes during component
+ * setup trips Solid 2.0's REACTIVE_WRITE_IN_OWNED_SCOPE guard — reactive
+ * writes are for event handlers, not component bodies.)
+ */
+const layoutNodes = <T extends LayoutInput>(
+  nodeList: readonly T[],
+  edgeList: readonly LayoutInput[],
+  direction: "TB" | "LR",
+) => {
+  const isHorizontal = direction === "LR";
+  dagreGraph.setGraph({ rankdir: direction });
+
+  nodeList.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+  edgeList.forEach((edge) => {
+    dagreGraph.setEdge(edge.source!, edge.target!);
+  });
+
+  dagre.layout(dagreGraph);
+
+  return nodeList.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    return {
+      ...node,
+      targetPosition: isHorizontal ? Position.Left : Position.Top,
+      sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+      position: {
+        x: nodeWithPosition.x - nodeWidth / 2,
+        y: nodeWithPosition.y - nodeHeight / 2,
+      },
+    };
+  });
+};
+
+const initialNodes = [
+  {
+    id: "1",
+    type: "input",
+    data: { label: "input" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "2",
+    type: "default",
+    data: { label: "node 2" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "2a",
+    type: "default",
+    data: { label: "node 2a" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "2b",
+    type: "default",
+    data: { label: "node 2b" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "2c",
+    type: "default",
+    data: { label: "node 2c" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "2d",
+    type: "default",
+    data: { label: "node 2d" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "3",
+    type: "default",
+    data: { label: "node 3" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "4",
+    type: "default",
+    data: { label: "node 4" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "5",
+    type: "default",
+    data: { label: "node 5" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "6",
+    type: "output",
+    data: { label: "output" },
+    position: { x: 0, y: 0 },
+  },
+  {
+    id: "7",
+    type: "output",
+    data: { label: "output" },
+    position: { x: 0, y: 0 },
+  },
+] satisfies NodesFor[];
+
+const initialEdges = [
+  { id: "e12", source: "1", target: "2", type: "smoothstep", animated: true },
+  { id: "e13", source: "1", target: "3", type: "smoothstep", animated: true },
+  { id: "e22a", source: "2", target: "2a", type: "smoothstep", animated: true },
+  { id: "e22b", source: "2", target: "2b", type: "smoothstep", animated: true },
+  { id: "e22c", source: "2", target: "2c", type: "smoothstep", animated: true },
+  { id: "e2c2d", source: "2c", target: "2d", type: "smoothstep", animated: true },
+  { id: "e45", source: "4", target: "5", type: "smoothstep", animated: true },
+  { id: "e56", source: "5", target: "6", type: "smoothstep", animated: true },
+  { id: "e57", source: "5", target: "7", type: "smoothstep", animated: true },
+] satisfies EdgesFor[];
+
 export const Dagre = () => {
-  const [nodes, setNodes] = createNodeStore([
-    {
-      id: "1",
-      type: "input",
-      data: { label: "input" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "2",
-      type: "default",
-      data: { label: "node 2" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "2a",
-      type: "default",
-      data: { label: "node 2a" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "2b",
-      type: "default",
-      data: { label: "node 2b" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "2c",
-      type: "default",
-      data: { label: "node 2c" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "2d",
-      type: "default",
-      data: { label: "node 2d" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "3",
-      type: "default",
-      data: { label: "node 3" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "4",
-      type: "default",
-      data: { label: "node 4" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "5",
-      type: "default",
-      data: { label: "node 5" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "6",
-      type: "output",
-      data: { label: "output" },
-      position: { x: 0, y: 0 },
-    },
-    {
-      id: "7",
-      type: "output",
-      data: { label: "output" },
-      position: { x: 0, y: 0 },
-    },
-  ]);
+  // Seed the stores with the layout already applied — no setup-time writes.
+  const [nodes, setNodes] = createNodeStore(layoutNodes(initialNodes, initialEdges, "TB"));
+  const [edges] = createEdgeStore(initialEdges);
 
-  const [edges, setEdges] = createEdgeStore([
-    { id: "e12", source: "1", target: "2", type: "smoothstep", animated: true },
-    { id: "e13", source: "1", target: "3", type: "smoothstep", animated: true },
-    { id: "e22a", source: "2", target: "2a", type: "smoothstep", animated: true },
-    { id: "e22b", source: "2", target: "2b", type: "smoothstep", animated: true },
-    { id: "e22c", source: "2", target: "2c", type: "smoothstep", animated: true },
-    { id: "e2c2d", source: "2c", target: "2d", type: "smoothstep", animated: true },
-    { id: "e45", source: "4", target: "5", type: "smoothstep", animated: true },
-    { id: "e56", source: "5", target: "6", type: "smoothstep", animated: true },
-    { id: "e57", source: "5", target: "7", type: "smoothstep", animated: true },
-  ]);
-
-  const getLayoutedElements = (direction = "TB") => {
-    const isHorizontal = direction === "LR";
-    dagreGraph.setGraph({ rankdir: direction });
-
-    nodes.forEach((node) => {
-      dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
-    });
-
-    edges.forEach((edge) => {
-      dagreGraph.setEdge(edge.source, edge.target);
-    });
-
-    dagre.layout(dagreGraph);
-
-    const layoutedNodes = nodes.map((node) => {
-      const nodeWithPosition = dagreGraph.node(node.id);
-
-      return {
-        ...node,
-        targetPosition: isHorizontal ? Position.Left : Position.Top,
-        sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
-        position: {
-          x: nodeWithPosition.x - nodeWidth / 2,
-          y: nodeWithPosition.y - nodeHeight / 2,
-        },
-      };
-    });
-
-    return { nodes: layoutedNodes, edges };
-  };
-
-  // Apply initial layout
-  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements("TB");
-
-  // Update the stores with layouted elements
-  setNodes(() => layoutedNodes);
-  setEdges(() => [...layoutedEdges]);
-
-  const onLayout = (direction: string) => {
-    const { nodes: newNodes, edges: newEdges } = getLayoutedElements(direction);
-    setNodes(() => newNodes);
-    setEdges(() => [...newEdges]);
+  const onLayout = (direction: "TB" | "LR") => {
+    // Event handler: reading the stores and writing the result back is fine.
+    setNodes(() => layoutNodes(nodes, edges, direction));
   };
 
   return (
