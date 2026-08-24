@@ -103,6 +103,10 @@ export default defineConfig((cli) => {
       ...shared,
       entry: { "index/index": "src/index.ts" },
       dts: false,
+      // Explicit even though tsconfig also says preserve (rolldown warns
+      // CONFIGURATION_FIELD_CONFLICT about the override — same value, benign):
+      // this build MUST stay JSX-preserved regardless of tsconfig changes,
+      // and nothing in the test suite compiles through tsdown to catch drift.
       inputOptions: { transform: { jsx: "preserve" } },
       outExtensions: () => ({ js: ".jsx" }),
     },
