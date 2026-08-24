@@ -1,5 +1,6 @@
 import { render } from "@solidjs/testing-library";
 import { fireEvent } from "@solidjs/testing-library";
+import { createStore } from "solid-js/store";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Edge, Node, OnSelectionChange } from "~/types";
@@ -139,5 +140,28 @@ describe("<SolidFlow />", () => {
     fireEvent.click(node);
     await tick();
     expect(onSelectionChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("unobserves a removed node's element from the shared ResizeObserver", async () => {
+    // Regression: the wrapper's measurement effect unobserved the PREVIOUS
+    // element on re-run but nothing unobserved on dispose, so every removed
+    // node left its detached element pinned in the shared observer.
+    const unobserve = vi.spyOn(ResizeObserver.prototype, "unobserve");
+    try {
+      const [nodes, setNodes] = createStore<Node[]>([makeNode({ id: "a" }), makeNode({ id: "b" })]);
+      const { container } = render(() => (
+        <SolidFlow nodes={nodes} edges={[]} width={800} height={600} />
+      ));
+      await tick();
+
+      const element = container.querySelector<HTMLElement>('[data-id="a"]')!;
+      setNodes((prev) => prev.filter((n) => n.id !== "a"));
+      await tick();
+
+      expect(container.querySelector('[data-id="a"]')).toBeNull();
+      expect(unobserve).toHaveBeenCalledWith(element);
+    } finally {
+      unobserve.mockRestore();
+    }
   });
 });

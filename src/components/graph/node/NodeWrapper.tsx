@@ -7,7 +7,7 @@ import {
   Position,
 } from "@xyflow/system";
 import clsx from "clsx";
-import { batch, createEffect, createSignal, type JSX, Show } from "solid-js";
+import { batch, createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import createDraggable from "../../../actions/createDraggable";
@@ -32,6 +32,14 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
   const node = () => nodeLookup.get(props.nodeId)!;
+
+  // The shared observer outlives this wrapper — without unobserve on dispose
+  // it pins the detached element in the observer's target list (removed
+  // nodes leak for the lifetime of the flow).
+  onCleanup(() => {
+    const el = nodeRef();
+    if (el) props.resizeObserver?.unobserve(el);
+  });
 
   const nodeId = () => node().id;
   const nodeType = () => node().type ?? "default";
