@@ -11,7 +11,7 @@ import type { Edge, Node } from "@/types";
 export const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<SolidFlowProps<NodeType, EdgeType>>,
 ): JSX.Element => {
-  const _props = merge(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
+  const _props = merge(getDefaultFlowStateProps(), props);
   const solidFlow = createSolidFlow(_props);
 
   onCleanup(() => {

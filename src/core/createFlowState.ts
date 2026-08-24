@@ -120,7 +120,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   props: SolidFlowProps<NodeType, EdgeType>,
   injections: FlowStateInjections = {},
 ) => {
-  const _props = merge(getDefaultFlowStateProps<NodeType, EdgeType>(), props);
+  const _props = merge(getDefaultFlowStateProps(), props);
 
   const initialNodeTypes = injections.initialNodeTypes ?? ({} as NodeTypes);
   const initialEdgeTypes = injections.initialEdgeTypes ?? ({} as EdgeTypes);
@@ -172,6 +172,28 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const [panActivationKeyPressed, setPanActivationKeyPressed] = createSignal(false);
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
+  // Controlled vs uncontrolled, PER AXIS (React Flow defaultNodes/
+  // defaultEdges parity). Controlled: the user's array/store owns membership
+  // and the reset effects below track it. Uncontrolled: defaults seed the
+  // flow-owned store once and commands/completed connections own membership
+  // (they already write these stores; the only controlled-mode difference is
+  // that a re-seed clobbers them). Mode is observable as
+  // `config().nodes !== undefined` — nodes/edges deliberately have NO merged
+  // default, so absence survives to here. A provider-created flow starts
+  // with neither and adopts whichever axis the inner SolidFlow supplies via
+  // setConfig (controlled arrays through the reset effects; defaults through
+  // the one-shot adoption effect below).
+  if (props.nodes !== undefined && props.defaultNodes !== undefined) {
+    console.warn(
+      "[solid-flow] Both `nodes` and `defaultNodes` were supplied; `nodes` wins and the flow is controlled. Pass one or the other.",
+    );
+  }
+  if (props.edges !== undefined && props.defaultEdges !== undefined) {
+    console.warn(
+      "[solid-flow] Both `edges` and `defaultEdges` were supplied; `edges` wins and the flow is controlled. Pass one or the other.",
+    );
+  }
+
   // Plain writable stores seeded from the user's graph, reset by the effects
   // below when the supplied array identity changes (matching 1.x, where the
   // backing store was recreated whenever the accessor value changed); all
@@ -179,8 +201,20 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // deriving from a store-proxy source rewraps every element on structural
   // writes, so a single addEdge/addNode would churn all row identities and
   // recreate the whole mapArray pipeline (verified empirically on rc.1).
-  const [nodesStore, setNodesStore] = createStore<NodeType[]>(_props.nodes as NodeType[]);
-  const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(_props.edges as EdgeType[]);
+  // Defaults are shallow-copied: the flow owns membership of its store and
+  // must not splice the caller's array (runtime fields still write onto the
+  // shared row objects, same as controlled mode).
+  const [nodesStore, setNodesStore] = createStore<NodeType[]>(
+    (props.nodes ?? [...(props.defaultNodes ?? [])]) as NodeType[],
+  );
+  const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(
+    (props.edges ?? [...(props.defaultEdges ?? [])]) as EdgeType[],
+  );
+
+  // Whether each axis has consumed its one-time seed (from either prop).
+  // Only a provider-created flow can still adopt later, via setConfig.
+  let nodeSeedAdopted = props.nodes !== undefined || props.defaultNodes !== undefined;
+  let edgeSeedAdopted = props.edges !== undefined || props.defaultEdges !== undefined;
 
   // The measurements root: DOM-derived per-node state (measured dimensions,
   // handle bounds), written only by the measurement ingest below. Kept apart
@@ -237,25 +271,51 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // keep element identity, skip the reset, and flow through the shared node
   // objects. The `{ next }` wrapper defeats the effect's equals check — the
   // proxy identity is stable even when the contents changed.
+  // An undefined axis is uncontrolled (or a provider flow not yet adopted):
+  // never re-seed it — defaults are initial-only and the flow owns
+  // membership. A provider flow adopting a controlled axis flips
+  // undefined -> array here and seeds through the same path.
   createEffect(
     () => {
-      const next = config().nodes as NodeType[];
-      for (const node of next) void node;
+      const next = config().nodes as NodeType[] | undefined;
+      if (next) for (const node of next) void node;
       return { next };
     },
     ({ next }) => {
+      if (!next) return;
+      nodeSeedAdopted = true;
       setNodesStore(() => next);
     },
     { defer: true },
   );
   createEffect(
     () => {
-      const next = config().edges as EdgeType[];
-      for (const edge of next) void edge;
+      const next = config().edges as EdgeType[] | undefined;
+      if (next) for (const edge of next) void edge;
       return { next };
     },
     ({ next }) => {
+      if (!next) return;
+      edgeSeedAdopted = true;
       setEdgesStore(() => next);
+    },
+    { defer: true },
+  );
+  // One-shot late adoption of DEFAULTS for provider-created flows: the
+  // provider seeded this store before the inner SolidFlow's props existed,
+  // so its defaultNodes/defaultEdges arrive via setConfig. Each axis adopts
+  // at most once, and never over a controlled axis.
+  createEffect(
+    () => ({ nodes: config().defaultNodes, edges: config().defaultEdges }),
+    ({ nodes: defaultNodes, edges: defaultEdges }) => {
+      if (defaultNodes && !nodeSeedAdopted && config().nodes === undefined) {
+        nodeSeedAdopted = true;
+        setNodesStore(() => [...defaultNodes] as NodeType[]);
+      }
+      if (defaultEdges && !edgeSeedAdopted && config().edges === undefined) {
+        edgeSeedAdopted = true;
+        setEdgesStore(() => [...defaultEdges] as EdgeType[]);
+      }
     },
     { defer: true },
   );

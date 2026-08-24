@@ -150,6 +150,8 @@ The stores you pass as `nodes` / `edges` props are **controlled** — a delibera
 - **The flow writes runtime fields onto your rows.** Dragging updates `position`, selection updates `selected`, measurement fills `measured` — on the same objects you provided, so reading your store is always live.
 - **Imperative commands don't write membership back.** `commands.addNodes(...)` and friends update the flow, not your store. To keep an element across a store replacement, adopt it — like the `onConnect` handler in the Quick Start pushing the new connection into the edge store.
 
+**Prefer letting the flow own the data?** Pass `defaultNodes` / `defaultEdges` instead of `nodes` / `edges` for an **uncontrolled** flow (React Flow parity): the arrays seed the flow once (later values are ignored), and membership belongs to the flow — commands like `addNodes` and completed connections persist with no adoption step. Read live state through `useSolidFlow()`'s `flow.nodes` / `flow.edges`. The two axes are independent, so you can control edges while leaving nodes uncontrolled (or vice versa); supplying both props on one axis is a mistake (`nodes` wins, with a dev warning).
+
 ## The flow API
 
 `useSolidFlow()` returns `{ flow, commands }` (with `commands` also spread at the top level for React/Svelte Flow familiarity). Both are stable identities — destructuring is safe.

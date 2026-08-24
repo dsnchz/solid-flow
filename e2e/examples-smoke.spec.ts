@@ -32,6 +32,7 @@ const EXAMPLES = [
   "Subflows",
   "Switch",
   "TwoWayViewport",
+  "Uncontrolled",
   "UpdateNode",
   "UpdateNodeInternals",
   "UseConnection",

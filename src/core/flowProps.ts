@@ -105,6 +105,22 @@ export type SolidFlowProps<
      */
     readonly edges?: Store<EdgeType[]>;
     /**
+     * Initial nodes for an UNCONTROLLED flow. When `nodes` is not supplied,
+     * the flow owns element state: this array seeds it once (later values
+     * are ignored), and membership belongs to the flow — commands like
+     * `addNodes`/`deleteElements` and completed connections write through
+     * and persist, with no adoption step. Mutually exclusive with `nodes`
+     * (which wins, with a dev warning). Mode is fixed at mount, per axis:
+     * nodes and edges can each be controlled or uncontrolled independently.
+     */
+    readonly defaultNodes?: readonly NodeType[];
+    /**
+     * Initial edges for an UNCONTROLLED flow — the edge-axis counterpart of
+     * `defaultNodes`: seeds once, flow owns membership, completed
+     * connections are kept automatically. Mutually exclusive with `edges`.
+     */
+    readonly defaultEdges?: readonly EdgeType[];
+    /**
      * Custom node types to be available in a flow.
      * Solid Flow matches a node's type to a component in the nodeTypes object.
      * @example

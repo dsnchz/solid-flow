@@ -41,7 +41,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
 
   const _props = merge(
     {
-      ...getDefaultFlowStateProps<NodeType, EdgeType>(),
+      ...getDefaultFlowStateProps(),
       colorMode: "light" as ColorModeClass,
       deleteKeyCode: "Backspace",
       defaultViewport: { x: 0, y: 0, zoom: 1 },
@@ -70,6 +70,8 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     _props,
     "nodes",
     "edges",
+    "defaultNodes",
+    "defaultEdges",
     "nodeTypes",
     "edgeTypes",
     "width",

@@ -23,6 +23,7 @@ export { StressTest } from "./stress-test/page";
 export { Subflows } from "./subflows/page";
 export { Switch } from "./switch/page";
 export { TwoWayViewport } from "./two-way-viewport/page";
+export { Uncontrolled } from "./uncontrolled/page";
 export { UpdateNode } from "./update-node/page";
 export { UpdateNodeInternals } from "./update-node-internals/page";
 export { UseConnection } from "./use-connection/page";

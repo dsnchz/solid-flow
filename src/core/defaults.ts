@@ -13,16 +13,15 @@ import type {
   ConnectionLineType,
   ConnectionMode,
   DefaultEdgeOptions,
-  Edge,
-  Node,
   SelectionMode,
 } from "@/types";
 
-export const getDefaultFlowStateProps = <NodeType extends Node, EdgeType extends Edge>() =>
+export const getDefaultFlowStateProps = () =>
   ({
     id: "1",
-    nodes: [] as NodeType[],
-    edges: [] as EdgeType[],
+    // nodes/edges/defaultNodes/defaultEdges deliberately have NO defaults:
+    // controlled-vs-uncontrolled mode is "is this prop present", so absence
+    // must survive the merge (see createFlowState's seeding).
     nodeOrigin: [0, 0] as NodeOrigin,
     nodeExtent: infiniteExtent,
     defaultEdgeOptions: {} as DefaultEdgeOptions,
