@@ -1,5 +1,95 @@
 # @dschz/solid-flow
 
+## 0.3.0-next.4
+
+### Minor Changes
+
+- e50a170: Edge reconnection works end-to-end. Fixed: `EdgeReconnectAnchor` passed the
+  connection updater to XYHandle without a flush, so under Solid 2.0's
+  deferred model the gesture's synchronous read-back saw a stale (null)
+  `fromHandle` and never matched a drop handle — every reconnect ended with
+  `isValid: null` and no edge update. The anchor also gained
+  `onReconnectingChange` (the Solid translation of Svelte Flow's
+  `bind:reconnecting`) and now honors its `reconnecting` prop as a controlled
+  override; a new EdgeReconnect playground example demonstrates the
+  selected-edge anchor pattern.
+- 612bd96: The guided node/edge unions behind `createNodeStore`/`createEdgeStore` are
+  now exported as `NodesFor<typeof nodeTypes>` / `EdgesFor<typeof edgeTypes>`,
+  so the same per-type data narrowing works on plain arrays, props, and
+  vanilla stores (`satisfies NodesFor<...>[]`). The unions are also more
+  robust: the `type` discriminant is now the renderer-map KEY (what actually
+  gets matched), components with odd-but-legal signatures degrade to open
+  data instead of collapsing their key to `never`, and omitting the generic
+  still rejects custom type names loudly (`NoInfer` guards the argument).
+- 34b904f: Hooks surface cleanup for React/Svelte Flow parity: `useNodeId` and
+  `useEdgeId` are now public (learn which node/edge a nested component is
+  rendered inside — composable custom nodes and edge labels without prop
+  drilling). BREAKING: `useHandleEdgeSelect` is removed (internal plumbing
+  that was never consumed; select edges through `commands` instead).
+- 9ac39c9: `MiniMap` supports `onClick` (pane click, receiving the position in flow
+  coordinates) and `onNodeClick` (receiving the clicked user node) — React
+  Flow parity. Custom `nodeComponent`s receive the wired `onClick` through
+  `MiniMapNodeProps`.
+- c198c96: `MiniMap` supports a custom `nodeComponent` (React Flow parity): render your
+  own SVG representation per node, receiving the exported `MiniMapNodeProps`
+  (id, flow-space geometry, colors, selection, and the node's own style —
+  whose background also now feeds the default rect's fill, matching upstream).
+  The default `MiniMapNode` is exported for composition.
+- f018c60: BREAKING: the deprecated imperative getters on `useSolidFlow()` are removed
+  (`getNode`, `getNodes`, `getEdge`, `getEdges`, `getViewport`, `getZoom`,
+  `getInternalNode`, `getHandleConnections`) — read the same state from `flow`
+  instead (`flow.nodes`, `flow.internalNodes[id]`, `flow.viewport`,
+  `flow.connections`); in Solid, reads inside event handlers are already
+  untracked, so no getter wrapper is needed. `useNodes()` and `useEdges()` now
+  return `readonly` arrays — mutate through commands, not array methods.
+- 5ef430e: **Breaking (prerelease line):** `onlyRenderVisibleElements` is repurposed to
+  mean what its name says — true conditional rendering — and its default flips
+  to `false`. Off-viewport nodes and edges are unmounted entirely and remount
+  as the viewport reaches them, matching React/Svelte Flow's semantics for the
+  prop. At 10k nodes this cuts the DOM ~16x, roughly halves memory, and makes
+  node drags ~3.7x faster (unmounting removes most live observers from the
+  reactive graph). The data graph is unaffected: positions, selection, and
+  cached measurements live outside the components, so remounted elements come
+  back exactly as they left. Component-local state (signals inside custom
+  nodes, uncontrolled inputs) does not survive unmounting — keep state in
+  `node.data`. Never unmounted: selected elements, unmeasured nodes, and the
+  element holding DOM focus.
+
+  The previous CSS culling behavior (hide off-viewport elements with
+  `visibility: hidden` + `pointer-events: none`, everything stays mounted) is
+  now always on and no longer tied to this prop — it is semantics-preserving
+  and needs no switch. `CullingSource` accordingly lost its
+  `onlyRenderVisibleElements` field.
+
+  Also fixed: `NodeWrapper` now unobserves its element from the shared
+  measurement `ResizeObserver` on dispose (previously removed nodes stayed
+  pinned in the observer's target list).
+
+### Patch Changes
+
+- 6bce414: Fix the in-progress connection line clipping at a hard boundary and
+  rendering beneath nodes: a mangled CSS selector (`connectionline` instead of
+  `.solid-flow__connectionline`) meant the line's svg never received
+  `overflow: visible`, `z-index: 1001`, or `position: absolute`, so the path
+  scissored at the svg box (flow-origin) and its near-node segment hid behind
+  the node body.
+- 040153e: Fix the `cross` background variant rendering as a blank pane: a flat
+  `size: 1` prop default preempted the per-variant default size (cross needs
+  6), shrinking each cross to an invisible ~1px speck.
+- 628dc25: `Node.domAttributes` is typed again: a mistranslated omit clause
+  (`keyof JSX.HTMLAttributes` — i.e. everything) had collapsed the escape
+  hatch to `{}`, disabling autocomplete and checking entirely. It now accepts
+  plain attributes while excluding event handlers, refs, and content
+  injection, matching Svelte Flow's intent.
+- 3eb07c9: Wholesale replacements on a store-backed `nodes`/`edges` prop
+  (`setNodes(() => nodes.map(...))`) now propagate into the flow. The
+  controlled-graph reset tracked the supplied array by reference, and a store
+  proxy's identity never changes — so on provider-adopted flows only draft
+  mutations worked and React Flow-style map-and-replace updates were silently
+  lost. The reset now tracks the array structurally (length + element
+  identity): replacements re-seed the internal root, field-level draft writes
+  still flow through without churn.
+
 ## 0.3.0-next.3
 
 ### Patch Changes

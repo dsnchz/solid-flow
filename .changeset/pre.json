@@ -6,10 +6,21 @@
   },
   "changesets": [
     "css-export-bundling",
+    "edge-reconnect",
+    "fix-connectionline-clipping",
+    "fix-cross-background",
     "flowstate-struct-api",
+    "guided-union-types",
+    "hooks-surface-cleanup",
     "jsdoc-symbol-docs",
+    "minimap-click-handlers",
+    "minimap-node-component",
+    "node-domattributes-type",
+    "remove-deprecated-getters",
     "solid-2-migration",
+    "store-prop-replacement",
     "sub-store-performance",
+    "unmount-culling",
     "viewport-culling-default"
   ]
 }
