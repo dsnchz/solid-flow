@@ -1,5 +1,27 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.6
+
+### Major Changes
+
+- a376b55: Solid Flow 1.0 — built for SolidJS 2.0.
+
+  The 0.3.0 prerelease line graduates to 1.0: the library is a ground-up rebuild on SolidJS 2.0's reactive foundation (draft-based store writes, deferred updates, the two-arg effect model) with a deliberately redesigned public API. From 1.0 on, breaking changes cost a major — the 0.x escape hatch is closed.
+
+  Highlights of the line (see the 0.3.0-next.\* entries below for details):
+
+  - Controlled node/edge stores with a clear ownership contract: your store owns membership, the flow writes runtime fields onto shared row objects; any write form works (drafts are O(changed), wholesale replacement re-seeds with keyed row reuse).
+  - Two-tier viewport culling: an always-on CSS tier, plus opt-in `onlyRenderVisibleElements` unmount culling (at 10k nodes: ~16x less DOM, ~half the heap, ~3.7x faster drags) with `cullable: false` per-element opt-out.
+  - Typed component schemas: `NodeProps`/`EdgeProps` with `SolidFlowNode`/`SolidFlowEdge` guided unions, `satisfies`-friendly everywhere.
+  - Feature parity gaps closed (MiniMap custom nodes and click handlers, edge reconnection, SSR) plus fixes for issues still open upstream in xyflow (stuck modifier keys after OS overlays, drags surviving window blur, connection-line clipping).
+
+  Requires `solid-js` and `@solidjs/web` 2.x. The 0.2.x line remains the SolidJS 1.9+ maintenance line.
+
+### Minor Changes
+
+- 941c08a: Rename the guided union types: `NodesFor` → `SolidFlowNode` and `EdgesFor` → `SolidFlowEdge` (breaking for prerelease users of the old names; no aliases kept — the stable 1.0 ships only the new names). The old names only read well with an explicit argument (`NodesFor<typeof nodeTypes>`); the new ones read correctly bare too (`satisfies SolidFlowNode[]`). Semantics are unchanged: element-level unions narrowed by your renderer map, `satisfies`-friendly anywhere.
+- 2b61ff8: Uncontrolled flows via `defaultNodes` / `defaultEdges` (React Flow parity). When you pass defaults instead of the controlled `nodes` / `edges` props, the flow owns element state: the arrays seed it once (later values are ignored), and membership belongs to the flow — commands like `addNodes` / `deleteElements` and completed connections write through and persist, with no adoption step. The two axes are independent (nodes and edges can each be controlled or uncontrolled), the mode works under `SolidFlowProvider`, and supplying both props on one axis warns in dev with the controlled prop winning. See "Who owns the data" in the README and the new Uncontrolled playground example.
+
 ## 0.3.0-next.5
 
 ### Minor Changes

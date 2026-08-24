@@ -20,9 +20,12 @@
     "minimap-node-component",
     "node-domattributes-type",
     "remove-deprecated-getters",
+    "rename-guided-union-types",
     "solid-2-migration",
+    "solid-flow-1-0",
     "store-prop-replacement",
     "sub-store-performance",
+    "uncontrolled-flows",
     "unmount-culling",
     "viewport-culling-default"
   ]

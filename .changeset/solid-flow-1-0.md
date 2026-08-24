@@ -10,7 +10,7 @@ Highlights of the line (see the 0.3.0-next.* entries below for details):
 
 - Controlled node/edge stores with a clear ownership contract: your store owns membership, the flow writes runtime fields onto shared row objects; any write form works (drafts are O(changed), wholesale replacement re-seeds with keyed row reuse).
 - Two-tier viewport culling: an always-on CSS tier, plus opt-in `onlyRenderVisibleElements` unmount culling (at 10k nodes: ~16x less DOM, ~half the heap, ~3.7x faster drags) with `cullable: false` per-element opt-out.
-- Typed component schemas: `NodeProps`/`EdgeProps` with `NodesFor`/`EdgesFor` guided unions, `satisfies`-friendly everywhere.
+- Typed component schemas: `NodeProps`/`EdgeProps` with `SolidFlowNode`/`SolidFlowEdge` guided unions, `satisfies`-friendly everywhere.
 - Feature parity gaps closed (MiniMap custom nodes and click handlers, edge reconnection, SSR) plus fixes for issues still open upstream in xyflow (stuck modifier keys after OS overlays, drags surviving window blur, connection-line clipping).
 
 Requires `solid-js` and `@solidjs/web` 2.x. The 0.2.x line remains the SolidJS 1.9+ maintenance line.
