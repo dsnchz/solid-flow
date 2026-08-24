@@ -19,7 +19,7 @@ A SolidJS port of [React Flow](https://reactflow.dev/) and [Svelte Flow](https:/
 | `0.3.x`    | `solid-js` 2.x  | Active development  |
 | `0.2.x`    | `solid-js` 1.9+ | Maintenance (fixes) |
 
-The 0.3 line is built for SolidJS 2.0 and its deferred, fine-grained reactive graph. Keep `solid-js` and `@solidjs/web` on matching 2.0 versions — mixing them breaks at import time.
+The 0.3 line is built for SolidJS 2.0 and its deferred, fine-grained reactive graph. Keep `solid-js` and `@solidjs/web` on matching 2.0 versions — mixing them breaks at import time. Upgrading from 0.2.x? See [Migrating from 0.2.x](#migrating-from-02x).
 
 ## Key Features
 
@@ -276,6 +276,56 @@ The MiniMap always renders the full graph in either mode — it reads the data g
 - Screen reader support with ARIA labels and live announcements
 - Focus management, including under viewport culling
 - Color mode support (`light` / `dark` / `system`)
+
+## Migrating from 0.2.x
+
+The 0.3 line targets SolidJS 2.0, which changes how you write to stores, and reworks the read API. The gestures, components, plugins, and commands are otherwise the same.
+
+**1. Upgrade the peer dependencies.** `solid-js` and `@solidjs/web` move to matching 2.0 versions.
+
+**2. Store writes: path setters are gone (SolidJS 2.0).** Every `setNodes` / `setEdges` call site using 1.x path syntax becomes a draft callback — the callback's argument is a mutable draft, so mutation is the API. Returning a value instead replaces wholesale.
+
+```tsx
+// 0.2.x (SolidJS 1.x) — path syntax
+setNodes(0, "position", "x", (x) => x + 20);
+setEdges((edge) => edge.id === "e1", "animated", true);
+
+// 0.3.x (SolidJS 2.0) — draft callback
+setNodes((nodes) => {
+  nodes[0]!.position.x += 20;
+});
+setEdges((edges) => {
+  const edge = edges.find((e) => e.id === "e1");
+  if (edge) edge.animated = true;
+});
+
+// wholesale replacement (re-seeds the flow; rows keyed by id are reused)
+setNodes(() => nextNodes);
+```
+
+**3. `useSolidFlow` reads moved to the reactive `flow` struct.** The flat getters (`getNodes()`, `getEdges()`, `getNode(id)`, `getEdge(id)`, `getInternalNode(id)`, `getViewport()`, `getZoom()`) are removed:
+
+```tsx
+// 0.2.x                          // 0.3.x
+solidFlow.getNodes();
+flow.nodes;
+solidFlow.getViewport();
+flow.viewport;
+solidFlow.getZoom();
+flow.viewport.zoom;
+solidFlow.getNode("a");
+flow.nodes.find((n) => n.id === "a");
+solidFlow.getInternalNode("a");
+useInternalNode(() => "a");
+```
+
+`flow.*` reads are reactive — using them in JSX or a tracked scope subscribes. Commands (`fitView`, `setViewport`, `updateNode`, `deleteElements`, ...) are unchanged and now also available namespaced under `commands`.
+
+**4. New connections are no longer written into your edge store.** In 0.2.x the flow inserted the connected edge into your store before `onConnect` fired. Under 0.3's ownership contract your store owns membership: adopt the connection yourself (see the Quick Start's `onConnect`). Unadopted connections still render, but won't survive a wholesale store replacement.
+
+**5. `onlyRenderVisibleElements` now does what it says.** In 0.2.x the prop was accepted but inert. In 0.3 it opts into unmount culling (off-screen elements are not mounted at all — see [Performance](#performance)), while the CSS culling tier is always on and needs no prop.
+
+**6. Smaller signature changes.** `useNodes()` / `useEdges()` return `readonly` arrays; `useHandleEdgeSelect` is removed (it was internal plumbing — select edges through `commands`).
 
 ## Examples
 
