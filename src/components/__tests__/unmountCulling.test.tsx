@@ -2,6 +2,7 @@ import { fireEvent, render } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
 
 import { useSolidFlow } from "@/hooks/useSolidFlow";
+import { MiniMap } from "@/plugins/minimap/MiniMap";
 import type { Edge, Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
@@ -149,6 +150,24 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
     expect(far).not.toBeNull();
     // Cached measurement: visible immediately, no unmeasured flash.
     expect(far!.style.visibility).toBe("visible");
+  });
+
+  it("keeps unmounted nodes on the MiniMap (data-graph driven, not DOM driven)", async () => {
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "near" }), makeNode({ id: "far", position: { x: FAR_X, y: 0 } })]}
+        edges={[]}
+        onlyRenderVisibleElements
+        width={800}
+        height={600}
+      >
+        <MiniMap />
+      </SolidFlow>
+    ));
+    await tick();
+
+    expect(container.querySelector('.solid-flow__nodes [data-id="far"]')).toBeNull();
+    expect(container.querySelectorAll(".solid-flow__minimap-node")).toHaveLength(2);
   });
 
   it("unobserves an unmounted node's element from the shared ResizeObserver", async () => {
