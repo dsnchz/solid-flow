@@ -17,6 +17,7 @@ export { MovingHandles } from "./moving-handles/page";
 export { NodeResizer } from "./node-resizer/page";
 export { NodeToolbar } from "./node-toolbar/page";
 export { Overview } from "./overview/page";
+export { QuickStart } from "./quick-start/page";
 export { Reset } from "./reset/page";
 export { StressTest } from "./stress-test/page";
 export { Subflows } from "./subflows/page";
