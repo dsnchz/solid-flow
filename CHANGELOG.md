@@ -1,5 +1,36 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.7
+
+### Minor Changes
+
+- e437fd1: Async-seeded stores: `createNodeStore` / `createEdgeStore` now also accept `async () => data` (SolidJS 2.0 "Fetch High") — no memo required, the function goes straight to the store's projection derive. Reads are not-ready until the data lands, and `SolidFlow` surfaces that first-load pending state to your `<Loading fallback>` boundary — including for provider-adopted flows — instead of silently rendering an empty graph. After the seed resolves the stores are ordinary writable stores (drafts, connection adoption, wholesale replacement). New AsyncData playground example + "Loading your graph from an API" README section.
+- 486f358: Declare `autoPanSpeed`, `panOnScrollSpeed`, and `ariaLiveMessage` as proper `SolidFlowProps`. The core already consumed all three, but they were never on the public type, so passing them was a type error. (Found by the new FLOW_PROP_KEYS compile-time contract.)
+
+### Patch Changes
+
+- 486f358: Bug sweep from the 2026-08-24 quality audit, every fix with a regression test:
+
+  - `nodesConnectable` prop was inert (a copy-paste wired it to `nodesDraggable`).
+  - The flow `id` (default `"1"`) leaked onto the root element as a DOM id, producing duplicate ids across flows; delete callbacks leaked as bogus DOM listeners. Flow props are now stripped via an exported `FLOW_PROP_KEYS` list whose completeness is a compile-time contract, so omit-list drift is a type error.
+  - A user `style` on a node could override the flow-computed width/height (defeating measured size), culling visibility, transform, and z-index. Ownership is now explicit: user style controls cosmetics; the flow owns size, stacking, positioning, visibility, and pointer-events.
+  - Programmatic `deleteElements()` never fired `onDelete` (only the Backspace path did). All delete paths now notify identically.
+  - `screenToFlowPosition` always snapped to a `[1, 1]` grid because its snap guard could never be false; fractional positions now survive when snapping is off.
+  - Edge selectability was resolved three different ways — box selection ignored `elementsSelectable` entirely, selecting edges a click could not. One `isEdgeSelectable` rule (edge flag, then `defaultEdgeOptions.selectable`, then `elementsSelectable`) now serves every path.
+  - `getIntersectingNodes` crashed on an unknown node id instead of returning `[]`.
+  - The measurement pass now receives the flow-level `nodeExtent`, aligning `expandParent` rect math with the projection's clamping rule.
+  - Removed the vestigial `reconnectRadius` threading and the dead unexported `EdgeAnchor` component (our reconnection API is Svelte-parity: you render your own anchor children).
+
+- 0a42977: Performance sweep (benchmarked before/after at 2.5k and 10k nodes):
+
+  - **MiniMap is now usable on large graphs.** Its viewBox/mask math re-ran ~30 unmemoized full-graph bounds scans per drag/pan frame — 1.5 seconds per mouse move at 2,500 nodes, and a hard freeze at 10,000. One memo chain later it's 20ms/move at 2.5k (74x) and 76ms at 10k (from frozen). Also fixed: pre-measurement graphs produced an Infinity bounds rect that could poison the shared viewport with NaN through the minimap's pan controller.
+  - Box selection membership is a Set instead of per-node `ids.includes` (was O(nodes x selection)).
+  - `store.nodeTypes` / `edgeTypes` / `connection` / `selectedNodes` / `selectedEdges` no longer allocate on every read (memoized); `actions.setViewport` has a stable identity; the selection box computes its bounds once per change instead of 7x per render; edge pointer handlers are wired directly.
+
+- 52b75d1: SolidJS 2.0.0-rc.2 support: the reactive-graph workarounds for solidjs/solid#3037 (first-nested-derive subscription stranding) are deleted now that the fix ships upstream, and rc.2's fix for solidjs/solid#3038 (the companion-walk flush cost we reported) makes 10k-node drags ~14% faster in production builds. Known upstream issue filed during verification: rc.2's node build ignores store setters that return a replacement array (solidjs/solid#3064) — browser builds, jsdom, and SSR rendering are unaffected.
+- e355096: Spatial queries (benchmarked at 10k nodes): connection drags are now interactive on large graphs — per-move cost went from ~422ms (every pointermove ran upstream's full node scan PLUS a ~20k-handle reactive fan-out) to ~5ms median / 17ms p95, a 31x mean improvement. Three pieces: a gesture-scoped spatial grid feeds XYHandle's closest-handle search from the pointer's neighborhood (node geometry is frozen during gestures, so the snapshot is exact); handles subscribe to equality-cut connection state instead of the per-move connection object; and the hover-target is a keyed record, so snapping onto a handle touches two handles instead of all of them. Box selection narrows its per-move sweep through the same grid, and `getIntersectingNodes` shares one grid build across same-task calls (the per-dragged-node collision pattern drops from N full scans to one build + N neighborhood queries; it remains a snapshot/pull API).
+- 3dbf594: Internal restructuring (WP3): the controlled/uncontrolled seeding policy, the measurement ingest lifecycle, and the selection command group now live in their own headless-testable core modules; dead internals removed (unused signal setters, unread store getters, a triply-plumbed pane click-distance path, vestigial actions). Behavioral fix riding along: `addSelectedEdges` now uses Set membership like `addSelectedNodes` (was O(edges x selection) per box selection).
+
 ## 1.0.0-next.6
 
 ### Major Changes
