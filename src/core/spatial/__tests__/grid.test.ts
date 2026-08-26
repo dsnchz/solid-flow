@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { SpatialGrid } from "../spatial";
+import { SpatialGrid } from "../grid";
 
 const rect = (x: number, y: number, width = 10, height = 10) => ({ x, y, width, height });
 

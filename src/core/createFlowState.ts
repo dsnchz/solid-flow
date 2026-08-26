@@ -66,8 +66,8 @@ import { createEdgeLookup } from "./projections/edgeLookup";
 import { createInternalNodes, type NodeMeasurements } from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
-import { createSeededGraphStores } from "./seeding";
-import { SpatialGrid } from "./spatial";
+import { SpatialGrid } from "./spatial/grid";
+import { createSeededGraphStores } from "./stores/seeding";
 
 /** One measure request: node id plus the DOM element to measure. */
 export type MeasureRequestEntry = [string, InternalNodeUpdate];

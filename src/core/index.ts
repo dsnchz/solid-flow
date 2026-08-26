@@ -9,13 +9,11 @@
  * The FlowState/FlowCommands types (and connectionKey/ConnectionsRecord) are
  * re-exported from the package entrypoint; the rest is internal.
  */
-export { createEdgeStore, type SolidFlowEdge } from "./createEdgeStore";
 export {
   createFlowState,
   type FlowStateInjections,
   type MeasureRequestEntry,
 } from "./createFlowState";
-export { createNodeStore, type SolidFlowNode } from "./createNodeStore";
 export {
   createCullingViewport,
   type CullingSource,
@@ -45,3 +43,5 @@ export {
 } from "./projections/internalNodes";
 export { createLayoutedEdges, type LayoutedEdgesSource } from "./projections/layoutedEdges";
 export { createParentIds, type ParentIdsSource } from "./projections/parentIds";
+export { createEdgeStore, type SolidFlowEdge } from "./stores/createEdgeStore";
+export { createNodeStore, type SolidFlowNode } from "./stores/createNodeStore";

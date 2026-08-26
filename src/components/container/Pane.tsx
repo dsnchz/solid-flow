@@ -13,7 +13,7 @@ import {
 import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
-import { GestureSpatialLookup } from "@/core/gestureLookup";
+import { GestureSpatialLookup } from "@/core/spatial/gestureLookup";
 import type { Edge, InternalNode, Node, PaneEvents } from "@/types";
 import { isEdgeSelectable } from "@/utils";
 

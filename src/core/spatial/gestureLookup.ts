@@ -1,6 +1,6 @@
 import type { Rect, XYPosition } from "@xyflow/system";
 
-import { SpatialGrid } from "./spatial";
+import { SpatialGrid } from "./grid";
 
 /**
  * A gesture-scoped spatial view over a node lookup, for @xyflow/system

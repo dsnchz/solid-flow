@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import type { EdgeProps, NodeProps } from "@/types";
 
-import { createEdgeStore } from "../createEdgeStore";
-import { createNodeStore } from "../createNodeStore";
+import { createEdgeStore } from "../stores/createEdgeStore";
+import { createNodeStore } from "../stores/createNodeStore";
 
 // used as types only (typeof) — the maps ARE the API surface under test
 const _nodeTypes = {
@@ -99,7 +99,7 @@ describe("createEdgeStore type contract", () => {
 describe("SolidFlowNode / SolidFlowEdge (exported guided unions)", () => {
   it("carries the guided typing to plain arrays via satisfies", async () => {
     const { createStore } = await import("solid-js");
-    type MyNodes = import("../createNodeStore").SolidFlowNode<typeof _nodeTypes>;
+    type MyNodes = import("../stores/createNodeStore").SolidFlowNode<typeof _nodeTypes>;
 
     const good = [
       { id: "a", position: { x: 0, y: 0 }, type: "text", data: { content: "hi" } },

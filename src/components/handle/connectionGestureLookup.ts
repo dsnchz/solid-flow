@@ -7,7 +7,7 @@ import {
   type Transform,
 } from "@xyflow/system";
 
-import { GestureSpatialLookup } from "@/core/gestureLookup";
+import { GestureSpatialLookup } from "@/core/spatial/gestureLookup";
 
 /**
  * Upstream `getClosestHandle` prefilters nodes within
