@@ -23,11 +23,23 @@
   &.connectingfrom {
     pointer-events: all;
   }
+}
 
-  &.connectionindicator {
-    pointer-events: all;
-    cursor: crosshair;
-  }
+/* The connection-target affordance, derived from ROOT gesture state instead
+   of a per-handle `connectionindicator` class (which required every handle
+   to recompute at gesture start — ~490ms at 10k nodes). Idle: connection
+   starts. During a gesture: valid connection ends — by opposite type in
+   strict mode, everything except the origin's own handles (.excluded) in
+   loose mode. */
+.solid-flow:not(.connecting) .solid-flow__handle.connectable.connectablestart,
+.solid-flow.connecting.connection-strict.connecting-from-source
+  .solid-flow__handle.connectable.connectableend.target:not(.excluded),
+.solid-flow.connecting.connection-strict.connecting-from-target
+  .solid-flow__handle.connectable.connectableend.source:not(.excluded),
+.solid-flow.connecting:not(.connection-strict)
+  .solid-flow__handle.connectable.connectableend:not(.excluded) {
+  pointer-events: all;
+  cursor: crosshair;
 }
 
 .solid-flow__handle-left {

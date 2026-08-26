@@ -6,6 +6,7 @@ import {
   getNodeDimensions,
   nodeHasDimensions,
   type PanelPosition,
+  type Rect,
   XYMinimap,
   type XYPosition,
 } from "@xyflow/system";
@@ -17,6 +18,7 @@ import {
   omit,
   type ParentProps,
   Show,
+  untrack,
 } from "solid-js";
 
 import { Panel } from "@/components/container";
@@ -154,17 +156,61 @@ export const MiniMap = <NodeType extends Node>(
     height: store.height / store.viewport.zoom,
   }));
 
+  // Graph bounds are SAMPLED, not tracked (bench round 7's residual): the
+  // previous memo ran the O(n) bounds scan through the reactive lookup, so
+  // every position write during a drag re-ran it with a full subscription
+  // teardown/rebuild — ~60ms of the 76ms minimap drag cost at 10k. The
+  // untracked sample runs per animation frame while dragging, on membership
+  // and measurement milestones, and on a coarse safety interval that
+  // catches exotic write paths (programmatic moves outside drags).
+  const rectsEqual = (a: Rect | null, b: Rect | null) =>
+    a === b ||
+    (!!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height);
+  const sampleBounds = (): Rect | null =>
+    untrack(() => {
+      if (nodeLookup.size === 0) return null;
+      const bounds = getInternalNodesBounds(nodeLookup);
+      // Pre-measurement graphs yield an Infinity rect; folding that in
+      // poisons viewScale with NaN, which XYMinimap writes into the SHARED
+      // panZoom viewport. Treat as "no bounds yet".
+      return Number.isFinite(bounds.x) && Number.isFinite(bounds.width) ? bounds : null;
+    });
+  const [graphBounds, setGraphBounds] = createSignal<Rect | null>(sampleBounds(), {
+    equals: rectsEqual,
+  });
+
+  createEffect(
+    () => store.dragging,
+    (dragging) => {
+      if (!dragging) {
+        setGraphBounds(sampleBounds());
+        return;
+      }
+      let raf = requestAnimationFrame(function tick() {
+        setGraphBounds(sampleBounds());
+        raf = requestAnimationFrame(tick);
+      });
+      return () => cancelAnimationFrame(raf);
+    },
+  );
+  createEffect(
+    () => ({ count: store.nodes.length, initialized: store.nodesInitialized }),
+    () => {
+      setGraphBounds(sampleBounds());
+    },
+  );
+  createEffect(
+    () => null,
+    () => {
+      const interval = setInterval(() => setGraphBounds(sampleBounds()), 500);
+      return () => clearInterval(interval);
+    },
+  );
+
   const boundingRect = createMemo(() => {
     const view = viewBB();
-    if (nodeLookup.size === 0) return view;
-    // Pre-measurement (or empty-measured) graphs yield an Infinity rect from
-    // getInternalNodesBounds; folding that in poisons viewScale with NaN,
-    // which XYMinimap then writes into the SHARED panZoom viewport — at 10k
-    // the whole flow's transform ended up NaN. Fall back to the view box
-    // until the bounds are finite.
-    const bounds = getInternalNodesBounds(nodeLookup);
-    if (!Number.isFinite(bounds.x) || !Number.isFinite(bounds.width)) return view;
-    return getBoundsOfRects(bounds, view);
+    const bounds = graphBounds();
+    return bounds ? getBoundsOfRects(bounds, view) : view;
   });
 
   const viewScale = createMemo(() =>

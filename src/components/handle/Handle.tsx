@@ -72,33 +72,19 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   const isTarget = () => _props.type === "target";
   const handleId = () => _props.id ?? null;
 
-  // Read the equality-cut connection memos, NOT store.connection: the full
-  // connection object has fresh identity every pointermove, and these
-  // accessors run in EVERY handle (audit/spatial bench: ~20k re-runs per
-  // move at 10k nodes when reading the full object).
-  const connectionInProcess = () => Boolean(store.connectionFromHandle);
-
-  const connectingFrom = () => {
-    const fromHandle = store.connectionFromHandle;
-    return (
-      fromHandle &&
-      fromHandle.nodeId === nodeId() &&
-      fromHandle.type === _props.type &&
-      fromHandle.id === handleId()
-    );
-  };
+  // KEYED subscriptions only (perf P2): a handle re-runs when ITS entries
+  // flip, never on every-gesture or every-move connection state. The
+  // possible-target affordance (formerly the per-handle connectionindicator
+  // computation, ~490ms at gesture start @10k) is now ROOT classes + CSS.
+  const originState = () =>
+    store.connectionOriginByHandle[connectionKey(nodeId(), _props.type, handleId())];
+  const connectingFrom = () => originState() === "from";
 
   // Keyed subscription: this handle re-runs only when ITS entry flips, not
   // on every hover-target change anywhere in the graph.
   const targetState = () =>
     store.connectionTargetByHandle[connectionKey(nodeId(), _props.type, handleId())];
   const connectingTo = () => targetState() !== undefined;
-
-  const isPossibleTargetHandle = () =>
-    store.connectionMode === "strict"
-      ? store.connectionFromHandle?.type !== _props.type
-      : nodeId() !== store.connectionFromHandle?.nodeId ||
-        handleId() !== store.connectionFromHandle?.id;
 
   const valid = () => targetState() === "valid";
 
@@ -219,13 +205,6 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     actions.setClickConnectStartHandle(undefined);
   };
 
-  const connectionIndicator = () =>
-    connectable() &&
-    (!connectionInProcess() || isPossibleTargetHandle()) &&
-    (connectionInProcess() || store.clickConnectStartHandle
-      ? _props.isConnectableEnd
-      : _props.isConnectableStart);
-
   return (
     <div
       {...rest}
@@ -254,7 +233,8 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
           connectablestart: _props.isConnectableStart,
           connectableend: _props.isConnectableEnd,
           connectable: !!connectable(),
-          connectionindicator: connectionIndicator(),
+          // Loose-mode target exclusion: the origin node's same-id handles.
+          excluded: !!originState(),
         },
       ]}
     >

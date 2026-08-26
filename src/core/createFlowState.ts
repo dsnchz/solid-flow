@@ -306,6 +306,40 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     { key: null },
   );
 
+  // The connection ORIGIN as a keyed record (perf P2): starting a gesture
+  // once flipped every handle's possible-target indicator computation
+  // (~490ms at 10k). The indicator is now derived from ROOT-level classes in
+  // CSS; the only per-handle state left is "am I the origin" (connectingfrom
+  // styling) and "am I excluded as a target" (loose mode excludes the origin
+  // node's same-id handles) — both keyed, so a gesture start touches the
+  // origin's keys instead of every handle. Sources: an in-flight drag
+  // connection, else a click-connect origin.
+  const connectionOriginByHandle = createProjection<Record<string, "from" | "excluded">>(
+    (draft) => {
+      const fromHandle = connection().fromHandle ?? clickConnectStartHandle();
+      const fromKey = fromHandle
+        ? connectionKey(fromHandle.nodeId, fromHandle.type, fromHandle.id ?? null)
+        : null;
+      const siblingKey = fromHandle
+        ? connectionKey(
+            fromHandle.nodeId,
+            fromHandle.type === "source" ? "target" : "source",
+            fromHandle.id ?? null,
+          )
+        : null;
+      for (const existing of Object.keys(draft)) {
+        if (existing !== fromKey && existing !== siblingKey) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
+          delete draft[existing];
+        }
+      }
+      if (fromKey) draft[fromKey] = "from";
+      if (siblingKey) draft[siblingKey] = "excluded";
+    },
+    {},
+    { key: null },
+  );
+
   // B3 (audit): merged renderer maps memoized — the getters below allocated
   // a fresh object PER READ, and every wrapper reads them twice per row.
   const mergedNodeTypes = createMemo(() => ({ ...initialNodeTypes, ...config().nodeTypes }));
@@ -336,6 +370,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
     get connectionTargetByHandle() {
       return connectionTargetByHandle;
+    },
+    get connectionOriginByHandle() {
+      return connectionOriginByHandle;
     },
     get domNode() {
       return domNode();

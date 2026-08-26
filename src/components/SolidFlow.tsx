@@ -143,7 +143,23 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
         domNode = el;
         setDomNodeRef(el);
       }}
-      class={["solid-flow", "solid-flow__container", _props.class, store.colorMode]}
+      class={[
+        "solid-flow",
+        "solid-flow__container",
+        _props.class,
+        store.colorMode,
+        // Connection-gesture state as ROOT classes (perf P2): the handles'
+        // possible-target affordance derives from these in CSS, so starting
+        // a gesture touches this one element instead of every handle.
+        {
+          connecting: !!store.connectionFromHandle || !!store.clickConnectStartHandle,
+          "connecting-from-source":
+            (store.connectionFromHandle ?? store.clickConnectStartHandle)?.type === "source",
+          "connecting-from-target":
+            (store.connectionFromHandle ?? store.clickConnectStartHandle)?.type === "target",
+          "connection-strict": store.connectionMode === "strict",
+        },
+      ]}
       style={rootStyle()}
       onScroll={(e) => {
         e.currentTarget.scrollTo({ top: 0, left: 0, behavior: "auto" });
