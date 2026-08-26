@@ -5,7 +5,6 @@ import { omit, type ParentComponent, Show, useContext } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 import { NodeIdContext } from "@/contexts/nodeId";
-import { useSolidFlow } from "@/hooks";
 import type { InternalNode, Position } from "@/types";
 import { propDefaults } from "@/utils";
 
@@ -32,8 +31,9 @@ export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">
 
 /** Toolbar attached to a node, rendered above the graph so it does not scale with zoom. */
 export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) => {
-  const { store } = useInternalSolidFlow();
-  const { flow, getNodesBounds } = useSolidFlow();
+  // Internal components read the internal context only (audit D3/D5):
+  // flow for the public read surface, commands for the write surface.
+  const { store, flow, commands } = useInternalSolidFlow();
 
   const _props = propDefaults(props, {
     offset: 10,
@@ -70,7 +70,7 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
   };
 
   const transform = () => {
-    const nodeRect = getNodesBounds(toolbarNodes());
+    const nodeRect = commands.getNodesBounds(toolbarNodes());
 
     return !nodeRect
       ? ""

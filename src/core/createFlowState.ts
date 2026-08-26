@@ -198,6 +198,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     get zIndexMode() {
       return config().zIndexMode;
     },
+    get onError() {
+      return config().onFlowError;
+    },
   });
 
   // Read-only Map view over internalNodes for @xyflow/system interop; reads
@@ -522,7 +525,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   const visibleEdgeIds = createMemo(() => Object.keys(layoutedEdges));
 
-  const getEdge = (id: string) => layoutedEdges[id];
+  // Named for what it returns: the LAYOUTED row (geometry joined in).
+  // Raw user edges live in `edgeLookup` — near-identical names once made
+  // this a shape trap (audit D2).
+  const getLayoutedEdge = (id: string) => layoutedEdges[id];
 
   /**********************************************************************************/
   /*                                                                                */
@@ -1125,7 +1131,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     parentIds,
     connections,
     actions: {
-      getEdge,
+      getLayoutedEdge,
       applyInitialFitView,
       applyMeasurementWrites,
       applyNodeChanges,

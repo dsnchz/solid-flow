@@ -1,13 +1,21 @@
 import {
+  type ConnectionMode,
+  type ConnectionState,
   getEventPosition,
   getHostForElement,
+  type InternalNodeBase,
+  type IsValidConnection as SystemIsValidConnection,
   type NodeBase,
   nodeToRect,
   pointToRendererPoint,
   type Transform,
+  type UpdateConnection,
 } from "@xyflow/system";
+import { flush } from "solid-js";
 
+import type { SolidFlowContextValue } from "@/contexts/flow";
 import { GestureSpatialLookup } from "@/core/spatial/gestureLookup";
+import type { Edge, InternalNode, Node } from "@/types";
 
 /**
  * Upstream `getClosestHandle` prefilters nodes within
@@ -74,4 +82,49 @@ export const armConnectionGestureLookup = <V extends NodeBase>(options: {
   doc.addEventListener("touchend", dispose, true);
 
   return lookup;
+};
+
+/**
+ * The XYHandle.onPointerDown params shared by BOTH connection entry points
+ * (Handle and EdgeReconnectAnchor) — 18 of ~22 fields were duplicated and
+ * had silently diverged (audit C2b). Call sites spread this and add their
+ * genuine deltas (nodeId/handleId/isTarget, onConnect, reconnect callbacks,
+ * per-handle isValidConnection override).
+ */
+export const buildConnectionGestureParams = <
+  NodeType extends Node,
+  EdgeType extends Edge,
+>(options: {
+  readonly event: PointerEvent;
+  readonly store: SolidFlowContextValue<NodeType, EdgeType>["store"];
+  readonly actions: SolidFlowContextValue<NodeType, EdgeType>["actions"];
+  readonly gestureLookup: Map<string, InternalNode<NodeType>>;
+}) => {
+  const { event, store, actions, gestureLookup } = options;
+  return {
+    lib: store.lib,
+    flowId: store.id,
+    domNode: store.domNode,
+    autoPanOnConnect: store.autoPanOnConnect,
+    autoPanSpeed: store.autoPanSpeed,
+    connectionMode: store.connectionMode as ConnectionMode,
+    connectionRadius: store.connectionRadius,
+    nodeLookup: gestureLookup,
+    cancelConnection: actions.cancelConnection,
+    panBy: actions.panBy,
+    // XYHandle reads connection state back synchronously in the same task —
+    // without the flush, fromHandle stays null and no drop ever matches.
+    // Single seam cast: system types the callback over InternalNodeBase.
+    updateConnection: ((connection: ConnectionState<InternalNode<NodeType>>) => {
+      actions.setConnection(connection);
+      flush();
+    }) as unknown as UpdateConnection<InternalNodeBase>,
+    isValidConnection: store.isValidConnection as SystemIsValidConnection,
+    onConnectStart: store.onConnectStart,
+    onConnectEnd: store.onConnectEnd,
+    getTransform: () => store.transform,
+    getFromHandle: () => store.connection.fromHandle,
+    dragThreshold: store.connectionDragThreshold,
+    handleDomNode: event.currentTarget as HTMLElement,
+  };
 };

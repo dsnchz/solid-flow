@@ -108,10 +108,10 @@ type EdgesInput<TUserEdgeTypes extends EdgeTypes> = SolidFlowEdge<TUserEdgeTypes
  * ```
  *
  * @remarks
- * - Provides autocomplete for the `type` field with all available node types
- * - Validates `data` structure based on the selected node type
- * - Supports all Node properties (style, draggable, hidden, etc.)
- * - Works seamlessly with both built-in and custom node types
+ * - Provides autocomplete for the `type` field with all available edge types
+ * - Validates `data` structure based on the selected edge type
+ * - Supports all Edge properties (style, animated, selectable, etc.)
+ * - Works seamlessly with both built-in and custom edge types
  * - Type errors prevent invalid type names or incorrect data structures
  */
 /**

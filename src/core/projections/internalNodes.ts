@@ -13,6 +13,9 @@ import {
 import { type Accessor, createMemo, createProjection, mapArray, onCleanup } from "solid-js";
 
 import type { InternalNode, Node } from "@/types";
+import { emitFlowError } from "@/utils";
+
+import { createRowRecordProjection } from "./rowRecord";
 
 const SELECTED_NODE_Z = 1000;
 const ROOT_PARENT_Z_INCREMENT = 10;
@@ -71,6 +74,7 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly measurements: NodeMeasurements;
   readonly nodeOrigin: NodeOrigin;
   readonly nodeExtent: CoordinateExtent;
+  readonly onError?: (id: string, message: string) => void;
   readonly elevateNodesOnSelect: boolean;
   readonly zIndexMode?: ZIndexMode;
 };
@@ -207,7 +211,9 @@ export const createInternalNodes = <NodeType extends Node = Node>(
               // Subscribe to membership so the row re-runs if the parent is
               // added (or reordered to the front) later.
               void source.nodes.length;
-              console.warn(
+              emitFlowError(
+                source.onError,
+                "parent-missing",
                 `Parent node ${userNode.parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
               );
             }
@@ -232,38 +238,9 @@ export const createInternalNodes = <NodeType extends Node = Node>(
     { keyed: (userNode) => userNode.id },
   );
 
-  // The public record: SHALLOW, holding each row's proxy by reference —
-  // row-content reads chain into the row stores; this computed updates only
-  // when membership changes (present→present content updates merge into the
-  // same backing object, so the `.row` slot read here does not fire for
-  // them). Slots are re-assigned by ROW-PROXY reference, so a same-id node
-  // replacement (array reset recreates the row store) repoints the slot
-  // instead of leaving it on the disposed store. Draft form: removed ids
-  // must be deleted explicitly (assigning undefined would keep the own key —
-  // spike 09).
-  const assigned = new Map<string, InternalNode<NodeType>>();
-  return createProjection<Record<string, InternalNode<NodeType>>>(
-    (draft) => {
-      const seen = new Set<string>();
-      for (const { id, store } of rowStores()) {
-        seen.add(id);
-        const row = store.row;
-        if (assigned.get(id) !== row) {
-          assigned.set(id, row);
-          draft[id] = row;
-        }
-      }
-      for (const id of assigned.keys()) {
-        if (!seen.has(id)) {
-          assigned.delete(id);
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
-          delete draft[id];
-        }
-      }
-    },
-    {},
-    { key: null, shallow: true },
-  );
+  // Shared keyed-record tail — see createRowRecordProjection. (These rows
+  // are never null; the helper's null-skip is a no-op here.)
+  return createRowRecordProjection(rowStores);
 };
 
 function calculateChildXYZ<NodeType extends Node>(

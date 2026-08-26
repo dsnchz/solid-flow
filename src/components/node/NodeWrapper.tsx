@@ -16,6 +16,7 @@ import { NodeConnectableContext } from "@/contexts/nodeConnectable";
 import { NodeIdContext } from "@/contexts/nodeId";
 import { isNodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
+import { emitFlowError } from "@/utils";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
@@ -51,7 +52,9 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   const userNode = () => node().internals.userNode;
 
   const nodeTypeValid = () => nodeType() in store.nodeTypes;
-  const nodeComponent = () => store.nodeTypes[nodeType()];
+  // Upstream parity (error003): unknown types render the default component
+  // instead of nothing.
+  const nodeComponent = () => store.nodeTypes[nodeTypeValid() ? nodeType() : "default"];
   const isParentNode = () => !!parentIds[node().id];
 
   const transform = () => {
@@ -92,7 +95,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     () => ({ valid: nodeTypeValid(), nodeType: nodeType() }),
     ({ valid, nodeType }) => {
       if (!valid) {
-        console.warn("003", errorMessages["error003"](nodeType));
+        emitFlowError(store.onError, "003", errorMessages["error003"](nodeType));
       }
     },
   );

@@ -44,7 +44,7 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
 
   const id = useEdgeId();
 
-  const zIndex = () => actions.getEdge(id())?.zIndex;
+  const zIndex = () => actions.getLayoutedEdge(id())?.zIndex;
 
   return (
     <EdgeLabelRenderer>

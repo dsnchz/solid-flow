@@ -92,3 +92,18 @@ export const isEdgeSelectable = (
     readonly defaultEdgeOptions: { readonly selectable?: boolean };
   },
 ): boolean => edge.selectable ?? store.defaultEdgeOptions.selectable ?? store.elementsSelectable;
+
+/**
+ * The single runtime error channel: user-supplied `onFlowError` when
+ * present, an identifiable console warning otherwise. (Setup-time config
+ * warnings in seeding stay on console by design — they fire during
+ * construction, before a flow error handler is meaningfully attachable.)
+ */
+export const emitFlowError = (
+  onError: ((id: string, message: string) => void) | undefined,
+  id: string,
+  message: string,
+): void => {
+  if (onError) onError(id, message);
+  else console.warn(`[solid-flow] ${id}: ${message}`);
+};

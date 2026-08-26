@@ -1,8 +1,11 @@
 import type { JSX } from "@solidjs/web";
-import { ConnectionMode, type HandleType, XYHandle, type XYPosition } from "@xyflow/system";
-import { createSignal, flush, omit, type ParentProps, Show } from "solid-js";
+import { type HandleType, XYHandle, type XYPosition } from "@xyflow/system";
+import { createSignal, omit, type ParentProps, Show } from "solid-js";
 
-import { armConnectionGestureLookup } from "@/components/handle/connectionGestureLookup";
+import {
+  armConnectionGestureLookup,
+  buildConnectionGestureParams,
+} from "@/components/handle/connectionGestureLookup";
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
 import type { Edge } from "@/types";
 import { propDefaults, toPxString } from "@/utils";
@@ -90,29 +93,11 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
       connectionRadius: store.connectionRadius,
     });
     XYHandle.onPointerDown(event, {
-      lib: store.lib,
-      flowId: store.id,
-      domNode: store.domNode,
+      ...buildConnectionGestureParams({ event, store, actions, gestureLookup }),
       nodeId: opposite.nodeId,
       handleId: opposite.handleId,
-      autoPanOnConnect: store.autoPanOnConnect,
-      connectionMode: store.connectionMode as ConnectionMode,
-      connectionRadius: store.connectionRadius,
-      nodeLookup: gestureLookup,
       isTarget: opposite.type === "target",
       edgeUpdaterType: opposite.type,
-      cancelConnection: actions.cancelConnection,
-      panBy: actions.panBy,
-      // XYHandle reads connection state back synchronously in the same task
-      // (same seam as Handle.tsx) — without the flush, fromHandle stays null
-      // and the gesture never matches a drop handle.
-      updateConnection: (connection) => {
-        actions.setConnection(connection);
-        flush();
-      },
-      isValidConnection: store.isValidConnection,
-      onConnectStart: store.onConnectStart,
-      onConnectEnd: store.onConnectEnd,
       onConnect: (connection) => {
         let newEdge = { ...edge(), ...connection } as Edge;
         newEdge = store.onBeforeReconnect?.(newEdge, edge()) ?? newEdge;
@@ -127,11 +112,6 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
         setReconnectingState(false);
         store.onReconnectEnd?.(event, edge(), opposite.type, connectionState);
       },
-      getTransform: () => store.transform,
-      getFromHandle: () => store.connection.fromHandle,
-      autoPanSpeed: store.autoPanSpeed,
-      dragThreshold: store.connectionDragThreshold,
-      handleDomNode: event.currentTarget as HTMLElement,
     });
   };
 

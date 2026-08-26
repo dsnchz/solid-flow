@@ -1,14 +1,15 @@
 import type { JSX } from "@solidjs/web";
+import type { ConnectionState } from "@xyflow/system";
 import {
   getBezierPath,
   getConnectionStatus,
   getSmoothStepPath,
   getStraightPath,
 } from "@xyflow/system";
-import { type ParentProps, Show } from "solid-js";
+import { createMemo, type ParentProps, Show } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
-import type { ConnectionLineComponentProps, ConnectionLineType, Node } from "@/types";
+import type { ConnectionLineComponentProps, ConnectionLineType, InternalNode, Node } from "@/types";
 
 type ConnectionLineProps<NodeType extends Node = Node> = {
   readonly style: JSX.CSSProperties;
@@ -24,64 +25,80 @@ const ConnectionLine = <NodeType extends Node = Node>(
   const { store } = useInternalSolidFlow<NodeType>();
   const connectionStatus = () => getConnectionStatus(store.connection.isValid);
 
-  return (
-    <Show when={store.connection.inProgress}>
-      <svg
-        class="solid-flow__container solid-flow__connectionline"
-        width={store.width}
-        height={store.height}
-        style={props.containerStyle}
-      >
-        <g class={["solid-flow__connection", connectionStatus()]}>
-          <Show when={props.component} fallback={<InternalConnectionLine style={props.style} />}>
-            {(CustomComponent) => {
-              const UserConnectionLine = CustomComponent();
+  // Narrow the discriminated union ONCE (audit D5): inside the Show callback
+  // the in-progress variant's fields are non-null by type, not by assertion.
+  const inProgress = createMemo(() => {
+    const state = store.connection;
+    return state.inProgress ? state : null;
+  });
 
-              return (
-                <UserConnectionLine
-                  connectionLineType={store.connectionLineType}
-                  connectionLineStyle={props.style}
-                  fromNode={store.connection.fromNode!}
-                  fromHandle={store.connection.fromHandle!}
-                  fromX={store.connection.from!.x}
-                  fromY={store.connection.from!.y}
-                  toX={store.connection.to!.x}
-                  toY={store.connection.to!.y}
-                  fromPosition={store.connection.fromPosition!}
-                  toPosition={store.connection.toPosition!}
-                  connectionStatus={connectionStatus()}
-                  toNode={store.connection.toNode!}
-                  toHandle={store.connection.toHandle!}
-                />
-              );
-            }}
-          </Show>
-        </g>
-      </svg>
+  return (
+    <Show when={inProgress()}>
+      {(connection) => (
+        <svg
+          class="solid-flow__container solid-flow__connectionline"
+          width={store.width}
+          height={store.height}
+          style={props.containerStyle}
+        >
+          <g class={["solid-flow__connection", connectionStatus()]}>
+            <Show
+              when={props.component}
+              fallback={<InternalConnectionLine style={props.style} connection={connection()} />}
+            >
+              {(CustomComponent) => {
+                const UserConnectionLine = CustomComponent();
+
+                return (
+                  <UserConnectionLine
+                    connectionLineType={store.connectionLineType}
+                    connectionLineStyle={props.style}
+                    fromNode={connection().fromNode}
+                    fromHandle={connection().fromHandle}
+                    fromX={connection().from.x}
+                    fromY={connection().from.y}
+                    toX={connection().to.x}
+                    toY={connection().to.y}
+                    fromPosition={connection().fromPosition}
+                    toPosition={connection().toPosition}
+                    connectionStatus={connectionStatus()}
+                    toNode={connection().toNode}
+                    toHandle={connection().toHandle}
+                  />
+                );
+              }}
+            </Show>
+          </g>
+        </svg>
+      )}
     </Show>
   );
 };
 
+type InProgressConnection<NodeType extends Node> = Extract<
+  ConnectionState<InternalNode<NodeType>>,
+  { inProgress: true }
+>;
+
 type InternalConnectionLineProps<NodeType extends Node = Node> = Pick<
   ConnectionLineProps<NodeType>,
   "style"
->;
+> & { readonly connection: InProgressConnection<NodeType> };
 
 const InternalConnectionLine = <NodeType extends Node = Node>(
-  props: Partial<InternalConnectionLineProps<NodeType>>,
+  props: Partial<InternalConnectionLineProps<NodeType>> &
+    Pick<InternalConnectionLineProps<NodeType>, "connection">,
 ) => {
   const { store } = useInternalSolidFlow<NodeType>();
 
   const path = () => {
-    if (!store.connection.inProgress) return undefined;
-
     const pathParams = {
-      sourceX: store.connection.from.x,
-      sourceY: store.connection.from.y,
-      sourcePosition: store.connection.fromPosition,
-      targetX: store.connection.to.x,
-      targetY: store.connection.to.y,
-      targetPosition: store.connection.toPosition,
+      sourceX: props.connection.from.x,
+      sourceY: props.connection.from.y,
+      sourcePosition: props.connection.fromPosition,
+      targetX: props.connection.to.x,
+      targetY: props.connection.to.y,
+      targetPosition: props.connection.toPosition,
     } as const;
 
     switch (store.connectionLineType) {

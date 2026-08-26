@@ -64,7 +64,9 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
   let autoPanStarted = false;
 
   const autoPanOnSelection = () => props.autoPanOnSelection ?? true;
-  const paneClickDistance = () => props.paneClickDistance ?? 1;
+  // Default lives in ONE place (SolidFlow's merge, 0); this fallback only
+  // covers direct Pane mounting in tests.
+  const paneClickDistance = () => props.paneClickDistance ?? 0;
 
   const _panOnDrag = () => store.panActivationKeyPressed || props.panOnDrag;
 

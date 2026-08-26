@@ -13,7 +13,7 @@ import {
 import { flush, type StoreSetter } from "solid-js";
 
 import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
-import { isEdgeSelectable } from "@/utils";
+import { emitFlowError, isEdgeSelectable } from "@/utils";
 
 /** The slice of the internal store the selection commands read. */
 type SelectionStoreReads<NodeType extends Node, EdgeType extends Edge> = {
@@ -142,7 +142,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     const node = store.nodes.find((n) => n.id === id);
 
     if (!node) {
-      console.warn("012", errorMessages["error012"](id));
+      emitFlowError(store.onError, "012", errorMessages["error012"](id));
       return;
     }
 
@@ -162,7 +162,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     const edge = edgeLookup[id];
 
     if (!edge) {
-      console.warn("012", errorMessages["error012"](id));
+      emitFlowError(store.onError, "012", errorMessages["error012"](id));
       return;
     }
 

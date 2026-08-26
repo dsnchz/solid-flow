@@ -1,14 +1,14 @@
 import type { JSX } from "@solidjs/web";
 import { Dynamic } from "@solidjs/web";
-import { elementSelectionKeys, getMarkerId } from "@xyflow/system";
-import { createMemo, Show } from "solid-js";
+import { elementSelectionKeys, errorMessages, getMarkerId } from "@xyflow/system";
+import { createEffect, createMemo, Show } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { isEdgeCulled } from "@/core";
 import type { Edge, EdgeEvents, Node } from "@/types";
-import { isEdgeSelectable } from "@/utils";
+import { emitFlowError, isEdgeSelectable } from "@/utils";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
   readonly edgeId: string;
@@ -22,13 +22,26 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
 
   const edgeId = () => props.edgeId;
-  const edge = () => actions.getEdge(edgeId())!;
+  const edge = () => actions.getLayoutedEdge(edgeId())!;
 
   const edgeType = () => edge().type ?? "default";
   const selectable = () => isEdgeSelectable(edge(), store);
   const focusable = () => edge().focusable ?? store.edgesFocusable;
 
-  const edgeComponent = () => store.edgeTypes[edgeType()];
+  const edgeTypeValid = () => edgeType() in store.edgeTypes;
+  // Upstream parity (error011): unknown types render the default component
+  // instead of nothing, and report through the error channel (mirrors
+  // NodeWrapper's error003 effect).
+  const edgeComponent = () => store.edgeTypes[edgeTypeValid() ? edgeType() : "default"];
+
+  createEffect(
+    () => ({ valid: edgeTypeValid(), edgeType: edgeType() }),
+    ({ valid, edgeType }) => {
+      if (!valid) {
+        emitFlowError(store.onError, "011", errorMessages["error011"](edgeType));
+      }
+    },
+  );
 
   const markerStartUrl = () =>
     edge().markerStart ? `url('#${getMarkerId(edge().markerStart, store.id)}')` : undefined;

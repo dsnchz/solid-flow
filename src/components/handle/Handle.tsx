@@ -10,20 +10,21 @@ import {
   handleConnectionChange,
   type HandleProps as SystemHandleProps,
   type HandleType,
-  type InternalNodeBase,
   type IsValidConnection as SystemIsValidConnection,
   type Optional,
-  type UpdateConnection,
   XYHandle,
 } from "@xyflow/system";
-import { createEffect, flush, omit, type ParentProps } from "solid-js";
+import { createEffect, omit, type ParentProps } from "solid-js";
 import { snapshot } from "solid-js";
 
-import { armConnectionGestureLookup } from "@/components/handle/connectionGestureLookup";
+import {
+  armConnectionGestureLookup,
+  buildConnectionGestureParams,
+} from "@/components/handle/connectionGestureLookup";
 import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import { useNodeConnectable } from "@/contexts/nodeConnectable";
 import { connectionKey } from "@/core";
-import type { Edge, InternalNode, Node, Position } from "@/types";
+import type { Edge, Node, Position } from "@/types";
 import { propDefaults } from "@/utils";
 import { getEdgeId } from "@/utils";
 
@@ -153,40 +154,14 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       connectionRadius: store.connectionRadius,
     });
     XYHandle.onPointerDown(event, {
+      ...buildConnectionGestureParams({ event, store, actions, gestureLookup }),
       handleId: handleId(),
       nodeId: nodeId(),
       isTarget: isTarget(),
-      connectionRadius: store.connectionRadius,
-      domNode: store.domNode,
-      nodeLookup: gestureLookup,
-      connectionMode: store.connectionMode as ConnectionMode,
-      lib: store.lib,
-      autoPanOnConnect: store.autoPanOnConnect,
-      flowId: store.id,
+      // Per-handle validation override is this call site's genuine delta.
       isValidConnection: (_props.isValidConnection ??
         store.isValidConnection) as SystemIsValidConnection,
-      // XYHandle reads connection state back synchronously in the same task.
-      // Single seam cast: system types the callback over InternalNodeBase.
-      updateConnection: ((connection: ConnectionState<InternalNode<NodeType>>) => {
-        actions.setConnection(connection);
-        flush();
-      }) as unknown as UpdateConnection<InternalNodeBase>,
-      cancelConnection: actions.cancelConnection,
-      panBy: actions.panBy,
       onConnect: onConnectExtended,
-      onConnectStart: (event, startParams) => {
-        store.onConnectStart?.(event, {
-          nodeId: startParams.nodeId,
-          handleId: startParams.handleId,
-          handleType: startParams.handleType,
-        });
-      },
-      onConnectEnd: store.onConnectEnd,
-      getTransform: () => store.transform,
-      getFromHandle: () => store.connection.fromHandle,
-      autoPanSpeed: store.autoPanSpeed,
-      dragThreshold: store.connectionDragThreshold,
-      handleDomNode: event.currentTarget as HTMLElement,
     });
   };
 

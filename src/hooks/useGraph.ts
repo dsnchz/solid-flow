@@ -11,8 +11,8 @@ import type { Edge, Node } from "@/types";
  * @returns store with an array of nodes
  */
 export function useNodes<NodeType extends Node = Node>(): Accessor<readonly NodeType[]> {
-  const { store } = useInternalSolidFlow<NodeType>();
-  return () => store.nodes;
+  const { flow } = useInternalSolidFlow<NodeType>();
+  return () => flow.nodes;
 }
 
 /**
@@ -22,8 +22,8 @@ export function useNodes<NodeType extends Node = Node>(): Accessor<readonly Node
  * @returns store with an array of edges
  */
 export function useEdges<EdgeType extends Edge = Edge>(): Accessor<readonly EdgeType[]> {
-  const { store } = useInternalSolidFlow<Node, EdgeType>();
-  return () => store.edges;
+  const { flow } = useInternalSolidFlow<Node, EdgeType>();
+  return () => flow.edges;
 }
 
 /**

@@ -82,9 +82,9 @@ export type MiniMapProps<NodeType extends Node> = Omit<
   readonly zoomStep?: number;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getAttrFunction = <NodeType extends Node>(func: any): GetMiniMapNodeAttribute<NodeType> =>
-  func instanceof Function ? func : () => func;
+const getAttrFunction = <NodeType extends Node>(
+  value: string | GetMiniMapNodeAttribute<NodeType>,
+): GetMiniMapNodeAttribute<NodeType> => (value instanceof Function ? value : () => value);
 
 /** Miniature overview map of the whole flow, with optional pan/zoom interaction. */
 export const MiniMap = <NodeType extends Node>(
@@ -278,32 +278,40 @@ export const MiniMap = <NodeType extends Node>(
               <title id={labelledBy()}>{store.ariaLabelConfig["minimap.ariaLabel"]}</title>
               <For keyed={false} each={nodeIds()}>
                 {(nodeId) => {
-                  const node = createMemo(() => nodeLookup.get(nodeId()));
-
-                  const nodeVisible = () =>
-                    Boolean(node() && nodeHasDimensions(node()!) && !node()!.hidden);
+                  // Narrow once through Show: inside the callback the row is
+                  // non-null by type, not by assertion (audit D).
+                  const visibleNode = createMemo(() => {
+                    const row = nodeLookup.get(nodeId());
+                    return row && nodeHasDimensions(row) && !row.hidden ? row : null;
+                  });
 
                   return (
-                    <Show when={nodeVisible() && getNodeDimensions(node()!)}>
-                      {(nodeDimensions) => (
-                        <Dynamic
-                          component={_props.nodeComponent ?? MiniMapNode}
-                          id={nodeId()}
-                          x={node()!.internals.positionAbsolute.x}
-                          y={node()!.internals.positionAbsolute.y}
-                          borderRadius={_props.nodeBorderRadius}
-                          strokeWidth={_props.nodeStrokeWidth}
-                          shapeRendering={shapeRendering}
-                          width={nodeDimensions().width}
-                          height={nodeDimensions().height}
-                          selected={node()!.selected}
-                          color={nodeColorFunc()?.call(null, node()!)}
-                          strokeColor={nodeStrokeColorFunc().call(null, node()!)}
-                          class={nodeClassFunc().call(null, node()!)}
-                          style={node()!.style}
-                          onClick={_props.onNodeClick ? onSvgNodeClick : undefined}
-                        />
-                      )}
+                    <Show when={visibleNode()}>
+                      {(node) => {
+                        const dimensions = () => getNodeDimensions(node());
+                        // Attribute callbacks receive the USER node (upstream
+                        // parity), not the internal row.
+                        const userNode = () => node().internals.userNode;
+                        return (
+                          <Dynamic
+                            component={_props.nodeComponent ?? MiniMapNode}
+                            id={nodeId()}
+                            x={node().internals.positionAbsolute.x}
+                            y={node().internals.positionAbsolute.y}
+                            borderRadius={_props.nodeBorderRadius}
+                            strokeWidth={_props.nodeStrokeWidth}
+                            shapeRendering={shapeRendering}
+                            width={dimensions().width}
+                            height={dimensions().height}
+                            selected={node().selected}
+                            color={nodeColorFunc()?.call(null, userNode())}
+                            strokeColor={nodeStrokeColorFunc().call(null, userNode())}
+                            class={nodeClassFunc().call(null, userNode())}
+                            style={node().style}
+                            onClick={_props.onNodeClick ? onSvgNodeClick : undefined}
+                          />
+                        );
+                      }}
                     </Show>
                   );
                 }}

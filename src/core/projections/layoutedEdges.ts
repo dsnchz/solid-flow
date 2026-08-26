@@ -9,6 +9,8 @@ import { createProjection, mapArray } from "solid-js";
 
 import type { DefaultEdgeOptions, Edge, EdgeLayouted, InternalNode, Node } from "@/types";
 
+import { createRowRecordProjection } from "./rowRecord";
+
 /**
  * The reactive inputs of the layout join, expressed structurally so the
  * internal store satisfies it and headless tests can supply a plain object.
@@ -76,36 +78,8 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
     { keyed: (edge) => edge.id },
   );
 
-  // The public record: SHALLOW, holding the PRESENT rows' proxies by
-  // reference. Slots are re-assigned by ROW-PROXY reference: present→present
-  // content updates merge into the same backing object (no reassignment, no
-  // record update); presence flips and same-id edge replacements repoint or
-  // drop the slot. Draft form: removed ids must be deleted explicitly
-  // (assigning undefined would keep the own key — spike 09).
-  const assigned = new Map<string, EdgeLayouted<EdgeType>>();
-  return createProjection<Record<string, EdgeLayouted<EdgeType>>>(
-    (draft) => {
-      const seen = new Set<string>();
-      for (const { id, store } of rowStores()) {
-        const row = store.row;
-        if (!row) continue;
-        seen.add(id);
-        if (assigned.get(id) !== row) {
-          assigned.set(id, row);
-          draft[id] = row;
-        }
-      }
-      for (const id of assigned.keys()) {
-        if (!seen.has(id)) {
-          assigned.delete(id);
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
-          delete draft[id];
-        }
-      }
-    },
-    {},
-    { key: null, shallow: true },
-  );
+  // Shared keyed-record tail — see createRowRecordProjection.
+  return createRowRecordProjection(rowStores);
 };
 
 const buildRow = <NodeType extends Node, EdgeType extends Edge>(

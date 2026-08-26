@@ -1,11 +1,13 @@
 import type { JSX } from "@solidjs/web";
 import { isServer } from "@solidjs/web";
-import { createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import { createMemo, For, onCleanup, Show } from "solid-js";
 
 import { NodeWrapper } from "@/components/node/NodeWrapper";
 import { useInternalSolidFlow } from "@/contexts";
 import { isNodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
+
+import { createFocusedIdTracker } from "./focusedIdTracker";
 
 export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
   readonly nodeClickDistance: number;
@@ -44,18 +46,13 @@ export const NodeRenderer = <NodeType extends Node = Node>(
   // The unmount tier's focus guard: focusin bubbles from any descendant (a
   // custom node's input included), so the node holding DOM focus is known
   // here and never unmounted mid-interaction — focus cannot survive removal.
-  const [focusedNodeId, setFocusedNodeId] = createSignal<string | null>(null);
-
-  const onFocusIn = (event: FocusEvent) => {
-    const nodeElement = (event.target as Element).closest("[data-id]");
-    setFocusedNodeId(nodeElement?.getAttribute("data-id") ?? null);
-  };
+  const { focusedId: focusedNodeId, onFocusIn, onFocusOut } = createFocusedIdTracker();
 
   return (
     <div
       class="solid-flow__container solid-flow__nodes"
       onFocusIn={onFocusIn}
-      onFocusOut={() => setFocusedNodeId(null)}
+      onFocusOut={onFocusOut}
     >
       <For each={store.visibleNodeIds}>
         {(nodeId) => {

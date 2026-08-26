@@ -1,11 +1,13 @@
 import type { JSX } from "@solidjs/web";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 
 import { EdgeWrapper } from "@/components/edge";
 import { MarkerDefinition } from "@/components/marker";
 import { useInternalSolidFlow } from "@/contexts";
 import { isEdgeCulled } from "@/core";
 import type { Edge, EdgeEvents, Node } from "@/types";
+
+import { createFocusedIdTracker } from "./focusedIdTracker";
 
 type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType>;
 
@@ -19,15 +21,10 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
   // `g` carries data-id and focusin bubbles here). Edge-LABEL content lives
   // in the portaled label layer and is not seen by this listener — labels
   // are interacted with on selected edges, and selected edges never cull.
-  const [focusedEdgeId, setFocusedEdgeId] = createSignal<string | null>(null);
-
-  const onFocusIn = (event: FocusEvent) => {
-    const edgeElement = (event.target as Element).closest("[data-id]");
-    setFocusedEdgeId(edgeElement?.getAttribute("data-id") ?? null);
-  };
+  const { focusedId: focusedEdgeId, onFocusIn, onFocusOut } = createFocusedIdTracker();
 
   return (
-    <div class="solid-flow__edges" onFocusIn={onFocusIn} onFocusOut={() => setFocusedEdgeId(null)}>
+    <div class="solid-flow__edges" onFocusIn={onFocusIn} onFocusOut={onFocusOut}>
       <MarkerDefinition />
 
       <For each={store.visibleEdgeIds}>
@@ -36,7 +33,7 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
           // NodeRenderer (see the comment there and bench round 6).
           const unmounted = createMemo(() => {
             if (!store.onlyRenderVisibleElements || focusedEdgeId() === edgeId) return false;
-            const edge = actions.getEdge(edgeId);
+            const edge = actions.getLayoutedEdge(edgeId);
             return !!edge && isEdgeCulled(edge, store.cullingViewport);
           });
 
