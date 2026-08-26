@@ -9,6 +9,7 @@ import { expect, test } from "./helpers";
 const EXAMPLES = [
   "A11y",
   "AddNodeOnDrop",
+  "AsyncData",
   "Backgrounds",
   "ColorMode",
   "CustomConnectionLine",

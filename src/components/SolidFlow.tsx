@@ -121,6 +121,23 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     },
   );
 
+  // Async-seed guard, rendered as a dynamic insert (returns null, shows
+  // nothing). While an async-seeded nodes/edges store is unresolved, the
+  // leaf reads throw NotReadyError, which reaches the user's <Loading>
+  // boundary. It must read the COMPONENT props (the user's stores), not the
+  // internal store: a provider-adopted flow's internal store is seeded
+  // before these props exist and never carries their not-readiness (the
+  // adoption effect just waits on it), and the flow's own reads happen
+  // inside For and projections, which hold their empty initial values —
+  // either way first-load pending state would silently render as an empty
+  // graph. An opaque call, not an inline expression, so the compiler cannot
+  // fold it away statically.
+  const asyncSeedGuard = () => {
+    void _props.nodes?.length;
+    void _props.edges?.length;
+    return null;
+  };
+
   const rootStyle = (): JSX.CSSProperties => ({
     width: toPxString(_props.width),
     height: toPxString(_props.height),
@@ -143,6 +160,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
       {...htmlProps}
     >
       <TypedSolidFlowContext value={solidFlow}>
+        {asyncSeedGuard()}
         <KeyHandler
           selectionKey={_props.selectionKey}
           deleteKey={_props.deleteKey}

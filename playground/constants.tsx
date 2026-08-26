@@ -1,6 +1,7 @@
 import {
   A11y,
   AddNodeOnDrop,
+  AsyncData,
   Backgrounds,
   ColorMode,
   CustomConnectionLine,
@@ -36,6 +37,7 @@ import {
 export const SolidFlowExamplesMap = {
   A11y,
   AddNodeOnDrop,
+  AsyncData,
   Backgrounds,
   ColorMode,
   CustomConnectionLine,

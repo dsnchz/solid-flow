@@ -110,10 +110,24 @@ type NodesInput<TUserNodeTypes extends NodeTypes> = SolidFlowNode<TUserNodeTypes
  * - Works seamlessly with both built-in and custom node types
  * - Type errors prevent invalid type names or incorrect data structures
  */
+/**
+ * Also accepts an async seed ("Fetch High"): pass `async () => nodes` —
+ * typically an API call — instead of an array. No memo required: the
+ * function goes straight to `createStore`'s projection derive, so reads
+ * throw `NotReadyError` until the first value (cover the flow with
+ * `<Loading fallback>`), and the graph retries them when the data lands.
+ * Afterwards the store is an ordinary writable store — draft writes and
+ * wholesale replacement work exactly like the array form.
+ */
 export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string, never>>(
-  nodes: NoInfer<NodesInput<TUserNodeTypes>>[],
+  nodes:
+    | NoInfer<NodesInput<TUserNodeTypes>>[]
+    | (() => Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>),
 ): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>] => {
-  const [store, setStore] = createStore(nodes);
+  const [store, setStore] =
+    typeof nodes === "function"
+      ? createStore<NodesInput<TUserNodeTypes>[]>(nodes, [])
+      : createStore(nodes);
 
   return [store, setStore] as const;
 };

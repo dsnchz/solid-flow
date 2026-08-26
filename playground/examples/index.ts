@@ -1,5 +1,6 @@
 export { A11y } from "./accessibility/page";
 export { AddNodeOnDrop } from "./add-node-on-drop/page";
+export { AsyncData } from "./async-data/page";
 export { Backgrounds } from "./backgrounds/page";
 export { ColorMode } from "./color-mode/page";
 export { CustomConnectionLine } from "./custom-connection-line/page";

@@ -152,6 +152,32 @@ The stores you pass as `nodes` / `edges` props are **controlled** — a delibera
 
 **Prefer letting the flow own the data?** Pass `defaultNodes` / `defaultEdges` instead of `nodes` / `edges` for an **uncontrolled** flow (React Flow parity): the arrays seed the flow once (later values are ignored), and membership belongs to the flow — commands like `addNodes` and completed connections persist with no adoption step. Read live state through `useSolidFlow()`'s `flow.nodes` / `flow.edges`. The two axes are independent, so you can control edges while leaving nodes uncontrolled (or vice versa); supplying both props on one axis is a mistake (`nodes` wins, with a dev warning).
 
+## Loading your graph from an API
+
+Both stores accept an async seed — pass `async () => data` instead of an array. No memo, no lifecycle juggling: reads are not-ready until the data lands (SolidJS 2.0's async model), so a `<Loading>` boundary holds the flow and swaps in the graph when it arrives. Afterwards the stores behave exactly like their array-seeded counterparts — drafts, adoption, wholesale replacement.
+
+```tsx
+import { Loading } from "@solidjs/web";
+
+const fetchNodes = async () => (await fetch("/api/graph/nodes")).json();
+const fetchEdges = async () => (await fetch("/api/graph/edges")).json();
+
+export const Flow = () => {
+  const [nodes] = createNodeStore(fetchNodes);
+  const [edges, setEdges] = createEdgeStore(fetchEdges);
+
+  return (
+    <Loading fallback={<div>Loading graph…</div>}>
+      <SolidFlow nodes={nodes} edges={edges} fitView>
+        <Background variant="dots" />
+      </SolidFlow>
+    </Loading>
+  );
+};
+```
+
+See the AsyncData playground example for the full version (including connection adoption after the async seed).
+
 ## The flow API
 
 `useSolidFlow()` returns `{ flow, commands }` (with `commands` also spread at the top level for React/Svelte Flow familiarity). Both are stable identities — destructuring is safe.

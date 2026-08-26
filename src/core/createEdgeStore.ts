@@ -114,9 +114,21 @@ type EdgesInput<TUserEdgeTypes extends EdgeTypes> = SolidFlowEdge<TUserEdgeTypes
  * - Works seamlessly with both built-in and custom node types
  * - Type errors prevent invalid type names or incorrect data structures
  */
+/**
+ * Also accepts an async seed ("Fetch High"): pass `async () => edges`
+ * instead of an array. Reads throw `NotReadyError` until the first value
+ * (cover the flow with `<Loading fallback>`); afterwards the store is an
+ * ordinary writable store. See {@link createNodeStore} for details.
+ */
 export const createEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
-  edges: NoInfer<EdgesInput<TUserEdgeTypes>>[],
+  edges:
+    | NoInfer<EdgesInput<TUserEdgeTypes>>[]
+    | (() => Promise<NoInfer<EdgesInput<TUserEdgeTypes>>[]>),
 ): readonly [Store<EdgesInput<TUserEdgeTypes>[]>, StoreSetter<EdgesInput<TUserEdgeTypes>[]>] => {
-  const [store, setStore] = createStore(edges);
+  const [store, setStore] =
+    typeof edges === "function"
+      ? createStore<EdgesInput<TUserEdgeTypes>[]>(edges, [])
+      : createStore(edges);
+
   return [store, setStore] as const;
 };

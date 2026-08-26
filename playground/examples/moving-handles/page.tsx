@@ -47,7 +47,7 @@ const NodeUpdater = () => {
 };
 
 export const MovingHandles = () => {
-  const [nodes] = createNodeStore([
+  const [nodes] = createNodeStore<typeof nodeTypes>([
     {
       id: "input",
       type: "input",
@@ -55,15 +55,12 @@ export const MovingHandles = () => {
       position: { x: -300, y: 0 },
       sourcePosition: Position.Right,
     },
-    ...new Array(10).fill(0).map(
-      (_, i) =>
-        ({
-          id: `${i}`,
-          type: "movingHandle",
-          position: { x: 0, y: i * 60 },
-          data: {},
-        }) as Parameters<typeof createNodeStore>[0][number],
-    ),
+    ...new Array(10).fill(0).map((_, i) => ({
+      id: `${i}`,
+      type: "movingHandle" as const,
+      position: { x: 0, y: i * 60 },
+      data: {},
+    })),
   ]);
 
   const [edges, setEdges] = createEdgeStore([]);
