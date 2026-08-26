@@ -27,8 +27,8 @@ const BenchProbe = () => {
 // twin app stubs this with a no-op because 1.x updates synchronously).
 export const StressTest = () => {
   const params = new URLSearchParams(window.location.search);
-  const xNodes = Number(params.get("x") ?? 25);
-  const yNodes = Number(params.get("y") ?? 25);
+  const xNodes = Number(params.get("x") ?? 50);
+  const yNodes = Number(params.get("y") ?? 30);
   const withMiniMap = params.get("minimap") === "1";
   const withEdges = params.get("edges") !== "0";
   const withUnmountCulling = params.get("unmount") === "1";
