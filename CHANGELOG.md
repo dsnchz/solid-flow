@@ -1,5 +1,16 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.8
+
+### Minor Changes
+
+- f5d3995: Two parity features: `useKeyPress` (reactive key/combo tracking usable anywhere — hardened beyond upstream: combos re-activate when the base key is re-pressed while the modifier stays held, fixing the pattern behind xyflow#2248, and stuck modifiers self-heal from later input events) and MiniMap `offsetScale` (scales the padding around the graph, default 5 — the last MiniMap parity gap).
+
+### Patch Changes
+
+- 3c0a946: Two more large-graph wins (benchmarked at 10k nodes): connection gestures now average 2.4ms per move with no start-of-gesture hitch (was a ~490ms spike — the possible-target handle affordance is derived from root-level classes in CSS instead of a per-handle computation), and dragging with the MiniMap open costs the same as without it (76 → 17ms/move — graph bounds are sampled per animation frame during drags instead of tracked through the reactive lookup). Breaking for custom CSS only: handles no longer emit the `connectionindicator` class; target `.solid-flow.connecting .solid-flow__handle.connectable.connectableend` (see handle styles) instead.
+- 36ddea3: Consistency sweep (audit WP4): all runtime warnings route through `onFlowError` (one error channel, console fallback); unknown node/edge types now render the `default` component instead of nothing, reporting error003/error011 (upstream parity); the internal layouted-edge accessor is named `getLayoutedEdge` to stop shape confusion with the raw `edgeLookup`; `useNodes`/`useEdges` read the public flow surface; duplicated internals unified (the XYHandle gesture params shared by Handle and EdgeReconnectAnchor — fixing a silent validation-handling divergence — the keyed-record projection tail, and the renderers' focus tracker); ConnectionLine and MiniMap drop all non-null assertions in favor of narrowed types; MiniMap attribute callbacks (`nodeColor` etc.) now receive the user node, matching upstream.
+
 ## 1.0.0-next.7
 
 ### Minor Changes
