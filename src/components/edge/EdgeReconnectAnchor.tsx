@@ -2,6 +2,7 @@ import type { JSX } from "@solidjs/web";
 import { ConnectionMode, type HandleType, XYHandle, type XYPosition } from "@xyflow/system";
 import { createSignal, flush, omit, type ParentProps, Show } from "solid-js";
 
+import { armConnectionGestureLookup } from "@/components/handle/connectionGestureLookup";
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
 import type { Edge } from "@/types";
 import { propDefaults, toPxString } from "@/utils";
@@ -80,6 +81,14 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
             type: "target" as HandleType,
           };
 
+    // RFC-4239 win #1: same gesture-scoped spatial view as Handle.tsx.
+    const gestureLookup = armConnectionGestureLookup({
+      event,
+      real: nodeLookup,
+      domNode: store.domNode,
+      getTransform: () => store.transform,
+      connectionRadius: store.connectionRadius,
+    });
     XYHandle.onPointerDown(event, {
       lib: store.lib,
       flowId: store.id,
@@ -89,7 +98,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
       autoPanOnConnect: store.autoPanOnConnect,
       connectionMode: store.connectionMode as ConnectionMode,
       connectionRadius: store.connectionRadius,
-      nodeLookup,
+      nodeLookup: gestureLookup,
       isTarget: opposite.type === "target",
       edgeUpdaterType: opposite.type,
       cancelConnection: actions.cancelConnection,

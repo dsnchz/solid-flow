@@ -19,6 +19,7 @@ import {
 import { createEffect, flush, omit, type ParentProps } from "solid-js";
 import { snapshot } from "solid-js";
 
+import { armConnectionGestureLookup } from "@/components/handle/connectionGestureLookup";
 import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import { useNodeConnectable } from "@/contexts/nodeConnectable";
 import { connectionKey } from "@/core";
@@ -70,27 +71,35 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   const isTarget = () => _props.type === "target";
   const handleId = () => _props.id ?? null;
 
-  const connectionInProcess = () => Boolean(store.connection.fromHandle);
+  // Read the equality-cut connection memos, NOT store.connection: the full
+  // connection object has fresh identity every pointermove, and these
+  // accessors run in EVERY handle (audit/spatial bench: ~20k re-runs per
+  // move at 10k nodes when reading the full object).
+  const connectionInProcess = () => Boolean(store.connectionFromHandle);
 
-  const connectingFrom = () =>
-    store.connection.fromHandle &&
-    store.connection.fromHandle.nodeId === nodeId() &&
-    store.connection.fromHandle.type === _props.type &&
-    store.connection.fromHandle.id === handleId();
+  const connectingFrom = () => {
+    const fromHandle = store.connectionFromHandle;
+    return (
+      fromHandle &&
+      fromHandle.nodeId === nodeId() &&
+      fromHandle.type === _props.type &&
+      fromHandle.id === handleId()
+    );
+  };
 
-  const connectingTo = () =>
-    store.connection.toHandle &&
-    store.connection.toHandle.nodeId === nodeId() &&
-    store.connection.toHandle.type === _props.type &&
-    store.connection.toHandle.id === handleId();
+  // Keyed subscription: this handle re-runs only when ITS entry flips, not
+  // on every hover-target change anywhere in the graph.
+  const targetState = () =>
+    store.connectionTargetByHandle[connectionKey(nodeId(), _props.type, handleId())];
+  const connectingTo = () => targetState() !== undefined;
 
   const isPossibleTargetHandle = () =>
     store.connectionMode === "strict"
-      ? store.connection.fromHandle?.type !== _props.type
-      : nodeId() !== store.connection.fromHandle?.nodeId ||
-        handleId() !== store.connection.fromHandle?.id;
+      ? store.connectionFromHandle?.type !== _props.type
+      : nodeId() !== store.connectionFromHandle?.nodeId ||
+        handleId() !== store.connectionFromHandle?.id;
 
-  const valid = () => Boolean(connectingTo() && store.connection.isValid);
+  const valid = () => targetState() === "valid";
 
   let prevConnections: Map<string, HandleConnection> | null = null;
 
@@ -134,13 +143,22 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   };
 
   const onPointerDown = (event: PointerEvent) => {
+    // RFC-4239 win #1: XYHandle's closest-handle search iterates this lookup
+    // on EVERY pointermove — hand it a gesture-scoped spatial view instead.
+    const gestureLookup = armConnectionGestureLookup({
+      event,
+      real: nodeLookup,
+      domNode: store.domNode,
+      getTransform: () => store.transform,
+      connectionRadius: store.connectionRadius,
+    });
     XYHandle.onPointerDown(event, {
       handleId: handleId(),
       nodeId: nodeId(),
       isTarget: isTarget(),
       connectionRadius: store.connectionRadius,
       domNode: store.domNode,
-      nodeLookup,
+      nodeLookup: gestureLookup,
       connectionMode: store.connectionMode as ConnectionMode,
       lib: store.lib,
       autoPanOnConnect: store.autoPanOnConnect,

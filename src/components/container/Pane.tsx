@@ -4,6 +4,7 @@ import {
   calcAutoPan,
   getEventPosition,
   getNodesInside,
+  nodeToRect,
   pointToRendererPoint,
   rendererPointToPoint,
   SelectionMode,
@@ -12,7 +13,8 @@ import {
 import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
-import type { Edge, Node, PaneEvents } from "@/types";
+import { GestureSpatialLookup } from "@/core/gestureLookup";
+import type { Edge, InternalNode, Node, PaneEvents } from "@/types";
 import { isEdgeSelectable } from "@/utils";
 
 const isSetEqual = (a: Set<string>, b: Set<string>) => {
@@ -52,6 +54,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
   // Used to prevent click events when the user lets go of the selectionKey during a selection
   let selectionInProgress = false;
+  const selectionSpatialLookup = new GestureSpatialLookup<InternalNode<NodeType>>(nodeLookup, 400);
   let selectedNodeIds: Set<string> = new Set();
   let selectedEdgeIds: Set<string> = new Set();
 
@@ -122,6 +125,11 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     (event.target as Partial<Element> | null)?.setPointerCapture?.(event.pointerId);
 
+    // RFC-4239 win #3: node geometry is frozen during a selection gesture —
+    // snapshot it so the per-move getNodesInside sweep only sees candidates
+    // near the selection rect instead of every node.
+    selectionSpatialLookup.arm((node) => nodeToRect(node));
+
     selectionInProgress = false;
     autoPanStarted = false;
 
@@ -171,9 +179,18 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     const prevSelectedNodeIds = selectedNodeIds;
     const prevSelectedEdgeIds = selectedEdgeIds;
 
+    {
+      const [tx, ty, zoom] = store.transform;
+      selectionSpatialLookup.setQueryRect({
+        x: (nextUserSelectRect.x - tx) / zoom,
+        y: (nextUserSelectRect.y - ty) / zoom,
+        width: nextUserSelectRect.width / zoom,
+        height: nextUserSelectRect.height / zoom,
+      });
+    }
     selectedNodeIds = new Set(
       getNodesInside(
-        nodeLookup,
+        selectionSpatialLookup,
         nextUserSelectRect,
         store.transform,
         store.selectionMode === SelectionMode.Partial,

@@ -34,6 +34,7 @@ import {
   type Accessor,
   createEffect,
   createMemo,
+  createProjection,
   createSignal,
   createStore,
   merge,
@@ -60,12 +61,13 @@ import { RecordMapFacade } from "./facades";
 import type { SolidFlowProps } from "./flowProps";
 import { type FlowCommands, type FlowSelection, type FlowState } from "./flowState";
 import { createMeasurementIngest } from "./measurementIngest";
-import { createConnections } from "./projections/connections";
+import { connectionKey, createConnections } from "./projections/connections";
 import { createEdgeLookup } from "./projections/edgeLookup";
 import { createInternalNodes, type NodeMeasurements } from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
 import { createSeededGraphStores } from "./seeding";
+import { SpatialGrid } from "./spatial";
 
 /** One measure request: node id plus the DOM element to measure. */
 export type MeasureRequestEntry = [string, InternalNodeUpdate];
@@ -264,6 +266,43 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       to: pointToRendererPoint(state.to, transform()),
     } as ConnectionState<InternalNode<NodeType>>;
   });
+  // Per-handle connection reads, equality-cut: `connection` (below) yields a
+  // FRESH object every pointermove, so any handle reading through it re-runs
+  // per move — at 10k nodes that is ~20k indicator computations per
+  // mousemove (measured: the bulk of a 422ms/move connection gesture,
+  // spatial-index bench). Handles subscribe to these instead: they change
+  // once per gesture (fromHandle), on hover-target changes (toHandle,
+  // isValid), never per move.
+  const handleIdentityEquals = (
+    a: { nodeId: string; type: string; id?: string | null } | null,
+    b: { nodeId: string; type: string; id?: string | null } | null,
+  ) => a === b || (!!a && !!b && a.nodeId === b.nodeId && a.type === b.type && a.id === b.id);
+  const connectionFromHandle = createMemo(() => connection().fromHandle ?? null, {
+    equals: handleIdentityEquals,
+  });
+  // The hover-target as a KEYED record: a toHandle/isValid flip re-runs only
+  // the subscribers of the two affected keys (the handle left and the handle
+  // entered) instead of every handle in the graph — the difference between a
+  // ~400ms hitch and O(2) work when snapping onto a handle at 10k nodes.
+  const connectionTargetByHandle = createProjection<Record<string, "valid" | "invalid">>(
+    (draft) => {
+      const state = connection();
+      const toHandle = state.inProgress ? state.toHandle : null;
+      const key = toHandle
+        ? connectionKey(toHandle.nodeId, toHandle.type, toHandle.id ?? null)
+        : null;
+      for (const existing of Object.keys(draft)) {
+        if (existing !== key) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
+          delete draft[existing];
+        }
+      }
+      if (key) draft[key] = state.isValid ? "valid" : "invalid";
+    },
+    {},
+    { key: null },
+  );
+
   // B3 (audit): merged renderer maps memoized — the getters below allocated
   // a fresh object PER READ, and every wrapper reads them twice per row.
   const mergedNodeTypes = createMemo(() => ({ ...initialNodeTypes, ...config().nodeTypes }));
@@ -288,6 +327,12 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
     get connection() {
       return projectedConnection();
+    },
+    get connectionFromHandle() {
+      return connectionFromHandle();
+    },
+    get connectionTargetByHandle() {
+      return connectionTargetByHandle;
     },
     get domNode() {
       return domNode();
@@ -733,6 +778,41 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   // The public write surface. Implementations live here (not in the hook) so
   // the struct is the canonical capability surface and hooks stay aliases.
+  // A microtask-lifetime spatial grid over node rects: always rebuilt at
+  // most once per task (no invalidation seams to miss — geometry writes in
+  // the same task were already visible when the first query built it, and
+  // the next task rebuilds). Untracked: this is a pull API, not a
+  // subscription (a reactive index would recreate the round-6
+  // central-collection anti-pattern).
+  let intersectionGrid: SpatialGrid | null = null;
+  let intersectionRows: Map<string, NodeType> | null = null;
+  const queryIntersectionCandidates = (rect: Rect): NodeType[] =>
+    untrack(() => {
+      if (!intersectionGrid) {
+        const grid = new SpatialGrid(300);
+        const rows = new Map<string, NodeType>();
+        for (const node of store.nodes) {
+          const internalNode = nodeLookup.get(node.id);
+          if (!internalNode) continue;
+          grid.insert(node.id, nodeToRect(internalNode));
+          rows.set(node.id, node);
+        }
+        intersectionGrid = grid;
+        intersectionRows = rows;
+        queueMicrotask(() => {
+          intersectionGrid = null;
+          intersectionRows = null;
+        });
+      }
+      const rows = intersectionRows!;
+      const result: NodeType[] = [];
+      for (const id of intersectionGrid.queryRect(rect)) {
+        const row = rows.get(id);
+        if (row) result.push(row);
+      }
+      return result;
+    });
+
   const getNodeRect = (node: NodeType | { id: NodeType["id"] }): Rect | null => {
     const nodeToUse = isNode<NodeType>(node) ? node : nodeLookup.get(node.id);
     if (!nodeToUse) return null;
@@ -933,7 +1013,13 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
       if (!nodeRect) return [];
 
-      return (nodesToIntersect || store.nodes).filter((n) => {
+      // RFC-4239 win #2: with no explicit subset, narrow candidates through
+      // the microtask-cached grid — collision patterns calling this per
+      // dragged node per frame share ONE build and drop from O(n) per call
+      // to O(candidates). The exact predicate below is unchanged.
+      const candidates = nodesToIntersect ?? queryIntersectionCandidates(nodeRect);
+
+      return candidates.filter((n) => {
         const internalNode = nodeLookup.get(n.id);
         if (!internalNode || (!isRect && n.id === nodeOrRect.id)) {
           return false;
