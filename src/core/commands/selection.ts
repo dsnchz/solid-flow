@@ -1,0 +1,236 @@
+import {
+  calculateNodePosition,
+  type CoordinateExtent,
+  errorMessages,
+  type NodeDragItem,
+  type NodeLookup,
+  type NodeOrigin,
+  type OnError,
+  type SnapGrid,
+  snapPosition,
+  type XYPosition,
+} from "@xyflow/system";
+import { flush, type StoreSetter } from "solid-js";
+
+import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
+import { isEdgeSelectable } from "@/utils";
+
+/** The slice of the internal store the selection commands read. */
+type SelectionStoreReads<NodeType extends Node, EdgeType extends Edge> = {
+  readonly nodes: readonly NodeType[];
+  readonly edges: readonly EdgeType[];
+  readonly multiselectionKeyPressed: boolean;
+  readonly snapGrid?: SnapGrid;
+  readonly nodesDraggable: boolean;
+  readonly nodeExtent: CoordinateExtent;
+  readonly nodeOrigin: NodeOrigin;
+  readonly onError?: OnError;
+  readonly elementsSelectable: boolean;
+  readonly defaultEdgeOptions: { readonly selectable?: boolean };
+};
+
+export type SelectionCommandDeps<NodeType extends Node, EdgeType extends Edge> = {
+  readonly store: SelectionStoreReads<NodeType, EdgeType>;
+  readonly setNodesStore: StoreSetter<NodeType[]>;
+  readonly setEdgesStore: StoreSetter<EdgeType[]>;
+  readonly setSelectionRect: (rect: undefined) => void;
+  readonly setSelectionRectMode: (mode: undefined) => void;
+  readonly nodeLookup: NodeLookup<InternalNode<NodeType>>;
+  readonly edgeLookup: Record<string, EdgeType>;
+  readonly updateNodePositions: (
+    updates: Map<string, Pick<NodeDragItem, "position">>,
+    dragging?: boolean,
+  ) => void;
+};
+
+/**
+ * Selection command group (WP3): every mutation of `selected` state, plus
+ * keyboard movement of the current selection. All writes are draft writes on
+ * the graph roots; the `flush()` calls mark gesture boundaries where
+ * @xyflow/system reads selection back synchronously through nodeLookup.
+ */
+export const createSelectionCommands = <NodeType extends Node, EdgeType extends Edge>({
+  store,
+  setNodesStore,
+  setEdgesStore,
+  setSelectionRect,
+  setSelectionRectMode,
+  nodeLookup,
+  edgeLookup,
+  updateNodePositions,
+}: SelectionCommandDeps<NodeType, EdgeType>) => {
+  const unselectNodesAndEdges = ({
+    nodes: _nodes,
+    edges,
+  }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
+    const nodesToUnselect = new Set((_nodes ? _nodes : store.nodes).map(({ id }) => id));
+
+    if (nodesToUnselect.size) {
+      setNodesStore((nodes) => {
+        for (const node of nodes) {
+          if (nodesToUnselect.has(node.id)) node.selected = false;
+        }
+        return undefined;
+      });
+    }
+
+    const edgesToUnselect = new Set((edges ?? store.edges).map(({ id }) => id));
+
+    if (edgesToUnselect.size) {
+      setEdgesStore((edges) => {
+        for (const edge of edges) {
+          if (edgesToUnselect.has(edge.id)) edge.selected = false;
+        }
+        return undefined;
+      });
+    }
+
+    // Gesture boundary: XYDrag reads selection through nodeLookup right after
+    // calling this, so the internalNodes projection must re-derive now.
+    flush();
+  };
+
+  const addSelectedNodes = (ids: string[]) => {
+    const isMultiSelection = store.multiselectionKeyPressed;
+    const idSet = new Set(ids);
+
+    setNodesStore((nodes) => {
+      for (const node of nodes) {
+        const nodeWillBeSelected = idSet.has(node.id);
+        const selected = isMultiSelection
+          ? node.selected || nodeWillBeSelected
+          : nodeWillBeSelected;
+
+        if (node.selected !== selected) node.selected = selected;
+      }
+      return undefined;
+    });
+
+    if (!isMultiSelection) {
+      unselectNodesAndEdges({ nodes: [] });
+    }
+
+    // Gesture boundary: the drag handler reads the selected state through
+    // nodeLookup synchronously after selection (selectNodesOnDrag).
+    flush();
+  };
+
+  const addSelectedEdges = (ids: string[]) => {
+    const isMultiSelection = store.multiselectionKeyPressed;
+    const idSet = new Set(ids);
+
+    setEdgesStore((edges) => {
+      for (const edge of edges) {
+        const edgeWillBeSelected = idSet.has(edge.id);
+        const selected = isMultiSelection
+          ? edge.selected || edgeWillBeSelected
+          : edgeWillBeSelected;
+
+        if (edge.selected !== selected) edge.selected = selected;
+      }
+      return undefined;
+    });
+
+    if (!isMultiSelection) {
+      unselectNodesAndEdges({ edges: [] });
+    }
+
+    flush();
+  };
+
+  const handleNodeSelection = (id: string, unselect?: boolean, nodeRef?: HTMLDivElement | null) => {
+    const node = store.nodes.find((n) => n.id === id);
+
+    if (!node) {
+      console.warn("012", errorMessages["error012"](id));
+      return;
+    }
+
+    setSelectionRect(undefined);
+    setSelectionRectMode(undefined);
+
+    if (!node.selected) {
+      addSelectedNodes([id]);
+    } else if (unselect || (node.selected && store.multiselectionKeyPressed)) {
+      unselectNodesAndEdges({ nodes: [node], edges: [] });
+
+      requestAnimationFrame(() => nodeRef?.blur());
+    }
+  };
+
+  const handleEdgeSelection = (id: string) => {
+    const edge = edgeLookup[id];
+
+    if (!edge) {
+      console.warn("012", errorMessages["error012"](id));
+      return;
+    }
+
+    if (!isEdgeSelectable(edge, store)) return;
+
+    setSelectionRect(undefined);
+    setSelectionRectMode(undefined);
+
+    if (!edge.selected) {
+      addSelectedEdges([id]);
+    } else if (edge.selected && store.multiselectionKeyPressed) {
+      unselectNodesAndEdges({ nodes: [], edges: [edge] });
+    }
+  };
+
+  const moveSelectedNodes = (direction: XYPosition, factor: number) => {
+    const nodeUpdates = new Map<string, Pick<NodeDragItem, "position">>();
+    /*
+     * by default a node moves 5px on each key press
+     * if snap grid is enabled, we use that for the velocity
+     */
+    const xVelo = store.snapGrid?.[0] ?? 5;
+    const yVelo = store.snapGrid?.[1] ?? 5;
+
+    const xDiff = direction.x * xVelo * factor;
+    const yDiff = direction.y * yVelo * factor;
+
+    for (const node of nodeLookup.values()) {
+      const isSelected =
+        node.selected &&
+        (node.draggable || (store.nodesDraggable && typeof node.draggable === "undefined"));
+
+      if (!isSelected) {
+        continue;
+      }
+
+      let nextPosition = {
+        x: node.internals.positionAbsolute.x + xDiff,
+        y: node.internals.positionAbsolute.y + yDiff,
+      };
+
+      if (store.snapGrid) {
+        nextPosition = snapPosition(nextPosition, store.snapGrid);
+      }
+
+      const { position } = calculateNodePosition({
+        nodeId: node.id,
+        nextPosition,
+        nodeLookup,
+        nodeExtent: store.nodeExtent,
+        nodeOrigin: store.nodeOrigin,
+        onError: store.onError,
+      });
+
+      // The user-graph write is the whole move: absolute positions re-derive
+      // in the internalNodes projection.
+      nodeUpdates.set(node.id, { position });
+    }
+
+    updateNodePositions(nodeUpdates);
+  };
+
+  return {
+    unselectNodesAndEdges,
+    addSelectedNodes,
+    addSelectedEdges,
+    handleNodeSelection,
+    handleEdgeSelection,
+    moveSelectedNodes,
+  } as const;
+};

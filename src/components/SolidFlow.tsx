@@ -93,15 +93,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     },
   );
 
-  // Track panZoom too: the instance lands after mount, and the distance must
-  // be (re)applied to each new instance
-  createEffect(
-    () => ({ panZoom: store.panZoom, distance: _props.paneClickDistance }),
-    ({ panZoom, distance }) => {
-      panZoom?.setClickDistance(distance);
-    },
-  );
-
   // Fires only when the set of selected ids changes, not on unrelated node/edge updates
   const selectedElements = createMemo(
     () => ({ nodes: store.selectedNodes, edges: store.selectedEdges }),

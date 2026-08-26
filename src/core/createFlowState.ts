@@ -1,9 +1,7 @@
 import {
   addEdge as systemAddEdge,
-  calculateNodePosition,
   type Connection,
   type ConnectionState,
-  errorMessages,
   evaluateAbsolutePosition,
   fitViewport,
   getElementsToRemove,
@@ -17,10 +15,8 @@ import {
   type InternalNodeUpdate,
   isRectObject,
   mergeAriaLabelConfig,
-  type NodeDimensionChange,
   type NodeDragItem,
   type NodeLookup,
-  type NodePositionChange,
   nodeToRect,
   panBy as panBySystem,
   type PanZoomInstance,
@@ -29,7 +25,6 @@ import {
   rendererPointToPoint,
   type SelectionRect,
   type SetCenterOptions,
-  snapPosition,
   type Transform,
   type Viewport,
   type ViewportHelperFunctionOptions,
@@ -41,7 +36,6 @@ import {
   createMemo,
   createSignal,
   createStore,
-  flush,
   merge,
   snapshot,
   untrack,
@@ -55,25 +49,23 @@ import type {
   FitViewOptions,
   InternalNode,
   Node,
-  NodeGraph,
   NodeTypes,
 } from "@/types";
-import { isEdge, isEdgeSelectable, isNode } from "@/utils";
+import { isEdge, isNode } from "@/utils";
 
+import { createSelectionCommands } from "./commands/selection";
 import { createCullingViewport } from "./culling";
 import { getDefaultFlowStateProps } from "./defaults";
 import { RecordMapFacade } from "./facades";
 import type { SolidFlowProps } from "./flowProps";
 import { type FlowCommands, type FlowSelection, type FlowState } from "./flowState";
+import { createMeasurementIngest } from "./measurementIngest";
 import { createConnections } from "./projections/connections";
 import { createEdgeLookup } from "./projections/edgeLookup";
-import {
-  createInternalNodes,
-  type NodeMeasurements,
-  type NodeMeasurementWrite,
-} from "./projections/internalNodes";
+import { createInternalNodes, type NodeMeasurements } from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
+import { createSeededGraphStores } from "./seeding";
 
 /** One measure request: node id plus the DOM element to measure. */
 export type MeasureRequestEntry = [string, InternalNodeUpdate];
@@ -137,9 +129,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // The config-signal is set by SolidFlow to its props.
   const [config, setConfig] = createSignal(_props);
 
-  const [ariaLabelConfig, setAriaLabelConfig] = createSignal(() =>
-    mergeAriaLabelConfig(config().ariaLabelConfig),
-  );
+  const ariaLabelConfig = createMemo(() => mergeAriaLabelConfig(config().ariaLabelConfig));
   const [ariaLiveMessage, setAriaLiveMessage] = createSignal(() => config().ariaLiveMessage);
   const [clickConnectStartHandle, setClickConnectStartHandle] = createSignal<
     Pick<Handle, "id" | "nodeId" | "type"> | undefined
@@ -152,17 +142,15 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     () => config().elementsSelectable,
   );
   const [height, setHeight] = createSignal(() => config().height);
-  const [minZoom, _setMinZoom] = createSignal<number>(() => config().minZoom);
-  const [maxZoom, _setMaxZoom] = createSignal<number>(() => config().maxZoom);
+  const minZoom = createMemo(() => config().minZoom);
+  const maxZoom = createMemo(() => config().maxZoom);
   const [nodesConnectable, setNodesConnectable] = createSignal(() => config().nodesConnectable);
   const [nodesDraggable, setNodesDraggable] = createSignal(() => config().nodesDraggable);
   const [panZoom, setPanZoom] = createSignal<PanZoomInstance | null>(null);
   const [selectionRect, setSelectionRect] = createSignal<SelectionRect | undefined>();
   const [selectionRectMode, setSelectionRectMode] = createSignal<string | undefined>();
   const [snapGrid, setSnapGrid] = createSignal(() => config().snapGrid);
-  const [translateExtent, _setTranslateExtent] = createSignal(
-    () => config().translateExtent ?? infiniteExtent,
-  );
+  const translateExtent = createMemo(() => config().translateExtent ?? infiniteExtent);
   const [width, setWidth] = createSignal(() => config().width);
 
   // Key flags
@@ -172,49 +160,13 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const [panActivationKeyPressed, setPanActivationKeyPressed] = createSignal(false);
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
-  // Controlled vs uncontrolled, PER AXIS (React Flow defaultNodes/
-  // defaultEdges parity). Controlled: the user's array/store owns membership
-  // and the reset effects below track it. Uncontrolled: defaults seed the
-  // flow-owned store once and commands/completed connections own membership
-  // (they already write these stores; the only controlled-mode difference is
-  // that a re-seed clobbers them). Mode is observable as
-  // `config().nodes !== undefined` — nodes/edges deliberately have NO merged
-  // default, so absence survives to here. A provider-created flow starts
-  // with neither and adopts whichever axis the inner SolidFlow supplies via
-  // setConfig (controlled arrays through the reset effects; defaults through
-  // the one-shot adoption effect below).
-  if (props.nodes !== undefined && props.defaultNodes !== undefined) {
-    console.warn(
-      "[solid-flow] Both `nodes` and `defaultNodes` were supplied; `nodes` wins and the flow is controlled. Pass one or the other.",
-    );
-  }
-  if (props.edges !== undefined && props.defaultEdges !== undefined) {
-    console.warn(
-      "[solid-flow] Both `edges` and `defaultEdges` were supplied; `edges` wins and the flow is controlled. Pass one or the other.",
-    );
-  }
-
-  // Plain writable stores seeded from the user's graph, reset by the effects
-  // below when the supplied array identity changes (matching 1.x, where the
-  // backing store was recreated whenever the accessor value changed); all
-  // other writes are local drafts. NOT the projection form of createStore:
-  // deriving from a store-proxy source rewraps every element on structural
-  // writes, so a single addEdge/addNode would churn all row identities and
-  // recreate the whole mapArray pipeline (verified empirically on rc.1).
-  // Defaults are shallow-copied: the flow owns membership of its store and
-  // must not splice the caller's array (runtime fields still write onto the
-  // shared row objects, same as controlled mode).
-  const [nodesStore, setNodesStore] = createStore<NodeType[]>(
-    (props.nodes ?? [...(props.defaultNodes ?? [])]) as NodeType[],
-  );
-  const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(
-    (props.edges ?? [...(props.defaultEdges ?? [])]) as EdgeType[],
-  );
-
-  // Whether each axis has consumed its one-time seed (from either prop).
-  // Only a provider-created flow can still adopt later, via setConfig.
-  let nodeSeedAdopted = props.nodes !== undefined || props.defaultNodes !== undefined;
-  let edgeSeedAdopted = props.edges !== undefined || props.defaultEdges !== undefined;
+  // Graph-membership seeding: the controlled/uncontrolled policy lives in
+  // core/seeding.ts (headless-tested); it creates the two writable roots and
+  // the reset/late-adoption effects.
+  const { nodesStore, setNodesStore, edgesStore, setEdgesStore } = createSeededGraphStores<
+    NodeType,
+    EdgeType
+  >(props, config);
 
   // The measurements root: DOM-derived per-node state (measured dimensions,
   // handle bounds), written only by the measurement ingest below. Kept apart
@@ -262,63 +214,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     _props.viewport ?? initialViewport,
   );
 
-  // Controlled-graph resets. Track the supplied arrays STRUCTURALLY (length +
-  // element identity), not by reference: when the prop is a store (the
-  // documented createNodeStore pattern), its proxy identity never changes, so
-  // a wholesale replacement (`setNodes(() => nodes.map(...))`) would
-  // otherwise never reach an adopted flow's internal root (the provider
-  // seeds it before the component's props arrive). Field-level draft writes
-  // keep element identity, skip the reset, and flow through the shared node
-  // objects. The `{ next }` wrapper defeats the effect's equals check — the
-  // proxy identity is stable even when the contents changed.
-  // An undefined axis is uncontrolled (or a provider flow not yet adopted):
-  // never re-seed it — defaults are initial-only and the flow owns
-  // membership. A provider flow adopting a controlled axis flips
-  // undefined -> array here and seeds through the same path.
-  createEffect(
-    () => {
-      const next = config().nodes as NodeType[] | undefined;
-      if (next) for (const node of next) void node;
-      return { next };
-    },
-    ({ next }) => {
-      if (!next) return;
-      nodeSeedAdopted = true;
-      setNodesStore(() => next);
-    },
-    { defer: true },
-  );
-  createEffect(
-    () => {
-      const next = config().edges as EdgeType[] | undefined;
-      if (next) for (const edge of next) void edge;
-      return { next };
-    },
-    ({ next }) => {
-      if (!next) return;
-      edgeSeedAdopted = true;
-      setEdgesStore(() => next);
-    },
-    { defer: true },
-  );
-  // One-shot late adoption of DEFAULTS for provider-created flows: the
-  // provider seeded this store before the inner SolidFlow's props existed,
-  // so its defaultNodes/defaultEdges arrive via setConfig. Each axis adopts
-  // at most once, and never over a controlled axis.
-  createEffect(
-    () => ({ nodes: config().defaultNodes, edges: config().defaultEdges }),
-    ({ nodes: defaultNodes, edges: defaultEdges }) => {
-      if (defaultNodes && !nodeSeedAdopted && config().nodes === undefined) {
-        nodeSeedAdopted = true;
-        setNodesStore(() => [...defaultNodes] as NodeType[]);
-      }
-      if (defaultEdges && !edgeSeedAdopted && config().edges === undefined) {
-        edgeSeedAdopted = true;
-        setEdgesStore(() => [...defaultEdges] as EdgeType[]);
-      }
-    },
-    { defer: true },
-  );
   // A controlled viewport prop resets the store; when absent, hold the current value
   createEffect(
     () => config().viewport,
@@ -353,6 +248,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
+  const resolvedColorMode = createMemo(() => {
+    const mode = config().colorMode;
+    return mode === "system" ? (prefersDark() ? "dark" : "light") : mode;
+  });
+
   // B4 (audit): connection projection memoized — the getter spread the state
   // and ran pointToRendererPoint on every read (ConnectionLine reads it 10x
   // per render, Zoom/Pane once per gesture event).
@@ -374,21 +274,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const selectedEdgesView = createMemo(() => edgesStore.filter((edge) => edge.selected));
 
   const store = merge({ width: 0, height: 0 }, config, {
-    get _colorMode() {
-      return config().colorMode;
-    },
-    get _colorModeSSR() {
-      return config().colorModeSSR;
-    },
-    get _connection() {
-      return connection();
-    },
-    get _nodeTypes() {
-      return config().nodeTypes;
-    },
-    get _edgeTypes() {
-      return config().edgeTypes;
-    },
     get ariaLabelConfig() {
       return ariaLabelConfig();
     },
@@ -399,7 +284,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return clickConnectStartHandle();
     },
     get colorMode() {
-      return this._colorMode === "system" ? (prefersDark() ? "dark" : "light") : this._colorMode;
+      return resolvedColorMode();
     },
     get connection() {
       return projectedConnection();
@@ -678,55 +563,13 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     });
   };
 
-  // ── measurement ingest seams (the DOM side lives in createSolidFlow) ──
-
-  /** Applies a DOM measuring pass's writes to the measurements root. */
-  const applyMeasurementWrites = (writes: NodeMeasurementWrite[]) => {
-    setMeasurementsStore((draft) => {
-      for (const write of writes) {
-        if (write.hidden) {
-          // Clear handle bounds (keep dimensions) so unhiding re-measures.
-          const entry = draft[write.id];
-          if (entry) entry.handleBounds = undefined;
-        } else {
-          draft[write.id] = { measured: write.measured, handleBounds: write.handleBounds };
-        }
-      }
-      return undefined;
-    });
-  };
-
-  /** Applies measured dimension/position changes back to the user graph. */
-  const applyNodeChanges = (changes: (NodeDimensionChange | NodePositionChange)[]) => {
-    if (changes.length === 0) return;
-
-    setNodesStore((nodes) => {
-      const nodeById = new Map(nodes.map((node) => [node.id, node]));
-
-      // Applied in order: parent expansion can emit BOTH a position and a
-      // dimensions change for the same node, and both must land.
-      for (const change of changes) {
-        const node = nodeById.get(change.id);
-        if (!node) continue;
-
-        switch (change.type) {
-          case "dimensions": {
-            if (change.setAttributes) {
-              node.width = change.dimensions?.width ?? node.width;
-              node.height = change.dimensions?.height ?? node.height;
-            }
-
-            node.measured = { ...node.measured, ...change.dimensions };
-            break;
-          }
-          case "position":
-            node.position = change.position ?? node.position;
-            break;
-        }
-      }
-      return undefined;
-    });
-  };
+  // ── measurement ingest (core/measurementIngest.ts): DOM-pass writes into
+  // the data graph + the measurements GC effect ──
+  const { applyMeasurementWrites, applyNodeChanges } = createMeasurementIngest<NodeType>({
+    setMeasurementsStore,
+    setNodesStore,
+    nodes: () => nodesStore,
+  });
 
   /** Marks the first measuring pass complete (may trigger the initial fitView). */
   const markInitialNodesMeasured = () => {
@@ -768,176 +611,26 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     return Promise.resolve(true);
   };
 
-  const setPaneClickDistance = (distance: number) => {
-    store.panZoom?.setClickDistance(distance);
-  };
-
-  const unselectNodesAndEdges = ({
-    nodes: _nodes,
-    edges,
-  }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
-    const nodesToUnselect = new Set((_nodes ? _nodes : store.nodes).map(({ id }) => id));
-
-    if (nodesToUnselect.size) {
-      setNodesStore((nodes) => {
-        for (const node of nodes) {
-          if (nodesToUnselect.has(node.id)) node.selected = false;
-        }
-        return undefined;
-      });
-    }
-
-    const edgesToUnselect = new Set((edges ?? store.edges).map(({ id }) => id));
-
-    if (edgesToUnselect.size) {
-      setEdgesStore((edges) => {
-        for (const edge of edges) {
-          if (edgesToUnselect.has(edge.id)) edge.selected = false;
-        }
-        return undefined;
-      });
-    }
-
-    // Gesture boundary: XYDrag reads selection through nodeLookup right after
-    // calling this, so the internalNodes projection must re-derive now.
-    flush();
-  };
-
   const stableSetViewport = (viewport: Viewport) => setViewportStore(() => viewport);
 
-  const addSelectedNodes = (ids: string[]) => {
-    const isMultiSelection = store.multiselectionKeyPressed;
-    const idSet = new Set(ids);
-
-    setNodesStore((nodes) => {
-      for (const node of nodes) {
-        const nodeWillBeSelected = idSet.has(node.id);
-        const selected = isMultiSelection
-          ? node.selected || nodeWillBeSelected
-          : nodeWillBeSelected;
-
-        if (node.selected !== selected) node.selected = selected;
-      }
-      return undefined;
-    });
-
-    if (!isMultiSelection) {
-      unselectNodesAndEdges({ nodes: [] });
-    }
-
-    // Gesture boundary: the drag handler reads the selected state through
-    // nodeLookup synchronously after selection (selectNodesOnDrag).
-    flush();
-  };
-
-  const addSelectedEdges = (ids: string[]) => {
-    const isMultiSelection = store.multiselectionKeyPressed;
-
-    setEdgesStore((edges) => {
-      for (const edge of edges) {
-        const edgeWillBeSelected = ids.includes(edge.id);
-        const selected = isMultiSelection
-          ? edge.selected || edgeWillBeSelected
-          : edgeWillBeSelected;
-
-        if (edge.selected !== selected) edge.selected = selected;
-      }
-      return undefined;
-    });
-
-    if (!isMultiSelection) {
-      unselectNodesAndEdges({ edges: [] });
-    }
-
-    flush();
-  };
-
-  const handleNodeSelection = (id: string, unselect?: boolean, nodeRef?: HTMLDivElement | null) => {
-    const node = store.nodes.find((n) => n.id === id);
-
-    if (!node) {
-      console.warn("012", errorMessages["error012"](id));
-      return;
-    }
-
-    setSelectionRect(undefined);
-    setSelectionRectMode(undefined);
-
-    if (!node.selected) {
-      addSelectedNodes([id]);
-    } else if (unselect || (node.selected && store.multiselectionKeyPressed)) {
-      unselectNodesAndEdges({ nodes: [node], edges: [] });
-
-      requestAnimationFrame(() => nodeRef?.blur());
-    }
-  };
-
-  const handleEdgeSelection = (id: string) => {
-    const edge = edgeLookup[id];
-
-    if (!edge) {
-      console.warn("012", errorMessages["error012"](id));
-      return;
-    }
-
-    if (!isEdgeSelectable(edge, store)) return;
-
-    setSelectionRect(undefined);
-    setSelectionRectMode(undefined);
-
-    if (!edge.selected) {
-      addSelectedEdges([id]);
-    } else if (edge.selected && store.multiselectionKeyPressed) {
-      unselectNodesAndEdges({ nodes: [], edges: [edge] });
-    }
-  };
-
-  const moveSelectedNodes = (direction: XYPosition, factor: number) => {
-    const nodeUpdates = new Map<string, Pick<NodeDragItem, "position">>();
-    /*
-     * by default a node moves 5px on each key press
-     * if snap grid is enabled, we use that for the velocity
-     */
-    const xVelo = store.snapGrid?.[0] ?? 5;
-    const yVelo = store.snapGrid?.[1] ?? 5;
-
-    const xDiff = direction.x * xVelo * factor;
-    const yDiff = direction.y * yVelo * factor;
-
-    for (const node of nodeLookup.values()) {
-      const isSelected =
-        node.selected &&
-        (node.draggable || (store.nodesDraggable && typeof node.draggable === "undefined"));
-
-      if (!isSelected) {
-        continue;
-      }
-
-      let nextPosition = {
-        x: node.internals.positionAbsolute.x + xDiff,
-        y: node.internals.positionAbsolute.y + yDiff,
-      };
-
-      if (store.snapGrid) {
-        nextPosition = snapPosition(nextPosition, store.snapGrid);
-      }
-
-      const { position } = calculateNodePosition({
-        nodeId: node.id,
-        nextPosition,
-        nodeLookup,
-        nodeExtent: store.nodeExtent,
-        nodeOrigin: store.nodeOrigin,
-        onError: store.onError,
-      });
-
-      // The user-graph write is the whole move: absolute positions re-derive
-      // in the internalNodes projection.
-      nodeUpdates.set(node.id, { position });
-    }
-
-    updateNodePositions(nodeUpdates);
-  };
+  // ── selection command group (core/commands/selection.ts) ──
+  const {
+    unselectNodesAndEdges,
+    addSelectedNodes,
+    addSelectedEdges,
+    handleNodeSelection,
+    handleEdgeSelection,
+    moveSelectedNodes,
+  } = createSelectionCommands<NodeType, EdgeType>({
+    store,
+    setNodesStore,
+    setEdgesStore,
+    setSelectionRect,
+    setSelectionRectMode,
+    nodeLookup,
+    edgeLookup,
+    updateNodePositions,
+  });
 
   const panBy = (delta: XYPosition) => {
     return panBySystem({
@@ -1335,29 +1028,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
   );
 
-  // Garbage-collect measurements for nodes that no longer exist in the user
-  // graph. Entries only appear via the measurement ingest, keyed by node id,
-  // so tracking the node ids is sufficient.
-  createEffect(
-    () => new Set(store.nodes.map((n) => n.id)),
-    (currentIds) => {
-      setMeasurementsStore((draft) => {
-        for (const id of Object.keys(draft)) {
-          if (!currentIds.has(id)) {
-            // `delete` is required: unlike the 1.x path setter, assigning
-            // undefined in a 2.0 draft KEEPS the own key — visible to `in`
-            // guards and Object.keys, and skips structural notification
-            // (spike 09).
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
-            delete draft[id];
-          }
-        }
-        return undefined;
-      });
-    },
-  );
-
-  // TODO: Add viewportInitialized to store
   return {
     store,
     flow,
@@ -1375,8 +1045,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       applyNodeChanges,
       markInitialNodesMeasured,
       setMeasureRequester,
-      resetStoreValues,
-      setAriaLabelConfig,
       setAriaLiveMessage,
       setClickConnectStartHandle,
       setConfig,
@@ -1400,7 +1068,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       setWidth,
       setZoomActivationKeyPressed,
 
-      // Port Svelte Flow Actions to Solid Flow
       addEdge,
       updateNodePositions,
       zoomIn,
@@ -1408,7 +1075,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       fitView,
       setCenter,
 
-      setPaneClickDistance,
       unselectNodesAndEdges,
       addSelectedNodes,
       addSelectedEdges,
