@@ -13,6 +13,8 @@ const TEST_EXCLUDES = [
   "tmp/**",
   // Playwright owns e2e/ (bun run test:e2e) — vitest must not pick it up
   "e2e/**",
+  // Agent workspace: bench-driver templates named *.spec.ts live here
+  ".agent/**",
   // SSR tests run in their own node-environment lane (vite.config.ssr.ts)
   "**/*.ssr.test.*",
 ];

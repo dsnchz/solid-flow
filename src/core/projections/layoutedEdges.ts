@@ -63,16 +63,10 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
         // downstream subscriptions never strand on disposed stores
         () => {
           const edge = edgeAccessor();
-          const row = buildRow(source, edge);
-          // Re-assert the node-side dependencies AFTER the build: during the
-          // FIRST nested derive (while the node record commits lazily beneath
-          // this read) reads made inside buildRow can fail to register —
-          // browser-verified: the first edge stranded with zero
-          // subscriptions. Reading the presence-deciding leaves here, at the
-          // end, reliably registers them. Upstream issue candidate.
-          void source.nodeLookup.get(edge.source)?.internals.handleBounds;
-          void source.nodeLookup.get(edge.target)?.internals.handleBounds;
-          return { row };
+          // (rc.1 carried post-build dependency re-asserts here — first
+          // nested derives could strand subscriptions; fixed upstream in
+          // solidjs/solid#3037, removed with the rc.2 bump.)
+          return { row: buildRow(source, edge) };
         },
         { row: null },
         { key: "id" },
@@ -122,13 +116,6 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   const targetNode = source.nodeLookup.get(edge.target);
 
   if (!sourceNode || !targetNode) {
-    // Membership subscription: a get/`in` on an ABSENT key does not subscribe
-    // inside a projection derive (the absent-key footgun) — and during the
-    // first nested derive the shallow node record's keys may not even have
-    // committed yet, which permanently stranded the first edge (no node-side
-    // subscriptions at all). A structural read (size ~ Object.keys) reliably
-    // re-runs this row when node membership changes.
-    void source.nodeLookup.size;
     return null;
   }
 

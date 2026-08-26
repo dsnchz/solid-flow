@@ -213,14 +213,6 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             }
           }
 
-          if (userNode.parentId) {
-            // Same re-assert as layoutedEdges: reads made inside the build can
-            // fail to register during the FIRST nested derive; the child's
-            // geometry depends on these parent leaves.
-            const parent = entryById.get(userNode.parentId);
-            void parent?.store.row.internals.positionAbsolute.x;
-            void parent?.store.row.internals.z;
-          }
           return { row };
         },
         {},
