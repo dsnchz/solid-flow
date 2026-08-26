@@ -35,7 +35,6 @@ import {
   type OnResizeEnd as SystemOnResizeEnd,
   type OnResizeStart as SystemOnResizeStart,
   type OnSelectionDrag as SystemOnSelectionDrag,
-  type ProOptions as SystemProOptions,
   type Rect as SystemRect,
   type ResizeDragEvent as SystemResizeDragEvent,
   type ResizeParams as SystemResizeParams,
@@ -137,7 +136,16 @@ export type OnResizeStart = SystemOnResizeStart;
 export type OnSelectionDrag<NodeType extends NodeBase = NodeBase> = SystemOnSelectionDrag<NodeType>;
 
 /** Pro/attribution options (`hideAttribution`). */
-export type ProOptions = SystemProOptions;
+/**
+ * Attribution options (formerly exported by @xyflow/system; the export was
+ * removed in 0.0.81, so the shape lives here now — upstream parity).
+ * If you hide the attribution, please support the xyflow project.
+ */
+export type ProOptions = {
+  account?: string;
+  /** If you hide the attribution, please support the xyflow project. */
+  hideAttribution: boolean;
+};
 
 /** A rectangle: position plus dimensions. */
 export type Rect = SystemRect;

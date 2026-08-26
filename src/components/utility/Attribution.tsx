@@ -1,7 +1,8 @@
-import type { PanelPosition, ProOptions } from "@xyflow/system";
+import type { PanelPosition } from "@xyflow/system";
 import { type Component, Show } from "solid-js";
 
 import { Panel } from "@/components/container";
+import type { ProOptions } from "@/types/system";
 
 export type AttributionProps = {
   readonly proOptions: ProOptions;

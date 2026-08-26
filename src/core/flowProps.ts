@@ -14,7 +14,6 @@ import type {
   OnReconnectEnd,
   OnReconnectStart,
   PanelPosition,
-  ProOptions,
   SnapGrid,
   Viewport,
   ZIndexMode,
@@ -48,6 +47,7 @@ import type {
   PanOnScrollMode,
   SelectionMode,
 } from "@/types";
+import type { ProOptions } from "@/types/system";
 
 /** Initial (uncontrolled) values used to seed a flow before the first measure/fit. */
 export type SolidFlowInitialProps = {
