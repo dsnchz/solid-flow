@@ -353,6 +353,26 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
+  // B4 (audit): connection projection memoized — the getter spread the state
+  // and ran pointToRendererPoint on every read (ConnectionLine reads it 10x
+  // per render, Zoom/Pane once per gesture event).
+  const projectedConnection = createMemo(() => {
+    const state = connection();
+    if (!state.inProgress) return state;
+    return {
+      ...state,
+      to: pointToRendererPoint(state.to, transform()),
+    } as ConnectionState<InternalNode<NodeType>>;
+  });
+  // B3 (audit): merged renderer maps memoized — the getters below allocated
+  // a fresh object PER READ, and every wrapper reads them twice per row.
+  const mergedNodeTypes = createMemo(() => ({ ...initialNodeTypes, ...config().nodeTypes }));
+  const mergedEdgeTypes = createMemo(() => ({ ...initialEdgeTypes, ...config().edgeTypes }));
+  // B5 (audit): selection views memoized — the getters scanned and allocated
+  // per read; consumers now share one array identity per selection change.
+  const selectedNodesView = createMemo(() => nodesStore.filter((node) => node.selected));
+  const selectedEdgesView = createMemo(() => edgesStore.filter((edge) => edge.selected));
+
   const store = merge({ width: 0, height: 0 }, config, {
     get _colorMode() {
       return config().colorMode;
@@ -382,11 +402,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return this._colorMode === "system" ? (prefersDark() ? "dark" : "light") : this._colorMode;
     },
     get connection() {
-      const state = connection();
-      return {
-        ...state,
-        to: state.inProgress ? pointToRendererPoint(state.to, this.transform) : state.to,
-      } as ConnectionState<InternalNode<NodeType>>;
+      return projectedConnection();
     },
     get domNode() {
       return domNode();
@@ -395,7 +411,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return dragging();
     },
     get edgeTypes() {
-      return { ...initialEdgeTypes, ...this._edgeTypes } as EdgeTypes;
+      return mergedEdgeTypes() as EdgeTypes;
     },
     get elementsSelectable() {
       return elementsSelectable();
@@ -433,16 +449,16 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return nodesDraggable();
     },
     get nodeTypes() {
-      return { ...initialNodeTypes, ...this._nodeTypes } as NodeTypes;
+      return mergedNodeTypes() as NodeTypes;
     },
     get panZoom() {
       return panZoom();
     },
     get selectedNodes() {
-      return nodesStore.filter((node) => node.selected);
+      return selectedNodesView();
     },
     get selectedEdges() {
-      return edgesStore.filter((edge) => edge.selected);
+      return selectedEdgesView();
     },
     get selectionRect() {
       return selectionRect();
@@ -787,12 +803,15 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     flush();
   };
 
+  const stableSetViewport = (viewport: Viewport) => setViewportStore(() => viewport);
+
   const addSelectedNodes = (ids: string[]) => {
     const isMultiSelection = store.multiselectionKeyPressed;
+    const idSet = new Set(ids);
 
     setNodesStore((nodes) => {
       for (const node of nodes) {
-        const nodeWillBeSelected = ids.includes(node.id);
+        const nodeWillBeSelected = idSet.has(node.id);
         const selected = isMultiSelection
           ? node.selected || nodeWillBeSelected
           : nodeWillBeSelected;
@@ -1365,15 +1384,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       setDeleteKeyPressed,
       setDomNode,
       setDragging,
-      get setEdges() {
-        return setEdgesStore;
-      },
+      setEdges: setEdgesStore,
       setElementsSelectable,
       setHeight,
       setMultiselectionKeyPressed,
-      get setNodes() {
-        return setNodesStore;
-      },
+      setNodes: setNodesStore,
       setNodesConnectable,
       setNodesDraggable,
       setPanActivationKeyPressed,
@@ -1381,9 +1396,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       setSelectionKeyPressed,
       setSelectionRect,
       setSelectionRectMode,
-      get setViewport() {
-        return (viewport: Viewport) => setViewportStore(() => viewport);
-      },
+      setViewport: stableSetViewport,
       setWidth,
       setZoomActivationKeyPressed,
 

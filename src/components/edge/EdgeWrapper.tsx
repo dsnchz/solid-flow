@@ -43,18 +43,13 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
     props.onEdgeClick?.({ edge: edge(), event });
   };
 
-  const onPointerEvent = <T extends PointerEvent>(
-    event: T,
-    type: "contextmenu" | "pointerenter" | "pointerleave",
-  ) => {
-    const handlers = {
-      contextmenu: props.onEdgeContextMenu,
-      pointerenter: props.onEdgePointerEnter,
-      pointerleave: props.onEdgePointerLeave,
-    } as const;
-
-    handlers[type]?.({ edge: edge(), event });
-  };
+  // B8 (audit): direct handlers, matching NodeWrapper — the previous shape
+  // rebuilt a handler map on every pointer event.
+  const onContextMenu = (event: PointerEvent) => props.onEdgeContextMenu?.({ edge: edge(), event });
+  const onPointerEnter = (event: PointerEvent) =>
+    props.onEdgePointerEnter?.({ edge: edge(), event });
+  const onPointerLeave = (event: PointerEvent) =>
+    props.onEdgePointerLeave?.({ edge: edge(), event });
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (store.disableKeyboardA11y || !elementSelectionKeys.includes(event.key) || !selectable()) {
@@ -108,9 +103,9 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
             ]}
             onClick={onClick}
             onKeyDown={(e) => focusable() && onKeyDown(e)}
-            onContextMenu={(e) => onPointerEvent(e, "contextmenu")}
-            onPointerEnter={(e) => onPointerEvent(e, "pointerenter")}
-            onPointerLeave={(e) => onPointerEvent(e, "pointerleave")}
+            onContextMenu={onContextMenu}
+            onPointerEnter={onPointerEnter}
+            onPointerLeave={onPointerLeave}
             {...edge().domAttributes}
           >
             <Dynamic

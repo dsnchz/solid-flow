@@ -136,64 +136,64 @@ export const MiniMap = <NodeType extends Node>(
   const nodeStrokeColorFunc = () => getAttrFunction(_props.nodeStrokeColor);
   const nodeClassFunc = () => getAttrFunction(_props.nodeClass);
 
-  const shapeRendering = () =>
+  const shapeRendering =
     // @ts-expect-error - TS doesn't know about chrome
     typeof window === "undefined" || !!window.chrome ? "crispEdges" : "geometricPrecision";
 
   const labelledBy = createMemo(() => `solid-flow__minimap-desc-${store.id}`);
 
-  const getViewBB = () => ({
+  // B1 (audit, bench round 7): every value below was an unmemoized helper
+  // chain — the viewBox and mask-path expressions re-ran the FULL O(n)
+  // getInternalNodesBounds scan ~30 times per drag/pan frame, which froze
+  // the tab outright at 10k nodes (1.5s per mousemove at 2.5k). One memo
+  // per level: exactly one bounds scan per graph/viewport change.
+  const viewBB = createMemo(() => ({
     x: -store.viewport.x / store.viewport.zoom,
     y: -store.viewport.y / store.viewport.zoom,
     width: store.width / store.viewport.zoom,
     height: store.height / store.viewport.zoom,
+  }));
+
+  const boundingRect = createMemo(() => {
+    const view = viewBB();
+    if (nodeLookup.size === 0) return view;
+    // Pre-measurement (or empty-measured) graphs yield an Infinity rect from
+    // getInternalNodesBounds; folding that in poisons viewScale with NaN,
+    // which XYMinimap then writes into the SHARED panZoom viewport — at 10k
+    // the whole flow's transform ended up NaN. Fall back to the view box
+    // until the bounds are finite.
+    const bounds = getInternalNodesBounds(nodeLookup);
+    if (!Number.isFinite(bounds.x) || !Number.isFinite(bounds.width)) return view;
+    return getBoundsOfRects(bounds, view);
   });
 
-  const getBoundingRect = () => {
-    const viewBB = getViewBB();
-    return nodeLookup.size > 0
-      ? getBoundsOfRects(getInternalNodesBounds(nodeLookup), viewBB)
-      : viewBB;
-  };
+  const viewScale = createMemo(() =>
+    Math.max(boundingRect().width / _props.width, boundingRect().height / _props.height),
+  );
 
-  const getScaledWidth = () => getBoundingRect().width / _props.width;
-  const getScaledHeight = () => getBoundingRect().height / _props.height;
-  const getViewScale = () => Math.max(getScaledWidth(), getScaledHeight());
-
-  const getViewWidth = () => getViewScale() * _props.width;
-  const getViewHeight = () => getViewScale() * _props.height;
-  const getOffset = () => 5 * getViewScale();
+  const getViewWidth = () => viewScale() * _props.width;
+  const getViewHeight = () => viewScale() * _props.height;
+  const getOffset = () => 5 * viewScale();
 
   const getX = () => {
-    const boundingRect = getBoundingRect();
-    return boundingRect.x - (getViewWidth() - boundingRect.width) / 2 - getOffset();
+    const rect = boundingRect();
+    return rect.x - (getViewWidth() - rect.width) / 2 - getOffset();
   };
 
   const getY = () => {
-    const boundingRect = getBoundingRect();
-    return boundingRect.y - (getViewHeight() - boundingRect.height) / 2 - getOffset();
+    const rect = boundingRect();
+    return rect.y - (getViewHeight() - rect.height) / 2 - getOffset();
   };
 
   const getViewboxWidth = () => getViewWidth() + getOffset() * 2;
   const getViewboxHeight = () => getViewHeight() + getOffset() * 2;
 
   const strokeWidth = () =>
-    _props.maskStrokeWidth ? _props.maskStrokeWidth * getViewScale() : undefined;
+    _props.maskStrokeWidth ? _props.maskStrokeWidth * viewScale() : undefined;
 
-  let prevNodeIds: string[] = [];
-  const nodeIds = () => {
-    const currentNodeIds = store.nodes.map((node) => node.id);
-    const currentSet = new Set(currentNodeIds);
-
-    if (
-      prevNodeIds.length !== currentNodeIds.length ||
-      !prevNodeIds.every((id) => currentSet.has(id))
-    ) {
-      prevNodeIds = currentNodeIds;
-    }
-
-    return prevNodeIds;
-  };
+  const nodeIds = createMemo(() => store.nodes.map((node) => node.id), {
+    equals: (a, b) => a.length === b.length && a.every((id, i) => id === b[i]),
+  });
 
   return (
     <Panel
@@ -221,7 +221,7 @@ export const MiniMap = <NodeType extends Node>(
                 domNode: el,
                 panZoom,
                 getTransform: () => store.transform,
-                getViewScale,
+                getViewScale: viewScale,
               });
               setMinimap(instance);
               return () => {
@@ -293,7 +293,7 @@ export const MiniMap = <NodeType extends Node>(
                           y={node()!.internals.positionAbsolute.y}
                           borderRadius={_props.nodeBorderRadius}
                           strokeWidth={_props.nodeStrokeWidth}
-                          shapeRendering={shapeRendering()}
+                          shapeRendering={shapeRendering}
                           width={nodeDimensions().width}
                           height={nodeDimensions().height}
                           selected={node()!.selected}
@@ -313,7 +313,7 @@ export const MiniMap = <NodeType extends Node>(
                 d={`M${getX() - getOffset()},${getY() - getOffset()}h${getViewboxWidth() + getOffset() * 2}v${
                   getViewboxHeight() + getOffset() * 2
                 }h${-getViewboxWidth() - getOffset() * 2}z
-            M${getViewBB().x},${getViewBB().y}h${getViewBB().width}v${getViewBB().height}h${-getViewBB().width}z`}
+            M${viewBB().x},${viewBB().y}h${viewBB().width}v${viewBB().height}h${-viewBB().width}z`}
                 fill-rule="evenodd"
                 pointer-events="none"
               />

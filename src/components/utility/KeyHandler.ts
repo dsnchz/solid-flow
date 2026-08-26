@@ -210,8 +210,8 @@ export const KeyHandler = (props: KeyHandlerProps) => {
   };
 
   const handleDelete = async () => {
-    const selectedNodes = store.nodes.filter((node) => node.selected);
-    const selectedEdges = store.edges.filter((edge) => edge.selected);
+    const selectedNodes = store.selectedNodes;
+    const selectedEdges = store.selectedEdges;
 
     // deleteElements fires onDelete (and the granular delete callbacks)
     // itself, so the keyboard path and commands.deleteElements notify

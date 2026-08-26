@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, Show } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
 import { useInternalSolidFlow } from "@/contexts";
@@ -19,14 +19,16 @@ export const NodeSelection = <NodeType extends Node = Node>(
   const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
   const [ref, setRef] = createSignal<HTMLDivElement>();
 
-  const bounds = () => {
+  // B6 (audit): memoized — this full-lookup scan was re-run 7x per render
+  // through the unmemoized accessor.
+  const bounds = createMemo(() => {
     if (store.selectionRectMode === "nodes") {
       return getInternalNodesBounds(nodeLookup, {
         filter: (node) => !!node.selected,
       });
     }
     return null;
-  };
+  });
 
   createEffect(
     () => ({ el: ref(), focusable: !store.disableKeyboardA11y }),
@@ -38,12 +40,12 @@ export const NodeSelection = <NodeType extends Node = Node>(
   );
 
   const onContextMenu = (event: PointerEvent) => {
-    const selectedNodes = store.nodes.filter((n) => n.selected);
+    const selectedNodes = store.selectedNodes;
     props.onSelectionContextMenu?.({ nodes: selectedNodes, event });
   };
 
   const onClick = (event: MouseEvent) => {
-    const selectedNodes = store.nodes.filter((n) => n.selected);
+    const selectedNodes = store.selectedNodes;
     props.onSelectionClick?.({ nodes: selectedNodes, event });
   };
 
