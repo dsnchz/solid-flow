@@ -176,7 +176,7 @@ export const Flow = () => {
 };
 ```
 
-See the AsyncData playground example for the full version (including connection adoption after the async seed).
+Where the boundary goes is your design decision (SolidJS 2.0: "fetch high, block low") — one `<Loading>` can cover the flow together with its toolbar and sidebar, or sit tight around the flow alone. Without any boundary the flow renders immediately (canvas, controls, background) and the graph pops in when the data arrives — there is deliberately no `fallback` prop. See the AsyncData playground example for the full version (including connection adoption after the async seed).
 
 ## The flow API
 
