@@ -4,8 +4,9 @@ import { isInputDOMNode, isMacOs } from "@xyflow/system";
 import { flush } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
+import { allContradicted, matchesKeyArray, type ModifierFlags } from "@/core/keys";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
-import type { KeyDefinition, KeyDefinitionObject } from "@/types";
+import type { KeyDefinition } from "@/types";
 
 export type KeyHandlerProps = {
   readonly selectionKey?: KeyDefinition | KeyDefinition[] | null;
@@ -14,103 +15,6 @@ export type KeyHandlerProps = {
   readonly panActivationKey?: KeyDefinition | KeyDefinition[] | null;
   readonly zoomActivationKey?: KeyDefinition | KeyDefinition[] | null;
 };
-
-function isKeyObject(key?: KeyDefinition | null): key is KeyDefinitionObject {
-  return key !== null && typeof key === "object";
-}
-
-function getModifier(key?: KeyDefinition | null) {
-  return isKeyObject(key) ? key.modifier || [] : [];
-}
-
-function getKeyString(key?: KeyDefinition | null): string {
-  if (key === null || key === undefined) {
-    return "";
-  }
-  return isKeyObject(key) ? key.key : key;
-}
-
-function matchesKey(event: KeyboardEvent, keyDef?: KeyDefinition | null): boolean {
-  if (!keyDef) return false;
-
-  const keyString = getKeyString(keyDef);
-  if (!keyString) return false;
-
-  const modifiers = getModifier(keyDef);
-
-  if (Array.isArray(modifiers)) {
-    const modifierMatch = modifiers
-      .flatMap((mod) => mod)
-      .every((mod) => {
-        switch (mod.toLowerCase()) {
-          case "meta":
-            return event.metaKey;
-          case "ctrl":
-            return event.ctrlKey;
-          case "alt":
-            return event.altKey;
-          case "shift":
-            return event.shiftKey;
-          default:
-            return false;
-        }
-      });
-
-    return event.key === keyString && modifierMatch;
-  }
-
-  return event.key === keyString;
-}
-
-function matchesKeyArray(
-  event: KeyboardEvent,
-  keyDefs: KeyDefinition | KeyDefinition[] | null | undefined,
-): boolean {
-  if (!keyDefs) return false;
-
-  const keys = Array.isArray(keyDefs) ? keyDefs : [keyDefs];
-  return keys.some((keyDef) => matchesKey(event, keyDef));
-}
-
-/** The modifier state every keyboard, pointer, and wheel event carries. */
-type ModifierFlags = Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey" | "shiftKey">;
-
-const MODIFIER_FLAG: Record<string, keyof ModifierFlags> = {
-  alt: "altKey",
-  control: "ctrlKey",
-  ctrl: "ctrlKey",
-  meta: "metaKey",
-  shift: "shiftKey",
-};
-
-/**
- * Whether an event's modifier flags PROVE this key definition cannot be held
- * right now: the key itself is a modifier whose flag is off, or one of its
- * required modifiers is off. Definitions built on non-modifier keys are never
- * contradicted (their state isn't derivable from flags).
- */
-function isContradicted(flags: ModifierFlags, keyDef: KeyDefinition): boolean {
-  const keyFlag = MODIFIER_FLAG[getKeyString(keyDef).toLowerCase()];
-  if (keyFlag && !flags[keyFlag]) return true;
-
-  const modifiers = getModifier(keyDef);
-  const mods = Array.isArray(modifiers) ? modifiers.flatMap((mod) => mod) : [modifiers];
-  return mods.some((mod) => {
-    const modFlag = MODIFIER_FLAG[mod.toLowerCase()];
-    return !!modFlag && !flags[modFlag];
-  });
-}
-
-/** True only when EVERY definition for this key state is contradicted. */
-function allContradicted(
-  flags: ModifierFlags,
-  keyDefs: KeyDefinition | KeyDefinition[] | null | undefined,
-): boolean {
-  if (!keyDefs) return false;
-
-  const keys = Array.isArray(keyDefs) ? keyDefs : [keyDefs];
-  return keys.length > 0 && keys.every((keyDef) => isContradicted(flags, keyDef));
-}
 
 export const KeyHandler = (props: KeyHandlerProps) => {
   const { store, actions } = useInternalSolidFlow();

@@ -82,6 +82,12 @@ export type MiniMapProps<NodeType extends Node> = Omit<
   readonly inversePan?: boolean;
   /** Step size for zooming in/out */
   readonly zoomStep?: number;
+  /**
+   * Scales the padding around the graph inside the minimap (multiplied by
+   * the minimap's view scale). Upstream parity.
+   * @default 5
+   */
+  readonly offsetScale?: number;
 };
 
 const getAttrFunction = <NodeType extends Node>(
@@ -103,6 +109,7 @@ export const MiniMap = <NodeType extends Node>(
     width: 200,
     height: 150,
     nodeBorderRadius: 5,
+    offsetScale: 5,
     nodeStrokeWidth: 2,
     style: {} as JSX.CSSProperties,
   });
@@ -119,6 +126,7 @@ export const MiniMap = <NodeType extends Node>(
     "zoomable",
     "inversePan",
     "zoomStep",
+    "offsetScale",
     "bgColor",
     "width",
     "height",
@@ -219,7 +227,7 @@ export const MiniMap = <NodeType extends Node>(
 
   const getViewWidth = () => viewScale() * _props.width;
   const getViewHeight = () => viewScale() * _props.height;
-  const getOffset = () => 5 * viewScale();
+  const getOffset = () => _props.offsetScale * viewScale();
 
   const getX = () => {
     const rect = boundingRect();

@@ -3,6 +3,7 @@ export * from "./useConnection";
 export * from "./useGraph";
 export * from "./useInitialized";
 export * from "./useInternalNode";
+export * from "./useKeyPress";
 export * from "./useNodeConnections";
 export * from "./useNodesData";
 export * from "./useSolidFlow";
