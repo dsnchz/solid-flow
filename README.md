@@ -300,7 +300,7 @@ The MiniMap always renders the full graph in either mode — it reads the data g
 
 `<SolidFlow>` renders with `renderToString` and hydrates cleanly. For meaningful server-rendered layout, give nodes explicit `width` / `height` (there is no DOM to measure on the server) — the same guidance as React/Svelte Flow.
 
-One contract note for headless **server-side** usage (from SolidJS 2.0's server semantics): constructing a flow and reading its derived state works under every runtime condition, but _mutating_ stores on the server (commands, setter writes) is deprecated upstream and will eventually throw — server-side state that changes over time should come from async sources (`createNodeStore(async () => …)`), which are fully supported on both builds. Rendering, jsdom tests, and browser apps are unaffected.
+One contract note for headless **server-side** usage (from SolidJS 2.0's server semantics): constructing a flow and reading its derived state works under every runtime condition, but _mutating_ stores on the server (commands, setter writes) is deprecated upstream and will eventually throw — server-side state that changes over time should come from async sources (`createNodeStore(async () => …)`), which are fully supported on both builds. One rule when writing your own computations over flow stores: never wrap store reads in a broad `try/catch` — a not-ready async read throws `NotReadyError`, and that propagation is how the server build re-derives (the browser build masks the mistake). Branch on readiness with `isPending()` instead. Rendering, jsdom tests, and browser apps are unaffected.
 
 ## Accessibility
 
