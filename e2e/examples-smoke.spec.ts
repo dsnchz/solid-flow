@@ -28,6 +28,7 @@ const EXAMPLES = [
   "NodeToolbar",
   "Overview",
   "QuickStart",
+  "Remount",
   "Reset",
   "StressTest",
   "Subflows",
