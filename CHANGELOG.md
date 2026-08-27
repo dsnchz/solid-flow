@@ -1,5 +1,17 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.9
+
+### Minor Changes
+
+- 2f2fff5: New element hooks matching upstream's latest additions (xyflow#5868): `useNode`, `useEdge`, `useSelectedNodes`, `useSelectedEdges` — all reactive, all Accessor-input. Plus a pinned immunity suite for upstream bugs Solid Flow dodges structurally: connections and MiniMap panning survive full flow remounts (xyflow#5971/#5933), `setNodes` inside `onNodeDrag` doesn't freeze the dragged node (xyflow#4760), edges never leave the DOM when nodes are added (xyflow#5970), non-adjacent edges aren't re-laid-out by node moves (the failure mode behind xyflow#5958), and the pan-activation key enables primary-button panning with `panOnDrag` off (xyflow#5923). New Remount playground example.
+
+### Patch Changes
+
+- ab5e00a: SolidJS 2.0.0-rc.3 support. rc.3 fixes the node-build store-setter defect we reported (solidjs/solid#3064), narrowing the headless-node gap to one remaining upstream issue we isolated and filed during verification: the node build never re-derives `createProjection` after source changes (solidjs/solid#3073). Browser builds, jsdom, and SSR rendering remain unaffected; production drag performance is at parity with rc.2.
+- c5d0e04: Bump `@xyflow/system` to 0.0.81, inheriting upstream fixes for rapid-pinch viewport corruption (xyflow#5949), fitView with never-measured hidden nodes (xyflow#5841), and multi-select-rectangle panning (xyflow#5878). The `ProOptions` type (removed from system's exports) is now defined and exported by Solid Flow directly — no API change for consumers importing it from `@dschz/solid-flow`.
+- 5603274: Packaging fix: `@solidjs/web` was declared as BOTH a regular dependency and a peer dependency, which could give npm consumers a second nested copy of the Solid runtime (two reactive systems = broken context in confusing ways). It is now peer-only, and the `solid-js` peer range is restored to `^2.0.0-rc.0` (it had been accidentally exact-pinned). If your installation ever showed duplicate `solid-js`/`@solidjs/web` copies under `@dschz/solid-flow`, this resolves it.
+
 ## 1.0.0-next.8
 
 ### Minor Changes

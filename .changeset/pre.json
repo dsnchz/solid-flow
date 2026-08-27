@@ -19,6 +19,7 @@
     "gesture-css-and-minimap-sampling",
     "guided-union-types",
     "hooks-surface-cleanup",
+    "immunity-and-element-hooks",
     "jsdoc-symbol-docs",
     "keypress-and-offsetscale",
     "minimap-click-handlers",
@@ -30,12 +31,15 @@
     "solid-2-migration",
     "solid-flow-1-0",
     "solid-rc2",
+    "solid-rc3",
     "spatial-queries",
     "store-prop-replacement",
     "sub-store-performance",
+    "system-0-0-81",
     "uncontrolled-flows",
     "unmount-culling",
     "viewport-culling-default",
+    "web-peer-only",
     "wp3-internals",
     "wp4-consistency"
   ]
