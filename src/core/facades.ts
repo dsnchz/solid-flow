@@ -17,6 +17,15 @@ export class RecordMapFacade<V> implements Map<string, V> {
   }
 
   get(key: string): V | undefined {
+    // Present-key fast path FIRST: the `in` probe reads at ownKeys level,
+    // subscribing the caller record-WIDE — with every wrapper computed
+    // resolving rows through this facade, any row write then marked ~30k
+    // observers (~137ms of pure markNode per selection change @10k; the
+    // dominant slice of the drag-start spike, bench round 12 follow-up).
+    // Keyed reads subscribe per key; the `in` probe remains only for absent
+    // keys, where the appear-later subscription is the point.
+    const value = this.#record[key];
+    if (value !== undefined) return value;
     return key in this.#record ? this.#record[key] : undefined;
   }
 

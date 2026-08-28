@@ -69,7 +69,8 @@ import { createEdgeLookup } from "./projections/edgeLookup";
 import { createInternalNodes, type NodeMeasurements } from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
-import { joinSelected, overlayEntry, type SelectionOverlay } from "./selectionOverlay";
+import { createSelectedIds } from "./projections/selectedIds";
+import { type SelectionOverlay } from "./selectionOverlay";
 import { SpatialGrid } from "./spatial/grid";
 import { createSeededGraphStores } from "./stores/seeding";
 
@@ -375,15 +376,27 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const mergedEdgeTypes = createMemo(() => ({ ...initialEdgeTypes, ...config().edgeTypes }));
   // B5 (audit): selection views memoized — the getters scanned and allocated
   // per read; consumers now share one array identity per selection change.
+  // Joined selection views via keyed presence projections (O(changed-row)
+  // updates — see core/projections/selectedIds.ts for why the monolithic
+  // filter memos had to go). The view memos read the presence RECORDS
+  // (membership-level subscription) and resolve rows through the lookups.
+  const selectedNodeIds = createSelectedIds(
+    () => nodesStore,
+    () => selectionOverlay.nodes,
+  );
+  const selectedEdgeIds = createSelectedIds(
+    () => edgesStore,
+    () => selectionOverlay.edges,
+  );
   const selectedNodesView = createMemo(() =>
-    nodesStore.filter((node) =>
-      joinSelected(node.selected, overlayEntry(selectionOverlay.nodes, node.id)),
-    ),
+    Object.keys(selectedNodeIds)
+      .map((id) => nodeLookup.get(id)?.internals.userNode)
+      .filter((node): node is NodeType => node !== undefined),
   );
   const selectedEdgesView = createMemo(() =>
-    edgesStore.filter((edge) =>
-      joinSelected(edge.selected, overlayEntry(selectionOverlay.edges, edge.id)),
-    ),
+    Object.keys(selectedEdgeIds)
+      .map((id) => edgeLookup[id])
+      .filter((edge): edge is EdgeType => edge !== undefined),
   );
 
   const store = merge({ width: 0, height: 0 }, config, {

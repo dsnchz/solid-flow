@@ -46,6 +46,17 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
 
   const { store, nodeLookup, actions } = state;
 
+  // Prime the joined selection views at idle: their first compute filters
+  // the whole graph (~180ms @10k) and otherwise lands inside the first
+  // selection-adjacent gesture (drag start deselects edges) — profiled as
+  // the largest slice of the drag-start spike (bench round 12 follow-up).
+  const prime = () => {
+    void store.selectedNodes;
+    void store.selectedEdges;
+  };
+  if (typeof requestIdleCallback === "function") requestIdleCallback(prime);
+  else setTimeout(prime, 50);
+
   // DOM measurement ingest: batch measure requests, read element geometry at
   // idle, and feed the results into the graph via the core seams. The order
   // matters: measurement writes flush first so parent expansion computes

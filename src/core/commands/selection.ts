@@ -21,6 +21,9 @@ import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionO
 type SelectionStoreReads<NodeType extends Node, EdgeType extends Edge> = {
   readonly nodes: readonly NodeType[];
   readonly edges: readonly EdgeType[];
+  /** Memoized JOINED selection views (overlay + rows) — see createFlowState. */
+  readonly selectedNodes: readonly NodeType[];
+  readonly selectedEdges: readonly EdgeType[];
   readonly multiselectionKeyPressed: boolean;
   readonly snapGrid?: SnapGrid;
   readonly nodesDraggable: boolean;
@@ -87,12 +90,26 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     nodes: _nodes,
     edges,
   }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
-    const nodesToUnselect = new Set((_nodes ? _nodes : store.nodes).map(({ id }) => id));
-
-    if (nodesToUnselect.size) {
+    // Targets come from the MEMOIZED joined selection views, not a walk of
+    // the whole graph: the drag-start profile @10k attributed ~515ms to this
+    // function writing (then merely reading) every element — when almost
+    // nothing is ever selected. Deselecting only what IS selected makes the
+    // empty case free and the common case O(selected).
+    const requestedNodeIds = _nodes ? new Set(_nodes.map(({ id }) => id)) : null;
+    // Explicitly-empty request: skip even the view read (its first compute
+    // filters the whole graph — the drag-start caller passes `nodes: []`).
+    const nodeTargets =
+      requestedNodeIds?.size === 0
+        ? new Set<string>()
+        : new Set(
+            store.selectedNodes
+              .filter((node) => !requestedNodeIds || requestedNodeIds.has(node.id))
+              .map(({ id }) => id),
+          );
+    if (nodeTargets.size) {
       setNodesStore((nodes) => {
         for (const node of nodes) {
-          if (nodesToUnselect.has(node.id)) {
+          if (nodeTargets.has(node.id)) {
             writeOverlay("nodes", node, false);
             node.selected = false;
           }
@@ -101,12 +118,19 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
       });
     }
 
-    const edgesToUnselect = new Set((edges ?? store.edges).map(({ id }) => id));
-
-    if (edgesToUnselect.size) {
+    const requestedEdgeIds = edges ? new Set(edges.map(({ id }) => id)) : null;
+    const edgeTargets =
+      requestedEdgeIds?.size === 0
+        ? new Set<string>()
+        : new Set(
+            store.selectedEdges
+              .filter((edge) => !requestedEdgeIds || requestedEdgeIds.has(edge.id))
+              .map(({ id }) => id),
+          );
+    if (edgeTargets.size) {
       setEdgesStore((edges) => {
         for (const edge of edges) {
-          if (edgesToUnselect.has(edge.id)) {
+          if (edgeTargets.has(edge.id)) {
             writeOverlay("edges", edge, false);
             edge.selected = false;
           }
