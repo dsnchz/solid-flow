@@ -1,114 +1,128 @@
 # @dschz/solid-flow — agent cheatsheet
 
-SolidJS port of React Flow / Svelte Flow (node-based UIs). Built for SolidJS 2.0
-(solid-js@2.0.0-rc.x, install with the `next` tag). Same gesture engine as
-upstream (@xyflow/system), different state model. This file front-loads what an
-agent trained on React Flow will get wrong here.
-
-## If you know React Flow, unlearn these
-
-- NO `onNodesChange` / `onEdgesChange` / `applyNodeChanges` / `applyEdgeChanges`.
-  They do not exist and are not needed. State is store-based: mutate your store
-  and the flow follows.
-- NO `useReactFlow` — it is `useSolidFlow()`, and it must be called INSIDE
-  `<SolidFlow>` (or under `<SolidFlowProvider>`). Returns `{ flow, commands }`
-  plus commands spread at the top level. `flow` is the read surface
-  (`flow.nodes`, `flow.edges`, `flow.selection`, `flow.viewport`),
-  `commands` the write surface (`addNodes`, `updateNode`, `setViewport`,
-  `fitView`, `deleteElements`, `toObject`, ...).
-- Mouse-named events are pointer-named here: `onNodePointerEnter` /
-  `onNodePointerMove` / `onNodePointerLeave` (same for edges and the pane),
-  NOT `onNodeMouseEnter`. Double-clicks, `onPaneScroll`, and
-  `onViewportChange` exist with React Flow semantics.
-- Styles: `import "@dschz/solid-flow/styles"` once, or nothing renders sensibly.
-- Components run ONCE (Solid). No re-renders, no dependency arrays, no memo
-  ceremony. Read reactive values in JSX/computations, not in component-body
-  statements.
-
-## State model (the core contract)
-
-Two modes, per axis (nodes and edges independently):
-
-- CONTROLLED (`nodes={...}` / `edges={...}`): your store owns membership.
-  Draft-mutate for O(changed) updates; wholesale replacement re-seeds (rows
-  keyed by id). The flow writes runtime fields (position on drag, `selected`,
-  `measured`) onto your rows. Imperative commands do NOT write membership back
-  to your store — adopt new elements yourself (see onConnect below).
-- UNCONTROLLED (`defaultNodes` / `defaultEdges`): seeds ONCE; the flow owns
-  membership afterwards. Commands and completed connections write membership
-  directly. Later changes to the default props are ignored by contract.
+SolidJS port of React Flow / Svelte Flow (node-based UIs), built for SolidJS 2.0
+(solid-js@2.0.0-rc.x; install with the `next` tag). Same gesture engine as
+upstream (@xyflow/system), different state model.
 
 ```tsx
-import { createEdgeStore, createNodeStore, SolidFlow } from "@dschz/solid-flow";
-import "@dschz/solid-flow/styles";
+import { SolidFlow, createNodeStore, createEdgeStore } from "@dschz/solid-flow";
+import "@dschz/solid-flow/styles"; // required, import once
+```
 
+## Unlearn these (React Flow priors that are WRONG here)
+
+- NO `onNodesChange` / `onEdgesChange` / `applyNodeChanges` / `applyEdgeChanges` — state is store-based; mutate your store.
+- NO `useReactFlow` — it is `useSolidFlow()`, called INSIDE `<SolidFlow>` (or under `<SolidFlowProvider>`).
+- Events are pointer-named: `onNodePointerEnter`, not `onNodeMouseEnter` (same for edges/pane).
+- Components run once (Solid): no re-renders, no dependency arrays; read reactive values in JSX/computations, not component-body statements.
+- NO `createOptimisticStore` as `nodes`/`edges` input — flow writes would revert with the overlay. See "Saving to a server".
+
+## Creating nodes/edges
+
+```tsx
 const [nodes, setNodes] = createNodeStore([
   { id: "1", type: "input", data: { label: "In" }, position: { x: 250, y: 0 } },
-  { id: "2", data: { label: "Mid" }, position: { x: 100, y: 100 } },
+  { id: "2", data: { label: "Mid" }, position: { x: 100, y: 100 } }, // type defaults to "default"
 ]);
 const [edges, setEdges] = createEdgeStore([{ id: "e1-2", source: "1", target: "2" }]);
 
-// Controlled: adopt completed connections into YOUR store.
-const onConnect = (c) => setEdges((draft) => { draft.push(c); });
-
-<SolidFlow nodes={nodes} edges={edges} onConnect={onConnect} fitView>
-  <Background variant="dots" /> <Controls /> <MiniMap />
-</SolidFlow>
+// Mutations are drafts — O(changed), no spread ceremony:
+setNodes((draft) => { draft[0]!.position.x += 20; });
+setEdges((draft) => draft.filter((e) => e.id !== "e1-2")); // returning a new array replaces
 ```
 
-Custom nodes: register components in `nodeTypes`; each element's `data` type is
-narrowed by its `type` field (`createNodeStore<typeof nodeTypes>([...])`).
-Custom node components receive `NodeProps` and render `<Handle type="source"
-position={Position.Bottom} />` for connectivity.
+Async creation (load from a server) — pass a function instead of an array:
 
-## Async and persistence (SolidJS 2.0 rules)
+```tsx
+const [nodes] = createNodeStore(async () => (await fetch("/api/nodes")).json());
+// Reads are not-ready until the data lands; optionally wrap the flow:
+<Loading fallback={<Spinner />}>...</Loading> // from @solidjs/web
+```
 
-- Loading from a server: `createNodeStore(async () => fetchNodes())` — no memo,
-  no lifecycle. Reads are not-ready until the data lands; wrap with
-  `<Loading fallback={...}>` from @solidjs/web (or don't — the canvas renders
-  and the graph pops in). Works for controlled props AND defaults.
-- NEVER wrap flow-store reads in broad try/catch in your own computations: a
-  not-ready read throws `NotReadyError`, and that propagation is load-bearing
-  (it is the server build's only re-derive channel). Branch with `isPending()`.
-- Saving to a server — use draft-then-commit, NOT per-mutation sync:
+## Custom node types (type-safe data)
+
+```tsx
+const CounterNode = (props: NodeProps<{ count: number }, "counter">) => (
+  <div>
+    <Handle type="target" position={Position.Top} />
+    count: {props.data.count}
+    <Handle type="source" position={Position.Bottom} />
+  </div>
+);
+const nodeTypes = { counter: CounterNode } satisfies NodeTypes;
+
+const [nodes] = createNodeStore<typeof nodeTypes>([
+  { id: "a", type: "counter", data: { count: 1 }, position: { x: 0, y: 0 } }, // data narrowed by type
+  { id: "b", type: "default", data: { label: "hi" }, position: { x: 0, y: 100 } }, // built-ins still work
+  // { type: "countr", ... }  <- compile error: unknown type name
+]);
+
+<SolidFlow nodes={nodes} nodeTypes={nodeTypes} />;
+```
+
+Standalone typing for plain arrays/props: `satisfies SolidFlowNode<typeof nodeTypes>[]` (and `SolidFlowEdge`).
+
+## Controlled vs uncontrolled (per axis)
+
+- `nodes={store}` / `edges={store}` — CONTROLLED: your store owns membership; the flow writes runtime fields (`position`, `selected`, `measured`) onto your rows. Commands do NOT write membership back — adopt:
+
+```tsx
+const onConnect = (c: EdgeConnection) => setEdges((draft) => { draft.push(c); });
+<SolidFlow nodes={nodes} edges={edges} onConnect={onConnect} fitView />
+```
+
+- `defaultNodes={[...]}` / `defaultEdges={[...]}` — UNCONTROLLED: seeds once (sync or async source), then the flow owns membership; commands and completed connections write it directly; later prop changes are ignored.
+
+## Reading & writing flow state
+
+```tsx
+const { flow, commands } = useSolidFlow(); // inside <SolidFlow> only
+flow.nodes; flow.edges; flow.selection.nodes; flow.viewport; // reactive reads
+```
+
+Commands: `fitView`, `fitBounds`, `zoomIn`, `zoomOut`, `setZoom`, `setCenter`,
+`setViewport`, `panBy`, `screenToFlowPosition`, `flowToScreenPosition`,
+`addNodes`, `addEdges`, `setNodes`, `setEdges`, `updateNode`, `updateNodeData`,
+`updateEdge`, `deleteElements`, `getIntersectingNodes`, `isNodeIntersecting`,
+`getNodesBounds`, `updateNodeInternals`, `toObject`.
+
+Hooks: `useNode(id)`, `useEdge(id)`, `useNodes()`, `useEdges()`,
+`useSelectedNodes()`, `useSelectedEdges()`, `useNodeConnections()`,
+`useKeyPress(keys)` — Accessor-based.
+
+## Events (props on `<SolidFlow>`)
+
+- Nodes: `onNodeClick`, `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeDrag(Start|Stop)?`, `onNodePointer(Enter|Move|Leave)`
+- Edges: `onEdgeClick`, `onEdgeDoubleClick`, `onEdgeContextMenu`, `onEdgePointer(Enter|Move|Leave)`
+- Pane: `onPaneClick`, `onPaneContextMenu`, `onPaneScroll`, `onPanePointer(Enter|Move|Leave)`
+- Connections: `onConnect`, `onConnect(Start|End)`, `onClickConnect(Start|End)`, `onBeforeConnect`, `isValidConnection`
+- Reconnect: `onReconnect(Start|End)?`, `onBeforeReconnect` (+ `<EdgeReconnectAnchor>` in custom edges, `reconnectEdge` util)
+- Selection: `onSelectionChange`, `onSelectionClick`, `onSelectionContextMenu`, `onSelectionDrag(Start|Stop)?`, `onSelection(Start|End)`
+- Viewport: `onMove(Start|End)?` , `onViewportChange` (fires for programmatic changes too)
+- Lifecycle: `onInit`, `onDelete`, `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onFlowError`
+
+## Saving to a server (draft-then-commit)
 
 ```tsx
 const [serverGraph] = createStore(() => api.loadGraph(), { nodes: [], edges: [] });
-// seed once from server truth; the flow owns the draft:
-<SolidFlow defaultNodes={serverGraph.nodes} defaultEdges={serverGraph.edges}>
-// one action batch-commits the whole draft:
+
+<SolidFlow defaultNodes={serverGraph.nodes} defaultEdges={serverGraph.edges}>...</SolidFlow>
+
+// one action batch-commits the whole draft; failed save keeps the draft:
 const save = action(function* () {
   yield api.saveGraph(commands.toObject());
   refresh(serverGraph);
 });
 ```
 
-  A failed save keeps the draft (retry-friendly); the refresh cannot clobber
-  edits.
-- DO NOT pass a `createOptimisticStore` as `nodes`/`edges`. Flow-internal
-  writes (selection, drag) would land on the optimistic overlay outside any
-  action and revert silently. Use draft-then-commit above.
+Rules:
+- Do NOT sync per-mutation with an optimistic store — unsupported (see Unlearn).
+- Never wrap flow-store reads in broad `try/catch` in your computations: `NotReadyError` propagation is load-bearing (it is the server build's re-derive channel). Branch with `isPending()` instead.
 
-## Commands quick reference
+## Gotchas
 
-`fitView`, `fitBounds`, `zoomIn/Out`, `setZoom`, `setCenter`, `setViewport`,
-`panBy`, `screenToFlowPosition`, `flowToScreenPosition`, `addNodes`, `addEdges`,
-`setNodes`, `setEdges`, `updateNode`, `updateNodeData`, `updateEdge`,
-`deleteElements`, `getIntersectingNodes`, `isNodeIntersecting`,
-`getNodesBounds`, `updateNodeInternals`, `toObject`.
-
-Element hooks: `useNode(id)`, `useEdge(id)`, `useNodes()`, `useEdges()`,
-`useSelectedNodes()`, `useSelectedEdges()`, `useNodeConnections()`,
-`useKeyPress(keys)` — all Accessor-based.
-
-## Misc gotchas
-
-- Give nodes explicit `width`/`height` for SSR (no DOM to measure) and for
-  meaningful first paint.
-- Viewport culling is ON by default (CSS tier); `onlyRenderVisibleElements`
-  unmounts off-screen elements; opt out per element with `cullable: false`.
+- Give nodes explicit `width`/`height` for SSR (no DOM to measure) and clean first paint.
+- Viewport culling is on by default (CSS tier); `onlyRenderVisibleElements` unmounts off-screen elements; per-element opt-out: `cullable: false`.
 - Keep `solid-js` and `@solidjs/web` on the same 2.0.0-rc.x version.
-- Edge reconnection: `<EdgeReconnectAnchor>` inside custom edges;
-  `onReconnect` + `reconnectEdge` utility.
-- Full docs: README.md in this package; examples: playground/ in the repo
-  (https://github.com/dsnchz/solid-flow).
+- Plugins: `<Background />`, `<Controls />`, `<MiniMap />`, `<Panel position="...">`, `<NodeToolbar />`, `<NodeResizer />`.
+- Full docs: README.md in this package. Examples: playground/ in the repo (https://github.com/dsnchz/solid-flow).
