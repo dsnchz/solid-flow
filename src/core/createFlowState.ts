@@ -59,6 +59,7 @@ import { isEdge, isNode } from "@/utils";
 import { createSelectionCommands } from "./commands/selection";
 import { createCullingViewport } from "./culling";
 import { getDefaultFlowStateProps } from "./defaults";
+import { type DragOverlay } from "./dragOverlay";
 import { RecordMapFacade } from "./facades";
 import type { SolidFlowProps } from "./flowProps";
 import { type FlowCommands, type FlowSelection, type FlowState } from "./flowState";
@@ -187,6 +188,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     edges: SelectionOverlay;
   }>({ nodes: {}, edges: {} });
 
+  // Drag-position sidecar (core/dragOverlay.ts): per-frame gesture positions,
+  // joined with rows in the internalNodes projection.
+  const [dragOverlay, setDragOverlay] = createStore<DragOverlay>({});
+
   // The adoption pass as a projection: user nodes joined with measurements
   // into internal nodes (absolute positions, z ordering, handle bounds).
   // Replaces the ReactiveMap + mapArray adoption pipeline — no write side.
@@ -199,6 +204,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
     get selectionOverlay() {
       return selectionOverlay.nodes;
+    },
+    get dragOverlay() {
+      return dragOverlay;
     },
     get nodeOrigin() {
       return config().nodeOrigin;
@@ -673,12 +681,24 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     nodeDragItems: Map<string, Pick<NodeDragItem, "position">>,
     dragging = false,
   ) => {
+    // Overlay write (authoritative for rendering) + best-effort row
+    // write-through (parity: a plain store is live during the drag).
+    // rowBefore is captured from the row's PRE-write value on the gesture's
+    // first frame and carried through subsequent frames.
     setNodesStore((nodes) => {
+      const writes: { id: string; position: XYPosition; rowBefore: XYPosition }[] = [];
       for (const node of nodes) {
         if (!nodeDragItems.has(node.id)) continue;
+        const position = nodeDragItems.get(node.id)!.position;
+        writes.push({ id: node.id, position, rowBefore: { ...node.position } });
         node.dragging = dragging;
-        node.position = nodeDragItems.get(node.id)!.position;
+        node.position = position;
       }
+      setDragOverlay((draft) => {
+        for (const { id, position, rowBefore } of writes) {
+          draft[id] = { position, dragging, rowBefore: draft[id]?.rowBefore ?? rowBefore };
+        }
+      });
       return undefined;
     });
   };
@@ -778,9 +798,23 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
         if (!row) gone.push(["edges", id]);
         else if (!!row.selected === selectionOverlay.edges[id]) candidates.push(["edges", id]);
       }
-      return { gone, candidates };
+      const dragGone: string[] = [];
+      const dragCandidates: string[] = [];
+      for (const id in dragOverlay) {
+        const entry = dragOverlay[id]!;
+        const row = nodeLookup.get(id)?.internals.userNode;
+        if (!row) dragGone.push(id);
+        else if (
+          !entry.dragging &&
+          row.position.x === entry.position.x &&
+          row.position.y === entry.position.y
+        ) {
+          dragCandidates.push(id);
+        }
+      }
+      return { gone, candidates, dragGone, dragCandidates };
     },
-    ({ gone, candidates }) => {
+    ({ gone, candidates, dragGone, dragCandidates }) => {
       if (gone.length) {
         setSelectionOverlay((draft) => {
           for (const [kind, id] of gone) {
@@ -789,7 +823,15 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
           }
         });
       }
-      if (!candidates.length) return;
+      if (dragGone.length) {
+        setDragOverlay((draft) => {
+          for (const id of dragGone) {
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+            delete draft[id];
+          }
+        });
+      }
+      if (!candidates.length && !dragCandidates.length) return;
       clearTimeout(releaseTimer);
       releaseTimer = setTimeout(() => {
         const confirmed = candidates.filter(([kind, id]) => {
@@ -798,14 +840,31 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
           const row = kind === "nodes" ? nodeLookup.get(id)?.internals.userNode : edgeLookup[id];
           return !!row && !!row.selected === entry;
         });
-        if (!confirmed.length) return;
-        setSelectionOverlay((draft) => {
-          for (const [kind, id] of confirmed) {
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete draft[kind][id];
-          }
+        const dragConfirmed = dragCandidates.filter((id) => {
+          const entry = dragOverlay[id];
+          if (entry === undefined || entry.dragging) return false;
+          const row = nodeLookup.get(id)?.internals.userNode;
+          return (
+            !!row && row.position.x === entry.position.x && row.position.y === entry.position.y
+          );
         });
-        flush();
+        if (confirmed.length) {
+          setSelectionOverlay((draft) => {
+            for (const [kind, id] of confirmed) {
+              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+              delete draft[kind][id];
+            }
+          });
+        }
+        if (dragConfirmed.length) {
+          setDragOverlay((draft) => {
+            for (const id of dragConfirmed) {
+              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+              delete draft[id];
+            }
+          });
+        }
+        if (confirmed.length || dragConfirmed.length) flush();
       }, 0);
     },
   );

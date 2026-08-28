@@ -68,6 +68,7 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
 
       const internalNodes = createInternalNodes({
         selectionOverlay: {},
+        dragOverlay: {},
         get nodes() {
           return nodes;
         },
@@ -118,7 +119,17 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
       flush();
       expect(seenIds).toEqual([[]]);
       expect({ keys: Object.keys(internalNodes.a ?? {}), width: internalNodes.a?.width }).toEqual({
-        keys: ["id", "position", "data", "width", "height", "selected", "measured", "internals"],
+        keys: [
+          "id",
+          "position",
+          "data",
+          "width",
+          "height",
+          "selected",
+          "dragging",
+          "measured",
+          "internals",
+        ],
         width: 100,
       });
 

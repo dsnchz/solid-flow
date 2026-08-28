@@ -50,6 +50,7 @@ const setup = (
 
   const internalNodes = createInternalNodes({
     selectionOverlay: {},
+    dragOverlay: {},
     get nodes() {
       return nodes;
     },
@@ -431,6 +432,7 @@ describe("createInternalNodes (core, headless)", () => {
 
       const internalNodes = createInternalNodes({
         selectionOverlay: {},
+        dragOverlay: {},
         get nodes() {
           return nodes;
         },

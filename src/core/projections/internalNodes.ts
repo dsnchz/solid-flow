@@ -15,6 +15,7 @@ import { type Accessor, createMemo, createProjection, mapArray, onCleanup } from
 import type { InternalNode, Node } from "@/types";
 import { emitFlowError } from "@/utils";
 
+import { dragEntry, type DragOverlay, joinDragging, joinPosition } from "../dragOverlay";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import { createRowRecordProjection } from "./rowRecord";
 
@@ -75,6 +76,8 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly measurements: NodeMeasurements;
   /** Flow-driven selection sidecar, joined with `userNode.selected` per row. */
   readonly selectionOverlay: SelectionOverlay;
+  /** Drag-position sidecar, joined with `userNode.position` per row. */
+  readonly dragOverlay: DragOverlay;
   readonly nodeOrigin: NodeOrigin;
   readonly nodeExtent: CoordinateExtent;
   readonly onError?: (id: string, message: string) => void;
@@ -167,6 +170,11 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             userNode.selected,
             overlayEntry(source.selectionOverlay, userNode.id),
           );
+          // Position/dragging = drag overlay joined with the row; the joined
+          // position feeds the row field AND the absolute-position derive.
+          const dragOverlayEntry = dragEntry(source.dragOverlay, userNode.id);
+          const position = joinPosition(userNode.position, dragOverlayEntry);
+          const dragging = joinDragging(userNode.dragging, dragOverlayEntry);
 
           // The measurements root is authoritative once a DOM measurement
           // exists (the row write-through can't be relied on — it reverts on
@@ -188,10 +196,12 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           const row = {
             ...userNode,
             selected,
+            position,
+            dragging,
             measured,
             internals: {
               positionAbsolute: clampPosition(
-                getNodePositionWithOrigin(userNode, nodeOrigin),
+                getNodePositionWithOrigin({ ...userNode, position, measured }, nodeOrigin),
                 isCoordinateExtent(userNode.extent) ? userNode.extent : nodeExtent,
                 dimensions,
               ),
