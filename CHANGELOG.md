@@ -1,5 +1,16 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.10
+
+### Minor Changes
+
+- 2e1cd74: `defaultNodes` / `defaultEdges` now accept rows from an async-seeded store — "seed the flow from server truth". While the source is pending the flow seeds empty (cover it with `<Loading>` if desired) and adopts the rows when the data settles; previously this was a hard `PENDING_ASYNC_UNTRACKED_READ` error. This enables the documented draft-then-commit persistence pattern (new README section + Persistence playground example): server truth in an async store outside the flow, edits accumulating in the flow-owned draft, one action batch-submitting `toObject()` — a failed save keeps the draft, and the refresh reconcile can't clobber edits. Passing a `createOptimisticStore` as `nodes`/`edges` is documented as unsupported (flow-internal writes would revert with the overlay).
+- 2e1cd74: Event-callback parity with React Flow: `onNodeDoubleClick`, `onEdgeDoubleClick`, `onEdgePointerMove`, `onPaneScroll`, `onPanePointerEnter` / `onPanePointerMove` / `onPanePointerLeave`, and `onViewportChange` (fires on every viewport change, programmatic ones included). The event surface now covers everything Svelte Flow exposes plus the React Flow set, except `onNodesChange`/`onEdgesChange`, which don't exist by design in a store-based flow.
+
+### Patch Changes
+
+- c9b4048: Ship an `llms.txt` agent cheatsheet in the npm and JSR packages: a compact, agent-oriented map of the API that front-loads what an agent trained on React Flow gets wrong here (no change reducers, store-based state, pointer-named events, Solid 2.0 async rules, draft-then-commit persistence).
+
 ## 1.0.0-next.9
 
 ### Minor Changes

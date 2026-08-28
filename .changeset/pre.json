@@ -5,6 +5,7 @@
     "@dschz/solid-flow": "0.2.3"
   },
   "changesets": [
+    "async-defaults-persistence",
     "async-seeded-stores",
     "audit-bug-sweep",
     "css-export-bundling",
@@ -12,6 +13,7 @@
     "culling-premeasured-starvation",
     "declare-missing-props",
     "edge-reconnect",
+    "event-parity",
     "fix-connectionline-clipping",
     "fix-cross-background",
     "flowstate-struct-api",
@@ -22,6 +24,7 @@
     "immunity-and-element-hooks",
     "jsdoc-symbol-docs",
     "keypress-and-offsetscale",
+    "llms-txt",
     "minimap-click-handlers",
     "minimap-node-component",
     "node-domattributes-type",
