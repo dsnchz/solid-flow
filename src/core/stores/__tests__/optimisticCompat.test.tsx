@@ -35,6 +35,13 @@ const makeNode = (id: string, x: number): Node => ({
  * flow-internal state layered over the user's optimistic store, entered
  * through tagged createOptimisticNodeStore/createOptimisticEdgeStore
  * factories (raw optimistic stores are undetectable). Un-skip when built.
+ *
+ * UPDATE (2026-08-28, after Ryan's #3085 answer): the mirror is dead and the
+ * factories are unnecessary — the blessed shape is a keyed SIDECAR joined at
+ * read time (no membership mirror, no detection). SELECTION landed first
+ * (selectionSidecar.test.tsx, core/selectionOverlay.ts). This suite remains
+ * the acceptance bar for the remaining slices: membership rendered from the
+ * user's store (tests 1-2) and drag-position/addNodes behavior (tests 3-4).
  */
 describe.skip("createOptimisticStore compat", () => {
   const setup = async (server: { rows: Node[] }) => {

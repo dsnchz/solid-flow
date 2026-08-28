@@ -49,6 +49,7 @@ const setup = (
   const [measurements, setMeasurements] = createStore<NodeMeasurements>({});
 
   const internalNodes = createInternalNodes({
+    selectionOverlay: {},
     get nodes() {
       return nodes;
     },
@@ -423,6 +424,7 @@ describe("createInternalNodes (core, headless)", () => {
       const [config, setConfig] = createStore<{ nodeOrigin: NodeOrigin }>({ nodeOrigin: [0, 0] });
 
       const internalNodes = createInternalNodes({
+        selectionOverlay: {},
         get nodes() {
           return nodes;
         },

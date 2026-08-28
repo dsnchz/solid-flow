@@ -15,6 +15,7 @@ import { type Accessor, createMemo, createProjection, mapArray, onCleanup } from
 import type { InternalNode, Node } from "@/types";
 import { emitFlowError } from "@/utils";
 
+import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import { createRowRecordProjection } from "./rowRecord";
 
 const SELECTED_NODE_Z = 1000;
@@ -72,6 +73,8 @@ export type NodeMeasurements = Record<string, NodeMeasurement>;
 export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly nodes: readonly NodeType[];
   readonly measurements: NodeMeasurements;
+  /** Flow-driven selection sidecar, joined with `userNode.selected` per row. */
+  readonly selectionOverlay: SelectionOverlay;
   readonly nodeOrigin: NodeOrigin;
   readonly nodeExtent: CoordinateExtent;
   readonly onError?: (id: string, message: string) => void;
@@ -158,6 +161,13 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           const measurement =
             userNode.id in source.measurements ? source.measurements[userNode.id] : undefined;
 
+          // Selection = overlay joined with the row (solid#3085 composition);
+          // the same value feeds the spread override and z elevation.
+          const selected = joinSelected(
+            userNode.selected,
+            overlayEntry(source.selectionOverlay, userNode.id),
+          );
+
           // User-provided dimensions win; otherwise the last DOM measurement.
           const measured = {
             width: userNode.measured?.width ?? measurement?.measured.width,
@@ -174,6 +184,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           const rootParentIndex = autoIndex().get(userNode.id);
           const row = {
             ...userNode,
+            selected,
             measured,
             internals: {
               positionAbsolute: clampPosition(
@@ -183,7 +194,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
               ),
               handleBounds: measurement?.handleBounds,
               z:
-                calculateZ(userNode, selectedNodeZ, zIndexMode) +
+                calculateZ({ zIndex: userNode.zIndex, selected }, selectedNodeZ, zIndexMode) +
                 (rootParentIndex !== undefined ? rootParentIndex * ROOT_PARENT_Z_INCREMENT : 0),
               ...(rootParentIndex !== undefined ? { rootParentIndex } : {}),
               userNode,

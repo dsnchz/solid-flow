@@ -9,6 +9,7 @@ import { createProjection, mapArray } from "solid-js";
 
 import type { DefaultEdgeOptions, Edge, EdgeLayouted, InternalNode, Node } from "@/types";
 
+import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import { createRowRecordProjection } from "./rowRecord";
 
 /**
@@ -18,6 +19,8 @@ import { createRowRecordProjection } from "./rowRecord";
  */
 export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   readonly edges: readonly EdgeType[];
+  /** Flow-driven selection sidecar, joined with `edge.selected` per row. */
+  readonly selectionOverlay: SelectionOverlay;
   readonly connectionMode: string;
   readonly defaultEdgeOptions: DefaultEdgeOptions;
   readonly elevateEdgesOnSelect: boolean;
@@ -105,12 +108,15 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
 
   if (!edgePosition) return null;
 
+  const selected = joinSelected(edge.selected, overlayEntry(source.selectionOverlay, edge.id));
+
   return {
     ...source.defaultEdgeOptions,
     ...edge,
+    selected,
     ...edgePosition,
     zIndex: getElevatedEdgeZIndex({
-      selected: edge.selected,
+      selected,
       zIndex: edge.zIndex ?? source.defaultEdgeOptions.zIndex,
       sourceNode,
       targetNode,

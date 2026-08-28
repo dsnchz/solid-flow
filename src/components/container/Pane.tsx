@@ -216,24 +216,13 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     }
 
     // this prevents unnecessary updates while updating the selection rectangle
-    if (!isSetEqual(prevSelectedNodeIds, selectedNodeIds)) {
-      actions.setNodes((nodes) => {
-        for (const node of nodes) {
-          const isSelected = selectedNodeIds.has(node.id);
-          if (!!node.selected !== isSelected) node.selected = isSelected;
-        }
-        return undefined;
-      });
-    }
-
-    if (!isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)) {
-      actions.setEdges((edges) => {
-        for (const edge of edges) {
-          const isSelected = selectedEdgeIds.has(edge.id);
-          if (!!edge.selected !== isSelected) edge.selected = isSelected;
-        }
-        return undefined;
-      });
+    if (
+      !isSetEqual(prevSelectedNodeIds, selectedNodeIds) ||
+      !isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)
+    ) {
+      // Overlay-aware selection write (solid#3085 sidecar) — direct row
+      // writes here would fight stale overlay entries.
+      actions.applySelectionSets(selectedNodeIds, selectedEdgeIds);
     }
 
     actions.setSelectionRectMode("user");

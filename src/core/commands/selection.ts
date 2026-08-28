@@ -15,6 +15,8 @@ import { flush, type StoreSetter } from "solid-js";
 import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
 import { emitFlowError, isEdgeSelectable } from "@/utils";
 
+import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
+
 /** The slice of the internal store the selection commands read. */
 type SelectionStoreReads<NodeType extends Node, EdgeType extends Edge> = {
   readonly nodes: readonly NodeType[];
@@ -41,6 +43,8 @@ export type SelectionCommandDeps<NodeType extends Node, EdgeType extends Edge> =
     updates: Map<string, Pick<NodeDragItem, "position">>,
     dragging?: boolean,
   ) => void;
+  readonly selectionOverlay: { readonly nodes: SelectionOverlay; readonly edges: SelectionOverlay };
+  readonly setSelectionOverlay: StoreSetter<{ nodes: SelectionOverlay; edges: SelectionOverlay }>;
 };
 
 /**
@@ -58,7 +62,27 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
   nodeLookup,
   edgeLookup,
   updateNodePositions,
+  selectionOverlay,
+  setSelectionOverlay,
 }: SelectionCommandDeps<NodeType, EdgeType>) => {
+  // The flow's view of an element's selection: overlay joined with the row.
+  const nodeSelected = (node: { id: string; selected?: boolean }) =>
+    joinSelected(node.selected, overlayEntry(selectionOverlay.nodes, node.id));
+  const edgeSelected = (edge: { id: string; selected?: boolean }) =>
+    joinSelected(edge.selected, overlayEntry(selectionOverlay.edges, edge.id));
+
+  // Sidecar write + best-effort row write-through happen together; the
+  // release effect in createFlowState deletes the entry once the row
+  // confirms the value (see core/selectionOverlay.ts).
+  const writeOverlay = (
+    kind: "nodes" | "edges",
+    row: { id: string; selected?: boolean },
+    value: boolean,
+  ) => {
+    setSelectionOverlay((draft) => {
+      draft[kind][row.id] = value;
+    });
+  };
   const unselectNodesAndEdges = ({
     nodes: _nodes,
     edges,
@@ -68,7 +92,10 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     if (nodesToUnselect.size) {
       setNodesStore((nodes) => {
         for (const node of nodes) {
-          if (nodesToUnselect.has(node.id)) node.selected = false;
+          if (nodesToUnselect.has(node.id)) {
+            writeOverlay("nodes", node, false);
+            node.selected = false;
+          }
         }
         return undefined;
       });
@@ -79,7 +106,10 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     if (edgesToUnselect.size) {
       setEdgesStore((edges) => {
         for (const edge of edges) {
-          if (edgesToUnselect.has(edge.id)) edge.selected = false;
+          if (edgesToUnselect.has(edge.id)) {
+            writeOverlay("edges", edge, false);
+            edge.selected = false;
+          }
         }
         return undefined;
       });
@@ -98,10 +128,13 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
       for (const node of nodes) {
         const nodeWillBeSelected = idSet.has(node.id);
         const selected = isMultiSelection
-          ? node.selected || nodeWillBeSelected
+          ? nodeSelected(node) || nodeWillBeSelected
           : nodeWillBeSelected;
 
-        if (node.selected !== selected) node.selected = selected;
+        if (nodeSelected(node) !== selected) {
+          writeOverlay("nodes", node, selected);
+          node.selected = selected;
+        }
       }
       return undefined;
     });
@@ -123,10 +156,13 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
       for (const edge of edges) {
         const edgeWillBeSelected = idSet.has(edge.id);
         const selected = isMultiSelection
-          ? edge.selected || edgeWillBeSelected
+          ? edgeSelected(edge) || edgeWillBeSelected
           : edgeWillBeSelected;
 
-        if (edge.selected !== selected) edge.selected = selected;
+        if (edgeSelected(edge) !== selected) {
+          writeOverlay("edges", edge, selected);
+          edge.selected = selected;
+        }
       }
       return undefined;
     });
@@ -149,9 +185,9 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     setSelectionRect(undefined);
     setSelectionRectMode(undefined);
 
-    if (!node.selected) {
+    if (!nodeSelected(node)) {
       addSelectedNodes([id]);
-    } else if (unselect || (node.selected && store.multiselectionKeyPressed)) {
+    } else if (unselect || (nodeSelected(node) && store.multiselectionKeyPressed)) {
       unselectNodesAndEdges({ nodes: [node], edges: [] });
 
       requestAnimationFrame(() => nodeRef?.blur());
@@ -171,9 +207,9 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     setSelectionRect(undefined);
     setSelectionRectMode(undefined);
 
-    if (!edge.selected) {
+    if (!edgeSelected(edge)) {
       addSelectedEdges([id]);
-    } else if (edge.selected && store.multiselectionKeyPressed) {
+    } else if (edgeSelected(edge) && store.multiselectionKeyPressed) {
       unselectNodesAndEdges({ nodes: [], edges: [edge] });
     }
   };
@@ -225,6 +261,36 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     updateNodePositions(nodeUpdates);
   };
 
+  // Box-selection application (Pane): wholesale set the selected id sets.
+  // Same overlay-aware write shape as the other commands — a direct row
+  // write here would fight stale overlay entries from the gesture's
+  // initial unselect.
+  const applySelectionSets = (
+    selectedNodeIds: ReadonlySet<string>,
+    selectedEdgeIds: ReadonlySet<string>,
+  ) => {
+    setNodesStore((nodes) => {
+      for (const node of nodes) {
+        const selected = selectedNodeIds.has(node.id);
+        if (nodeSelected(node) !== selected) {
+          writeOverlay("nodes", node, selected);
+          node.selected = selected;
+        }
+      }
+      return undefined;
+    });
+    setEdgesStore((edges) => {
+      for (const edge of edges) {
+        const selected = selectedEdgeIds.has(edge.id);
+        if (edgeSelected(edge) !== selected) {
+          writeOverlay("edges", edge, selected);
+          edge.selected = selected;
+        }
+      }
+      return undefined;
+    });
+  };
+
   return {
     unselectNodesAndEdges,
     addSelectedNodes,
@@ -232,5 +298,6 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     handleNodeSelection,
     handleEdgeSelection,
     moveSelectedNodes,
+    applySelectionSets,
   } as const;
 };

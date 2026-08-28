@@ -54,6 +54,7 @@ const makeSource = (edges: Edge[], nodes: InternalNode[]) => {
   const nodeLookup = new Map(nodes.map((n) => [n.id, n]));
 
   const source: LayoutedEdgesSource<Node, Edge> = {
+    selectionOverlay: {},
     get edges() {
       return edgesStore;
     },
@@ -219,6 +220,7 @@ describe("createLayoutedEdges (core, headless)", () => {
       ["b", internalNode("b", 200, 100)],
     ]);
     const source: LayoutedEdgesSource<Node, Edge> = {
+      selectionOverlay: {},
       get edges() {
         edgesReads++;
         return edgesStore;

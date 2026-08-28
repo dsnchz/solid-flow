@@ -37,7 +37,9 @@ import {
   createProjection,
   createSignal,
   createStore,
+  flush,
   merge,
+  onCleanup,
   snapshot,
   untrack,
 } from "solid-js";
@@ -66,6 +68,7 @@ import { createEdgeLookup } from "./projections/edgeLookup";
 import { createInternalNodes, type NodeMeasurements } from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
+import { joinSelected, overlayEntry, type SelectionOverlay } from "./selectionOverlay";
 import { SpatialGrid } from "./spatial/grid";
 import { createSeededGraphStores } from "./stores/seeding";
 
@@ -176,6 +179,14 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // measurements (two-root architecture).
   const [measurementsStore, setMeasurementsStore] = createStore<NodeMeasurements>({});
 
+  // Selection sidecar (solid#3085 composition): flow-driven selection, keyed
+  // by element id, joined with user rows at read time (core/selectionOverlay).
+  // Selection commands write here first and write through to rows best-effort.
+  const [selectionOverlay, setSelectionOverlay] = createStore<{
+    nodes: SelectionOverlay;
+    edges: SelectionOverlay;
+  }>({ nodes: {}, edges: {} });
+
   // The adoption pass as a projection: user nodes joined with measurements
   // into internal nodes (absolute positions, z ordering, handle bounds).
   // Replaces the ReactiveMap + mapArray adoption pipeline — no write side.
@@ -185,6 +196,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
     get measurements() {
       return measurementsStore;
+    },
+    get selectionOverlay() {
+      return selectionOverlay.nodes;
     },
     get nodeOrigin() {
       return config().nodeOrigin;
@@ -346,8 +360,16 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const mergedEdgeTypes = createMemo(() => ({ ...initialEdgeTypes, ...config().edgeTypes }));
   // B5 (audit): selection views memoized — the getters scanned and allocated
   // per read; consumers now share one array identity per selection change.
-  const selectedNodesView = createMemo(() => nodesStore.filter((node) => node.selected));
-  const selectedEdgesView = createMemo(() => edgesStore.filter((edge) => edge.selected));
+  const selectedNodesView = createMemo(() =>
+    nodesStore.filter((node) =>
+      joinSelected(node.selected, overlayEntry(selectionOverlay.nodes, node.id)),
+    ),
+  );
+  const selectedEdgesView = createMemo(() =>
+    edgesStore.filter((edge) =>
+      joinSelected(edge.selected, overlayEntry(selectionOverlay.edges, edge.id)),
+    ),
+  );
 
   const store = merge({ width: 0, height: 0 }, config, {
     get ariaLabelConfig() {
@@ -539,6 +561,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Edge layout join (core projection): id-keyed record, row identity stable
   // across derive re-runs. Replaces the mapArray layout effect + ReactiveMap.
   const layoutedEdges = createLayoutedEdges<NodeType, EdgeType>({
+    get selectionOverlay() {
+      return selectionOverlay.edges;
+    },
     get edges() {
       return store.edges;
     },
@@ -709,6 +734,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     handleNodeSelection,
     handleEdgeSelection,
     moveSelectedNodes,
+    applySelectionSets,
   } = createSelectionCommands<NodeType, EdgeType>({
     store,
     setNodesStore,
@@ -718,7 +744,64 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     nodeLookup,
     edgeLookup,
     updateNodePositions,
+    selectionOverlay,
+    setSelectionOverlay,
   });
+
+  // Overlay release (confirm-then-release, core/selectionOverlay.ts): delete
+  // an entry once the row STABLY carries the written value — the write-through
+  // landed, so the row (and later user writes) can govern. Confirmation is
+  // re-verified on a macrotask: an optimistic write is briefly visible before
+  // its transaction reverts it, and effects observe that transient — only a
+  // post-settle re-check separates "landed" (plain store) from "reverted"
+  // (optimistic store). Rows that left the graph release immediately.
+  let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(releaseTimer));
+  createEffect(
+    () => {
+      const gone: ["nodes" | "edges", string][] = [];
+      const candidates: ["nodes" | "edges", string][] = [];
+      for (const id in selectionOverlay.nodes) {
+        const row = nodeLookup.get(id)?.internals.userNode;
+        if (!row) gone.push(["nodes", id]);
+        else if (!!row.selected === selectionOverlay.nodes[id]) candidates.push(["nodes", id]);
+      }
+      for (const id in selectionOverlay.edges) {
+        const row = edgeLookup[id];
+        if (!row) gone.push(["edges", id]);
+        else if (!!row.selected === selectionOverlay.edges[id]) candidates.push(["edges", id]);
+      }
+      return { gone, candidates };
+    },
+    ({ gone, candidates }) => {
+      if (gone.length) {
+        setSelectionOverlay((draft) => {
+          for (const [kind, id] of gone) {
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+            delete draft[kind][id];
+          }
+        });
+      }
+      if (!candidates.length) return;
+      clearTimeout(releaseTimer);
+      releaseTimer = setTimeout(() => {
+        const confirmed = candidates.filter(([kind, id]) => {
+          const entry = selectionOverlay[kind][id];
+          if (entry === undefined) return false;
+          const row = kind === "nodes" ? nodeLookup.get(id)?.internals.userNode : edgeLookup[id];
+          return !!row && !!row.selected === entry;
+        });
+        if (!confirmed.length) return;
+        setSelectionOverlay((draft) => {
+          for (const [kind, id] of confirmed) {
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+            delete draft[kind][id];
+          }
+        });
+        flush();
+      }, 0);
+    },
+  );
 
   const panBy = (delta: XYPosition) => {
     return panBySystem({
@@ -1206,6 +1289,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
       unselectNodesAndEdges,
       addSelectedNodes,
+      applySelectionSets,
       addSelectedEdges,
       handleNodeSelection,
       handleEdgeSelection,
