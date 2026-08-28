@@ -10,7 +10,7 @@ import {
   snapPosition,
   type XYPosition,
 } from "@xyflow/system";
-import { flush, type StoreSetter } from "solid-js";
+import { flush, snapshot, type StoreSetter } from "solid-js";
 
 import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
 import { emitFlowError, isEdgeSelectable } from "@/utils";
@@ -124,14 +124,17 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     const isMultiSelection = store.multiselectionKeyPressed;
     const idSet = new Set(ids);
 
+    // Loop fast path: a PLAIN snapshot of the overlay — per-row tracked
+    // absent-key reads on the store cost a signal registration per node
+    // (measured: a ~700ms first drag frame @10k, bench round 12).
+    const nodeOverlay = snapshot(selectionOverlay.nodes);
     setNodesStore((nodes) => {
       for (const node of nodes) {
         const nodeWillBeSelected = idSet.has(node.id);
-        const selected = isMultiSelection
-          ? nodeSelected(node) || nodeWillBeSelected
-          : nodeWillBeSelected;
+        const current = joinSelected(node.selected, nodeOverlay[node.id]);
+        const selected = isMultiSelection ? current || nodeWillBeSelected : nodeWillBeSelected;
 
-        if (nodeSelected(node) !== selected) {
+        if (current !== selected) {
           writeOverlay("nodes", node, selected);
           node.selected = selected;
         }
@@ -152,14 +155,14 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     const isMultiSelection = store.multiselectionKeyPressed;
     const idSet = new Set(ids);
 
+    const edgeOverlay = snapshot(selectionOverlay.edges);
     setEdgesStore((edges) => {
       for (const edge of edges) {
         const edgeWillBeSelected = idSet.has(edge.id);
-        const selected = isMultiSelection
-          ? edgeSelected(edge) || edgeWillBeSelected
-          : edgeWillBeSelected;
+        const current = joinSelected(edge.selected, edgeOverlay[edge.id]);
+        const selected = isMultiSelection ? current || edgeWillBeSelected : edgeWillBeSelected;
 
-        if (edgeSelected(edge) !== selected) {
+        if (current !== selected) {
           writeOverlay("edges", edge, selected);
           edge.selected = selected;
         }
@@ -269,20 +272,22 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     selectedNodeIds: ReadonlySet<string>,
     selectedEdgeIds: ReadonlySet<string>,
   ) => {
+    const nodeOverlay = snapshot(selectionOverlay.nodes);
     setNodesStore((nodes) => {
       for (const node of nodes) {
         const selected = selectedNodeIds.has(node.id);
-        if (nodeSelected(node) !== selected) {
+        if (joinSelected(node.selected, nodeOverlay[node.id]) !== selected) {
           writeOverlay("nodes", node, selected);
           node.selected = selected;
         }
       }
       return undefined;
     });
+    const edgeOverlay = snapshot(selectionOverlay.edges);
     setEdgesStore((edges) => {
       for (const edge of edges) {
         const selected = selectedEdgeIds.has(edge.id);
-        if (edgeSelected(edge) !== selected) {
+        if (joinSelected(edge.selected, edgeOverlay[edge.id]) !== selected) {
           writeOverlay("edges", edge, selected);
           edge.selected = selected;
         }
