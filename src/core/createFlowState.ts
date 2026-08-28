@@ -246,14 +246,21 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     () => [viewportStore.x, viewportStore.y, viewportStore.zoom] as Transform,
   );
 
-  // Mirrors upstream adoptUserNodes semantics: true once every non-hidden node has been measured
+  // Mirrors upstream adoptUserNodes semantics: true once every non-hidden
+  // node has been measured. Reads the measurements root joined with the row
+  // (sidecar composition): the row write-through reverts on optimistic
+  // stores, so initialization must not depend on it. `in` guard: subscribe
+  // even while the key is absent so the first measurement re-runs this.
   const nodesInitialized = createMemo(() => {
     const nodes = nodesStore;
     if (nodes.length === 0) return false;
 
     for (const node of nodes) {
       if (node.hidden) continue;
-      if (node.measured?.width === undefined || node.measured?.height === undefined) {
+      const measurement = node.id in measurementsStore ? measurementsStore[node.id] : undefined;
+      const width = measurement?.measured.width ?? node.measured?.width;
+      const height = measurement?.measured.height ?? node.measured?.height;
+      if (width === undefined || height === undefined) {
         return false;
       }
     }

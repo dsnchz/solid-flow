@@ -203,18 +203,24 @@ describe("createInternalNodes (core, headless)", () => {
     });
   });
 
-  it("lets user-provided dimensions win over measurements", () => {
+  it("user-seeded dimensions cover the pre-measurement window; a DOM measurement supersedes them", () => {
     createRoot((dispose) => {
       const { internalNodes, setMeasurements } = setup([
         makeNode({ id: "a", measured: { width: 500, height: 300 } }),
       ]);
+      // Pre-measurement: the user seed governs (SSR sizing, persisted layout).
+      expect(internalNodes.a!.measured).toEqual({ width: 500, height: 300 });
+
       setMeasurements((draft) => {
         draft.a = { measured: { width: 120, height: 48 } };
         return undefined;
       });
       flush();
 
-      expect(internalNodes.a!.measured).toEqual({ width: 500, height: 300 });
+      // Sidecar composition (solid#3085): the measurements root is
+      // authoritative once a real measurement exists — rendering must not
+      // depend on the row write-through, which reverts on optimistic stores.
+      expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
       dispose();
     });
   });

@@ -168,10 +168,13 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             overlayEntry(source.selectionOverlay, userNode.id),
           );
 
-          // User-provided dimensions win; otherwise the last DOM measurement.
+          // The measurements root is authoritative once a DOM measurement
+          // exists (the row write-through can't be relied on — it reverts on
+          // optimistic stores); the user seed covers the pre-measurement
+          // window (SSR sizing, persisted layouts).
           const measured = {
-            width: userNode.measured?.width ?? measurement?.measured.width,
-            height: userNode.measured?.height ?? measurement?.measured.height,
+            width: measurement?.measured.width ?? userNode.measured?.width,
+            height: measurement?.measured.height ?? userNode.measured?.height,
           };
           const dimensions = getNodeDimensions({
             measured,
