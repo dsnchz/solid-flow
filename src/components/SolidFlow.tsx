@@ -105,6 +105,15 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     },
   );
 
+  // Any viewport change, programmatic included (React Flow onViewportChange
+  // parity) — onMove and friends stay gesture-only.
+  createEffect(
+    () => ({ x: store.viewport.x, y: store.viewport.y, zoom: store.viewport.zoom }),
+    (viewport, prev) => {
+      if (prev) untrack(() => _props.onViewportChange)?.(viewport);
+    },
+  );
+
   createEffect(
     () => selectedElements(),
     (params) => {
@@ -195,6 +204,10 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
           <Pane
             onPaneClick={_props.onPaneClick}
             onPaneContextMenu={_props.onPaneContextMenu}
+            onPaneScroll={_props.onPaneScroll}
+            onPanePointerEnter={_props.onPanePointerEnter}
+            onPanePointerMove={_props.onPanePointerMove}
+            onPanePointerLeave={_props.onPanePointerLeave}
             onSelectionStart={_props.onSelectionStart}
             onSelectionEnd={_props.onSelectionEnd}
             panOnDrag={_props.panOnDrag}
@@ -209,6 +222,8 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
                 onEdgeContextMenu={_props.onEdgeContextMenu}
                 onEdgePointerEnter={_props.onEdgePointerEnter}
                 onEdgePointerLeave={_props.onEdgePointerLeave}
+                onEdgePointerMove={_props.onEdgePointerMove}
+                onEdgeDoubleClick={_props.onEdgeDoubleClick}
               />
               <div class="solid-flow__container solid-flow__edge-labels" />
               <ConnectionLine<NodeType>
@@ -220,6 +235,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
               <NodeRenderer
                 nodeClickDistance={_props.nodeClickDistance}
                 onNodeClick={_props.onNodeClick}
+                onNodeDoubleClick={_props.onNodeDoubleClick}
                 onNodeContextMenu={_props.onNodeContextMenu}
                 onNodePointerEnter={_props.onNodePointerEnter}
                 onNodePointerMove={_props.onNodePointerMove}

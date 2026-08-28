@@ -1,7 +1,8 @@
+import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
 import { Dynamic } from "@solidjs/web";
 import { elementSelectionKeys, errorMessages, getMarkerId } from "@xyflow/system";
-import { createEffect, createMemo, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, Show } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
@@ -19,6 +20,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   props: EdgeWrapperProps<EdgeType>,
 ): JSX.Element => {
   let edgeRef!: SVGGElement;
+  const [edgeEl, setEdgeEl] = createSignal<SVGGElement>();
   const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
 
   const edgeId = () => props.edgeId;
@@ -63,6 +65,13 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
     props.onEdgePointerEnter?.({ edge: edge(), event });
   const onPointerLeave = (event: PointerEvent) =>
     props.onEdgePointerLeave?.({ edge: edge(), event });
+  const onPointerMove = (event: PointerEvent) => props.onEdgePointerMove?.({ edge: edge(), event });
+  // The native compiler's delegated `dblclick` never fires (and `on:` is not
+  // implemented in the AST-native milestone), so attach directly. The target
+  // must be a SIGNAL: the <g> mounts after layout, later than this effect's
+  // first run, and a plain ref never re-triggers the attach.
+  const onDblClick = (event: MouseEvent) => props.onEdgeDoubleClick?.({ edge: edge(), event });
+  createEventListener(edgeEl, "dblclick", onDblClick);
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (store.disableKeyboardA11y || !elementSelectionKeys.includes(event.key) || !selectable()) {
@@ -97,7 +106,10 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
           }}
         >
           <g
-            ref={edgeRef}
+            ref={(el) => {
+              edgeRef = el;
+              setEdgeEl(el);
+            }}
             data-id={edge().id}
             tabindex={focusable() ? 0 : undefined}
             role={edge().ariaRole ?? (focusable() ? "group" : "img")}
@@ -119,6 +131,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
             onContextMenu={onContextMenu}
             onPointerEnter={onPointerEnter}
             onPointerLeave={onPointerLeave}
+            onPointerMove={onPointerMove}
             {...edge().domAttributes}
           >
             <Dynamic

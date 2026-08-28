@@ -27,6 +27,7 @@ const EXAMPLES = [
   "NodeResizer",
   "NodeToolbar",
   "Overview",
+  "Persistence",
   "QuickStart",
   "Remount",
   "Reset",

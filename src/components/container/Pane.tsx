@@ -390,6 +390,9 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
         container = el;
         setContainerRef(el);
       }}
+      onWheel={(event) => props.onPaneScroll?.({ event })}
+      onPointerEnter={(event) => props.onPanePointerEnter?.({ event })}
+      onPointerLeave={(event) => props.onPanePointerLeave?.({ event })}
       class={[
         "solid-flow__container solid-flow__pane",
         {
@@ -401,7 +404,10 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
         },
       ]}
       onClick={(e) => (isSelectionEnabled() ? undefined : onClick(e))}
-      onPointerMove={(e) => (isSelectionEnabled() ? onPointerMove(e) : undefined)}
+      onPointerMove={(e) => {
+        props.onPanePointerMove?.({ event: e });
+        if (isSelectionEnabled()) onPointerMove(e);
+      }}
       onPointerUp={onPointerUp}
       onPointerCancel={(e) => (isSelectionEnabled() ? onPointerCancel(e) : undefined)}
       onContextMenu={onContextMenu}

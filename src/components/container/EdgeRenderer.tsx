@@ -42,6 +42,8 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
               <EdgeWrapper<NodeType, EdgeType>
                 edgeId={edgeId}
                 onEdgeClick={props.onEdgeClick}
+                onEdgeDoubleClick={props.onEdgeDoubleClick}
+                onEdgePointerMove={props.onEdgePointerMove}
                 onEdgeContextMenu={props.onEdgeContextMenu}
                 onEdgePointerEnter={props.onEdgePointerEnter}
                 onEdgePointerLeave={props.onEdgePointerLeave}

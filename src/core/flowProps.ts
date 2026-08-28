@@ -517,6 +517,12 @@ export type SolidFlowProps<
     /** This event handler is called when the user stops panning or zooming the viewport */
     readonly onMoveEnd?: OnMoveEnd;
     /**
+     * This event handler is called on every viewport change, gesture or
+     * programmatic (setViewport, fitView) — React Flow onViewportChange
+     * parity.
+     */
+    readonly onViewportChange?: (viewport: Viewport) => void;
+    /**
      * Ocassionally something may happen that causes Solid Flow to throw an error.
      * Instead of exploding your application, we log a message to the console and then call this event handler.
      * You might use it for additional logging or to show a message to the user.
@@ -645,8 +651,10 @@ export const FLOW_PROP_KEYS = [
   "onDelete",
   "onEdgeClick",
   "onEdgeContextMenu",
+  "onEdgeDoubleClick",
   "onEdgePointerEnter",
   "onEdgePointerLeave",
+  "onEdgePointerMove",
   "onEdgesDelete",
   "onFlowError",
   "onInit",
@@ -655,6 +663,7 @@ export const FLOW_PROP_KEYS = [
   "onMoveStart",
   "onNodeClick",
   "onNodeContextMenu",
+  "onNodeDoubleClick",
   "onNodeDrag",
   "onNodeDragStart",
   "onNodeDragStop",
@@ -664,6 +673,10 @@ export const FLOW_PROP_KEYS = [
   "onNodesDelete",
   "onPaneClick",
   "onPaneContextMenu",
+  "onPanePointerEnter",
+  "onPanePointerLeave",
+  "onPanePointerMove",
+  "onPaneScroll",
   "onReconnect",
   "onReconnectEnd",
   "onReconnectStart",
@@ -675,6 +688,7 @@ export const FLOW_PROP_KEYS = [
   "onSelectionDragStop",
   "onSelectionEnd",
   "onSelectionStart",
+  "onViewportChange",
   "onlyRenderVisibleElements",
   "panActivationKey",
   "panOnDrag",

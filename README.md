@@ -178,6 +178,27 @@ export const Flow = () => {
 
 Where the boundary goes is your design decision (SolidJS 2.0: "fetch high, block low") — one `<Loading>` can cover the flow together with its toolbar and sidebar, or sit tight around the flow alone. Without any boundary the flow renders immediately (canvas, controls, background) and the graph pops in when the data arrives — there is deliberately no `fallback` prop. See the AsyncData playground example for the full version (including connection adoption after the async seed).
 
+## Persisting your graph to a server
+
+A graph edit session is a transaction of many mutations — drags, connections, deletions — with a commit point, not a stream of independent server writes. Solid Flow's architecture maps to that directly: keep server truth in an async-seeded store _outside_ the flow, seed the flow once from it via `defaultNodes`/`defaultEdges` (an uncontrolled flow owns its draft — commands and completed connections write membership directly), and batch-commit the whole draft with `toObject()` inside one action:
+
+```tsx
+import { action, createStore, refresh } from "solid-js";
+import { Loading } from "@solidjs/web";
+
+const [serverGraph] = createStore(() => api.loadGraph(), { nodes: [], edges: [] });
+
+// inside the flow (via useSolidFlow):
+const save = action(function* () {
+  yield api.saveGraph(commands.toObject());
+  refresh(serverGraph);
+});
+```
+
+The pieces reinforce each other: the flow already _shows_ the draft, so no optimistic bookkeeping is needed; the action's pending window drives a "Saving…" affordance; a failed save leaves the draft intact for retry (the flow's store is not a speculative overlay — nothing reverts); and the `refresh` reconcile can't clobber in-progress edits because defaults are initial-only by contract. Works equally with a debounced autosave calling the same action. See the Persistence playground example for the full version with save status and failure handling.
+
+Note: passing a `createOptimisticStore` as the flow's `nodes`/`edges` is **not** supported — flow-internal writes (selection, drag) would land on the optimistic overlay outside any action and revert immediately. Optimistic stores model server truth plus in-flight predictions; the flow's draft state belongs to the flow. Use the draft-then-commit pattern above instead.
+
 ## The flow API
 
 `useSolidFlow()` returns `{ flow, commands }` (with `commands` also spread at the top level for React/Svelte Flow familiarity). Both are stable identities — destructuring is safe.

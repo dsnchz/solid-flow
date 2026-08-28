@@ -35,6 +35,8 @@ export type NodeEvents<NodeType extends Node = Node> = {
   onNodeClick?: NodeEventWithPointer<MouseEvent | TouchEvent, NodeType>;
   /** This event handler is called when a user right-clicks on a node. */
   onNodeContextMenu?: NodeEventWithPointer<MouseEvent, NodeType>;
+  /** This event handler is called when a user double-clicks on a node. */
+  onNodeDoubleClick?: NodeEventWithPointer<MouseEvent, NodeType>;
   /** This event handler is called when a user drags a node. */
   onNodeDrag?: NodeTargetEventWithPointer<MouseEvent | TouchEvent, NodeType>;
   /** This event handler is called when a user starts to drag a node. */
@@ -63,6 +65,14 @@ export type PaneEvents = {
   onPaneClick?: ({ event }: { event: MouseEvent }) => void;
   /** This event handler is called when a user right-clicks the pane. */
   onPaneContextMenu?: ({ event }: { event: PointerEvent }) => void;
+  /** This event handler is called when a user scrolls the pane. */
+  onPaneScroll?: ({ event }: { event: WheelEvent }) => void;
+  /** This event handler is called when the pointer of a user enters the pane. */
+  onPanePointerEnter?: ({ event }: { event: PointerEvent }) => void;
+  /** This event handler is called when the pointer of a user moves over the pane. */
+  onPanePointerMove?: ({ event }: { event: PointerEvent }) => void;
+  /** This event handler is called when the pointer of a user leaves the pane. */
+  onPanePointerLeave?: ({ event }: { event: PointerEvent }) => void;
 };
 
 /** Edge pointer event handlers. */
@@ -71,10 +81,14 @@ export type EdgeEvents<EdgeType extends Edge = Edge> = {
   onEdgeClick?: ({ edge, event }: { edge: EdgeType; event: MouseEvent }) => void;
   /** This event handler is called when a user right-clicks an edge. */
   onEdgeContextMenu?: ({ edge, event }: { edge: EdgeType; event: PointerEvent }) => void;
+  /** This event handler is called when a user double-clicks an edge. */
+  onEdgeDoubleClick?: ({ edge, event }: { edge: EdgeType; event: MouseEvent }) => void;
   /** This event handler is called when the pointer of a user enters an edge. */
   onEdgePointerEnter?: ({ edge, event }: { edge: EdgeType; event: PointerEvent }) => void;
-  /** This event handler is called when the pointer of a user enters an edge. */
+  /** This event handler is called when the pointer of a user leaves an edge. */
   onEdgePointerLeave?: ({ edge, event }: { edge: EdgeType; event: PointerEvent }) => void;
+  /** This event handler is called when the pointer of a user moves over an edge. */
+  onEdgePointerMove?: ({ edge, event }: { edge: EdgeType; event: PointerEvent }) => void;
 };
 
 /** Handlers fired after node/edge deletions. */

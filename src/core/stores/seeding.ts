@@ -1,4 +1,4 @@
-import { createEffect, createStore } from "solid-js";
+import { createEffect, createStore, isPending, untrack } from "solid-js";
 
 import type { Edge, Node } from "@/types";
 
@@ -53,17 +53,34 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
     );
   }
 
+  // Defaults may come from an async-seeded store ("seed the flow from server
+  // truth"). Component setup is untracked, so reading pending rows here is a
+  // hard error — probe with isPending (the contract-blessed non-reading
+  // check) and hand a pending seed to the one-shot adoption effect below,
+  // whose tracked compute holds on NotReadyError and adopts on settle.
+  // Even the prop GETTER is a pending read when the default comes from an
+  // async store, so every access — including undefined-checks — must happen
+  // inside isPending's accessor (absent prop -> accessor returns undefined
+  // -> not pending) or behind a short-circuit that skips it while pending.
+  const nodeDefaultsPending =
+    props.nodes === undefined && isPending(() => props.defaultNodes?.length);
+  const edgeDefaultsPending =
+    props.edges === undefined && isPending(() => props.defaultEdges?.length);
+
   const [nodesStore, setNodesStore] = createStore<NodeType[]>(
-    (props.nodes ?? [...(props.defaultNodes ?? [])]) as NodeType[],
+    (props.nodes ?? (nodeDefaultsPending ? [] : [...(props.defaultNodes ?? [])])) as NodeType[],
   );
   const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(
-    (props.edges ?? [...(props.defaultEdges ?? [])]) as EdgeType[],
+    (props.edges ?? (edgeDefaultsPending ? [] : [...(props.defaultEdges ?? [])])) as EdgeType[],
   );
 
   // Whether each axis has consumed its one-time seed (from either prop).
-  // Only a provider-created flow can still adopt later, via setConfig.
-  let nodeSeedAdopted = props.nodes !== undefined || props.defaultNodes !== undefined;
-  let edgeSeedAdopted = props.edges !== undefined || props.defaultEdges !== undefined;
+  // A provider-created flow (via setConfig) or a pending async default can
+  // still adopt later, through the one-shot adoption effect.
+  let nodeSeedAdopted =
+    props.nodes !== undefined || (!nodeDefaultsPending && props.defaultNodes !== undefined);
+  let edgeSeedAdopted =
+    props.edges !== undefined || (!edgeDefaultsPending && props.defaultEdges !== undefined);
 
   // An undefined axis is uncontrolled (or a provider flow not yet adopted):
   // never re-seed it — defaults are initial-only by contract, and a re-seed
@@ -100,23 +117,37 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
     { defer: true },
   );
 
-  // One-shot late adoption of DEFAULTS for provider-created flows: the
-  // provider seeded this store before the inner SolidFlow's props existed,
-  // so its defaultNodes/defaultEdges arrive via setConfig. Each axis adopts
-  // at most once, and never over a controlled axis.
+  // One-shot late adoption of DEFAULTS, one effect per axis. Two callers:
+  // provider-created flows (defaults arrive via setConfig after the provider
+  // seeded the store) and async defaults (pending at setup — the compute's
+  // read throws NotReadyError, the effect holds, and adoption happens on
+  // settle). Not deferred: a pending-at-mount default needs its initial run.
+  // Each axis adopts at most once, and never over a controlled axis.
   createEffect(
-    () => ({ nodes: config().defaultNodes, edges: config().defaultEdges }),
-    ({ nodes: defaultNodes, edges: defaultEdges }) => {
-      if (defaultNodes && !nodeSeedAdopted && config().nodes === undefined) {
+    () => {
+      const defaultNodes = config().defaultNodes;
+      // Copy in the COMPUTE: row reads must happen in a tracking scope (the
+      // body is untracked, and a pending source must throw HERE to hold).
+      return defaultNodes ? ([...defaultNodes] as NodeType[]) : undefined;
+    },
+    (seed) => {
+      if (seed && !nodeSeedAdopted && untrack(() => config().nodes) === undefined) {
         nodeSeedAdopted = true;
-        setNodesStore(() => [...defaultNodes] as NodeType[]);
-      }
-      if (defaultEdges && !edgeSeedAdopted && config().edges === undefined) {
-        edgeSeedAdopted = true;
-        setEdgesStore(() => [...defaultEdges] as EdgeType[]);
+        setNodesStore(() => seed);
       }
     },
-    { defer: true },
+  );
+  createEffect(
+    () => {
+      const defaultEdges = config().defaultEdges;
+      return defaultEdges ? ([...defaultEdges] as EdgeType[]) : undefined;
+    },
+    (seed) => {
+      if (seed && !edgeSeedAdopted && untrack(() => config().edges) === undefined) {
+        edgeSeedAdopted = true;
+        setEdgesStore(() => seed);
+      }
+    },
   );
 
   return { nodesStore, setNodesStore, edgesStore, setEdgesStore } as const;

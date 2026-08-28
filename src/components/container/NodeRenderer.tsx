@@ -74,6 +74,7 @@ export const NodeRenderer = <NodeType extends Node = Node>(
                 resizeObserver={resizeObserver}
                 nodeClickDistance={props.nodeClickDistance}
                 onNodeClick={props.onNodeClick}
+                onNodeDoubleClick={props.onNodeDoubleClick}
                 onNodePointerEnter={props.onNodePointerEnter}
                 onNodePointerMove={props.onNodePointerMove}
                 onNodePointerLeave={props.onNodePointerLeave}

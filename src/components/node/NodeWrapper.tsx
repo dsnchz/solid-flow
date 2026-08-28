@@ -1,3 +1,4 @@
+import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
 import { Dynamic } from "@solidjs/web";
 import {
@@ -34,6 +35,12 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
   const node = () => nodeLookup.get(props.nodeId)!;
+
+  // The native compiler's delegated `dblclick` never fires (and `on:` is not
+  // implemented in the AST-native milestone), so attach directly.
+  createEventListener(nodeRef, "dblclick", (event) =>
+    props.onNodeDoubleClick?.({ node: userNode(), event }),
+  );
 
   // The shared observer outlives this wrapper — without unobserve on dispose
   // it pins the detached element in the observer's target list.
