@@ -67,8 +67,11 @@ export const NodeRenderer = <NodeType extends Node = Node>(
             return !!node && isNodeCulled(node, store.cullingViewport);
           });
 
+          // Membership now comes from the user-facing store; the projection
+          // row materializes in the same flush, but guard the window (and
+          // any future null-row semantics) rather than crash NodeWrapper.
           return (
-            <Show when={!unmounted()}>
+            <Show when={!unmounted() && nodeLookup.get(nodeId) !== undefined}>
               <NodeWrapper
                 nodeId={nodeId}
                 resizeObserver={resizeObserver}

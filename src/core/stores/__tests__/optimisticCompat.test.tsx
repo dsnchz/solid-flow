@@ -3,6 +3,7 @@ import { action, createOptimisticStore, refresh } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
+import { useInternalSolidFlow } from "@/contexts";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
 
@@ -17,33 +18,17 @@ const makeNode = (id: string, x: number): Node => ({
 });
 
 /**
- * ASPIRATIONAL — currently red, skipped. Spike findings (2026-08-27, spikes
- * p32/26-27 + this file's history):
- *
- * `createOptimisticStore` as the `nodes` prop is silently incompatible today.
- * Controlled seeding WRAPS the user's store (write-through is the controlled
- * contract), so every flow-internal write (selection, drag, addNodes) becomes
- * an optimistic-overlay write outside any action — which reverts immediately,
- * on every build. All flow commands go inert; no error, nothing renders.
- *
- * Copy-seeding instead doesn't work either: the seeding effect tracks
- * structurally (length + slot identity), so the part-2 canonical in-place row
- * mutation (`setNodes(d => { d[i].completed = v })`) never fires it — the
- * flow would miss user updates.
- *
- * The viable shape is a fine-grained per-row mirror (projection-pattern) for
- * flow-internal state layered over the user's optimistic store, entered
- * through tagged createOptimisticNodeStore/createOptimisticEdgeStore
- * factories (raw optimistic stores are undetectable). Un-skip when built.
- *
- * UPDATE (2026-08-28, after Ryan's #3085 answer): the mirror is dead and the
- * factories are unnecessary — the blessed shape is a keyed SIDECAR joined at
- * read time (no membership mirror, no detection). SELECTION landed first
- * (selectionSidecar.test.tsx, core/selectionOverlay.ts). This suite remains
- * the acceptance bar for the remaining slices: membership rendered from the
- * user's store (tests 1-2) and drag-position/addNodes behavior (tests 3-4).
+ * ACCEPTANCE SUITE for createOptimisticStore compat — GREEN since 2026-08-28.
+ * The composition (from Ryan's solid#3085 answer) is keyed sidecars joined
+ * at read time, with best-effort write-through for plain-store parity:
+ * selection (core/selectionOverlay.ts), drag positions (core/dragOverlay.ts),
+ * measurements (measurements root authoritative), and membership rendered
+ * from the user-facing store (visibleNode/EdgeIds — a derived record's
+ * enumeration does not surface optimistic membership mid-action; direct row
+ * reads pierce). See also the per-slice suites: selectionSidecar,
+ * dragSidecar, measuredSidecar.
  */
-describe.skip("createOptimisticStore compat", () => {
+describe("createOptimisticStore compat", () => {
   const setup = async (server: { rows: Node[] }) => {
     const api = {
       list: async () => server.rows.map((r) => ({ ...r })),
@@ -54,8 +39,10 @@ describe.skip("createOptimisticStore compat", () => {
     const [nodes, setNodes] = createOptimisticStore<Node[]>(() => api.list(), []);
 
     let flowApi!: ReturnType<typeof useSolidFlow>;
+    let internal!: ReturnType<typeof useInternalSolidFlow>;
     const Probe = () => {
       flowApi = useSolidFlow();
+      internal = useInternalSolidFlow();
       return null;
     };
     const { container } = render(() => (
@@ -68,7 +55,7 @@ describe.skip("createOptimisticStore compat", () => {
     const inDom = (id: string) =>
       container.querySelector(`.solid-flow__node[data-id="${id}"]`) !== null;
 
-    return { api, nodes, setNodes, flowApi, container, inDom };
+    return { api, nodes, setNodes, flowApi, internal: () => internal, container, inDom };
   };
 
   it("optimistic add appears immediately and survives a confirming refresh", async () => {
@@ -127,11 +114,15 @@ describe.skip("createOptimisticStore compat", () => {
 
   it("flow-internal state (selection, moved position) survives a confirming refresh", async () => {
     const server = { rows: [makeNode("a", 0), makeNode("c", 400)] };
-    const { api, nodes, setNodes, flowApi, container, inDom } = await setup(server);
+    const { api, nodes, setNodes, flowApi, internal, container, inDom } = await setup(server);
 
-    // Internal writes on an UNRELATED node while an action is in flight:
-    // select "c" and move it (drag-equivalent write through the flow api).
-    flowApi.updateNode("c", { position: { x: 999, y: 50 } });
+    // Flow-internal writes on an UNRELATED node while an action is in
+    // flight: select via the flow api (sidecar-routed) and move via the
+    // drag seam (the flow-internal position path).
+    internal().actions.updateNodePositions(
+      new Map([["c", { position: { x: 999, y: 50 } }]]),
+      false,
+    );
     flowApi.updateNode("c", { selected: true });
     await tick();
     expect(container.querySelector('.solid-flow__node[data-id="c"].selected')).not.toBeNull();
@@ -152,8 +143,13 @@ describe.skip("createOptimisticStore compat", () => {
     expect(inDom("b")).toBe(true);
 
     // The reconcile must not clobber flow-owned state on untouched rows.
-    const c = flowApi.flow.nodes.find((n) => n.id === "c")!;
-    expect(c.position).toEqual({ x: 999, y: 50 });
+    // Dragged position lives in the sidecar (joined into the projection);
+    // the raw row correctly reverted to server truth.
+    const c = internal().nodeLookup.get("c")!;
+    expect({ x: c.internals.positionAbsolute.x, y: c.internals.positionAbsolute.y }).toEqual({
+      x: 999,
+      y: 50,
+    });
     expect(container.querySelector('.solid-flow__node[data-id="c"].selected')).not.toBeNull();
   });
 

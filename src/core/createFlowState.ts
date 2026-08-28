@@ -550,7 +550,12 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Always the FULL id list: the CSS tier hides elements without changing
   // membership, and the opt-in unmount tier gates per row INSIDE the
   // renderer's <For> (a Show around each wrapper) so this list stays stable.
-  const visibleNodeIds = createMemo(() => Object.keys(internalNodes));
+  // Membership from the seeded (user-facing) store, NOT the projection
+  // record: a derived record's ENUMERATION does not surface an optimistic
+  // membership edit mid-action, while direct row reads pierce the overlay
+  // (#3085; spike 30). Renderers guard per-row against not-yet-materialized
+  // projection rows.
+  const visibleNodeIds = createMemo(() => nodesStore.map((node) => node.id));
 
   // Which nodes currently have children (reactive "is parent" answers)
   const parentIds = createParentIds<NodeType>({
@@ -600,12 +605,16 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     nodeLookup,
   });
 
-  const visibleEdgeIds = createMemo(() => Object.keys(layoutedEdges));
+  // Same membership-vs-layout split as visibleNodeIds; unlayouted edges are
+  // filtered by the renderer's per-row guard (their layouted row is null).
+  const visibleEdgeIds = createMemo(() => edgesStore.map((edge) => edge.id));
 
   // Named for what it returns: the LAYOUTED row (geometry joined in).
   // Raw user edges live in `edgeLookup` — near-identical names once made
   // this a shape trap (audit D2).
-  const getLayoutedEdge = (id: string) => layoutedEdges[id];
+  // `in` guard: subscribe even while the key is absent, so a caller waiting
+  // on an edge's layout (the renderer's mount guard) re-runs when it lands.
+  const getLayoutedEdge = (id: string) => (id in layoutedEdges ? layoutedEdges[id] : undefined);
 
   /**********************************************************************************/
   /*                                                                                */
@@ -1039,6 +1048,14 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
       const node = nodes[index]!;
       const nextNode = typeof nodeUpdate === "function" ? nodeUpdate(node) : nodeUpdate;
+      // `selected` is flow state, not user data: route it through the
+      // selection sidecar too, so updateNode-driven selection composes over
+      // optimistic stores exactly like gesture-driven selection.
+      if (nextNode.selected !== undefined) {
+        setSelectionOverlay((draft) => {
+          draft.nodes[id] = !!nextNode.selected;
+        });
+      }
       nodes[index] =
         options?.replace && isNode<NodeType>(nextNode) ? nextNode : { ...node, ...nextNode };
       return undefined;

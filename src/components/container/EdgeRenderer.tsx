@@ -37,8 +37,10 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
             return !!edge && isEdgeCulled(edge, store.cullingViewport);
           });
 
+          // Membership comes from the user-facing edges store; an edge whose
+          // endpoints are not layouted yet has a null row — do not mount it.
           return (
-            <Show when={!unmounted()}>
+            <Show when={!unmounted() && actions.getLayoutedEdge(edgeId) != null}>
               <EdgeWrapper<NodeType, EdgeType>
                 edgeId={edgeId}
                 onEdgeClick={props.onEdgeClick}
