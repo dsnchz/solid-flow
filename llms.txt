@@ -37,6 +37,11 @@ Async creation (load from a server) — pass a function instead of an array:
 const [nodes] = createNodeStore(async () => (await fetch("/api/nodes")).json());
 // Reads are not-ready until the data lands; optionally wrap the flow:
 <Loading fallback={<Spinner />}>...</Loading> // from @solidjs/web
+
+// LIVE graphs: an async generator streams updates (pair with live()):
+const [liveNodes] = createNodeStore(async function* () {
+  for await (const state of graphStream()) yield state.nodes;
+});
 ```
 
 ## Custom node types (type-safe data)

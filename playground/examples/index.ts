@@ -17,6 +17,7 @@ export { Intersections } from "./intersections/page";
 export { MovingHandles } from "./moving-handles/page";
 export { NodeResizer } from "./node-resizer/page";
 export { NodeToolbar } from "./node-toolbar/page";
+export { LiveFlow } from "./liveflow/page";
 export { Overview } from "./overview/page";
 export { Persistence } from "./persistence/page";
 export { QuickStart } from "./quick-start/page";

@@ -22,6 +22,7 @@ const EXAMPLES = [
   "HandleConnect",
   "Interaction",
   "InteractiveMinimap",
+  "LiveFlow",
   "Intersections",
   "MovingHandles",
   "NodeResizer",

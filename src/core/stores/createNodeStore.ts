@@ -118,11 +118,19 @@ type NodesInput<TUserNodeTypes extends NodeTypes> = SolidFlowNode<TUserNodeTypes
  * `<Loading fallback>`), and the graph retries them when the data lands.
  * Afterwards the store is an ordinary writable store — draft writes and
  * wholesale replacement work exactly like the array form.
+ *
+ * An async GENERATOR works the same way ("a value that keeps arriving"):
+ * `createNodeStore(async function* () { for await (const g of stream) yield g.nodes; })`
+ * is unsettled until the first yield, then every yield updates the store —
+ * the natural source for server-pushed / collaborative graphs (pair with a
+ * `live()` server function).
  */
 export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string, never>>(
   nodes:
     | NoInfer<NodesInput<TUserNodeTypes>>[]
-    | (() => Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>),
+    | (() =>
+        | Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>
+        | AsyncIterable<NoInfer<NodesInput<TUserNodeTypes>>[]>),
 ): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>] => {
   const [store, setStore] =
     typeof nodes === "function"

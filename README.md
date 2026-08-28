@@ -180,6 +180,24 @@ export const Flow = () => {
 
 Where the boundary goes is your design decision (SolidJS 2.0: "fetch high, block low") — one `<Loading>` can cover the flow together with its toolbar and sidebar, or sit tight around the flow alone. Without any boundary the flow renders immediately (canvas, controls, background) and the graph pops in when the data arrives — there is deliberately no `fallback` prop. See the AsyncData playground example for the full version (including connection adoption after the async seed).
 
+### Live flows (server-pushed graphs)
+
+The async seed can also be an async **generator** — "a value that keeps arriving". The store is unsettled until the first yield, then every yield updates the graph with fine-grained reconciliation. Paired with a `live()` server function, that is a collaborative, server-pushed flow in a handful of lines:
+
+```tsx
+import { live } from "@solidjs/web/server-functions";
+
+const graphStream = live(async function* () {
+  "use server";
+  for await (const state of subscribeToGraph()) yield state.nodes;
+});
+
+const [nodes] = createNodeStore(() => graphStream());
+<SolidFlow nodes={nodes} edges={edges} fitView />;
+```
+
+Membership changes, node moves, and removals all stream through — see the LiveFlow playground example for a self-contained version with a simulated server.
+
 ## Persisting your graph to a server
 
 A graph edit session is a transaction of many mutations — drags, connections, deletions — with a commit point, not a stream of independent server writes. Solid Flow's architecture maps to that directly: keep server truth in an async-seeded store _outside_ the flow, seed the flow once from it via `defaultNodes`/`defaultEdges` (an uncontrolled flow owns its draft — commands and completed connections write membership directly), and batch-commit the whole draft with `toObject()` inside one action:

@@ -123,7 +123,9 @@ type EdgesInput<TUserEdgeTypes extends EdgeTypes> = SolidFlowEdge<TUserEdgeTypes
 export const createEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
   edges:
     | NoInfer<EdgesInput<TUserEdgeTypes>>[]
-    | (() => Promise<NoInfer<EdgesInput<TUserEdgeTypes>>[]>),
+    | (() =>
+        | Promise<NoInfer<EdgesInput<TUserEdgeTypes>>[]>
+        | AsyncIterable<NoInfer<EdgesInput<TUserEdgeTypes>>[]>),
 ): readonly [Store<EdgesInput<TUserEdgeTypes>[]>, StoreSetter<EdgesInput<TUserEdgeTypes>[]>] => {
   const [store, setStore] =
     typeof edges === "function"
