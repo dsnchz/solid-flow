@@ -20,6 +20,8 @@ export type DragOverlayEntry = {
   readonly position: XYPosition;
   readonly dragging: boolean;
   readonly rowBefore: XYPosition;
+  /** Row proxy captured at write time — see SelectionOverlayEntry.row. */
+  readonly row: { readonly position: XYPosition };
 };
 
 export type DragOverlay = Record<string, DragOverlayEntry>;

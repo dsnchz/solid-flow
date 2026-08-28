@@ -83,7 +83,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     value: boolean,
   ) => {
     setSelectionOverlay((draft) => {
-      draft[kind][row.id] = value;
+      draft[kind][row.id] = { value, row };
     });
   };
   const unselectNodesAndEdges = ({

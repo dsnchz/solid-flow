@@ -708,17 +708,22 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     // rowBefore is captured from the row's PRE-write value on the gesture's
     // first frame and carried through subsequent frames.
     setNodesStore((nodes) => {
-      const writes: { id: string; position: XYPosition; rowBefore: XYPosition }[] = [];
+      const writes: {
+        id: string;
+        position: XYPosition;
+        rowBefore: XYPosition;
+        row: NodeType;
+      }[] = [];
       for (const node of nodes) {
         if (!nodeDragItems.has(node.id)) continue;
         const position = nodeDragItems.get(node.id)!.position;
-        writes.push({ id: node.id, position, rowBefore: { ...node.position } });
+        writes.push({ id: node.id, position, rowBefore: { ...node.position }, row: node });
         node.dragging = dragging;
         node.position = position;
       }
       setDragOverlay((draft) => {
-        for (const { id, position, rowBefore } of writes) {
-          draft[id] = { position, dragging, rowBefore: draft[id]?.rowBefore ?? rowBefore };
+        for (const { id, position, rowBefore, row } of writes) {
+          draft[id] = { position, dragging, rowBefore: draft[id]?.rowBefore ?? rowBefore, row };
         }
       });
       return undefined;
@@ -803,90 +808,87 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // re-verified on a macrotask: an optimistic write is briefly visible before
   // its transaction reverts it, and effects observe that transient — only a
   // post-settle re-check separates "landed" (plain store) from "reverted"
-  // (optimistic store). Rows that left the graph release immediately.
+  // (optimistic store).
+  //
+  // The compute reads rows through the proxies CAPTURED IN THE ENTRIES —
+  // never through nodeLookup/edgeLookup: pulling a derived keyed record
+  // inside the write flush triggered an O(sources) marking wave (~130ms
+  // @10k, the residual of bench round 12b). Entries for rows that left the
+  // graph are swept in the deferred timer (off-frame), where record pulls
+  // are harmless.
   let releaseTimer: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => clearTimeout(releaseTimer));
   createEffect(
     () => {
-      const gone: ["nodes" | "edges", string][] = [];
       const candidates: ["nodes" | "edges", string][] = [];
       for (const id in selectionOverlay.nodes) {
-        const row = nodeLookup.get(id)?.internals.userNode;
-        if (!row) gone.push(["nodes", id]);
-        else if (!!row.selected === selectionOverlay.nodes[id]) candidates.push(["nodes", id]);
+        const entry = selectionOverlay.nodes[id]!;
+        if (!!entry.row.selected === entry.value) candidates.push(["nodes", id]);
       }
       for (const id in selectionOverlay.edges) {
-        const row = edgeLookup[id];
-        if (!row) gone.push(["edges", id]);
-        else if (!!row.selected === selectionOverlay.edges[id]) candidates.push(["edges", id]);
+        const entry = selectionOverlay.edges[id]!;
+        if (!!entry.row.selected === entry.value) candidates.push(["edges", id]);
       }
-      const dragGone: string[] = [];
       const dragCandidates: string[] = [];
       for (const id in dragOverlay) {
         const entry = dragOverlay[id]!;
-        const row = nodeLookup.get(id)?.internals.userNode;
-        if (!row) dragGone.push(id);
-        else if (
+        if (
           !entry.dragging &&
-          row.position.x === entry.position.x &&
-          row.position.y === entry.position.y
+          entry.row.position.x === entry.position.x &&
+          entry.row.position.y === entry.position.y
         ) {
           dragCandidates.push(id);
         }
       }
-      return { gone, candidates, dragGone, dragCandidates };
+      return { candidates, dragCandidates };
     },
-    ({ gone, candidates, dragGone, dragCandidates }) => {
-      if (gone.length) {
-        setSelectionOverlay((draft) => {
-          for (const [kind, id] of gone) {
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete draft[kind][id];
-          }
-        });
-      }
-      if (dragGone.length) {
-        setDragOverlay((draft) => {
-          for (const id of dragGone) {
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete draft[id];
-          }
-        });
-      }
+    ({ candidates, dragCandidates }) => {
       if (!candidates.length && !dragCandidates.length) return;
       clearTimeout(releaseTimer);
       releaseTimer = setTimeout(() => {
         const confirmed = candidates.filter(([kind, id]) => {
           const entry = selectionOverlay[kind][id];
-          if (entry === undefined) return false;
-          const row = kind === "nodes" ? nodeLookup.get(id)?.internals.userNode : edgeLookup[id];
-          return !!row && !!row.selected === entry;
+          return entry !== undefined && !!entry.row.selected === entry.value;
         });
         const dragConfirmed = dragCandidates.filter((id) => {
           const entry = dragOverlay[id];
-          if (entry === undefined || entry.dragging) return false;
-          const row = nodeLookup.get(id)?.internals.userNode;
           return (
-            !!row && row.position.x === entry.position.x && row.position.y === entry.position.y
+            entry !== undefined &&
+            !entry.dragging &&
+            entry.row.position.x === entry.position.x &&
+            entry.row.position.y === entry.position.y
           );
         });
-        if (confirmed.length) {
+        // Off-frame sweep: entries whose rows left the graph. Record pulls
+        // are fine here — no flush is in flight.
+        const goneSel: ["nodes" | "edges", string][] = [];
+        for (const id in selectionOverlay.nodes) {
+          if (!nodeLookup.has(id)) goneSel.push(["nodes", id]);
+        }
+        for (const id in selectionOverlay.edges) {
+          if (!(id in edgeLookup)) goneSel.push(["edges", id]);
+        }
+        const goneDrag: string[] = [];
+        for (const id in dragOverlay) {
+          if (!nodeLookup.has(id)) goneDrag.push(id);
+        }
+        if (confirmed.length || goneSel.length) {
           setSelectionOverlay((draft) => {
-            for (const [kind, id] of confirmed) {
+            for (const [kind, id] of [...confirmed, ...goneSel]) {
               // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
               delete draft[kind][id];
             }
           });
         }
-        if (dragConfirmed.length) {
+        if (dragConfirmed.length || goneDrag.length) {
           setDragOverlay((draft) => {
-            for (const id of dragConfirmed) {
+            for (const id of [...dragConfirmed, ...goneDrag]) {
               // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
               delete draft[id];
             }
           });
         }
-        if (confirmed.length || dragConfirmed.length) flush();
+        if (confirmed.length || dragConfirmed.length || goneSel.length || goneDrag.length) flush();
       }, 0);
     },
   );
@@ -1063,10 +1065,17 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       const nextNode = typeof nodeUpdate === "function" ? nodeUpdate(node) : nodeUpdate;
       // `selected` is flow state, not user data: route it through the
       // selection sidecar too, so updateNode-driven selection composes over
-      // optimistic stores exactly like gesture-driven selection.
+      // optimistic stores exactly like gesture-driven selection. The entry
+      // holds the ORIGINAL row proxy, and `selected` is field-written onto it
+      // BEFORE the slot replacement: on plain stores the field write commits
+      // (entry confirms; the replacement row governs after release), on
+      // optimistic stores both writes revert together and the overlay holds.
+      // Capturing the replacement object instead would self-confirm — it
+      // keeps the written value even after the slot reverts around it.
       if (nextNode.selected !== undefined) {
+        node.selected = !!nextNode.selected;
         setSelectionOverlay((draft) => {
-          draft.nodes[id] = !!nextNode.selected;
+          draft.nodes[id] = { value: !!nextNode.selected, row: node };
         });
       }
       nodes[index] =
@@ -1181,11 +1190,12 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
         const edge = edges[index]!;
         const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
-        // `selected` is flow state — route through the selection sidecar
-        // (mirrors updateNode) so it composes over optimistic stores.
+        // `selected` routing — see updateNode for the original-row-proxy
+        // capture rationale.
         if (nextEdge.selected !== undefined) {
+          edge.selected = !!nextEdge.selected;
           setSelectionOverlay((draft) => {
-            draft.edges[id] = !!nextEdge.selected;
+            draft.edges[id] = { value: !!nextEdge.selected, row: edge };
           });
         }
         edges[index] =

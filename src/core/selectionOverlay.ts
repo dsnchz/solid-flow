@@ -16,13 +16,27 @@
  * booleans: a user toggling back is value-identical to an optimistic revert,
  * so lifetime — not value — is what disambiguates.)
  */
-export type SelectionOverlay = Record<string, boolean>;
+export type SelectionOverlayEntry = {
+  readonly value: boolean;
+  /**
+   * The ROW PROXY captured at write time (Ryan's #3085 guidance: hold row
+   * proxies by reference — reads pierce). The release effect confirms
+   * against THIS reference instead of resolving rows through the keyed
+   * lookup records: pulling a derived record inside the write flush
+   * triggered an O(sources) marking wave (~130ms @10k, bench round 12b).
+   */
+  readonly row: { readonly selected?: boolean };
+};
+
+export type SelectionOverlay = Record<string, SelectionOverlayEntry>;
 
 export const joinSelected = (
   rowSelected: boolean | undefined,
-  entry: boolean | undefined,
-): boolean => entry ?? !!rowSelected;
+  entry: SelectionOverlayEntry | undefined,
+): boolean => (entry !== undefined ? entry.value : !!rowSelected);
 
 /** Absent-key-safe overlay read (subscribes even while the key is absent). */
-export const overlayEntry = (overlay: SelectionOverlay, id: string): boolean | undefined =>
-  id in overlay ? overlay[id] : undefined;
+export const overlayEntry = (
+  overlay: SelectionOverlay,
+  id: string,
+): SelectionOverlayEntry | undefined => (id in overlay ? overlay[id] : undefined);
