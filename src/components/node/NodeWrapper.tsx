@@ -36,8 +36,9 @@ export const NodeWrapper = <NodeType extends Node = Node>(
 
   const node = () => nodeLookup.get(props.nodeId)!;
 
-  // The native compiler's delegated `dblclick` never fires (and `on:` is not
-  // implemented in the AST-native milestone), so attach directly.
+  // The native compiler's delegated `dblclick` never fires and `on:`
+  // namespaces are not planned for it — direct attachment is the permanent
+  // form here, not a workaround.
   createEventListener(nodeRef, "dblclick", (event) =>
     props.onNodeDoubleClick?.({ node: userNode(), event }),
   );

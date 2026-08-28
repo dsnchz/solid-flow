@@ -66,8 +66,9 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const onPointerLeave = (event: PointerEvent) =>
     props.onEdgePointerLeave?.({ edge: edge(), event });
   const onPointerMove = (event: PointerEvent) => props.onEdgePointerMove?.({ edge: edge(), event });
-  // The native compiler's delegated `dblclick` never fires (and `on:` is not
-  // implemented in the AST-native milestone), so attach directly. The target
+  // The native compiler's delegated `dblclick` never fires and `on:`
+  // namespaces are not planned for it — direct attachment is the permanent
+  // form here, not a workaround. The target
   // must be a SIGNAL: the <g> mounts after layout, later than this effect's
   // first run, and a plain ref never re-triggers the attach.
   const onDblClick = (event: MouseEvent) => props.onEdgeDoubleClick?.({ edge: edge(), event });
