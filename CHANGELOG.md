@@ -1,5 +1,18 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.11
+
+### Minor Changes
+
+- 89a0993: Drag positions are now sidecar-backed (third slice of the solid#3085 composition): per-frame gesture positions live in a flow-owned overlay joined at read time, so dragging works — and dragged positions persist, including across `refresh()` reconciles — over `createOptimisticStore` inputs. The parity contract is unchanged for plain stores: your rows stay live during the drag, later position writes through your own store govern, and undo back to the exact pre-drag position works.
+- f3a2005: Measurements are now sidecar-authoritative (second slice of the solid#3085 composition, after selection): rendering and `nodesInitialized` read the flow-owned measurements root joined with your rows, so both work correctly over `createOptimisticStore` inputs where the row write-through reverts. Precedence change: a fresh DOM measurement now supersedes a user-seeded `measured` value (previously the user seed always won); user-seeded `measured` still governs the pre-measurement window (SSR sizing, persisted layouts), and the write-through onto your rows remains for plain stores.
+- 7402b1f: Full `createOptimisticStore` support — the final slice. Membership is now rendered from the user-facing store (a derived record's enumeration doesn't surface optimistic membership edits mid-action; direct row reads do), so an optimistic node/edge add appears immediately mid-action, a rejected action reverts the flow cleanly, and flow commands work inside open action transactions. `updateNode`/`updateEdge` route `selected` through the selection sidecar, so programmatic selection composes over optimistic stores like gesture selection. Together with the selection, drag-position, and measurement sidecars, the optimistic-compat acceptance suite is fully green: Solid Flow now composes with the part-2 "Write Sync, Run Async" pattern end to end.
+- fb606a2: Selection is now sidecar-backed — the composition recommended by the SolidJS team in solidjs/solid#3085. Flow-driven selection lives in a library-owned keyed overlay joined with your rows at read time, with best-effort write-through onto your rows preserving the existing contract (reading `selected` off your store stays live for plain stores, and user writes to `selected` through your own store still govern). The payoff: selection now works and persists over `createOptimisticStore` inputs — clicks select, deselects route correctly, and selection survives `refresh()` reconciles — the first slice of full optimistic-store support. Internal nodes now always carry an explicit `selected` boolean (previously absent when the user row had none).
+
+### Patch Changes
+
+- 824cf89: Drag-start cost at 10k nodes cut ~6.5x (first gesture frame 1605ms → ~250ms; drag mean 16.5 → 6.3 ms/move), root-caused by CPU profiling: `unselectNodesAndEdges` deselected every element unconditionally (now O(actually-selected) via the joined views), the selection views were whole-graph filter memos rebuilding two subscriptions per element per recompute (now keyed presence projections with O(changed) updates), and the internal record facade's `in`-first probe subscribed every keyed consumer record-wide (now a present-key fast path). The spike predates the sidecar work — it was invisible in mean-only benchmarks.
+
 ## 1.0.0-next.10
 
 ### Minor Changes
