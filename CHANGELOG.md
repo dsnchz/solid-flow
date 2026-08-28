@@ -1,5 +1,15 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.12
+
+### Minor Changes
+
+- ee73976: Live flows: `createNodeStore` / `createEdgeStore` now accept an async **generator** source — "a value that keeps arriving". The store is unsettled until the first yield, then every yield streams into the graph with fine-grained updates: membership changes, node moves, and removals all flow through. Paired with a `live()` server function this is a server-pushed, collaborative flow in a handful of lines — see the new LiveFlow playground example and the "Live flows" README section.
+
+### Patch Changes
+
+- e7d2d33: The sidecar release effect now confirms against row proxies captured at write time instead of resolving rows through the keyed lookup records — pulling a derived record inside the write flush triggered an O(sources) marking wave. Drag-start first frame at 10k nodes drops from ~250ms to ~45ms (~35x faster than two releases ago), and drag mean improves to ~4.7 ms/move.
+
 ## 1.0.0-next.11
 
 ### Minor Changes
