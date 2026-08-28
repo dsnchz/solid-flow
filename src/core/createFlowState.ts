@@ -1181,6 +1181,13 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
         const edge = edges[index]!;
         const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
+        // `selected` is flow state — route through the selection sidecar
+        // (mirrors updateNode) so it composes over optimistic stores.
+        if (nextEdge.selected !== undefined) {
+          setSelectionOverlay((draft) => {
+            draft.edges[id] = !!nextEdge.selected;
+          });
+        }
         edges[index] =
           options.replace && isEdge<EdgeType>(nextEdge) ? nextEdge : { ...edge, ...nextEdge };
         return undefined;

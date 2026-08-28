@@ -199,7 +199,7 @@ const save = action(function* () {
 
 The pieces reinforce each other: the flow already _shows_ the draft, so no optimistic bookkeeping is needed; the action's pending window drives a "Saving…" affordance; a failed save leaves the draft intact for retry (the flow's store is not a speculative overlay — nothing reverts); and the `refresh` reconcile can't clobber in-progress edits because defaults are initial-only by contract. Works equally with a debounced autosave calling the same action. See the Persistence playground example for the full version with save status and failure handling.
 
-Note: passing a `createOptimisticStore` as the flow's `nodes`/`edges` is **not** supported — flow-internal writes (selection, drag) would land on the optimistic overlay outside any action and revert immediately. Optimistic stores model server truth plus in-flight predictions; the flow's draft state belongs to the flow. Use the draft-then-commit pattern above instead.
+Prefer per-mutation sync instead? Passing a `createOptimisticStore` as `nodes`/`edges` is fully supported (the composition recommended by the SolidJS team in [solid#3085](https://github.com/solidjs/solid/discussions/3085)): optimistic adds render mid-action, rejected actions revert the flow cleanly, and flow-driven state — selection, drag positions, measurements — lives in flow-owned sidecars joined at read time, so it survives overlay reverts and `refresh()` reconciles. For plain stores nothing changes: the flow still writes runtime fields through to your rows.
 
 ## The flow API
 

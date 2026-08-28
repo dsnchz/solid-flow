@@ -3,7 +3,8 @@ import { action, createOptimisticStore, createStore, refresh } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
-import type { Node } from "@/types";
+import { useSolidFlow } from "@/hooks/useSolidFlow";
+import type { Edge, Node } from "@/types";
 
 const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -71,6 +72,29 @@ describe("selection sidecar", () => {
     await noop();
     await tick(50);
     expect(isSelected("a")).toBe(true);
+  });
+
+  it("updateNode/updateEdge selected routes through the sidecar over an OPTIMISTIC store", async () => {
+    const api = {
+      list: async () => [makeNode("a", 0), makeNode("b", 300)],
+      edges: async () => [{ id: "e1", source: "a", target: "b" } as Edge],
+    };
+    const [nodes] = createOptimisticStore<Node[]>(() => api.list(), []);
+    const [edges] = createOptimisticStore<Edge[]>(() => api.edges(), []);
+    let flowApi!: ReturnType<typeof useSolidFlow>;
+    const Probe = () => ((flowApi = useSolidFlow()), null);
+    const { container } = render(() => (
+      <SolidFlow nodes={nodes} edges={edges} width={800} height={600}>
+        <Probe />
+      </SolidFlow>
+    ));
+    await tick();
+
+    flowApi.updateNode("a", { selected: true });
+    flowApi.updateEdge("e1", { selected: true });
+    await tick();
+    expect(container.querySelector('.solid-flow__node[data-id="a"].selected')).not.toBeNull();
+    expect(flowApi.flow.selection.edges.map((e) => e.id)).toEqual(["e1"]);
   });
 
   it("plain stores keep the write-through parity contract", async () => {

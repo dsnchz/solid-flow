@@ -15,7 +15,7 @@ import "@dschz/solid-flow/styles"; // required, import once
 - NO `useReactFlow` — it is `useSolidFlow()`, called INSIDE `<SolidFlow>` (or under `<SolidFlowProvider>`).
 - Events are pointer-named: `onNodePointerEnter`, not `onNodeMouseEnter` (same for edges/pane).
 - Components run once (Solid): no re-renders, no dependency arrays; read reactive values in JSX/computations, not component-body statements.
-- NO `createOptimisticStore` as `nodes`/`edges` input — flow writes would revert with the overlay. See "Saving to a server".
+- `createOptimisticStore` as `nodes`/`edges` IS supported (optimistic adds render mid-action; flow state survives reverts/reconciles). Draft-then-commit remains the simpler default — see "Saving to a server".
 
 ## Creating nodes/edges
 
@@ -116,7 +116,7 @@ const save = action(function* () {
 ```
 
 Rules:
-- Do NOT sync per-mutation with an optimistic store — unsupported (see Unlearn).
+- Per-mutation sync via `createOptimisticStore` as `nodes`/`edges` also works (flow state lives in sidecars and survives overlay reverts); draft-then-commit is the simpler default.
 - Never wrap flow-store reads in broad `try/catch` in your computations: `NotReadyError` propagation is load-bearing (it is the server build's re-derive channel). Branch with `isPending()` instead.
 
 ## Gotchas
