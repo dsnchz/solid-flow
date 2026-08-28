@@ -44,6 +44,8 @@ bun  add     @dschz/solid-flow
 
 `solid-js` is a peer dependency. Also available on [JSR](https://jsr.io/@dschz/solid-flow).
 
+Building with an AI agent? The package ships an [`llms.txt`](./llms.txt) cheatsheet — a compact, agent-oriented map of the API that front-loads the differences from React Flow.
+
 ## Quick Start
 
 ```tsx

@@ -46,7 +46,8 @@
     "url": "git+https://github.com/dsnchz/solid-flow.git"
   },
   "files": [
-    "dist"
+    "dist",
+    "llms.txt"
   ],
   "type": "module",
   "sideEffects": false,
