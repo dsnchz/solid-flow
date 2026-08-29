@@ -149,15 +149,29 @@ export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string
  * and survives overlay reverts); this keeps the same `data`-narrowed-by-
  * `type` guidance as the other factories.
  */
-export const createOptimisticNodeStore = <TUserNodeTypes extends NodeTypes = Record<string, never>>(
-  nodes: () => Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>,
+export function createOptimisticNodeStore<TUserNodeTypes extends NodeTypes = Record<string, never>>(
+  nodes: NoInfer<NodesInput<TUserNodeTypes>>[],
+): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>];
+export function createOptimisticNodeStore<TUserNodeTypes extends NodeTypes = Record<string, never>>(
+  nodes: () =>
+    | Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>
+    | AsyncIterable<NoInfer<NodesInput<TUserNodeTypes>>[]>,
 ): readonly [
   Store<NodesInput<TUserNodeTypes>[]> & Refreshable<NodesInput<TUserNodeTypes>[]>,
   StoreSetter<NodesInput<TUserNodeTypes>[]>,
-] => {
-  const [store, setStore] = createOptimisticStore<NodesInput<TUserNodeTypes>[]>(nodes, []);
-  return [
-    store as Store<NodesInput<TUserNodeTypes>[]> & Refreshable<NodesInput<TUserNodeTypes>[]>,
-    setStore,
-  ] as const;
-};
+];
+export function createOptimisticNodeStore<TUserNodeTypes extends NodeTypes = Record<string, never>>(
+  nodes:
+    | NoInfer<NodesInput<TUserNodeTypes>>[]
+    | (() =>
+        | Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>
+        | AsyncIterable<NoInfer<NodesInput<TUserNodeTypes>>[]>),
+): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>] {
+  // Mirrors the full core surface (value | promise | stream), like the plain
+  // factory: the wrapper's only value-add is the guided-union typing.
+  const [store, setStore] =
+    typeof nodes === "function"
+      ? createOptimisticStore<NodesInput<TUserNodeTypes>[]>(nodes, [])
+      : createOptimisticStore<NodesInput<TUserNodeTypes>[]>(nodes);
+  return [store, setStore] as const;
+}

@@ -45,4 +45,39 @@ describe("createOptimisticNodeStore / createOptimisticEdgeStore", () => {
     expect(inDom("b")).toBe(false); // overlay dropped
     expect(inDom("a")).toBe(true);
   });
+
+  it("array form: inline seed, writes inside an action are optimistic", async () => {
+    const [nodes, setNodes] = createOptimisticNodeStore([
+      { id: "a", type: "default" as const, data: { label: "a" }, position: { x: 0, y: 0 } },
+    ]);
+    const { container } = render(() => <SolidFlow nodes={nodes} width={800} height={600} />);
+    await tick();
+    const inDom = (id: string) =>
+      container.querySelector(`.solid-flow__node[data-id="${id}"]`) !== null;
+    expect(inDom("a")).toBe(true);
+
+    // Outside an action: reverts immediately (upstream optimistic semantics).
+    setNodes((draft) => {
+      draft.push({ id: "x", type: "default", data: { label: "x" }, position: { x: 99, y: 0 } });
+    });
+    await tick();
+    expect(inDom("x")).toBe(false);
+
+    // Inside an action: visible mid-flight, dropped at settle (no refresh
+    // source to confirm against — the array IS the committed truth).
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const add = action(function* () {
+      setNodes((draft) => {
+        draft.push({ id: "b", type: "default", data: { label: "b" }, position: { x: 200, y: 0 } });
+      });
+      yield gate;
+    });
+    void add();
+    await tick();
+    expect(inDom("b")).toBe(true);
+    release();
+    await tick(50);
+    expect(inDom("b")).toBe(false);
+  });
 });

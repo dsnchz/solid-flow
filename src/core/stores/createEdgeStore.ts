@@ -136,15 +136,29 @@ export const createEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string
 };
 
 /** The optimistic twin of {@link createEdgeStore}'s async form — see {@link createOptimisticNodeStore}. */
-export const createOptimisticEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
-  edges: () => Promise<NoInfer<EdgesInput<TUserEdgeTypes>>[]>,
+export function createOptimisticEdgeStore<TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
+  edges: NoInfer<EdgesInput<TUserEdgeTypes>>[],
+): readonly [Store<EdgesInput<TUserEdgeTypes>[]>, StoreSetter<EdgesInput<TUserEdgeTypes>[]>];
+export function createOptimisticEdgeStore<TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
+  edges: () =>
+    | Promise<NoInfer<EdgesInput<TUserEdgeTypes>>[]>
+    | AsyncIterable<NoInfer<EdgesInput<TUserEdgeTypes>>[]>,
 ): readonly [
   Store<EdgesInput<TUserEdgeTypes>[]> & Refreshable<EdgesInput<TUserEdgeTypes>[]>,
   StoreSetter<EdgesInput<TUserEdgeTypes>[]>,
-] => {
-  const [store, setStore] = createOptimisticStore<EdgesInput<TUserEdgeTypes>[]>(edges, []);
-  return [
-    store as Store<EdgesInput<TUserEdgeTypes>[]> & Refreshable<EdgesInput<TUserEdgeTypes>[]>,
-    setStore,
-  ] as const;
-};
+];
+export function createOptimisticEdgeStore<TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
+  edges:
+    | NoInfer<EdgesInput<TUserEdgeTypes>>[]
+    | (() =>
+        | Promise<NoInfer<EdgesInput<TUserEdgeTypes>>[]>
+        | AsyncIterable<NoInfer<EdgesInput<TUserEdgeTypes>>[]>),
+): readonly [Store<EdgesInput<TUserEdgeTypes>[]>, StoreSetter<EdgesInput<TUserEdgeTypes>[]>] {
+  // Mirrors the full core surface (value | promise | stream), like the plain
+  // factory: the wrapper's only value-add is the guided-union typing.
+  const [store, setStore] =
+    typeof edges === "function"
+      ? createOptimisticStore<EdgesInput<TUserEdgeTypes>[]>(edges, [])
+      : createOptimisticStore<EdgesInput<TUserEdgeTypes>[]>(edges);
+  return [store, setStore] as const;
+}
