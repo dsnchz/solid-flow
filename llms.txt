@@ -106,7 +106,9 @@ Hooks: `useNode(id)`, `useEdge(id)`, `useNodes()`, `useEdges()`,
 - Viewport: `onMove(Start|End)?` , `onViewportChange` (fires for programmatic changes too)
 - Lifecycle: `onInit`, `onDelete`, `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onFlowError`
 
-## Saving to a server (draft-then-commit)
+## Saving to a server
+
+Pattern A — draft-then-commit (the simpler default; the flow owns the draft):
 
 ```tsx
 const [serverGraph] = createStore(() => api.loadGraph(), { nodes: [], edges: [] });
@@ -120,9 +122,27 @@ const save = action(function* () {
 });
 ```
 
-Rules:
-- Per-mutation sync via `createOptimisticStore` as `nodes`/`edges` also works (flow state lives in sidecars and survives overlay reverts); draft-then-commit is the simpler default.
+Pattern B — per-mutation sync with an optimistic store (fully supported):
+
+```tsx
+const [nodes, setNodes] = createOptimisticStore(() => api.listNodes(), []);
+<SolidFlow nodes={nodes} edges={edges}>...</SolidFlow>
+
+// each mutation is its own optimistic action (the part-2 TodoMVC shape):
+const addNode = action(function* (node) {
+  setNodes((draft) => { draft.push(node); }); // renders mid-action
+  yield api.createNode(node);                 // rejected -> flow reverts cleanly
+  refresh(nodes);                             // reconcile against server truth
+});
+// Flow-driven state (selection, drag positions, measurements) lives in
+// flow-owned sidecars joined at read time — it survives overlay reverts
+// and refresh() reconciles. Persist positions yourself in onNodeDragStop
+// (drag writes are flow state, not writes into your optimistic store).
+```
+
+Rules for both:
 - Never wrap flow-store reads in broad `try/catch` in your computations: `NotReadyError` propagation is load-bearing (it is the server build's re-derive channel). Branch with `isPending()` instead.
+- Direct writes to an optimistic store OUTSIDE an action revert immediately (upstream semantics) — user mutations belong inside `action(function* ...)`.
 
 ## Gotchas
 
