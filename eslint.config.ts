@@ -15,7 +15,6 @@ export default tseslint.config(
       "**/node_modules/**",
       "tmp/**",
       "playground/**",
-      ".spike/**",
     ],
   },
   js.configs.recommended,

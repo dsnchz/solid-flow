@@ -37,13 +37,13 @@ The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive gr
 ## Installation
 
 ```sh
-npm  install @dschz/solid-flow
-pnpm add     @dschz/solid-flow
-yarn add     @dschz/solid-flow
-bun  add     @dschz/solid-flow
+npm  install @dschz/solid-flow@next solid-js@next @solidjs/web@next
+pnpm add     @dschz/solid-flow@next solid-js@next @solidjs/web@next
+yarn add     @dschz/solid-flow@next solid-js@next @solidjs/web@next
+bun  add     @dschz/solid-flow@next solid-js@next @solidjs/web@next
 ```
 
-`solid-js` is a peer dependency. Also available on [JSR](https://jsr.io/@dschz/solid-flow).
+`solid-js` and `@solidjs/web` are **peer dependencies** — install both on matching 2.0 versions. The `@next` tags are the 1.x prerelease line paired with the SolidJS 2.0 RCs; once Solid 2.0 stable ships, plain installs take over (see [Version pairing](#version-pairing)). Also available on [JSR](https://jsr.io/@dschz/solid-flow).
 
 Building with an AI agent? The package ships an [`llms.txt`](./llms.txt) cheatsheet — a compact, agent-oriented map of the API that front-loads the differences from React Flow.
 
