@@ -29,6 +29,7 @@ The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive gr
 - **Fine-grained by construction:** A node drag is a handful of DOM attribute writes — no virtual DOM, no component re-renders, no memoization ceremony
 - **Scales to large graphs:** Off-screen elements are viewport-culled by default, and an opt-in `onlyRenderVisibleElements` mode only mounts what's visible — stress-tested at 10,000 nodes
 - **Type-guided data:** Your custom components are the schema — node/edge stores narrow each element's `data` by its `type` field, with autocomplete for type names
+- **Server data, first-class:** Load the graph from an API, stream it live from a server push, batch-save drafts, or sync per-mutation with optimistic stores — all through SolidJS 2.0's async model, no cache library required
 - **Rich plugins:** Background patterns, interactive MiniMap (custom minimap nodes, click handlers), zoom Controls, Node Toolbar, and Node Resizer
 - **Accessible:** Keyboard navigation, screen reader support, ARIA labels, and focus management
 - **SSR-ready:** Renders on the server (a dedicated SSR test lane keeps it that way)
@@ -100,6 +101,20 @@ export const Flow = () => {
   );
 };
 ```
+
+## Creating your graph
+
+Everything the flow renders comes from two inputs — nodes and edges — and each accepts the same range of sources. Pick the row that matches where your data lives; every deeper section below is linked from here:
+
+| Your data is…                    | Create it with                                                                                   | Details                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Defined inline                   | A plain array, or `createNodeStore([...])` / `createEdgeStore([...])` for typed autocomplete     | [Quick Start](#quick-start), [typing](#your-components-are-the-schema) |
+| Loaded from an API               | `createNodeStore(async () => ...)` — reads hold until the data lands                             | [Loading from an API](#loading-your-graph-from-an-api)                 |
+| Streamed from a server           | `createNodeStore(async function* () { ... })` — every yield updates the graph                    | [Live flows](#live-flows-server-pushed-graphs)                         |
+| Edited locally, saved in batches | An async store _outside_ the flow + `defaultNodes`; one action commits `toObject()`              | [Draft-then-commit](#persisting-your-graph-to-a-server)                |
+| Synced per-mutation              | `createOptimisticNodeStore` / `createOptimisticEdgeStore` — optimistic actions render mid-flight | [Per-mutation sync](#per-mutation-sync-optimistic-stores)              |
+
+Orthogonal to all of these is **who owns membership**, chosen per axis by which prop you pass: `nodes`/`edges` (controlled — your store decides what exists) or `defaultNodes`/`defaultEdges` (uncontrolled — the seed is read once and the flow takes over). The contract details live in [Who owns the data](#who-owns-the-data).
 
 ## Your components are the schema
 
@@ -180,7 +195,7 @@ export const Flow = () => {
 
 Where the boundary goes is your design decision (SolidJS 2.0: "fetch high, block low") — one `<Loading>` can cover the flow together with its toolbar and sidebar, or sit tight around the flow alone. Without any boundary the flow renders immediately (canvas, controls, background) and the graph pops in when the data arrives — there is deliberately no `fallback` prop. See the AsyncData playground example for the full version (including connection adoption after the async seed).
 
-### Live flows (server-pushed graphs)
+## Live flows (server-pushed graphs)
 
 The async seed can also be an async **generator** — "a value that keeps arriving". The store is unsettled until the first yield, then every yield updates the graph with fine-grained reconciliation. Paired with a `live()` server function, that is a collaborative, server-pushed flow in a handful of lines:
 
@@ -217,7 +232,28 @@ const save = action(function* () {
 
 The pieces reinforce each other: the flow already _shows_ the draft, so no optimistic bookkeeping is needed; the action's pending window drives a "Saving…" affordance; a failed save leaves the draft intact for retry (the flow's store is not a speculative overlay — nothing reverts); and the `refresh` reconcile can't clobber in-progress edits because defaults are initial-only by contract. Works equally with a debounced autosave calling the same action. See the Persistence playground example for the full version with save status and failure handling.
 
-Prefer per-mutation sync instead? Passing an optimistic store as `nodes`/`edges` is fully supported — use the typed `createOptimisticNodeStore` / `createOptimisticEdgeStore` factories (guided-union narrowing, same as their plain counterparts) or a raw `createOptimisticStore`. This is the composition recommended by the SolidJS team in [solid#3085](https://github.com/solidjs/solid/discussions/3085): optimistic adds render mid-action, rejected actions revert the flow cleanly, and flow-driven state — selection, drag positions, measurements — lives in flow-owned sidecars joined at read time, so it survives overlay reverts and `refresh()` reconciles. For plain stores nothing changes: the flow still writes runtime fields through to your rows.
+### Per-mutation sync (optimistic stores)
+
+Prefer every mutation to be its own server round-trip? Pass an optimistic store as `nodes`/`edges` — fully supported, using the typed `createOptimisticNodeStore` / `createOptimisticEdgeStore` factories (same guided-union narrowing as the plain factories; a raw `createOptimisticStore` works identically):
+
+```tsx
+import { action, refresh } from "solid-js";
+import { createOptimisticNodeStore } from "@dschz/solid-flow";
+
+const [nodes, setNodes] = createOptimisticNodeStore(() => api.listNodes());
+
+const addNode = action(function* (node) {
+  setNodes((draft) => {
+    draft.push(node);
+  }); // renders mid-action
+  yield api.createNode(node); // rejection reverts the flow cleanly
+  refresh(nodes); // reconcile against server truth
+});
+
+<SolidFlow nodes={nodes} edges={edges} />;
+```
+
+This is the composition recommended by the SolidJS team in [solid#3085](https://github.com/solidjs/solid/discussions/3085): optimistic adds render mid-action, rejected actions revert the flow cleanly, and flow-driven state — selection, drag positions, measurements — lives in flow-owned sidecars joined at read time, so it survives overlay reverts and `refresh()` reconciles. Two things to know: user mutations belong inside `action` (a direct optimistic-store write outside one reverts immediately — upstream semantics), and drag positions are flow state — persist them yourself in `onNodeDragStop`. For plain stores nothing changes: the flow still writes runtime fields through to your rows.
 
 ## The flow API
 
