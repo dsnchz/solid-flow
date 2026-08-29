@@ -1,5 +1,15 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.13
+
+### Minor Changes
+
+- 2a3363a: Typed optimistic store factories: `createOptimisticNodeStore` / `createOptimisticEdgeStore` — guided-union twins of the plain factories for the per-mutation sync pattern, mirroring the full core surface: an inline array, an async function, or an async generator (`data` narrowed by `type`; the derived forms keep the `Refreshable` brand so `refresh()` typechecks). Purely a typing convenience: a raw `createOptimisticStore` composes with the flow identically.
+
+### Patch Changes
+
+- 7619b3f: SolidJS 2.0.0-rc.4 support. rc.4 ships the fix for the torn mid-action reads through derived stores that our optimistic-compat questions surfaced upstream (solidjs/solid#3089) — our contract spikes confirm the mid-action read artifact is gone, the full runtime matrix stays green, and drag performance improved slightly (mean ~4.7 → ~3.7 ms/move at 10k nodes).
+
 ## 1.0.0-next.12
 
 ### Minor Changes
