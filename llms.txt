@@ -125,7 +125,7 @@ const save = action(function* () {
 Pattern B — per-mutation sync with an optimistic store (fully supported):
 
 ```tsx
-const [nodes, setNodes] = createOptimisticStore(() => api.listNodes(), []);
+const [nodes, setNodes] = createOptimisticNodeStore(() => api.listNodes()); // typed twin of createNodeStore (raw createOptimisticStore works too)
 <SolidFlow nodes={nodes} edges={edges}>...</SolidFlow>
 
 // each mutation is its own optimistic action (the part-2 TodoMVC shape):

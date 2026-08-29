@@ -43,5 +43,13 @@ export {
 } from "./projections/internalNodes";
 export { createLayoutedEdges, type LayoutedEdgesSource } from "./projections/layoutedEdges";
 export { createParentIds, type ParentIdsSource } from "./projections/parentIds";
-export { createEdgeStore, type SolidFlowEdge } from "./stores/createEdgeStore";
-export { createNodeStore, type SolidFlowNode } from "./stores/createNodeStore";
+export {
+  createEdgeStore,
+  createOptimisticEdgeStore,
+  type SolidFlowEdge,
+} from "./stores/createEdgeStore";
+export {
+  createNodeStore,
+  createOptimisticNodeStore,
+  type SolidFlowNode,
+} from "./stores/createNodeStore";

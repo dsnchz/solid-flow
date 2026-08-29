@@ -1,5 +1,5 @@
 import { type StoreSetter } from "solid-js";
-import { createStore, type Store } from "solid-js";
+import { createOptimisticStore, createStore, type Refreshable, type Store } from "solid-js";
 
 import type { BuiltInEdgeTypes, Edge, EdgeProps, EdgeTypes, UnknownStruct } from "@/types";
 
@@ -133,4 +133,18 @@ export const createEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string
       : createStore(edges);
 
   return [store, setStore] as const;
+};
+
+/** The optimistic twin of {@link createEdgeStore}'s async form — see {@link createOptimisticNodeStore}. */
+export const createOptimisticEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
+  edges: () => Promise<NoInfer<EdgesInput<TUserEdgeTypes>>[]>,
+): readonly [
+  Store<EdgesInput<TUserEdgeTypes>[]> & Refreshable<EdgesInput<TUserEdgeTypes>[]>,
+  StoreSetter<EdgesInput<TUserEdgeTypes>[]>,
+] => {
+  const [store, setStore] = createOptimisticStore<EdgesInput<TUserEdgeTypes>[]>(edges, []);
+  return [
+    store as Store<EdgesInput<TUserEdgeTypes>[]> & Refreshable<EdgesInput<TUserEdgeTypes>[]>,
+    setStore,
+  ] as const;
 };

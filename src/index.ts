@@ -8,7 +8,14 @@ export {
   type SolidFlowInitialProps,
   type SolidFlowProps,
 } from "./core";
-export { createEdgeStore, createNodeStore, type SolidFlowEdge, type SolidFlowNode } from "./core";
+export {
+  createEdgeStore,
+  createNodeStore,
+  createOptimisticEdgeStore,
+  createOptimisticNodeStore,
+  type SolidFlowEdge,
+  type SolidFlowNode,
+} from "./core";
 export * from "./hooks";
 export * from "./plugins";
 

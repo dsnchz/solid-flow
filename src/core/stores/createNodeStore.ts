@@ -1,5 +1,5 @@
 import { type StoreSetter } from "solid-js";
-import { createStore, type Store } from "solid-js";
+import { createOptimisticStore, createStore, type Refreshable, type Store } from "solid-js";
 
 import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes, UnknownStruct } from "@/types";
 
@@ -138,4 +138,26 @@ export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string
       : createStore(nodes);
 
   return [store, setStore] as const;
+};
+
+/**
+ * The optimistic twin of {@link createNodeStore}'s async form: a guided-union
+ * wrapper over `createOptimisticStore` for per-mutation server sync (write
+ * the prediction in an `action`, `yield` the request, `refresh` to
+ * reconcile). Purely a typing convenience — the flow composes with a raw
+ * `createOptimisticStore` identically (flow-driven state lives in sidecars
+ * and survives overlay reverts); this keeps the same `data`-narrowed-by-
+ * `type` guidance as the other factories.
+ */
+export const createOptimisticNodeStore = <TUserNodeTypes extends NodeTypes = Record<string, never>>(
+  nodes: () => Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>,
+): readonly [
+  Store<NodesInput<TUserNodeTypes>[]> & Refreshable<NodesInput<TUserNodeTypes>[]>,
+  StoreSetter<NodesInput<TUserNodeTypes>[]>,
+] => {
+  const [store, setStore] = createOptimisticStore<NodesInput<TUserNodeTypes>[]>(nodes, []);
+  return [
+    store as Store<NodesInput<TUserNodeTypes>[]> & Refreshable<NodesInput<TUserNodeTypes>[]>,
+    setStore,
+  ] as const;
 };
