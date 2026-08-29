@@ -1,4 +1,4 @@
-import { type InternalNode, Position, type XYPosition } from "@/index";
+import { type InternalNode, type XYPosition } from "@/index";
 
 // this helper function returns the intersection point
 // of the line between the center of the intersectionNode and the target node
@@ -39,19 +39,19 @@ function getEdgePosition(node: InternalNode, intersectionPoint: XYPosition) {
   const { width = 0, height = 0 } = node.measured;
 
   if (px <= nx + 1) {
-    return Position.Left;
+    return "left";
   }
   if (px >= nx + width - 1) {
-    return Position.Right;
+    return "right";
   }
   if (py <= ny + 1) {
-    return Position.Top;
+    return "top";
   }
   if (py >= n.y! + height - 1) {
-    return Position.Bottom;
+    return "bottom";
   }
 
-  return Position.Top;
+  return "top";
 }
 
 // returns the parameters (sx, sy, tx, ty, sourcePos, targetPos) you need to create an edge

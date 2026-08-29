@@ -251,8 +251,10 @@ export const Overview = () => {
   const setLeftRight = () => {
     const updatedNodes = nodes.map((node) => ({
       ...node,
-      sourcePosition: node.sourcePosition === Position.Right ? Position.Bottom : Position.Right,
-      targetPosition: node.targetPosition === Position.Left ? Position.Top : Position.Left,
+      // Comparisons take literals; the node FIELDS are typed by upstream's
+      // nominal enum, so construction needs the member objects.
+      sourcePosition: node.sourcePosition === "right" ? Position.Bottom : Position.Right,
+      targetPosition: node.targetPosition === "left" ? Position.Top : Position.Left,
     }));
 
     setNodes(() => updatedNodes);

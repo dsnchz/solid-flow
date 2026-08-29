@@ -56,14 +56,8 @@ export {
 } from "@xyflow/system";
 
 // system enums (documented upstream)
-export {
-  ConnectionLineType,
-  ConnectionMode,
-  MarkerType,
-  PanOnScrollMode,
-  Position,
-  ResizeControlVariant,
-} from "@xyflow/system";
+// Erasable mirrors of @xyflow/system's enums (member objects + union types)
+// live in ./types/general and flow through its star export above.
 
 // system types (documented upstream)
 export type {

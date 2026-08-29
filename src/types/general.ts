@@ -1,24 +1,45 @@
 import type { JSX } from "@solidjs/web";
-import type {
-  Connection,
+import {
+  type Connection,
   ConnectionLineType as SystemConnectionLineType,
   ConnectionMode as SystemConnectionMode,
-  FitViewOptionsBase,
-  Handle,
-  OnBeforeDeleteBase,
+  type FitViewOptionsBase,
+  type Handle,
+  MarkerType as SystemMarkerType,
+  type OnBeforeDeleteBase,
   PanOnScrollMode as SystemPanOnScrollMode,
   Position as SystemPosition,
   ResizeControlVariant as SystemResizeControlVariant,
   SelectionMode as SystemSelectionMode,
-  XYPosition,
+  type XYPosition,
 } from "@xyflow/system";
 
 import type { Edge } from "./edge";
 import type { InternalNode, Node } from "./node";
 
+// @xyflow/system's enums, re-exposed as value + STRING-UNION type pairs.
+// The value stays the upstream enum object — its members are the only thing
+// assignable into system-owned fields (`NodeBase.sourcePosition` is typed
+// with the nominal enum, and a string literal never crosses that boundary),
+// and they also flow into every union-typed position, so `Position.Top`
+// works everywhere. The TYPE is the template-literal widening, making plain
+// literals first-class in annotations and all Solid Flow props
+// (`const p: Position = "right"`). Solid Flow's own surfaces prefer the
+// literals; reach for the member objects only where a node's
+// `sourcePosition`/`targetPosition` (or another system-typed field) demands
+// the enum.
+
+export const Position = SystemPosition;
 export type Position = `${SystemPosition}`;
+
+export const ConnectionMode = SystemConnectionMode;
 export type ConnectionMode = `${SystemConnectionMode}`;
+
+export const ConnectionLineType = SystemConnectionLineType;
 export type ConnectionLineType = `${SystemConnectionLineType}`;
+
+export const MarkerType = SystemMarkerType;
+export type MarkerType = `${SystemMarkerType}`;
 
 /**
  * If you want to render a custom component for connection lines, you can set the
@@ -42,8 +63,13 @@ export type ConnectionLineComponentProps<NodeType extends Node = Node> = {
   readonly toNode: InternalNode<NodeType> | null;
   readonly toHandle: Handle | null;
 };
+export const SelectionMode = SystemSelectionMode;
 export type SelectionMode = `${SystemSelectionMode}`;
+
+export const PanOnScrollMode = SystemPanOnScrollMode;
 export type PanOnScrollMode = `${SystemPanOnScrollMode}`;
+
+export const ResizeControlVariant = SystemResizeControlVariant;
 export type ResizeControlVariant = `${SystemResizeControlVariant}`;
 
 /** A single keyboard modifier key. */

@@ -28,7 +28,7 @@ export function NodeToolbar() {
     {
       id: "default-node",
       type: "custom" as const,
-      data: { label: "toolbar top", toolbarPosition: Position.Top },
+      data: { label: "toolbar top", toolbarPosition: "top" },
       position: { x: 0, y: -200 },
       className: "solid-flow__node-default",
     },

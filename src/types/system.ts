@@ -39,7 +39,6 @@ import {
   type ResizeDragEvent as SystemResizeDragEvent,
   type ResizeParams as SystemResizeParams,
   type ResizeParamsWithDirection as SystemResizeParamsWithDirection,
-  SelectionMode as SystemSelectionMode,
   type SelectionRect as SystemSelectionRect,
   type SetCenterOptions as SystemSetCenterOptions,
   type SmoothStepPathOptions as SystemSmoothStepPathOptions,
@@ -183,11 +182,9 @@ export type XYZPosition = SystemXYZPosition;
 /**
  * How drag-selection decides membership: 'full' requires nodes to be fully
  * inside the selection box, 'partial' selects on any overlap.
+ * The member object + union type live in ./general (erasable enum mirror).
  */
-export const SelectionMode: typeof SystemSelectionMode = SystemSelectionMode;
-
-/** See {@link SelectionMode}. */
-export type SelectionMode = SystemSelectionMode;
+export { SelectionMode } from "./general";
 
 /** Returns the center `[x, y]` of a straight edge between two points. */
 export const getEdgeCenter: typeof systemGetEdgeCenter = systemGetEdgeCenter;

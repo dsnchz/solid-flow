@@ -121,19 +121,13 @@ Orthogonal to all of these is **who owns membership**, chosen per axis by which 
 `createNodeStore` / `createEdgeStore` derive each element's `data` type from the component registered for its `type` — the renderer map is the single source of truth, and the stores narrow against it:
 
 ```tsx
-import {
-  createNodeStore,
-  Handle,
-  type NodeProps,
-  type NodeTypes,
-  Position,
-} from "@dschz/solid-flow";
+import { createNodeStore, Handle, type NodeProps, type NodeTypes } from "@dschz/solid-flow";
 
 const CounterNode = (props: NodeProps<{ count: number }, "counter">) => (
   <div style={{ padding: "10px", background: "white", border: "1px solid #333" }}>
-    <Handle type="target" position={Position.Top} />
+    <Handle type="target" position="top" />
     <div>count: {props.data.count}</div>
-    <Handle type="source" position={Position.Bottom} />
+    <Handle type="source" position="bottom" />
   </div>
 );
 

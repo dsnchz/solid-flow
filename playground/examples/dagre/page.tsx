@@ -2,7 +2,6 @@ import dagre from "@dagrejs/dagre";
 
 import {
   Background,
-  ConnectionLineType,
   createEdgeStore,
   createNodeStore,
   type SolidFlowEdge,
@@ -159,7 +158,7 @@ export const Dagre = () => {
         nodes={nodes}
         edges={edges}
         fitView
-        connectionLineType={ConnectionLineType.SmoothStep}
+        connectionLineType={"smoothstep"}
         defaultEdgeOptions={{ type: "smoothstep", animated: true }}
       >
         <Panel position="top-right">

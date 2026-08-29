@@ -1,23 +1,22 @@
 import type { JSX } from "@solidjs/web";
-import { Position } from "@xyflow/system";
 
 import type { NodeProps } from "@/types";
-import { propDefaults } from "@/utils";
 
 import { Handle } from "../handle";
 
 /** Built-in default node: label with source and target handles. */
-export const DefaultNode = (props: NodeProps<{ label: string }, "default">): JSX.Element => {
-  const _props = propDefaults(props, {
-    targetPosition: Position.Top,
-    sourcePosition: Position.Bottom,
-  });
-
-  return (
-    <>
-      <Handle type="target" position={_props.targetPosition} isConnectable={_props.isConnectable} />
-      {props.data.label}
-      <Handle type="source" position={_props.sourcePosition} isConnectable={_props.isConnectable} />
-    </>
-  );
-};
+export const DefaultNode = (props: NodeProps<{ label: string }, "default">): JSX.Element => (
+  <>
+    <Handle
+      type="target"
+      position={props.targetPosition ?? "top"}
+      isConnectable={props.isConnectable}
+    />
+    {props.data.label}
+    <Handle
+      type="source"
+      position={props.sourcePosition ?? "bottom"}
+      isConnectable={props.isConnectable}
+    />
+  </>
+);

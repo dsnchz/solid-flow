@@ -13,8 +13,7 @@ export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">
   /** The id of the node, or array of ids the toolbar should be displayed at */
   readonly nodeId: string | string[];
   /** Position of the toolbar relative to the node
-   * @example Position.TopLeft, Position.TopRight,
-   * Position.BottomLeft, Position.BottomRight
+   * @example "top" | "right" | "bottom" | "left"
    */
   readonly position: Position;
   /** Align the toolbar relative to the node

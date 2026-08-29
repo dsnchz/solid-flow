@@ -30,12 +30,11 @@ export type NodeResizerSubProps = Pick<
 
 type ResizeControlProps = NodeResizerSubProps & {
   /** Position of control
-   * @example ControlPosition.TopLeft, ControlPosition.TopRight,
-   * ControlPosition.BottomLeft, ControlPosition.BottomRight
+   * @example "top-left" | "top-right" | "bottom-left" | "bottom-right"
    */
   readonly position?: ControlPosition;
   /** Variant of control
-   * @example ResizeControlVariant.Handle, ResizeControlVariant.Line
+   * @example "handle", "line"
    */
   readonly variant?: ResizeControlVariant;
   readonly color?: string;

@@ -438,9 +438,8 @@ export type SolidFlowProps<
     /** Styles to be applied to the flow container */
     readonly style?: JSX.CSSProperties;
     /** Choose from the built-in edge types to be used for connections
-     * @default 'default' | ConnectionLineType.Bezier
-     * @example 'straight' | 'default' | 'step' | 'smoothstep' | 'bezier'
-     * @example ConnectionLineType.Straight | ConnectionLineType.Default | ConnectionLineType.Step | ConnectionLineType.SmoothStep | ConnectionLineType.Bezier
+     * @default "default"
+     * @example "default" | "straight" | "step" | "smoothstep" | "simplebezier"
      */
     readonly connectionLineType?: ConnectionLineType;
     /** Enabling this option will raise the z-index of nodes when they are selected.

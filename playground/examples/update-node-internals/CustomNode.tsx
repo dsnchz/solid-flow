@@ -1,6 +1,6 @@
 import { createSignal, For } from "solid-js";
 
-import { Handle, type NodeProps, Position, useUpdateNodeInternals } from "@/index";
+import { Handle, type NodeProps, useUpdateNodeInternals } from "@/index";
 
 export const CustomNode = (props: NodeProps) => {
   const updateNodeInternals = useUpdateNodeInternals();
@@ -20,13 +20,13 @@ export const CustomNode = (props: NodeProps) => {
         "border-radius": "5px",
       }}
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={"top"} />
       <button onClick={onClick}>add handle</button>
       <For each={Array.from({ length: handleCount() }, (_, i) => i)}>
         {(i) => (
           <Handle
             type="source"
-            position={Position.Bottom}
+            position={"bottom"}
             id={i.toString()}
             style={{ left: `${i * 20 + 10}px` }}
           />

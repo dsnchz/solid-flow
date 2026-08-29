@@ -7,7 +7,6 @@ import {
   nodeToRect,
   pointToRendererPoint,
   rendererPointToPoint,
-  SelectionMode,
   type XYPosition,
 } from "@xyflow/system";
 import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
@@ -195,7 +194,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
         selectionSpatialLookup,
         nextUserSelectRect,
         store.transform,
-        store.selectionMode === SelectionMode.Partial,
+        store.selectionMode === "partial",
         true,
       ).map((n) => n.id),
     );

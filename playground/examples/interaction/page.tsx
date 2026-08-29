@@ -59,7 +59,7 @@ export const Interaction = () => {
   const [zoomOnScroll, setZoomOnScroll] = createSignal(false);
   const [zoomOnPinch, setZoomOnPinch] = createSignal(false);
   const [panOnScroll, setPanOnScroll] = createSignal(false);
-  const [panOnScrollMode, setPanOnScrollMode] = createSignal<PanOnScrollMode>(PanOnScrollMode.Free);
+  const [panOnScrollMode, setPanOnScrollMode] = createSignal<PanOnScrollMode>("free");
   const [zoomOnDoubleClick, setZoomOnDoubleClick] = createSignal(false);
   const [panOnDrag, setPanOnDrag] = createSignal(true);
   const [captureZoomClick, setCaptureZoomClick] = createSignal(false);

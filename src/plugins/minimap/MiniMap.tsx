@@ -55,8 +55,7 @@ export type MiniMapProps<NodeType extends Node> = Omit<
   /** Stroke width of the mask representing viewport */
   readonly maskStrokeWidth?: number;
   /** Position of the minimap on the pane
-   * @example PanelPosition.TopLeft, PanelPosition.TopRight,
-   * PanelPosition.BottomLeft, PanelPosition.BottomRight
+   * @example "top-left" | "top-right" | "bottom-left" | "bottom-right"
    */
   readonly position?: PanelPosition;
   /** Style applied to container */

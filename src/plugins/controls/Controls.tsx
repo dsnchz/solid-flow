@@ -14,8 +14,7 @@ type ControlsOrientation = "horizontal" | "vertical";
 
 type ControlsProps = {
   /** Position of the controls on the pane
-   * @example PanelPosition.TopLeft, PanelPosition.TopRight,
-   * PanelPosition.BottomLeft, PanelPosition.BottomRight
+   * @example "top-left" | "top-right" | "bottom-left" | "bottom-right"
    */
   readonly position?: PanelPosition;
   /** Show button for zoom in/out */
