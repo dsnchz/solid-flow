@@ -1,5 +1,12 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.14
+
+### Patch Changes
+
+- 6fbb387: Completed connections are no longer written into a controlled edges store. The completion write pierced into the user's store (the internal store wraps their proxy), so the documented `onConnect` adoption push produced a duplicate row with the same id — invisible in the DOM (the derived edge record is keyed by id) but persisted by `toObject()`. Connection completion is now a no-op on a controlled axis: the connection reaches you only through `onConnect`, and adopting it is what makes it exist (unadopted connections are dropped). Uncontrolled flows (`defaultEdges`) are unchanged — the flow owns membership and inserts the edge itself. Playground examples that relied on the auto-insert now adopt, and the README/llms.txt ownership contract is updated to match.
+- 5f1bb81: The public types for `Position`, `ConnectionLineType`, `ConnectionMode`, `MarkerType`, `PanOnScrollMode`, `ResizeControlVariant`, and `SelectionMode` are now string unions instead of the nominal upstream enums — `const p: Position = "right"` and literal-typed helpers now typecheck (every prop already accepted literals). The exported member objects are unchanged (`Position.Top` still compiles everywhere and remains required for system-typed node fields like `sourcePosition`).
+
 ## 1.0.0-next.13
 
 ### Minor Changes
