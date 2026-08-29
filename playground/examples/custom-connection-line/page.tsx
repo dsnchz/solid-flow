@@ -1,4 +1,10 @@
-import { Background, createEdgeStore, createNodeStore, SolidFlow } from "@/index";
+import {
+  Background,
+  createEdgeStore,
+  createNodeStore,
+  type EdgeConnection,
+  SolidFlow,
+} from "@/index";
 
 import { ConnectionLine } from "./ConnectionLine";
 import { CustomNode } from "./CustomNode";
@@ -17,13 +23,21 @@ export const CustomConnectionLine = () => {
     },
   ]);
 
-  const [edges] = createEdgeStore([]);
+  const [edges, setEdges] = createEdgeStore([]);
+
+  // Adopt completed connections — controlled edges never auto-insert.
+  const onConnect = (connection: EdgeConnection) => {
+    setEdges((draft) => {
+      draft.push(connection);
+    });
+  };
 
   return (
     <div style={{ height: "100vh" }}>
       <SolidFlow
         nodes={nodes}
         edges={edges}
+        onConnect={onConnect}
         nodeTypes={nodeTypes}
         fitView
         connectionLineComponent={ConnectionLine}

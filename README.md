@@ -165,7 +165,8 @@ The stores you pass as `nodes` / `edges` props are **controlled** — a delibera
 
 - **Your store owns membership.** Which nodes and edges exist is decided by your store. Any write form works: draft mutations update in place (`O(changed)`), and wholesale replacement (`setNodes(() => next)`) re-seeds the flow — rows are keyed by `id`, so surviving elements keep their runtime state.
 - **The flow writes runtime fields onto your rows.** Dragging updates `position`, selection updates `selected`, measurement fills `measured` — on the same objects you provided, so reading your store is always live.
-- **Your writes are authoritative; the flow's are best-effort.** Flow-side writes — commands like `commands.addNodes(...)`, completed connections, the runtime fields above — reach your store through the same write-through, but they are not durable against you: a wholesale replacement (`setNodes(() => next)`) re-seeds from exactly your array, and anything it doesn't contain vanishes. To make an element durable, put it in your store yourself — like the `onConnect` handler in the Quick Start adopting the new connection. (On optimistic stores, flow-side write-throughs revert with the overlay — rendering doesn't depend on them landing.)
+- **Completed connections are yours to adopt.** The flow never writes membership on a controlled axis: a finished connection reaches you only through `onConnect` — push it into your store to keep it (like the Quick Start's handler). No adoption, no edge.
+- **Your writes are authoritative; the flow's are best-effort.** Explicit commands like `commands.addNodes(...)` and the runtime fields above reach your store through the same write-through, but they are not durable against you: a wholesale replacement (`setNodes(() => next)`) re-seeds from exactly your array, and anything it doesn't contain vanishes. (On optimistic stores, flow-side write-throughs revert with the overlay — rendering doesn't depend on them landing.)
 
 **Prefer letting the flow own the data?** Pass `defaultNodes` / `defaultEdges` instead of `nodes` / `edges` for an **uncontrolled** flow (React Flow parity): the arrays seed the flow once (later values are ignored), and membership belongs to the flow — commands like `addNodes` and completed connections persist with no adoption step. Read live state through `useSolidFlow()`'s `flow.nodes` / `flow.edges`. The two axes are independent, so you can control edges while leaving nodes uncontrolled (or vice versa); supplying both props on one axis is a mistake (`nodes` wins, with a dev warning).
 
@@ -287,7 +288,7 @@ export const App = () => (
 );
 ```
 
-Commands include viewport control (`fitView`, `fitBounds`, `zoomIn`/`zoomOut`, `setZoom`, `setCenter`, `setViewport`, `panBy`), element updates (`updateNode`, `updateNodeData`, `updateEdge`, `addNodes`, `addEdges`, `deleteElements`), coordinate conversion (`screenToFlowPosition`, `flowToScreenPosition`), and geometry queries (`isNodeIntersecting`, `getIntersectingNodes`).
+Commands include viewport control (`fitView`, `fitBounds`, `zoomIn`/`zoomOut`, `setZoom`, `setCenter`, `setViewport`, `panBy`), element updates (`updateNode`, `updateNodeData`, `updateEdge`, `addNodes`, `addEdges`, `deleteElements`), serialization (`toObject`), coordinate conversion (`screenToFlowPosition`, `flowToScreenPosition`), and geometry queries (`isNodeIntersecting`, `getIntersectingNodes`).
 
 ## Hooks
 
@@ -430,7 +431,7 @@ useInternalNode(() => "a");
 
 `flow.*` reads are reactive — using them in JSX or a tracked scope subscribes. Commands (`fitView`, `setViewport`, `updateNode`, `deleteElements`, ...) are unchanged and now also available namespaced under `commands`.
 
-**4. New connections are no longer written into your edge store.** In 0.2.x the flow inserted the connected edge into your store before `onConnect` fired. Under the 1.x ownership contract your store owns membership: adopt the connection yourself (see the Quick Start's `onConnect`). Unadopted connections still render, but won't survive a wholesale store replacement.
+**4. New connections are no longer written into your edge store.** In 0.2.x the flow inserted the connected edge into your store before `onConnect` fired. Under the 1.x ownership contract your store owns membership: adopt the connection yourself (see the Quick Start's `onConnect`), or it is dropped — an unadopted connection does not render. Uncontrolled flows (`defaultEdges`) keep the 0.2.x behavior: the flow owns membership and inserts the edge itself.
 
 **5. `onlyRenderVisibleElements` now does what it says.** In 0.2.x the prop was accepted but inert. In 1.x it opts into unmount culling (off-screen elements are not mounted at all — see [Performance](#performance)), while the CSS culling tier is always on and needs no prop.
 
@@ -438,7 +439,7 @@ useInternalNode(() => "a");
 
 ## Examples
 
-The repository ships a playground with 25+ runnable examples — custom nodes and edges, edge reconnection, drag & drop, subflows, validation, minimap customization, a 10k-node stress test, accessibility, and more:
+The repository ships a playground with 35+ runnable examples — custom nodes and edges, edge reconnection, drag & drop, subflows, validation, minimap customization, a 10k-node stress test, accessibility, and more:
 
 ```bash
 bun install

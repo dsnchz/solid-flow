@@ -164,9 +164,12 @@ describe("createSolidFlow", () => {
     );
   });
 
-  it("adds edges through the addEdge action", () => {
+  // addEdge is the connection-completion writer: it only writes on an
+  // UNCONTROLLED edges axis (controlled membership belongs to the user's
+  // store — the connection reaches them through onConnect instead).
+  it("adds edges through the addEdge action (uncontrolled)", () => {
     withFlow(
-      { nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })], edges: [] },
+      { nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })], defaultEdges: [] },
       ({ store, actions }) => {
         actions.addEdge({ source: "a", target: "b", sourceHandle: null, targetHandle: null });
         flush();
@@ -176,11 +179,22 @@ describe("createSolidFlow", () => {
     );
   });
 
+  it("addEdge is a no-op on a controlled edges axis", () => {
+    withFlow(
+      { nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })], edges: [] },
+      ({ store, actions }) => {
+        actions.addEdge({ source: "a", target: "b", sourceHandle: null, targetHandle: null });
+        flush();
+        expect(store.edges).toHaveLength(0);
+      },
+    );
+  });
+
   it("addEdge rejects duplicate connections", () => {
     withFlow(
       {
         nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })],
-        edges: [makeEdge({ id: "e1", source: "a", target: "b" })],
+        defaultEdges: [makeEdge({ id: "e1", source: "a", target: "b" })],
       },
       ({ store, actions }) => {
         actions.addEdge({ source: "a", target: "b", sourceHandle: null, targetHandle: null });
@@ -198,7 +212,7 @@ describe("createSolidFlow", () => {
     withFlow(
       {
         nodes: [makeNode({ id: "a" }), makeNode({ id: "b" })],
-        edges: [makeEdge({ id: "e1", source: "a", target: "b" })],
+        defaultEdges: [makeEdge({ id: "e1", source: "a", target: "b" })],
       },
       ({ store, actions, edgeLookup }) => {
         const existing = store.edges[0];
@@ -245,7 +259,11 @@ describe("createSolidFlow", () => {
         edges: [makeEdge({ id: "e1", source: "a", target: "b" })],
       },
       ({ store, actions, edgeLookup }) => {
-        actions.addEdge({ source: "b", target: "c", sourceHandle: null, targetHandle: null });
+        // A flow-side structural write (controlled axes route these through
+        // setEdges — addEdge is connection-only and controlled-guarded).
+        actions.setEdges((edges) => {
+          edges.push(makeEdge({ id: "xy-edge__b-c", source: "b", target: "c" }));
+        });
         flush();
         expect(store.edges).toHaveLength(2);
 

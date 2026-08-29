@@ -3,6 +3,7 @@ import {
   Controls,
   createEdgeStore,
   createNodeStore,
+  type EdgeConnection,
   Panel,
   SolidFlow,
   useConnection,
@@ -26,10 +27,17 @@ export const UseConnection = () => {
     },
   ]);
 
-  const [edges] = createEdgeStore([]);
+  const [edges, setEdges] = createEdgeStore([]);
+
+  // Adopt completed connections — controlled edges never auto-insert.
+  const onConnect = (connection: EdgeConnection) => {
+    setEdges((draft) => {
+      draft.push(connection);
+    });
+  };
 
   return (
-    <SolidFlow nodes={nodes} edges={edges} fitView>
+    <SolidFlow nodes={nodes} edges={edges} onConnect={onConnect} fitView>
       <Controls />
       <Background variant="dots" />
 

@@ -4,6 +4,7 @@ import {
   Controls,
   createEdgeStore,
   createNodeStore,
+  type EdgeConnection,
   MiniMap,
   SolidFlow,
   useSolidFlow,
@@ -35,7 +36,7 @@ export function DragNDrop() {
     },
   ]);
 
-  const [edges] = createEdgeStore([
+  const [edges, setEdges] = createEdgeStore([
     {
       id: "1-2",
       type: "default",
@@ -87,9 +88,23 @@ export function DragNDrop() {
     addNodes(newNode);
   };
 
+  // Adopt completed connections — controlled edges never auto-insert.
+  const onConnect = (connection: EdgeConnection) => {
+    setEdges((draft) => {
+      draft.push(connection);
+    });
+  };
+
   return (
     <main style={{ height: "100%", display: "flex" }}>
-      <SolidFlow nodes={nodes} edges={edges} fitView onDragOver={onDragOver} onDrop={onDrop}>
+      <SolidFlow
+        nodes={nodes}
+        edges={edges}
+        onConnect={onConnect}
+        fitView
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
         <Controls />
         <Background variant="dots" />
         <MiniMap />

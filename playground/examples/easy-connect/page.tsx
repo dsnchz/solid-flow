@@ -4,6 +4,7 @@ import {
   Background,
   createEdgeStore,
   createNodeStore,
+  type EdgeConnection,
   MarkerType,
   type NodeTypes,
   SolidFlow,
@@ -63,13 +64,20 @@ export const EasyConnect = () => {
     },
   ]);
 
-  const [edges] = createEdgeStore([]);
+  const [edges, setEdges] = createEdgeStore([]);
+
+  // Adopt completed connections — controlled edges never auto-insert.
+  const onConnect = (connection: EdgeConnection) => {
+    setEdges((draft) => {
+      draft.push(connection);
+    });
+  };
 
   return (
     <SolidFlow
       nodes={nodes}
       edges={edges}
-      // onConnect={onConnect}
+      onConnect={onConnect}
       fitView
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}

@@ -3,6 +3,7 @@ import {
   Controls,
   createEdgeStore,
   createNodeStore,
+  type EdgeConnection,
   MiniMap,
   type NodeTypes,
   SolidFlow,
@@ -56,7 +57,7 @@ export const HandleConnect = () => {
     },
   ]);
 
-  const [edges] = createEdgeStore([
+  const [edges, setEdges] = createEdgeStore([
     {
       id: "e1-2",
       source: "1",
@@ -81,8 +82,22 @@ export const HandleConnect = () => {
     },
   ]);
 
+  // Adopt completed connections — controlled edges never auto-insert.
+  const onConnect = (connection: EdgeConnection) => {
+    setEdges((draft) => {
+      draft.push(connection);
+    });
+  };
+
   return (
-    <SolidFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView colorMode="dark">
+    <SolidFlow
+      nodes={nodes}
+      edges={edges}
+      onConnect={onConnect}
+      nodeTypes={nodeTypes}
+      fitView
+      colorMode="dark"
+    >
       <Controls />
       <Background variant="dots" />
       <MiniMap />

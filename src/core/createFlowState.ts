@@ -671,6 +671,14 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const addEdge = (edgeParams: EdgeType | Connection) => {
+    // Connection-completion writer (Handle's drag and click paths). On a
+    // controlled edges axis membership belongs to the user's store: the
+    // connection reaches them only through onConnect, and auto-inserting here
+    // would pierce into their store and duplicate the documented adoption
+    // push. Uncontrolled flows own membership, so the connection lands
+    // directly. Presence check only — referencing the store proxy is not a
+    // row read, so a still-pending async-seeded store is safe here.
+    if (untrack(() => config().edges) !== undefined) return;
     setEdgesStore((edges) => {
       const next = systemAddEdge(edgeParams, edges as EdgeType[]);
       // systemAddEdge returns the same array when the edge is invalid/duplicate

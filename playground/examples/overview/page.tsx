@@ -4,6 +4,7 @@ import {
   Controls,
   createEdgeStore,
   createNodeStore,
+  type EdgeConnection,
   EdgeLabel,
   type EdgeProps,
   getBezierPath,
@@ -226,6 +227,14 @@ export const Overview = () => {
     });
   };
 
+  // Controlled edges: adopt completed connections into the store (the flow
+  // never writes membership on a controlled axis — see "Who owns the data").
+  const onConnect = (connection: EdgeConnection) => {
+    setEdges((draft) => {
+      draft.push(connection);
+    });
+  };
+
   const changeEdgeType = () => {
     setEdges((items) => {
       for (const edge of items) {
@@ -260,6 +269,7 @@ export const Overview = () => {
       <SolidFlow
         nodes={nodes}
         edges={edges}
+        onConnect={onConnect}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView

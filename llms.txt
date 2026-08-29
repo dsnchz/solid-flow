@@ -69,7 +69,7 @@ Standalone typing for plain arrays/props: `satisfies SolidFlowNode<typeof nodeTy
 
 ## Controlled vs uncontrolled (per axis)
 
-- `nodes={store}` / `edges={store}` — CONTROLLED: your store owns membership; the flow writes runtime fields (`position`, `selected`, `measured`) onto your rows. Commands do NOT write membership back — adopt:
+- `nodes={store}` / `edges={store}` — CONTROLLED: your store owns membership; the flow writes runtime fields (`position`, `selected`, `measured`) onto your rows. Completed connections are NEVER auto-inserted (no adoption = no edge) — adopt in onConnect; commands (addNodes/addEdges) write through best-effort but do not survive your wholesale replacements:
 
 ```tsx
 const onConnect = (c: EdgeConnection) => setEdges((draft) => { draft.push(c); });

@@ -3,6 +3,7 @@ import {
   Controls,
   createEdgeStore,
   createNodeStore,
+  type EdgeConnection,
   Position,
   SolidFlow,
 } from "@/index";
@@ -43,7 +44,14 @@ export const Validation = () => {
     },
   ]);
 
-  const [edges] = createEdgeStore([]);
+  const [edges, setEdges] = createEdgeStore([]);
+
+  // Adopt completed connections — controlled edges never auto-insert.
+  const onConnect = (connection: EdgeConnection) => {
+    setEdges((draft) => {
+      draft.push(connection);
+    });
+  };
 
   const defaultEdgeOptions = {
     animated: true,
@@ -69,6 +77,7 @@ export const Validation = () => {
       <SolidFlow
         nodes={nodes}
         edges={edges}
+        onConnect={onConnect}
         fitView
         minZoom={0.1}
         maxZoom={2.5}

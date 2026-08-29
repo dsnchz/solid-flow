@@ -4,8 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Handle } from "@/components/handle";
 import { SolidFlow } from "@/components/SolidFlow";
+import { createEdgeStore } from "@/core";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
-import type { Edge, Node, NodeTypes } from "@/types";
+import type { EdgeConnection, Node, NodeTypes } from "@/types";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },
@@ -25,13 +26,81 @@ afterEach(() => {
   delete (documentPrototype as { elementFromPoint?: unknown }).elementFromPoint;
 });
 
+// Drags from node `a`'s source handle onto node `b`'s target handle.
+const connectByDrag = async (container: HTMLElement) => {
+  const sourceHandle = container.querySelector<HTMLElement>(
+    '.solid-flow__handle.source[data-nodeid="a"]',
+  )!;
+  const targetHandle = container.querySelector<HTMLElement>(
+    '.solid-flow__handle.target[data-nodeid="b"]',
+  )!;
+  expect(sourceHandle).not.toBeNull();
+  expect(targetHandle).not.toBeNull();
+
+  documentPrototype.elementFromPoint = () => targetHandle;
+
+  fireEvent.pointerDown(sourceHandle, { button: 0, pointerId: 1, clientX: 50, clientY: 40 });
+  // two moves: the first exceeds the drag threshold and starts the
+  // connection, the second hovers the drop target
+  fireEvent.mouseMove(document, { clientX: 150, clientY: 80 });
+  fireEvent.mouseMove(document, { clientX: 220, clientY: 100 });
+  fireEvent.mouseUp(document, { clientX: 220, clientY: 100 });
+  await tick();
+};
+
 describe("<Handle /> connection gesture", () => {
-  it("creates an edge by dragging from a source handle to a target handle", async () => {
+  it("creates an edge by dragging from a source handle to a target handle (uncontrolled)", async () => {
     // Regression: XYHandle writes the connection state and synchronously reads
     // it back through getFromHandle() in the same task. Solid 2.0 defers reads
     // until flush, so without the flush() in the updateConnection seam the
     // gesture aborted on the first pointermove and no edge was ever created.
-    const edges: Edge[] = [];
+    // Uses defaultEdges: on an uncontrolled axis the flow owns membership, so
+    // the completed connection lands with no adoption step.
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "a" }), makeNode({ id: "b", position: { x: 200, y: 100 } })]}
+        defaultEdges={[]}
+        width={800}
+        height={600}
+      />
+    ));
+    await tick();
+    await connectByDrag(container);
+
+    const renderedEdges = Array.from(container.querySelectorAll(".solid-flow__edge")).map((edge) =>
+      edge.getAttribute("data-id"),
+    );
+    expect(renderedEdges).toEqual(["xy-edge__a-b"]);
+  });
+
+  it("controlled: the completed connection is not written into the user's store — onConnect adoption yields exactly one row", async () => {
+    // The ownership contract (README "Who owns the data"): a controlled axis'
+    // membership belongs to the user's store. The flow must NOT auto-insert
+    // the connection, or the documented onConnect adoption duplicates the id.
+    const [edges, setEdges] = createEdgeStore([]);
+    const onConnect = (connection: EdgeConnection) => {
+      setEdges((draft) => {
+        draft.push(connection);
+      });
+    };
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "a" }), makeNode({ id: "b", position: { x: 200, y: 100 } })]}
+        edges={edges}
+        onConnect={onConnect}
+        width={800}
+        height={600}
+      />
+    ));
+    await tick();
+    await connectByDrag(container);
+
+    expect(edges.map((edge) => edge.id)).toEqual(["xy-edge__a-b"]);
+    expect(container.querySelectorAll('.solid-flow__edge[data-id="xy-edge__a-b"]')).toHaveLength(1);
+  });
+
+  it("controlled without adoption: the completed connection does not enter the flow", async () => {
+    const [edges] = createEdgeStore([]);
     const { container } = render(() => (
       <SolidFlow
         nodes={[makeNode({ id: "a" }), makeNode({ id: "b", position: { x: 200, y: 100 } })]}
@@ -41,30 +110,10 @@ describe("<Handle /> connection gesture", () => {
       />
     ));
     await tick();
+    await connectByDrag(container);
 
-    const sourceHandle = container.querySelector<HTMLElement>(
-      '.solid-flow__handle.source[data-nodeid="a"]',
-    )!;
-    const targetHandle = container.querySelector<HTMLElement>(
-      '.solid-flow__handle.target[data-nodeid="b"]',
-    )!;
-    expect(sourceHandle).not.toBeNull();
-    expect(targetHandle).not.toBeNull();
-
-    documentPrototype.elementFromPoint = () => targetHandle;
-
-    fireEvent.pointerDown(sourceHandle, { button: 0, pointerId: 1, clientX: 50, clientY: 40 });
-    // two moves: the first exceeds the drag threshold and starts the
-    // connection, the second hovers the drop target
-    fireEvent.mouseMove(document, { clientX: 150, clientY: 80 });
-    fireEvent.mouseMove(document, { clientX: 220, clientY: 100 });
-    fireEvent.mouseUp(document, { clientX: 220, clientY: 100 });
-    await tick();
-
-    const renderedEdges = Array.from(container.querySelectorAll(".solid-flow__edge")).map((edge) =>
-      edge.getAttribute("data-id"),
-    );
-    expect(renderedEdges).toEqual(["xy-edge__a-b"]);
+    expect(edges).toHaveLength(0);
+    expect(container.querySelectorAll(".solid-flow__edge")).toHaveLength(0);
   });
 
   it("does not create an edge when the drag ends on empty pane", async () => {
