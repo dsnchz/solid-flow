@@ -36,14 +36,20 @@ describe("live (async-iterable) node stores", () => {
   it("streams membership and position updates into a rendered flow", async () => {
     const queue: SeedNode[][] = [];
     let notify: (() => void) | undefined;
+    let closed = false;
     const stream = async function* () {
-      for (;;) {
+      while (!closed) {
         while (queue.length) yield queue.shift()!;
+        if (closed) break;
         await new Promise<void>((resolve) => (notify = resolve));
       }
     };
     const push = (v: SeedNode[]) => {
       queue.push(v);
+      notify?.();
+    };
+    const close = () => {
+      closed = true;
       notify?.();
     };
 
@@ -76,6 +82,16 @@ describe("live (async-iterable) node stores", () => {
     push([makeNode("a", 250)]);
     await tick();
     expect(inDom("b")).toBe(false);
+    expect(inDom("a")).toBe(true);
+
+    // Stream completion: the store keeps the last yielded state. Completing
+    // BEFORE unmount also makes teardown deterministic — a generator parked
+    // on a pending next() at dispose leaves a promise reaction racing the
+    // iterator cancellation, an upstream window that intermittently wedged
+    // the reactive graph into a recompute loop (heap OOM ~1 in 5 full-suite
+    // runs; see .agent/spikes/p33-live-store-oom-repro.ts).
+    close();
+    await tick();
     expect(inDom("a")).toBe(true);
   });
 });
