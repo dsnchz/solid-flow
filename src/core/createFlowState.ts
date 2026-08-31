@@ -1,9 +1,6 @@
 import {
-  addEdge as systemAddEdge,
-  type Connection,
   type ConnectionState,
   evaluateAbsolutePosition,
-  getElementsToRemove,
   getInternalNodesBounds,
   getNodesBounds as systemGetNodesBounds,
   getOverlappingArea,
@@ -14,7 +11,6 @@ import {
   type InternalNodeUpdate,
   isRectObject,
   mergeAriaLabelConfig,
-  type NodeDragItem,
   type NodeLookup,
   nodeToRect,
   type PanZoomInstance,
@@ -23,7 +19,6 @@ import {
   type SelectionRect,
   type Transform,
   type Viewport,
-  type XYPosition,
 } from "@xyflow/system";
 import {
   type Accessor,
@@ -35,7 +30,6 @@ import {
   flush,
   merge,
   onCleanup,
-  snapshot,
   untrack,
 } from "solid-js";
 
@@ -48,8 +42,9 @@ import type {
   Node,
   NodeTypes,
 } from "@/types";
-import { isEdge, isNode } from "@/utils";
+import { isNode } from "@/utils";
 
+import { createElementCommands } from "./commands/elements";
 import { createSelectionCommands } from "./commands/selection";
 import { createViewportCommands } from "./commands/viewport";
 import { createCullingViewport } from "./culling";
@@ -656,24 +651,20 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     setSnapGrid(undefined);
   };
 
-  const addEdge = (edgeParams: EdgeType | Connection) => {
-    // Connection-completion writer (Handle's drag and click paths). On a
-    // controlled edges axis membership belongs to the user's store: the
-    // connection reaches them only through onConnect, and auto-inserting here
-    // would pierce into their store and duplicate the documented adoption
-    // push. Uncontrolled flows own membership, so the connection lands
-    // directly. Presence check only — referencing the store proxy is not a
-    // row read, so a still-pending async-seeded store is safe here.
-    if (untrack(() => config().edges) !== undefined) return;
-    setEdgesStore((edges) => {
-      const next = systemAddEdge(edgeParams, edges as EdgeType[]);
-      // systemAddEdge returns the same array when the edge is invalid/duplicate
-      if (next !== edges) {
-        edges.push(next[next.length - 1]!);
-      }
-      return undefined;
-    });
-  };
+  // ── element command group (core/commands/elements.ts): structural and
+  // field mutations of nodes/edges, plus the gesture-driven writers ──
+  const elementCommands = createElementCommands<NodeType, EdgeType>({
+    store,
+    setNodesStore,
+    setEdgesStore,
+    setSelectionOverlay,
+    setDragOverlay,
+    nodeLookup,
+    // Presence check only — referencing the store proxy is not a row read,
+    // so a still-pending async-seeded store is safe here.
+    controlledEdges: () => untrack(() => config().edges) !== undefined,
+  });
+  const { addEdge, updateNodePositions } = elementCommands;
 
   let initialFitViewApplied = false;
   let initialNodesMeasured = false;
@@ -691,37 +682,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
     initialFitViewApplied = true;
     void untrack(() => fitView());
-  };
-
-  const updateNodePositions = (
-    nodeDragItems: Map<string, Pick<NodeDragItem, "position">>,
-    dragging = false,
-  ) => {
-    // Overlay write (authoritative for rendering) + best-effort row
-    // write-through (parity: a plain store is live during the drag).
-    // rowBefore is captured from the row's PRE-write value on the gesture's
-    // first frame and carried through subsequent frames.
-    setNodesStore((nodes) => {
-      const writes: {
-        id: string;
-        position: XYPosition;
-        rowBefore: XYPosition;
-        row: NodeType;
-      }[] = [];
-      for (const node of nodes) {
-        if (!nodeDragItems.has(node.id)) continue;
-        const position = nodeDragItems.get(node.id)!.position;
-        writes.push({ id: node.id, position, rowBefore: { ...node.position }, row: node });
-        node.dragging = dragging;
-        node.position = position;
-      }
-      setDragOverlay((draft) => {
-        for (const { id, position, rowBefore, row } of writes) {
-          draft[id] = { position, dragging, rowBefore: draft[id]?.rowBefore ?? rowBefore, row };
-        }
-      });
-      return undefined;
-    });
   };
 
   // ── measurement ingest (core/measurementIngest.ts): DOM-pass writes into
@@ -1008,38 +968,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     return nodeToRect(nodeWithPosition);
   };
 
-  const updateNode: FlowCommands<NodeType, EdgeType>["updateNode"] = (
-    id,
-    nodeUpdate,
-    options = { replace: false },
-  ) => {
-    setNodesStore((nodes) => {
-      const index = nodes.findIndex((node) => node.id === id);
-      if (index === -1) return undefined;
-
-      const node = nodes[index]!;
-      const nextNode = typeof nodeUpdate === "function" ? nodeUpdate(node) : nodeUpdate;
-      // `selected` is flow state, not user data: route it through the
-      // selection sidecar too, so updateNode-driven selection composes over
-      // optimistic stores exactly like gesture-driven selection. The entry
-      // holds the ORIGINAL row proxy, and `selected` is field-written onto it
-      // BEFORE the slot replacement: on plain stores the field write commits
-      // (entry confirms; the replacement row governs after release), on
-      // optimistic stores both writes revert together and the overlay holds.
-      // Capturing the replacement object instead would self-confirm — it
-      // keeps the written value even after the slot reverts around it.
-      if (nextNode.selected !== undefined) {
-        node.selected = !!nextNode.selected;
-        setSelectionOverlay((draft) => {
-          draft.nodes[id] = { value: !!nextNode.selected, row: node };
-        });
-      }
-      nodes[index] =
-        options?.replace && isNode<NodeType>(nextNode) ? nextNode : { ...node, ...nextNode };
-      return undefined;
-    });
-  };
-
   const commands: FlowCommands<NodeType, EdgeType> = {
     fitView: viewportCommands.fitView,
     fitBounds: viewportCommands.fitBounds,
@@ -1051,90 +979,14 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     panBy,
     screenToFlowPosition: viewportCommands.screenToFlowPosition,
     flowToScreenPosition: viewportCommands.flowToScreenPosition,
-    addNodes: (payload) => {
-      const newNodes = Array.isArray(payload) ? payload : [payload];
-      setNodesStore((nodes) => [...nodes, ...newNodes]);
-    },
-    addEdges: (payload) => {
-      const newEdges = Array.isArray(payload) ? payload : [payload];
-      setEdgesStore((edges) => [...edges, ...newEdges]);
-    },
+    addNodes: elementCommands.addNodes,
+    addEdges: elementCommands.addEdges,
     setNodes: setNodesStore,
     setEdges: setEdgesStore,
-    updateNode,
-    updateNodeData: (id, dataUpdate, options) => {
-      const node = nodeLookup.get(id)?.internals.userNode;
-      if (!node) return;
-
-      const nextData = typeof dataUpdate === "function" ? dataUpdate(node) : dataUpdate;
-      updateNode(id, (current) => ({
-        ...current,
-        data: options?.replace ? nextData : { ...current.data, ...nextData },
-      }));
-    },
-    updateEdge: (id, edgeUpdate, options = { replace: false }) => {
-      setEdgesStore((edges) => {
-        const index = edges.findIndex((edge) => edge.id === id);
-        if (index === -1) return undefined;
-
-        const edge = edges[index]!;
-        const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
-        // `selected` routing — see updateNode for the original-row-proxy
-        // capture rationale.
-        if (nextEdge.selected !== undefined) {
-          edge.selected = !!nextEdge.selected;
-          setSelectionOverlay((draft) => {
-            draft.edges[id] = { value: !!nextEdge.selected, row: edge };
-          });
-        }
-        edges[index] =
-          options.replace && isEdge<EdgeType>(nextEdge) ? nextEdge : { ...edge, ...nextEdge };
-        return undefined;
-      });
-    },
-    deleteElements: async ({ nodes: nodesToRemove = [], edges: edgesToRemove = [] }) => {
-      const { nodes: matchingNodes, edges: matchingEdges } = await getElementsToRemove<
-        NodeType,
-        EdgeType
-      >({
-        nodesToRemove,
-        edgesToRemove,
-        nodes: store.nodes,
-        edges: store.edges,
-        onBeforeDelete: store.onBeforeDelete,
-      });
-
-      if (matchingEdges) {
-        const remainingEdges = store.edges.filter(
-          (edge) => !matchingEdges.some(({ id }) => id === edge.id),
-        );
-
-        store.onEdgesDelete?.(matchingEdges);
-        setEdgesStore(() => remainingEdges);
-      }
-
-      if (matchingNodes) {
-        const remainingNodes = store.nodes.filter(
-          (node) => !matchingNodes.some(({ id }) => id === node.id),
-        );
-
-        store.onNodesDelete?.(matchingNodes);
-        setNodesStore(() => remainingNodes);
-      }
-
-      // Every delete path (keyboard AND programmatic) notifies here, so
-      // commands.deleteElements never deletes silently.
-      const deletedNodes = matchingNodes ?? [];
-      const deletedEdges = matchingEdges ?? [];
-      if (deletedNodes.length > 0 || deletedEdges.length > 0) {
-        store.onDelete?.({ nodes: deletedNodes, edges: deletedEdges });
-      }
-
-      return {
-        deletedNodes: matchingNodes,
-        deletedEdges: matchingEdges,
-      };
-    },
+    updateNode: elementCommands.updateNode,
+    updateNodeData: elementCommands.updateNodeData,
+    updateEdge: elementCommands.updateEdge,
+    deleteElements: elementCommands.deleteElements,
     getIntersectingNodes: (nodeOrRect, partially = true, nodesToIntersect) => {
       const isRect = isRectObject(nodeOrRect);
       const nodeRect = isRect ? nodeOrRect : getNodeRect(nodeOrRect);
@@ -1189,13 +1041,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
       requestMeasure(updates);
     },
-    toObject: () => {
-      return structuredClone({
-        nodes: [...snapshot(store.nodes)],
-        edges: [...snapshot(store.edges)],
-        viewport: { ...snapshot(store.viewport) },
-      });
-    },
+    toObject: elementCommands.toObject,
   };
 
   /**********************************************************************************/
