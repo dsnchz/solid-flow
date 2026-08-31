@@ -1,7 +1,8 @@
-import { type StoreSetter } from "solid-js";
-import { createOptimisticStore, createStore, type Refreshable, type Store } from "solid-js";
+import type { Refreshable, Store, StoreSetter } from "solid-js";
 
 import type { BuiltInEdgeTypes, Edge, EdgeProps, EdgeTypes, UnknownStruct } from "@/types";
+
+import { createSeededOptimisticStore, createSeededStore } from "./factory";
 
 // Extract the data type from an edge component's props; components whose
 // signature doesn't match the EdgeProps shape degrade gracefully to an
@@ -10,6 +11,9 @@ type EdgeDataOf<T> = T extends (props: EdgeProps<infer TData, infer _TType>) => 
   ? TData
   : UnknownStruct;
 
+// NOTE: the type machinery below is intentionally PARALLEL with createNodeStore.ts
+// (TS has no higher-kinded types to abstract the Node/Edge constructors);
+// keep the two in sync. Runtime behavior lives once, in ./factory.ts.
 // Create a discriminated union of all possible edge configurations
 type AllEdgeTypes<TUserEdgeTypes extends EdgeTypes> =
   TUserEdgeTypes extends Record<string, never>
@@ -127,12 +131,7 @@ export const createEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string
         | Promise<NoInfer<EdgesInput<TUserEdgeTypes>>[]>
         | AsyncIterable<NoInfer<EdgesInput<TUserEdgeTypes>>[]>),
 ): readonly [Store<EdgesInput<TUserEdgeTypes>[]>, StoreSetter<EdgesInput<TUserEdgeTypes>[]>] => {
-  const [store, setStore] =
-    typeof edges === "function"
-      ? createStore<EdgesInput<TUserEdgeTypes>[]>(edges, [])
-      : createStore(edges);
-
-  return [store, setStore] as const;
+  return createSeededStore<EdgesInput<TUserEdgeTypes>>(edges);
 };
 
 /** The optimistic twin of {@link createEdgeStore}'s async form — see {@link createOptimisticNodeStore}. */
@@ -156,9 +155,5 @@ export function createOptimisticEdgeStore<TUserEdgeTypes extends EdgeTypes = Rec
 ): readonly [Store<EdgesInput<TUserEdgeTypes>[]>, StoreSetter<EdgesInput<TUserEdgeTypes>[]>] {
   // Mirrors the full core surface (value | promise | stream), like the plain
   // factory: the wrapper's only value-add is the guided-union typing.
-  const [store, setStore] =
-    typeof edges === "function"
-      ? createOptimisticStore<EdgesInput<TUserEdgeTypes>[]>(edges, [])
-      : createOptimisticStore<EdgesInput<TUserEdgeTypes>[]>(edges);
-  return [store, setStore] as const;
+  return createSeededOptimisticStore<EdgesInput<TUserEdgeTypes>>(edges);
 }

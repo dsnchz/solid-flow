@@ -1,7 +1,8 @@
-import { type StoreSetter } from "solid-js";
-import { createOptimisticStore, createStore, type Refreshable, type Store } from "solid-js";
+import type { Refreshable, Store, StoreSetter } from "solid-js";
 
 import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes, UnknownStruct } from "@/types";
+
+import { createSeededOptimisticStore, createSeededStore } from "./factory";
 
 // Extract the data type from a node component's props; components whose
 // signature doesn't match the NodeProps shape (extra props, wrappers, no
@@ -11,6 +12,9 @@ type NodeDataOf<T> = T extends (props: NodeProps<infer TData, infer _TType>) => 
   ? TData
   : UnknownStruct;
 
+// NOTE: the type machinery below is intentionally PARALLEL with createEdgeStore.ts
+// (TS has no higher-kinded types to abstract the Node/Edge constructors);
+// keep the two in sync. Runtime behavior lives once, in ./factory.ts.
 // Create a discriminated union of all possible node configurations
 type AllNodeTypes<TUserNodeTypes extends NodeTypes> =
   TUserNodeTypes extends Record<string, never>
@@ -132,12 +136,7 @@ export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string
         | Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>
         | AsyncIterable<NoInfer<NodesInput<TUserNodeTypes>>[]>),
 ): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>] => {
-  const [store, setStore] =
-    typeof nodes === "function"
-      ? createStore<NodesInput<TUserNodeTypes>[]>(nodes, [])
-      : createStore(nodes);
-
-  return [store, setStore] as const;
+  return createSeededStore<NodesInput<TUserNodeTypes>>(nodes);
 };
 
 /**
@@ -169,9 +168,5 @@ export function createOptimisticNodeStore<TUserNodeTypes extends NodeTypes = Rec
 ): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>] {
   // Mirrors the full core surface (value | promise | stream), like the plain
   // factory: the wrapper's only value-add is the guided-union typing.
-  const [store, setStore] =
-    typeof nodes === "function"
-      ? createOptimisticStore<NodesInput<TUserNodeTypes>[]>(nodes, [])
-      : createOptimisticStore<NodesInput<TUserNodeTypes>[]>(nodes);
-  return [store, setStore] as const;
+  return createSeededOptimisticStore<NodesInput<TUserNodeTypes>>(nodes);
 }
