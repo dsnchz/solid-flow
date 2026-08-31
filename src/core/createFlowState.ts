@@ -1,21 +1,15 @@
 import {
   type ConnectionState,
-  evaluateAbsolutePosition,
   getInternalNodesBounds,
-  getNodesBounds as systemGetNodesBounds,
-  getOverlappingArea,
   getViewportForBounds,
   type Handle,
   infiniteExtent,
   initialConnection,
   type InternalNodeUpdate,
-  isRectObject,
   mergeAriaLabelConfig,
   type NodeLookup,
-  nodeToRect,
   type PanZoomInstance,
   pointToRendererPoint,
-  type Rect,
   type SelectionRect,
   type Transform,
   type Viewport,
@@ -42,9 +36,9 @@ import type {
   Node,
   NodeTypes,
 } from "@/types";
-import { isNode } from "@/utils";
 
 import { createElementCommands } from "./commands/elements";
+import { createGeometryCommands } from "./commands/geometry";
 import { createSelectionCommands } from "./commands/selection";
 import { createViewportCommands } from "./commands/viewport";
 import { createCullingViewport } from "./culling";
@@ -61,7 +55,6 @@ import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
 import { createSelectedIds } from "./projections/selectedIds";
 import { type SelectionOverlay } from "./selectionOverlay";
-import { SpatialGrid } from "./spatial/grid";
 import { createSeededGraphStores } from "./stores/seeding";
 
 /** One measure request: node id plus the DOM element to measure. */
@@ -908,65 +901,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
   };
 
-  // The public write surface. Implementations live here (not in the hook) so
-  // the struct is the canonical capability surface and hooks stay aliases.
-  // A microtask-lifetime spatial grid over node rects: always rebuilt at
-  // most once per task (no invalidation seams to miss — geometry writes in
-  // the same task were already visible when the first query built it, and
-  // the next task rebuilds). Untracked: this is a pull API, not a
-  // subscription (a reactive index would recreate the round-6
-  // central-collection anti-pattern).
-  let intersectionGrid: SpatialGrid | null = null;
-  let intersectionRows: Map<string, NodeType> | null = null;
-  const queryIntersectionCandidates = (rect: Rect): NodeType[] =>
-    untrack(() => {
-      if (!intersectionGrid) {
-        const grid = new SpatialGrid(300);
-        const rows = new Map<string, NodeType>();
-        for (const node of store.nodes) {
-          const internalNode = nodeLookup.get(node.id);
-          if (!internalNode) continue;
-          grid.insert(node.id, nodeToRect(internalNode));
-          rows.set(node.id, node);
-        }
-        intersectionGrid = grid;
-        intersectionRows = rows;
-        queueMicrotask(() => {
-          intersectionGrid = null;
-          intersectionRows = null;
-        });
-      }
-      const rows = intersectionRows!;
-      const result: NodeType[] = [];
-      for (const id of intersectionGrid.queryRect(rect)) {
-        const row = rows.get(id);
-        if (row) result.push(row);
-      }
-      return result;
-    });
-
-  const getNodeRect = (node: NodeType | { id: NodeType["id"] }): Rect | null => {
-    const nodeToUse = isNode<NodeType>(node) ? node : nodeLookup.get(node.id);
-    if (!nodeToUse) return null;
-    const position = nodeToUse.parentId
-      ? evaluateAbsolutePosition(
-          nodeToUse.position,
-          nodeToUse.measured,
-          nodeToUse.parentId,
-          nodeLookup,
-          store.nodeOrigin,
-        )
-      : nodeToUse.position;
-
-    const nodeWithPosition = {
-      ...nodeToUse,
-      position,
-      width: nodeToUse.measured?.width ?? nodeToUse.width,
-      height: nodeToUse.measured?.height ?? nodeToUse.height,
-    };
-
-    return nodeToRect(nodeWithPosition);
-  };
+  // The public write surface. Implementations live in the command groups
+  // (core/commands/*); this struct is the canonical capability surface and
+  // hooks stay aliases.
+  const geometryCommands = createGeometryCommands<NodeType, EdgeType>({ store, nodeLookup });
 
   const commands: FlowCommands<NodeType, EdgeType> = {
     fitView: viewportCommands.fitView,
@@ -987,45 +925,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     updateNodeData: elementCommands.updateNodeData,
     updateEdge: elementCommands.updateEdge,
     deleteElements: elementCommands.deleteElements,
-    getIntersectingNodes: (nodeOrRect, partially = true, nodesToIntersect) => {
-      const isRect = isRectObject(nodeOrRect);
-      const nodeRect = isRect ? nodeOrRect : getNodeRect(nodeOrRect);
-
-      if (!nodeRect) return [];
-
-      // RFC-4239 win #2: with no explicit subset, narrow candidates through
-      // the microtask-cached grid — collision patterns calling this per
-      // dragged node per frame share ONE build and drop from O(n) per call
-      // to O(candidates). The exact predicate below is unchanged.
-      const candidates = nodesToIntersect ?? queryIntersectionCandidates(nodeRect);
-
-      return candidates.filter((n) => {
-        const internalNode = nodeLookup.get(n.id);
-        if (!internalNode || (!isRect && n.id === nodeOrRect.id)) {
-          return false;
-        }
-
-        const currNodeRect = nodeToRect(internalNode);
-        const overlappingArea = getOverlappingArea(currNodeRect, nodeRect);
-        const partiallyVisible = partially && overlappingArea > 0;
-
-        return partiallyVisible || overlappingArea >= nodeRect.width * nodeRect.height;
-      });
-    },
-    isNodeIntersecting: (nodeOrRect, area, partially = true) => {
-      const isRect = isRectObject(nodeOrRect);
-      const nodeRect = isRect ? nodeOrRect : getNodeRect(nodeOrRect);
-
-      if (!nodeRect) return false;
-
-      const overlappingArea = getOverlappingArea(nodeRect, area);
-      const partiallyVisible = partially && overlappingArea > 0;
-
-      return partiallyVisible || overlappingArea >= nodeRect.width * nodeRect.height;
-    },
-    getNodesBounds: (nodesToMeasure) => {
-      return systemGetNodesBounds(nodesToMeasure, { nodeLookup, nodeOrigin: store.nodeOrigin });
-    },
+    getIntersectingNodes: geometryCommands.getIntersectingNodes,
+    isNodeIntersecting: geometryCommands.isNodeIntersecting,
+    getNodesBounds: geometryCommands.getNodesBounds,
     updateNodeInternals: (id) => {
       const updateIds = Array.isArray(id) ? id : [id];
       const updates: MeasureRequestEntry[] = [];
