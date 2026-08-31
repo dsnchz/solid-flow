@@ -1,8 +1,8 @@
 import type { JSX } from "@solidjs/web";
-import { type Context, merge, onCleanup, type ParentProps } from "solid-js";
+import { merge, onCleanup, type ParentProps } from "solid-js";
 
 import { createSolidFlow } from "@/browser/createSolidFlow";
-import { SolidFlowContext, type SolidFlowContextValue } from "@/contexts/flow";
+import { typedSolidFlowContext } from "@/contexts/flow";
 import { getDefaultFlowStateProps } from "@/core/defaults";
 import type { SolidFlowProps } from "@/core/flowProps";
 import type { Edge, Node } from "@/types";
@@ -18,11 +18,8 @@ export const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends
     solidFlow.actions.reset();
   });
 
-  // Since we cannot pass generic type info at the point of context creation, we need to cast it here
-  // In Solid 2.0 the context object IS the provider component
-  const ContextProvider = SolidFlowContext as unknown as Context<
-    SolidFlowContextValue<NodeType, EdgeType>
-  >;
+  // In Solid 2.0 the context object IS the provider component.
+  const ContextProvider = typedSolidFlowContext<NodeType, EdgeType>();
 
   return <ContextProvider value={solidFlow}>{props.children}</ContextProvider>;
 };

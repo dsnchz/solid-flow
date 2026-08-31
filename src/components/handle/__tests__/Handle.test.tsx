@@ -8,6 +8,12 @@ import { createEdgeStore } from "@/core";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { EdgeConnection, Node, NodeTypes } from "@/types";
 
+import {
+  connectByDrag,
+  restoreElementFromPoint,
+  stubElementFromPoint,
+} from "../../__tests__/gestureHarness";
+
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },
   data: { label: `node-${overrides.id}` },
@@ -18,35 +24,7 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
-// jsdom has no elementFromPoint; XYHandle uses it to find the handle under the
-// cursor while connecting. Individual tests point it at the drop handle.
-const documentPrototype = Object.getPrototypeOf(document) as Document;
-
-afterEach(() => {
-  delete (documentPrototype as { elementFromPoint?: unknown }).elementFromPoint;
-});
-
-// Drags from node `a`'s source handle onto node `b`'s target handle.
-const connectByDrag = async (container: HTMLElement) => {
-  const sourceHandle = container.querySelector<HTMLElement>(
-    '.solid-flow__handle.source[data-nodeid="a"]',
-  )!;
-  const targetHandle = container.querySelector<HTMLElement>(
-    '.solid-flow__handle.target[data-nodeid="b"]',
-  )!;
-  expect(sourceHandle).not.toBeNull();
-  expect(targetHandle).not.toBeNull();
-
-  documentPrototype.elementFromPoint = () => targetHandle;
-
-  fireEvent.pointerDown(sourceHandle, { button: 0, pointerId: 1, clientX: 50, clientY: 40 });
-  // two moves: the first exceeds the drag threshold and starts the
-  // connection, the second hovers the drop target
-  fireEvent.mouseMove(document, { clientX: 150, clientY: 80 });
-  fireEvent.mouseMove(document, { clientX: 220, clientY: 100 });
-  fireEvent.mouseUp(document, { clientX: 220, clientY: 100 });
-  await tick();
-};
+afterEach(restoreElementFromPoint);
 
 describe("<Handle /> connection gesture", () => {
   it("creates an edge by dragging from a source handle to a target handle (uncontrolled)", async () => {
@@ -131,7 +109,7 @@ describe("<Handle /> connection gesture", () => {
       '.solid-flow__handle.source[data-nodeid="a"]',
     )!;
 
-    documentPrototype.elementFromPoint = () => null;
+    stubElementFromPoint(null);
 
     fireEvent.pointerDown(sourceHandle, { button: 0, pointerId: 1, clientX: 50, clientY: 40 });
     fireEvent.mouseMove(document, { clientX: 400, clientY: 400 });

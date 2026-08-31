@@ -9,9 +9,10 @@ type UseNodeConnectionsParams = {
   id?: string;
   handleType?: HandleType;
   handleId?: string;
-  // TODO: Svelte 5
-  //   onConnect?: (connections: Connection[]) => void;
-  //   onDisconnect?: (connections: Connection[]) => void;
+  // React/Svelte Flow also accept onConnect/onDisconnect callbacks here;
+  // in Solid Flow those live on <Handle> (which owns the connection-diff
+  // machinery). Add them here only if a concrete use case can't reach the
+  // Handle props.
 };
 
 /**

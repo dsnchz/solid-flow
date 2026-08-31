@@ -107,7 +107,6 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
             .reduce((acc, node) => `${acc}${node.id} `, "")
             .trim()}
           style={{
-            // TODO: Add hideOnSSR display style from Svelte implementation
             position: "absolute",
             transform: transform(),
             "z-index": zIndex(),

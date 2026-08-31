@@ -53,7 +53,8 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
         tabindex={-1}
         class={["solid-flow__edge-label", { transparent: _props.transparent }, _props.class]}
         style={{
-          // TODO: Add hideOnSSR
+          // No hideOnSSR needed (unlike Svelte Flow): EdgeLabelRenderer
+          // portals into domNode, which only exists in the browser.
           "pointer-events": "all",
           width: toPxString(_props.width),
           height: toPxString(_props.height),

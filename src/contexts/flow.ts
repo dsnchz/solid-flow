@@ -1,4 +1,4 @@
-import { createContext, useContext } from "solid-js";
+import { type Context, createContext, useContext } from "solid-js";
 
 import { createSolidFlow } from "@/browser/createSolidFlow";
 import type { Edge, Node } from "@/types";
@@ -10,11 +10,18 @@ export type SolidFlowContextValue<
 
 export const SolidFlowContext = createContext<SolidFlowContextValue | null>(null);
 
+/**
+ * The ONE place the generic-context cast lives. A context object is created
+ * without generic info, so every generic consumer/provider must retype it;
+ * the cast is sound because Solid contexts are plain value carriers and the
+ * SolidFlow/SolidFlowProvider generics keep provider and consumer on the
+ * same instantiation.
+ */
+export const typedSolidFlowContext = <NodeType extends Node, EdgeType extends Edge>() =>
+  SolidFlowContext as unknown as Context<SolidFlowContextValue<NodeType, EdgeType> | null>;
+
 export function useInternalSolidFlow<NodeType extends Node = Node, EdgeType extends Edge = Edge>() {
-  // Since we cannot pass generic types info at the point of context creation, we need to cast it here
-  const ctx = useContext(SolidFlowContext) as unknown as
-    | SolidFlowContextValue<NodeType, EdgeType>
-    | undefined;
+  const ctx = useContext(typedSolidFlowContext<NodeType, EdgeType>());
 
   if (!ctx) {
     throw new Error(

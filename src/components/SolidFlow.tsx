@@ -1,7 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { type ColorModeClass, infiniteExtent } from "@xyflow/system";
 import {
-  type Context,
   createEffect,
   createMemo,
   createSignal,
@@ -18,7 +17,7 @@ import { ConnectionLine } from "@/components/connection";
 import { EdgeRenderer, NodeRenderer, Pane, Viewport, Zoom } from "@/components/container";
 import { NodeSelection, Selection } from "@/components/selection";
 import { Attribution, KeyHandler } from "@/components/utility";
-import { SolidFlowContext, type SolidFlowContextValue } from "@/contexts/flow";
+import { typedSolidFlowContext } from "@/contexts/flow";
 import { getDefaultFlowStateProps } from "@/core/defaults";
 import { FLOW_PROP_KEYS, type SolidFlowProps } from "@/core/flowProps";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
@@ -61,10 +60,9 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
 
   const htmlProps = omit(_props, ...FLOW_PROP_KEYS, "children");
 
-  // Since we cannot pass generic types info at the point of context creation, we need to cast it here
-  const TypedSolidFlowContext = SolidFlowContext as unknown as Context<
-    SolidFlowContextValue<NodeType, EdgeType>
-  >;
+  // In Solid 2.0 the context object IS the provider component (also used in
+  // the JSX below); the generic retyping lives in typedSolidFlowContext.
+  const TypedSolidFlowContext = typedSolidFlowContext<NodeType, EdgeType>();
 
   const solidFlow = useContext(TypedSolidFlowContext) ?? createSolidFlow(_props);
   const { store, actions } = solidFlow;

@@ -8,7 +8,10 @@ export const Viewport = (props: ParentProps): JSX.Element => {
 
   return (
     <div
-      // TODO: Figure out why nodes disappear when we remove the xyflow__viewport class.
+      // `xyflow__viewport` is a LOAD-BEARING upstream contract, independent of
+      // the `lib` class prefix: @xyflow/system's updateNodeInternals resolves
+      // the current zoom via `domNode.querySelector(".xyflow__viewport")` and
+      // bails out (no measurements -> nodes never appear) when it's missing.
       class="solid-flow__container solid-flow__viewport xyflow__viewport"
       style={{
         transform: `translate(${store.viewport.x}px, ${store.viewport.y}px) scale(${store.viewport.zoom})`,
