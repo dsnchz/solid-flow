@@ -67,6 +67,13 @@ export const createOverlayRelease = ({
     },
     ({ candidates, dragCandidates }) => {
       if (!candidates.length && !dragCandidates.length) return;
+      // setTimeout(0) is a SCHEDULING BOUNDARY, not a duration: the re-check
+      // must run on the next MACROTASK, strictly after the current flush and
+      // its microtask cascade — that is where an out-of-action optimistic
+      // write's immediate revert lands (flow writes are always outside
+      // actions). A microtask can interleave with the settle cascade itself
+      // and still observe the transient. clearTimeout coalesces candidate
+      // bursts (e.g. per-frame drag writes) into one verification.
       clearTimeout(releaseTimer);
       releaseTimer = setTimeout(() => {
         const confirmed = candidates.filter(([kind, id]) => {
