@@ -3,7 +3,6 @@ import {
   type Connection,
   type ConnectionState,
   evaluateAbsolutePosition,
-  fitViewport,
   getElementsToRemove,
   getInternalNodesBounds,
   getNodesBounds as systemGetNodesBounds,
@@ -18,16 +17,12 @@ import {
   type NodeDragItem,
   type NodeLookup,
   nodeToRect,
-  panBy as panBySystem,
   type PanZoomInstance,
   pointToRendererPoint,
   type Rect,
-  rendererPointToPoint,
   type SelectionRect,
-  type SetCenterOptions,
   type Transform,
   type Viewport,
-  type ViewportHelperFunctionOptions,
   type XYPosition,
 } from "@xyflow/system";
 import {
@@ -49,7 +44,6 @@ import type {
   BuiltInNodeTypes,
   Edge,
   EdgeTypes,
-  FitViewOptions,
   InternalNode,
   Node,
   NodeTypes,
@@ -57,6 +51,7 @@ import type {
 import { isEdge, isNode } from "@/utils";
 
 import { createSelectionCommands } from "./commands/selection";
+import { createViewportCommands } from "./commands/viewport";
 import { createCullingViewport } from "./culling";
 import { getDefaultFlowStateProps } from "./defaults";
 import { type DragOverlay } from "./dragOverlay";
@@ -635,23 +630,14 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const fitView = async (options?: FitViewOptions<NodeType>) => {
-    if (!store.panZoom) return false;
-
-    const result = await fitViewport(
-      {
-        nodes: nodeLookup,
-        width: store.width,
-        height: store.height,
-        panZoom: store.panZoom,
-        minZoom: store.minZoom,
-        maxZoom: store.maxZoom,
-      },
-      options ?? config().fitViewOptions,
-    );
-
-    return result;
-  };
+  // ── viewport command group (core/commands/viewport.ts): camera movement
+  // and coordinate conversion ──
+  const viewportCommands = createViewportCommands<NodeType, EdgeType>({
+    store,
+    nodeLookup,
+    defaultFitViewOptions: () => config().fitViewOptions,
+  });
+  const { fitView, zoomIn, zoomOut, setCenter, panBy } = viewportCommands;
 
   const resetStoreValues = () => {
     // NOTE: should we reset to the config()-values instead?
@@ -757,33 +743,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   let requestMeasure: (entries: MeasureRequestEntry[]) => void = () => {};
   const setMeasureRequester = (fn: (entries: MeasureRequestEntry[]) => void) => {
     requestMeasure = fn;
-  };
-
-  const zoomBy = async (factor: number, options?: ViewportHelperFunctionOptions) => {
-    return store.panZoom ? store.panZoom.scaleBy(factor, options) : false;
-  };
-
-  const zoomIn = (options?: ViewportHelperFunctionOptions) => zoomBy(1.2, options);
-  const zoomOut = (options?: ViewportHelperFunctionOptions) => zoomBy(1 / 1.2, options);
-
-  const setCenter = async (x: number, y: number, options?: SetCenterOptions) => {
-    const nextZoom = typeof options?.zoom !== "undefined" ? options.zoom : store.maxZoom;
-    const currentPanZoom = store.panZoom;
-
-    if (!currentPanZoom) {
-      return Promise.resolve(false);
-    }
-
-    await currentPanZoom.setViewport(
-      {
-        x: store.width / 2 - x * nextZoom,
-        y: store.height / 2 - y * nextZoom,
-        zoom: nextZoom,
-      },
-      { duration: options?.duration, ease: options?.ease, interpolate: options?.interpolate },
-    );
-
-    return Promise.resolve(true);
   };
 
   const stableSetViewport = (viewport: Viewport) => setViewportStore(() => viewport);
@@ -900,17 +859,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       }, 0);
     },
   );
-
-  const panBy = (delta: XYPosition) => {
-    return panBySystem({
-      delta,
-      panZoom: store.panZoom,
-      transform: store.transform,
-      translateExtent: store.translateExtent,
-      width: store.width,
-      height: store.height,
-    });
-  };
 
   const cancelConnection = () => {
     setConnection({ ...initialConnection });
@@ -1093,83 +1041,16 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   };
 
   const commands: FlowCommands<NodeType, EdgeType> = {
-    fitView,
-    fitBounds: async (bounds, options) => {
-      if (!store.panZoom) return false;
-
-      const viewport = getViewportForBounds(
-        bounds,
-        store.width,
-        store.height,
-        store.minZoom,
-        store.maxZoom,
-        options?.padding ?? 0.1,
-      );
-
-      await store.panZoom.setViewport(viewport, {
-        duration: options?.duration,
-        ease: options?.ease,
-        interpolate: options?.interpolate,
-      });
-
-      return true;
-    },
+    fitView: viewportCommands.fitView,
+    fitBounds: viewportCommands.fitBounds,
     zoomIn,
     zoomOut,
-    setZoom: (zoomLevel, options) => {
-      const currentPanZoom = store.panZoom;
-      return currentPanZoom
-        ? currentPanZoom.scaleTo(zoomLevel, { duration: options?.duration })
-        : Promise.resolve(false);
-    },
+    setZoom: viewportCommands.setZoom,
     setCenter,
-    setViewport: async (nextViewport, options) => {
-      const currentViewport = store.viewport;
-
-      if (!store.panZoom) return false;
-
-      await store.panZoom.setViewport(
-        {
-          x: nextViewport.x ?? currentViewport.x,
-          y: nextViewport.y ?? currentViewport.y,
-          zoom: nextViewport.zoom ?? currentViewport.zoom,
-        },
-        options,
-      );
-
-      return true;
-    },
+    setViewport: viewportCommands.setViewport,
     panBy,
-    screenToFlowPosition: (position, options = { snapToGrid: true }) => {
-      if (!store.domNode) return position;
-
-      const _snapGrid = options.snapToGrid ? store.snapGrid : false;
-      const { x, y, zoom } = store.viewport;
-      const { x: domX, y: domY } = store.domNode.getBoundingClientRect();
-      const correctedPosition = {
-        x: position.x - domX,
-        y: position.y - domY,
-      };
-
-      return pointToRendererPoint(
-        correctedPosition,
-        [x, y, zoom],
-        !!_snapGrid,
-        _snapGrid || [1, 1],
-      );
-    },
-    flowToScreenPosition: (position) => {
-      if (!store.domNode) return position;
-
-      const { x, y, zoom } = store.viewport;
-      const { x: domX, y: domY } = store.domNode.getBoundingClientRect();
-      const rendererPosition = rendererPointToPoint(position, [x, y, zoom]);
-
-      return {
-        x: rendererPosition.x + domX,
-        y: rendererPosition.y + domY,
-      };
-    },
+    screenToFlowPosition: viewportCommands.screenToFlowPosition,
+    flowToScreenPosition: viewportCommands.flowToScreenPosition,
     addNodes: (payload) => {
       const newNodes = Array.isArray(payload) ? payload : [payload];
       setNodesStore((nodes) => [...nodes, ...newNodes]);
