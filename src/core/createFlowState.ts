@@ -915,7 +915,12 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // The public write surface. Implementations live in the command groups
   // (core/commands/*); this struct is the canonical capability surface and
   // hooks stay aliases.
-  const geometryCommands = createGeometryCommands<NodeType, EdgeType>({ store, nodeLookup });
+  const geometryCommands = createGeometryCommands<NodeType, EdgeType>({
+    store,
+    nodeLookup,
+    geometry: nodeGeometry,
+    nodeIndex,
+  });
 
   const commands: FlowCommands<NodeType, EdgeType> = {
     fitView: viewportCommands.fitView,

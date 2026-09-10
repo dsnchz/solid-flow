@@ -14,6 +14,8 @@ import type { Edge, InternalNode, Node } from "@/types";
 import { isNode } from "@/utils";
 
 import type { FlowCommands } from "../flowState";
+import type { NodeGeometry } from "../projections/internalNodes";
+import type { RowIndex } from "../rowIndex";
 import { SpatialGrid } from "../spatial/grid";
 
 /** The slice of the internal store the geometry queries read. */
@@ -25,6 +27,9 @@ type GeometryStoreReads<NodeType extends Node> = {
 export type GeometryCommandDeps<NodeType extends Node> = {
   readonly store: GeometryStoreReads<NodeType>;
   readonly nodeLookup: NodeLookup<InternalNode<NodeType>>;
+  /** The row derive\'s plain geometry map (see InternalNodesSource.onGeometryChange). */
+  readonly geometry: ReadonlyMap<string, NodeGeometry>;
+  readonly nodeIndex: RowIndex<NodeType>;
 };
 
 /**
@@ -34,6 +39,8 @@ export type GeometryCommandDeps<NodeType extends Node> = {
 export const createGeometryCommands = <NodeType extends Node, EdgeType extends Edge>({
   store,
   nodeLookup,
+  geometry,
+  nodeIndex,
 }: GeometryCommandDeps<NodeType>) => {
   // A microtask-lifetime spatial grid over node rects: always rebuilt at
   // most once per task (no invalidation seams to miss — geometry writes in
@@ -42,29 +49,24 @@ export const createGeometryCommands = <NodeType extends Node, EdgeType extends E
   // subscription (a reactive index would recreate the round-6
   // central-collection anti-pattern).
   let intersectionGrid: SpatialGrid | null = null;
-  let intersectionRows: Map<string, NodeType> | null = null;
   const queryIntersectionCandidates = (rect: Rect): NodeType[] =>
     untrack(() => {
       if (!intersectionGrid) {
+        // Built from the row derive's geometry map (no proxy reads), released
+        // at the end of the task (bench round 25).
         const grid = new SpatialGrid(300);
-        const rows = new Map<string, NodeType>();
-        for (const node of store.nodes) {
-          const internalNode = nodeLookup.get(node.id);
-          if (!internalNode) continue;
-          grid.insert(node.id, nodeToRect(internalNode));
-          rows.set(node.id, node);
-        }
+        geometry.forEach((nodeRect, id) => {
+          grid.insert(id, nodeRect);
+        });
         intersectionGrid = grid;
-        intersectionRows = rows;
         queueMicrotask(() => {
           intersectionGrid = null;
-          intersectionRows = null;
         });
       }
-      const rows = intersectionRows!;
+      const rows = store.nodes;
       const result: NodeType[] = [];
       for (const id of intersectionGrid.queryRect(rect)) {
-        const row = rows.get(id);
+        const row = nodeIndex.get(rows, id);
         if (row) result.push(row);
       }
       return result;

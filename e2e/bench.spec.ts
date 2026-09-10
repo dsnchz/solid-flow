@@ -484,3 +484,38 @@ test("BENCH memory unmount @10k", async ({ page }) => {
   );
   expect(unmounted).toBeLessThan(mounted);
 });
+
+test("BENCH getIntersectingNodes @10k", async ({ page }) => {
+  test.setTimeout(120000);
+  await waitForStress(page);
+  // One call per task: each pays the microtask-cached grid build (bench
+  // round 25: built from the geometry map instead of 10k proxy reads).
+  const result = await page.evaluate(async () => {
+    type Api = {
+      api: { commands: { getIntersectingNodes: (rect: unknown) => unknown[] } };
+    };
+    const { api } = (window as unknown as { __bench: Api }).__bench;
+    const samples: number[] = [];
+    let found = 0;
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 0));
+      const t0 = performance.now();
+      found = api.commands.getIntersectingNodes({
+        x: 1000 + i,
+        y: 1000,
+        width: 400,
+        height: 300,
+      }).length;
+      samples.push(performance.now() - t0);
+    }
+    samples.sort((a, b) => a - b);
+    const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
+    return {
+      mean: Math.round(mean * 100) / 100,
+      worst: Math.round(samples[19]! * 100) / 100,
+      found,
+    };
+  });
+  console.log("INTERSECT @10k:", JSON.stringify(result));
+  expect(result.found).toBeGreaterThan(0);
+});
