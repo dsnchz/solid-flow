@@ -11,3 +11,4 @@ tmp
 # playwright
 test-results/
 playwright-report/
+.bench-dist

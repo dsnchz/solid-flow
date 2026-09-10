@@ -71,7 +71,7 @@ describe("createOptimisticStore compat", () => {
         draft.push(node);
       });
       yield gate.then(() => api.add(node));
-      refresh(nodes);
+      void refresh(nodes);
     });
 
     void addNode(makeNode("b", 200));
@@ -98,7 +98,7 @@ describe("createOptimisticStore compat", () => {
         draft.push(node);
       });
       yield gate;
-      refresh(nodes);
+      void refresh(nodes);
     });
 
     addNode(makeNode("b", 200)).catch(() => {});
@@ -134,7 +134,7 @@ describe("createOptimisticStore compat", () => {
         draft.push(node);
       });
       yield gate.then(() => api.add(node));
-      refresh(nodes);
+      void refresh(nodes);
     });
 
     void addNode(makeNode("b", 200));
@@ -166,7 +166,7 @@ describe("createOptimisticStore compat", () => {
       flowApi.addNodes(node);
       flowApi.updateNode(node.id, { selected: true });
       yield gate.then(() => api.add(node));
-      refresh(nodes);
+      void refresh(nodes);
     });
 
     void combined(makeNode("b", 200));

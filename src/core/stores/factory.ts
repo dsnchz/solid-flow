@@ -26,7 +26,6 @@ export const createSeededStore = <T>(
   return [store, setStore] as const;
 };
 
-export function createSeededOptimisticStore<T>(input: T[]): readonly [Store<T[]>, StoreSetter<T[]>];
 export function createSeededOptimisticStore<T>(
   input: AsyncSeed<T>,
 ): readonly [Store<T[]> & Refreshable<T[]>, StoreSetter<T[]>];

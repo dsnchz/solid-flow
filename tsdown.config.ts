@@ -1,4 +1,4 @@
-import { transformAsync } from "@dom-expressions/compiler";
+import { transformAsync } from "@solidjs/compiler";
 import { defineConfig, type UserConfig } from "tsdown";
 
 const SOLID_BUILT_INS = [

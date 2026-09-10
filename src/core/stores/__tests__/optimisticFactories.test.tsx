@@ -34,7 +34,7 @@ describe("createOptimisticNodeStore / createOptimisticEdgeStore", () => {
         draft.push({ id: "b", type: "default", data: { label: "b" }, position: { x: 200, y: 0 } });
       });
       yield gate;
-      refresh(nodes);
+      void refresh(nodes);
     });
     add().catch(() => {});
     await tick();

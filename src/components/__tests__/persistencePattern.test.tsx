@@ -122,7 +122,7 @@ describe("draft-then-commit persistence pattern", () => {
     const save = action(function* () {
       const { nodes, edges } = flowApi().toObject();
       yield api.saveGraph({ nodes, edges });
-      refresh(serverGraph);
+      void refresh(serverGraph);
     });
     await save();
     await tick(50);

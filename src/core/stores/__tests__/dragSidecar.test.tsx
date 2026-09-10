@@ -79,7 +79,7 @@ describe("drag position sidecar", () => {
 
     const noop = action(function* () {
       yield Promise.resolve();
-      refresh(nodes);
+      void refresh(nodes);
     });
     await noop();
     await tick(50);
