@@ -17,6 +17,7 @@ import { createProjection } from "solid-js";
  */
 export const createRowRecordProjection = <Row extends object>(
   rowStores: () => readonly { readonly id: string; readonly store: { readonly row: Row | null } }[],
+  name = "rowRecord",
 ): Record<string, Row> => {
   const assigned = new Map<string, Row>();
   return createProjection<Record<string, Row>>(
@@ -40,6 +41,6 @@ export const createRowRecordProjection = <Row extends object>(
       }
     },
     {},
-    { key: null, shallow: true },
+    { key: null, shallow: true, name },
   );
 };

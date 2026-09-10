@@ -1,9 +1,8 @@
 import type { JSX } from "@solidjs/web";
-import { createMarkerIds } from "@xyflow/system";
 import { createMemo, For, Show } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
-import type { Edge } from "@/types";
+import { createMarkerIndex } from "@/core/projections/markers";
 
 import { Marker, type MarkerProps } from "./Marker";
 
@@ -11,14 +10,29 @@ import { Marker, type MarkerProps } from "./Marker";
 export const MarkerDefinition = (): JSX.Element => {
   const { store } = useInternalSolidFlow();
 
-  const markers = createMemo(() => {
-    return createMarkerIds(store.edges as Edge[], {
-      id: store.id,
-      defaultColor: store.defaultMarkerColor,
-      defaultMarkerStart: store.defaultEdgeOptions.markerStart,
-      defaultMarkerEnd: store.defaultEdgeOptions.markerEnd,
-    }) as MarkerProps[];
+  // Keyed by marker id, derived per edge (core/projections/markers.ts): the
+  // list below re-runs only when the SET of unique markers changes.
+  const markerIndex = createMarkerIndex({
+    get edges() {
+      return store.edges;
+    },
+    get id() {
+      return store.id;
+    },
+    get defaultColor() {
+      return store.defaultMarkerColor;
+    },
+    get defaultMarkerStart() {
+      return store.defaultEdgeOptions.markerStart;
+    },
+    get defaultMarkerEnd() {
+      return store.defaultEdgeOptions.markerEnd;
+    },
   });
+  const markers = createMemo(
+    () => Object.values(markerIndex).sort((a, b) => a.id.localeCompare(b.id)) as MarkerProps[],
+    { name: "markers.list" },
+  );
 
   return (
     <Show when={markers().length > 0}>

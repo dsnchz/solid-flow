@@ -82,7 +82,7 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
   );
 
   // Shared keyed-record tail — see createRowRecordProjection.
-  return createRowRecordProjection(rowStores);
+  return createRowRecordProjection(rowStores, "layoutedEdges");
 };
 
 const buildRow = <NodeType extends Node, EdgeType extends Edge>(

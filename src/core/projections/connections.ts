@@ -1,5 +1,5 @@
 import type { HandleConnection, HandleType } from "@xyflow/system";
-import { createProjection } from "solid-js";
+import { createMemo, createProjection, mapArray } from "solid-js";
 
 import type { Edge } from "@/types";
 
@@ -42,48 +42,95 @@ export type ConnectionsSource<EdgeType extends Edge = Edge> = {
  * handle's connection set: subscribers read `Object.keys(rec)` (or values)
  * and only re-run when THEIR key set changes.
  */
+type Contribution = {
+  readonly key: string;
+  readonly entry: string;
+  readonly connection: HandleConnection;
+};
+
+const sameContributions = (a: readonly Contribution[], b: readonly Contribution[]) =>
+  a.length === b.length &&
+  a.every((c, i) => {
+    const o = b[i]!;
+    return (
+      c.key === o.key &&
+      c.entry === o.entry &&
+      c.connection.source === o.connection.source &&
+      c.connection.target === o.connection.target &&
+      c.connection.sourceHandle === o.connection.sourceHandle &&
+      c.connection.targetHandle === o.connection.targetHandle
+    );
+  });
+
+/** One edge's (up to six) index entries — reads only that edge's leaves. */
+const edgeContributions = (edge: Edge): Contribution[] => {
+  const sourceHandle = edge.sourceHandle ?? null;
+  const targetHandle = edge.targetHandle ?? null;
+  const connection: HandleConnection = {
+    edgeId: edge.id,
+    source: edge.source,
+    target: edge.target,
+    sourceHandle,
+    targetHandle,
+  };
+  const sourceKey = pairKey(edge.source, sourceHandle, edge.target, targetHandle);
+  const targetKey = pairKey(edge.target, targetHandle, edge.source, sourceHandle);
+  const out: Contribution[] = [
+    { key: edge.source, entry: targetKey, connection },
+    { key: connectionKey(edge.source, "source"), entry: targetKey, connection },
+  ];
+  if (sourceHandle) {
+    out.push({
+      key: connectionKey(edge.source, "source", sourceHandle),
+      entry: targetKey,
+      connection,
+    });
+  }
+  out.push(
+    { key: edge.target, entry: sourceKey, connection },
+    { key: connectionKey(edge.target, "target"), entry: sourceKey, connection },
+  );
+  if (targetHandle) {
+    out.push({
+      key: connectionKey(edge.target, "target", targetHandle),
+      entry: sourceKey,
+      connection,
+    });
+  }
+  return out;
+};
+
 export const createConnections = <EdgeType extends Edge = Edge>(
   source: ConnectionsSource<EdgeType>,
 ): ConnectionsRecord => {
+  // Per-edge row derivations (rc.7 HUGE_FAN_IN, bench round 16): the record
+  // used to read ~6 leaves of EVERY edge — one reconnect re-read the whole
+  // graph (~5.4k sources @900 edges, ~60k @10k). Each row memo tracks only
+  // its own edge's leaves and is equality-cut on its contributions, so a
+  // field write re-runs one row; the record merge reads E memos, no leaves.
+  const rows = createMemo(
+    mapArray(
+      () => source.edges,
+      (edge) =>
+        createMemo(() => edgeContributions(edge), {
+          equals: sameContributions,
+          name: "connections.row",
+        }),
+    ),
+    { name: "connections.rows" },
+  );
+
   return createProjection<ConnectionsRecord>(
     () => {
       const out: ConnectionsRecord = {};
-
-      const add = (key: string, entry: string, connection: HandleConnection) => {
-        (out[key] ??= {})[entry] = connection;
-      };
-
-      for (const edge of source.edges) {
-        const sourceHandle = edge.sourceHandle ?? null;
-        const targetHandle = edge.targetHandle ?? null;
-
-        const connection: HandleConnection = {
-          edgeId: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle,
-          targetHandle,
-        };
-
-        const sourceKey = pairKey(edge.source, sourceHandle, edge.target, targetHandle);
-        const targetKey = pairKey(edge.target, targetHandle, edge.source, sourceHandle);
-
-        add(edge.source, targetKey, connection);
-        add(connectionKey(edge.source, "source"), targetKey, connection);
-        if (sourceHandle) {
-          add(connectionKey(edge.source, "source", sourceHandle), targetKey, connection);
-        }
-
-        add(edge.target, sourceKey, connection);
-        add(connectionKey(edge.target, "target"), sourceKey, connection);
-        if (targetHandle) {
-          add(connectionKey(edge.target, "target", targetHandle), sourceKey, connection);
+      for (const row of rows()) {
+        for (const { key, entry, connection } of row()) {
+          (out[key] ??= {})[entry] = connection;
         }
       }
-
       return out;
     },
     {},
-    { key: "id" },
+    { key: "id", name: "connections" },
   );
 };

@@ -147,8 +147,22 @@ are the same code path as arrays.
   at gesture start (geometry is frozen mid-gesture) instead of upstream's
   full scans. `getIntersectingNodes` shares a microtask-lifetime grid.
 - Avoid monolithic view memos: a memo that maps every row rebuilds all its
-  subscriptions on any recompute. Prefer keyed projections (`selectedIds`'
-  per-row presence pattern is the template — O(changed-row)).
+  subscriptions on any recompute. Prefer keyed projections
+  (`projections/presenceIds.ts` is the template — one tiny projection per row
+  deciding its own presence, O(changed-row); `selectedIds` and the unmeasured
+  set behind `nodesInitialized` use it; `connections` and the marker index use
+  per-row memos merged by a record projection).
+- **Reactive nodes are named** (`{ name }` on memos, effects, projections) so
+  the rc.7 dev diagnostics (`HUGE_FAN_IN`, `HUGE_FAN_OUT`, `WIDE_SCOPE_DEPS`)
+  and `DEV.attribution.costs()` identify them. The stress example enables
+  attribution with `?attr=1`; `e2e/attribution-probe.spec.ts` prints the
+  warnings and cost tables. Diagnostics that fire BY DESIGN on a large graph,
+  and must not be "fixed": `visibleNodeIds`/`visibleEdgeIds` (membership id
+  lists read one id per row — inherent, membership cadence only), the
+  renderers' `<For>` insert effects (framework: one child value per row), and
+  `connectionFromHandle` / `cullingViewport` fan-out (every row subscribes on
+  purpose — each changes once per gesture or pan frame and costs O(1) per
+  subscriber). Anything else the diagnostics name is a finding.
 
 ## Typing
 

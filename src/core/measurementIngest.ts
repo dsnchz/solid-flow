@@ -9,8 +9,8 @@ import type { RowIndex } from "./rowIndex";
 export type MeasurementIngestDeps<NodeType extends Node> = {
   readonly setMeasurementsStore: StoreSetter<NodeMeasurements>;
   readonly setNodesStore: StoreSetter<NodeType[]>;
-  /** Live view of the user graph, for the garbage-collection effect. */
-  readonly nodes: () => readonly NodeType[];
+  /** Membership-cadence id list (visibleNodeIds), for the garbage-collection effect. */
+  readonly nodeIds: () => readonly string[];
   /** O(1) id → draft row resolution (see core/rowIndex.ts). */
   readonly nodeIndex: RowIndex<NodeType>;
 };
@@ -25,7 +25,7 @@ export type MeasurementIngestDeps<NodeType extends Node> = {
 export const createMeasurementIngest = <NodeType extends Node>({
   setMeasurementsStore,
   setNodesStore,
-  nodes,
+  nodeIds,
   nodeIndex,
 }: MeasurementIngestDeps<NodeType>) => {
   /** Applies a DOM measuring pass's writes to the measurements root. */
@@ -78,9 +78,11 @@ export const createMeasurementIngest = <NodeType extends Node>({
 
   // Garbage-collect measurements for nodes that no longer exist in the user
   // graph. Entries only appear via the measurement ingest, keyed by node id,
-  // so tracking the node ids is sufficient.
+  // so the shared membership-cadence id list is the only source this needs
+  // (reading every row's id slot here duplicated visibleNodeIds' ~2n
+  // subscriptions — rc.7 HUGE_FAN_IN).
   createEffect(
-    () => new Set(nodes().map((n) => n.id)),
+    () => new Set(nodeIds()),
     (currentIds) => {
       setMeasurementsStore((draft) => {
         for (const id of Object.keys(draft)) {
@@ -96,6 +98,7 @@ export const createMeasurementIngest = <NodeType extends Node>({
         return undefined;
       });
     },
+    { name: "measurementsGC" },
   );
 
   return { applyMeasurementWrites, applyNodeChanges } as const;

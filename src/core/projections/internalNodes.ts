@@ -125,20 +125,23 @@ export const createInternalNodes = <NodeType extends Node = Node>(
   // Root parents get staggered z blocks in "auto" mode, indexed in order of
   // first-child appearance (upstream: rootParentIndex). Depends only on
   // membership and parentId slots — node moves do not re-run it.
-  const autoIndex: Accessor<ReadonlyMap<string, number>> = createMemo(() => {
-    if (source.zIndexMode !== "auto") return EMPTY_AUTO_INDEX;
+  const autoIndex: Accessor<ReadonlyMap<string, number>> = createMemo(
+    () => {
+      if (source.zIndexMode !== "auto") return EMPTY_AUTO_INDEX;
 
-    const index = new Map<string, number>();
-    const rootIds = new Set<string>();
-    for (const node of source.nodes) {
-      if (!node.parentId) {
-        rootIds.add(node.id);
-      } else if (rootIds.has(node.parentId) && !index.has(node.parentId)) {
-        index.set(node.parentId, index.size + 1);
+      const index = new Map<string, number>();
+      const rootIds = new Set<string>();
+      for (const node of source.nodes) {
+        if (!node.parentId) {
+          rootIds.add(node.id);
+        } else if (rootIds.has(node.parentId) && !index.has(node.parentId)) {
+          index.set(node.parentId, index.size + 1);
+        }
       }
-    }
-    return index;
-  });
+      return index;
+    },
+    { name: "autoIndex" },
+  );
 
   // id → row store (+ array position, to enforce the parents-first contract).
   const entryById = new Map<
@@ -281,7 +284,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
 
   // Shared keyed-record tail — see createRowRecordProjection. (These rows
   // are never null; the helper's null-skip is a no-op here.)
-  return createRowRecordProjection(rowStores);
+  return createRowRecordProjection(rowStores, "internalNodes");
 };
 
 function calculateChildXYZ<NodeType extends Node>(

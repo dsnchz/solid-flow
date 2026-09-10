@@ -1,4 +1,4 @@
-import { flush } from "solid-js";
+import { DEV, flush } from "solid-js";
 import {
   Background,
   Controls,
@@ -12,7 +12,12 @@ import {
 // Exposes the flow API to the bench driver (pan via commands.setViewport).
 const BenchProbe = () => {
   const api = useSolidFlow();
-  (window as Window & { __bench?: unknown }).__bench = { flush, api };
+  // Dev-only attribution (solid-js rc.7+): `?attr=1` enables the engine's
+  // why-chains/costs() for the perf loop; DEV is undefined in prod builds.
+  if (DEV && new URLSearchParams(window.location.search).get("attr") === "1") {
+    DEV.attribution.enable();
+  }
+  (window as Window & { __bench?: unknown }).__bench = { flush, api, DEV };
   return null;
 };
 

@@ -254,8 +254,11 @@ export const MiniMap = <NodeType extends Node>(
   const strokeWidth = () =>
     _props.maskStrokeWidth ? _props.maskStrokeWidth * viewScale() : undefined;
 
-  const nodeIds = createMemo(() => store.nodes.map((node) => node.id), {
+  // Membership from the flow's shared id list (ONE source) — mapping
+  // store.nodes here re-read every row's id slot (rc.7 HUGE_FAN_IN).
+  const nodeIds = createMemo(() => store.visibleNodeIds, {
     equals: (a, b) => a.length === b.length && a.every((id, i) => id === b[i]),
+    name: "minimap.nodeIds",
   });
 
   return (

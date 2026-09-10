@@ -222,3 +222,24 @@ test("BENCH minimap rAF sampling @10k", async ({ page }) => {
   console.log("MINIMAP rAF @10k:", JSON.stringify(raf));
   expect(raf.n).toBeGreaterThan(0);
 });
+
+test("BENCH mount @10k", async ({ page }) => {
+  test.setTimeout(120000);
+  // Navigation start -> all rows measured (flow.nodesInitialized), prod build.
+  await page.goto(`/?example=StressTest&x=100&y=100&fit=0`);
+  const ms = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const w = window as unknown as {
+          __bench?: { api: { flow: { nodesInitialized: boolean } } };
+        };
+        const tick = () => {
+          if (w.__bench?.api.flow.nodesInitialized) resolve(performance.now());
+          else requestAnimationFrame(tick);
+        };
+        tick();
+      }),
+  );
+  console.log("MOUNT @10k (ms to nodesInitialized):", Math.round(ms));
+  expect(ms).toBeGreaterThan(0);
+});

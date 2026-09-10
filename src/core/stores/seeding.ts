@@ -101,7 +101,7 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
       nodeSeedAdopted = true;
       setNodesStore(() => next);
     },
-    { defer: true },
+    { defer: true, name: "controlledNodesReset" },
   );
   createEffect(
     () => {
@@ -114,7 +114,7 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
       edgeSeedAdopted = true;
       setEdgesStore(() => next);
     },
-    { defer: true },
+    { defer: true, name: "controlledEdgesReset" },
   );
 
   // One-shot late adoption of DEFAULTS, one effect per axis. Two callers:
@@ -136,6 +136,7 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
         setNodesStore(() => seed);
       }
     },
+    { name: "defaultNodesAdoption" },
   );
   createEffect(
     () => {
@@ -148,6 +149,7 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
         setEdgesStore(() => seed);
       }
     },
+    { name: "defaultEdgesAdoption" },
   );
 
   return { nodesStore, setNodesStore, edgesStore, setEdgesStore } as const;

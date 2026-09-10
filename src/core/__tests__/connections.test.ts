@@ -108,4 +108,35 @@ describe("createConnections (core, headless)", () => {
       dispose();
     });
   });
+
+  it("an unrelated edge's field write leaves other handles' sub-records identity-stable", () => {
+    const [edges, setEdges] = createStore([
+      { id: "e1", source: "a", target: "b" },
+      { id: "e2", source: "c", target: "d" },
+    ] as Edge[]);
+
+    createRoot((dispose) => {
+      const connections = createConnections({
+        get edges() {
+          return edges;
+        },
+      });
+      flush();
+      const aBefore = connections["a"];
+      const aSourceBefore = connections[connectionKey("a", "source")];
+
+      // Reconnect e2's target handle: only c/d keys may change. With per-edge
+      // row derivations the record diff is O(that edge), and a's sub-records
+      // keep their identity (the reactive identity of a's connection set).
+      setEdges((draft) => {
+        draft[1]!.targetHandle = "in";
+      });
+      flush();
+
+      expect(connections["a"]).toBe(aBefore);
+      expect(connections[connectionKey("a", "source")]).toBe(aSourceBefore);
+      expect(Object.keys(connections[connectionKey("d", "target", "in")] ?? {})).toHaveLength(1);
+      dispose();
+    });
+  });
 });

@@ -52,6 +52,7 @@ import { createEdgeLookup } from "./projections/edgeLookup";
 import { createInternalNodes, type NodeMeasurements } from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
+import { createPresenceIds } from "./projections/presenceIds";
 import { getSelectedNodesBounds } from "./projections/selectedBounds";
 import { createSelectedIds } from "./projections/selectedIds";
 import { createRowIndex } from "./rowIndex";
@@ -120,7 +121,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // The config-signal is set by SolidFlow to its props.
   const [config, setConfig] = createSignal(_props);
 
-  const ariaLabelConfig = createMemo(() => mergeAriaLabelConfig(config().ariaLabelConfig));
+  const ariaLabelConfig = createMemo(() => mergeAriaLabelConfig(config().ariaLabelConfig), {
+    name: "ariaLabelConfig",
+  });
   const [ariaLiveMessage, setAriaLiveMessage] = createSignal(() => config().ariaLiveMessage);
   const [clickConnectStartHandle, setClickConnectStartHandle] = createSignal<
     Pick<Handle, "id" | "nodeId" | "type"> | undefined
@@ -133,15 +136,17 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     () => config().elementsSelectable,
   );
   const [height, setHeight] = createSignal(() => config().height);
-  const minZoom = createMemo(() => config().minZoom);
-  const maxZoom = createMemo(() => config().maxZoom);
+  const minZoom = createMemo(() => config().minZoom, { name: "minZoom" });
+  const maxZoom = createMemo(() => config().maxZoom, { name: "maxZoom" });
   const [nodesConnectable, setNodesConnectable] = createSignal(() => config().nodesConnectable);
   const [nodesDraggable, setNodesDraggable] = createSignal(() => config().nodesDraggable);
   const [panZoom, setPanZoom] = createSignal<PanZoomInstance | null>(null);
   const [selectionRect, setSelectionRect] = createSignal<SelectionRect | undefined>();
   const [selectionRectMode, setSelectionRectMode] = createSignal<string | undefined>();
   const [snapGrid, setSnapGrid] = createSignal(() => config().snapGrid);
-  const translateExtent = createMemo(() => config().translateExtent ?? infiniteExtent);
+  const translateExtent = createMemo(() => config().translateExtent ?? infiniteExtent, {
+    name: "translateExtent",
+  });
   const [width, setWidth] = createSignal(() => config().width);
 
   // Key flags
@@ -244,29 +249,32 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   const transform = createMemo(
     () => [viewportStore.x, viewportStore.y, viewportStore.zoom] as Transform,
+    { name: "transform" },
   );
 
-  // Mirrors upstream adoptUserNodes semantics: true once every non-hidden
-  // node has been measured. Reads the measurements root joined with the row
-  // (sidecar composition): the row write-through reverts on optimistic
-  // stores, so initialization must not depend on it. `in` guard: subscribe
-  // even while the key is absent so the first measurement re-runs this.
-  const nodesInitialized = createMemo(() => {
-    const nodes = nodesStore;
-    if (nodes.length === 0) return false;
-
-    for (const node of nodes) {
-      if (node.hidden) continue;
+  // "All visible nodes measured": a keyed UNMEASURED presence record (one
+  // tiny projection per row; see projections/presenceIds.ts) and a
+  // membership-level read. The previous monolithic memo read four leaves of
+  // every node (~35k sources @10k) and rebuilt them all on ANY measurement
+  // write — every NodeResizer frame (rc.7 HUGE_FAN_IN, bench round 16).
+  // Measurement-first: the measurements root is authoritative over the row's
+  // seed, and the `in` guard subscribes to the absent key so the first
+  // measurement of a node re-runs its row.
+  const unmeasuredNodeIds = createPresenceIds<NodeType>(
+    () => nodesStore,
+    (node) => {
+      if (node.hidden) return false;
       const measurement = node.id in measurementsStore ? measurementsStore[node.id] : undefined;
       const width = measurement?.measured.width ?? node.measured?.width;
       const height = measurement?.measured.height ?? node.measured?.height;
-      if (width === undefined || height === undefined) {
-        return false;
-      }
-    }
-
-    return true;
-  });
+      return width === undefined || height === undefined;
+    },
+    "unmeasuredNodeIds",
+  );
+  const nodesInitialized = createMemo(
+    () => nodesStore.length > 0 && Object.keys(unmeasuredNodeIds).length === 0,
+    { name: "nodesInitialized" },
+  );
 
   /**********************************************************************************/
   /*                                                                                */
@@ -274,22 +282,28 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const resolvedColorMode = createMemo(() => {
-    const mode = config().colorMode;
-    return mode === "system" ? (prefersDark() ? "dark" : "light") : mode;
-  });
+  const resolvedColorMode = createMemo(
+    () => {
+      const mode = config().colorMode;
+      return mode === "system" ? (prefersDark() ? "dark" : "light") : mode;
+    },
+    { name: "resolvedColorMode" },
+  );
 
   // B4 (audit): connection projection memoized — the getter spread the state
   // and ran pointToRendererPoint on every read (ConnectionLine reads it 10x
   // per render, Zoom/Pane once per gesture event).
-  const projectedConnection = createMemo(() => {
-    const state = connection();
-    if (!state.inProgress) return state;
-    return {
-      ...state,
-      to: pointToRendererPoint(state.to, transform()),
-    } as ConnectionState<InternalNode<NodeType>>;
-  });
+  const projectedConnection = createMemo(
+    () => {
+      const state = connection();
+      if (!state.inProgress) return state;
+      return {
+        ...state,
+        to: pointToRendererPoint(state.to, transform()),
+      } as ConnectionState<InternalNode<NodeType>>;
+    },
+    { name: "projectedConnection" },
+  );
   // Per-handle connection reads, equality-cut: `connection` (below) yields a
   // FRESH object every pointermove, so any handle reading through it re-runs
   // per move — at 10k nodes that is ~20k indicator computations per
@@ -303,6 +317,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   ) => a === b || (!!a && !!b && a.nodeId === b.nodeId && a.type === b.type && a.id === b.id);
   const connectionFromHandle = createMemo(() => connection().fromHandle ?? null, {
     equals: handleIdentityEquals,
+    // Every handle subscribes (rc.7 HUGE_FAN_OUT) BY DESIGN: it changes once
+    // per gesture and each subscriber does O(1) work — see docs/ARCHITECTURE.md.
+    name: "connectionFromHandle",
   });
   // The hover-target as a KEYED record: a toHandle/isValid flip re-runs only
   // the subscribers of the two affected keys (the handle left and the handle
@@ -324,7 +341,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       if (key) draft[key] = state.isValid ? "valid" : "invalid";
     },
     {},
-    { key: null },
+    { key: null, name: "connectionTargetByHandle" },
   );
 
   // The connection ORIGIN as a keyed record (perf P2): starting a gesture
@@ -358,13 +375,17 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       if (siblingKey) draft[siblingKey] = "excluded";
     },
     {},
-    { key: null },
+    { key: null, name: "connectionOriginByHandle" },
   );
 
   // B3 (audit): merged renderer maps memoized — the getters below allocated
   // a fresh object PER READ, and every wrapper reads them twice per row.
-  const mergedNodeTypes = createMemo(() => ({ ...initialNodeTypes, ...config().nodeTypes }));
-  const mergedEdgeTypes = createMemo(() => ({ ...initialEdgeTypes, ...config().edgeTypes }));
+  const mergedNodeTypes = createMemo(() => ({ ...initialNodeTypes, ...config().nodeTypes }), {
+    name: "mergedNodeTypes",
+  });
+  const mergedEdgeTypes = createMemo(() => ({ ...initialEdgeTypes, ...config().edgeTypes }), {
+    name: "mergedEdgeTypes",
+  });
   // B5 (audit): selection views memoized — the getters scanned and allocated
   // per read; consumers now share one array identity per selection change.
   // Joined selection views via keyed presence projections (O(changed-row)
@@ -379,19 +400,26 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     () => edgesStore,
     () => selectionOverlay.edges,
   );
-  const selectedNodesView = createMemo(() =>
-    Object.keys(selectedNodeIds)
-      .map((id) => nodeLookup.get(id)?.internals.userNode)
-      .filter((node): node is NodeType => node !== undefined),
+  const selectedNodesView = createMemo(
+    () =>
+      Object.keys(selectedNodeIds)
+        .map((id) => nodeLookup.get(id)?.internals.userNode)
+        .filter((node): node is NodeType => node !== undefined),
+    { name: "selectedNodesView" },
   );
-  const selectedEdgesView = createMemo(() =>
-    Object.keys(selectedEdgeIds)
-      .map((id) => edgeLookup[id])
-      .filter((edge): edge is EdgeType => edge !== undefined),
+  const selectedEdgesView = createMemo(
+    () =>
+      Object.keys(selectedEdgeIds)
+        .map((id) => edgeLookup[id])
+        .filter((edge): edge is EdgeType => edge !== undefined),
+    { name: "selectedEdgesView" },
   );
   // Selection-wrapper box: O(selected) reads through the presence record
   // (NodeSelection renders it; see projections/selectedBounds.ts).
-  const selectedNodesBounds = createMemo(() => getSelectedNodesBounds(selectedNodeIds, nodeLookup));
+  const selectedNodesBounds = createMemo(
+    () => getSelectedNodesBounds(selectedNodeIds, nodeLookup),
+    { name: "selectedNodesBounds" },
+  );
 
   const store = merge({ width: 0, height: 0 }, config, {
     get ariaLabelConfig() {
@@ -562,7 +590,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // membership edit mid-action, while direct row reads pierce the overlay
   // (#3085; spike 30). Renderers guard per-row against not-yet-materialized
   // projection rows.
-  const visibleNodeIds = createMemo(() => nodesStore.map((node) => node.id));
+  const visibleNodeIds = createMemo(() => nodesStore.map((node) => node.id), {
+    name: "visibleNodeIds",
+  });
   // Membership-cadence id → index maps for the per-frame writers.
   const nodeIndex = createRowIndex<NodeType>(visibleNodeIds);
 
@@ -616,7 +646,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   // Same membership-vs-layout split as visibleNodeIds; unlayouted edges are
   // filtered by the renderer's per-row guard (their layouted row is null).
-  const visibleEdgeIds = createMemo(() => edgesStore.map((edge) => edge.id));
+  const visibleEdgeIds = createMemo(() => edgesStore.map((edge) => edge.id), {
+    name: "visibleEdgeIds",
+  });
   const edgeIndex = createRowIndex<EdgeType>(visibleEdgeIds);
 
   // Named for what it returns: the LAYOUTED row (geometry joined in).
@@ -698,7 +730,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const { applyMeasurementWrites, applyNodeChanges } = createMeasurementIngest<NodeType>({
     setMeasurementsStore,
     setNodesStore,
-    nodes: () => nodesStore,
+    nodeIds: visibleNodeIds,
     nodeIndex,
   });
 

@@ -27,6 +27,6 @@ export const createParentIds = <NodeType extends Node = Node>(
       return out;
     },
     {},
-    { key: "id" },
+    { key: "id", name: "parentIds" },
   );
 };

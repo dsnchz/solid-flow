@@ -7,6 +7,11 @@ import { defineConfig, devices } from "@playwright/test";
 // the real d3/XY* paths that unit tests cannot reach.
 export default defineConfig({
   testDir: "./e2e",
+  // Perf tooling lives next to the suite but is opt-in: `BENCH=1 bunx
+  // playwright test e2e/bench.spec.ts` (against the prod preview on :3010,
+  // see .agent/bench) or `e2e/attribution-probe.spec.ts` (dev server,
+  // prints rc.7 diagnostics + DEV.attribution.costs()).
+  testIgnore: process.env.BENCH ? [] : ["**/bench.spec.ts", "**/attribution-probe.spec.ts"],
   fullyParallel: true,
   reporter: "list",
   timeout: 30_000,

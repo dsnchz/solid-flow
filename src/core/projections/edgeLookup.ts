@@ -21,6 +21,6 @@ export const createEdgeLookup = <EdgeType extends Edge = Edge>(
       return out;
     },
     {},
-    { key: "id" },
+    { key: "id", name: "edgeLookup" },
   );
 };

@@ -75,7 +75,7 @@ export const createCullingViewport = (source: CullingSource): Accessor<Rect | nu
         height: 2 * halfHeight,
       };
     },
-    { equals: rectsEqual },
+    { equals: rectsEqual, name: "cullingViewport" },
   );
 
 /**
