@@ -4,7 +4,7 @@ import { expect, test } from "./helpers";
  * PROFILE: CDP sampling profile of the 10k mount (navigation -> every row
  * measured), against the prod preview. Prints phase timestamps and the top
  * self-time functions / files. Opt-in: BENCH=1 bunx playwright test
- * e2e/mount-profile.spec.ts (preview .bench-dist on :3010 first).
+ * e2e/mount-profile.spec.ts (preview .benchmarks/dist on :3010 first).
  */
 test("PROFILE mount @10k", async ({ page }) => {
   test.setTimeout(180000);

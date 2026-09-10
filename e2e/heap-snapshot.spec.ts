@@ -5,8 +5,8 @@ import { expect, test } from "./helpers";
  * heap snapshot via CDP at three points and aggregates SELF size by node
  * type+name (constructor for objects, function name for closures). Run
  * against an UNMINIFIED dev-condition build so engine class names survive:
- *   bunx vite build --outDir .bench-names --minify false
- *   bunx vite preview --outDir .bench-names --port 3010
+ *   bunx vite build --outDir .benchmarks/names --minify false
+ *   bunx vite preview --outDir .benchmarks/names --port 3010
  *   BENCH=1 bunx playwright test e2e/heap-snapshot.spec.ts
  * HEAP_MODE=unmount unmounts the whole SolidFlow instead of deleting rows;
  * HEAP_SAMPLE is the regex of heap node names whose retaining paths are
