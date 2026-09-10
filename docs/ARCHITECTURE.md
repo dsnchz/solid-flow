@@ -203,6 +203,20 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   clears `panZoom` with the pane (`unmountRelease.test.tsx`). A hoisted
   state keeps its DATA by contract (~320 MB @10k); a flow under its own
   provider releases everything (24 MB, the example's arrays).
+- **Per-row render costs (bench round 21).** Three rules for the wrappers
+  and anything rendered once per node/edge/handle: (1) resolve the row ONCE
+  (`const node = createMemo(() => nodeLookup.get(id))`) — every binding
+  reads it, and each resolution through the record is two store-slot reads
+  (holder slot, row slot), or a record-wide `in` probe for edges; (2) render
+  the user component through `dynamic(() => component())` from
+  `@solidjs/web`, not `<Dynamic>` — `<Dynamic>` re-copies every prop
+  descriptor per row (`omit(props, "component")`); (3) assign `class` as one
+  string via `cx(...)` (`utils.ts`), never the array/object form — `@solidjs/web`
+  flattens and diffs a key map on every assignment. Together: 10k mount
+  3.25 s → 2.6 s, selection drag 0.6 → 0.35 ms/move. What remains in the
+  mount profile is engine store reads, DOM creation, GC and the row derive;
+  Handle's per-instance `propDefaults`/`omit`/`merge` (~100 ms @10k) is the
+  one library-side item left.
 - **Reactive nodes are named** (`{ name }` on memos, effects, projections) so
   the rc.7 dev diagnostics (`HUGE_FAN_IN`, `HUGE_FAN_OUT`, `WIDE_SCOPE_DEPS`)
   and `DEV.attribution.costs()` identify them. The stress example enables

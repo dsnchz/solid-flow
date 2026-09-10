@@ -80,6 +80,25 @@ export function propDefaults<T extends object, D extends Partial<T>>(
   return out;
 }
 
+/**
+ * Class string from string/object parts (falsy parts and false keys dropped).
+ * Per-row elements assign their class as ONE string: @solidjs/web's
+ * array/object class form flattens and diffs a key map on every assignment
+ * (~200ms of a 10k mount, bench round 21); a string is one attribute write.
+ */
+export const cx = (
+  ...parts: (string | number | false | null | undefined | Record<string, unknown>)[]
+): string => {
+  let out = "";
+  for (const part of parts) {
+    if (!part && part !== 0) continue;
+    if (typeof part === "object") {
+      for (const key in part) if (part[key]) out += (out ? " " : "") + key;
+    } else out += (out ? " " : "") + part;
+  }
+  return out;
+};
+
 export const getEdgeId = (connection: Connection | EdgeBase): string => {
   const { source, sourceHandle, target, targetHandle } = connection;
   return `xy-edge__${source}${sourceHandle || ""}-${target}${targetHandle || ""}`;

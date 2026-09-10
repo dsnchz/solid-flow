@@ -1,6 +1,6 @@
 import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
-import { Dynamic, spread } from "@solidjs/web";
+import { dynamic, spread } from "@solidjs/web";
 import {
   elementSelectionKeys,
   errorMessages,
@@ -25,7 +25,7 @@ import { NodeConnectableContext } from "@/contexts/nodeConnectable";
 import { NodeIdContext } from "@/contexts/nodeId";
 import { isNodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
-import { emitFlowError } from "@/utils";
+import { cx, emitFlowError } from "@/utils";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
@@ -44,7 +44,11 @@ export const NodeWrapper = <NodeType extends Node = Node>(
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
-  const node = () => nodeLookup.get(props.nodeId)!;
+  // ONE row resolution per wrapper: every binding below reads `node()`, and
+  // each resolution through the facade is two store-slot reads (holder slot,
+  // then the row store's `row` slot). The memo re-runs only when the row
+  // identity changes (same-id reset), so ~55 reads collapse to one.
+  const node = createMemo(() => nodeLookup.get(props.nodeId)!);
 
   // The shared observer outlives this wrapper — without unobserve on dispose
   // it pins the detached element in the observer's target list.
@@ -66,6 +70,9 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   // Upstream parity (error003): unknown types render the default component
   // instead of nothing.
   const nodeComponent = () => store.nodeTypes[nodeTypeValid() ? nodeType() : "default"];
+  // `dynamic()` directly: <Dynamic> re-copies every prop descriptor per row
+  // (its `omit(props, "component")`), ~110ms of a 10k mount (bench round 21).
+  const NodeComponent = dynamic(nodeComponent);
   const isParentNode = () => !!parentIds[node().id];
 
   const transform = () => {
@@ -290,7 +297,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
           runWithOwner(owner, () => mountElement(el));
         }}
         data-id={node().id}
-        class={[
+        class={cx(
           "solid-flow__node",
           `solid-flow__node-${nodeType()}`,
           {
@@ -303,7 +310,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
             selected: !!node().selected,
           },
           node().class,
-        ]}
+        )}
         style={style()}
         onClick={onSelectNodeHandler}
         onPointerEnter={(event) => props.onNodePointerEnter?.({ node: userNode(), event })}
@@ -321,8 +328,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       >
         <NodeIdContext value={nodeId}>
           <NodeConnectableContext value={connectable}>
-            <Dynamic
-              component={nodeComponent()}
+            <NodeComponent
               data={node().data}
               id={node().id}
               selected={Boolean(node().selected)}

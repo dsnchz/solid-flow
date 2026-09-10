@@ -25,7 +25,7 @@ import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import { useNodeConnectable } from "@/contexts/nodeConnectable";
 import { connectionKey } from "@/core";
 import type { Edge, Node, Position } from "@/types";
-import { propDefaults } from "@/utils";
+import { cx, propDefaults } from "@/utils";
 import { getEdgeId } from "@/utils";
 
 type HandleProps = Omit<SystemHandleProps, "position"> & {
@@ -218,7 +218,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       onClick={store.clickConnect ? onClick : undefined}
       onPointerDown={onPointerDown}
       style={_props.style}
-      class={[
+      class={cx(
         "solid-flow__handle",
         `solid-flow__handle-${_props.position}`,
         store.noDragClass,
@@ -236,7 +236,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
           // Loose-mode target exclusion: the origin node's same-id handles.
           excluded: !!originState(),
         },
-      ]}
+      )}
     >
       {_props.children}
     </div>
