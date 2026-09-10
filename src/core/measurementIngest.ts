@@ -4,12 +4,15 @@ import { createEffect, type StoreSetter } from "solid-js";
 import type { Node } from "@/types";
 
 import type { NodeMeasurements, NodeMeasurementWrite } from "./projections/internalNodes";
+import type { RowIndex } from "./rowIndex";
 
 export type MeasurementIngestDeps<NodeType extends Node> = {
   readonly setMeasurementsStore: StoreSetter<NodeMeasurements>;
   readonly setNodesStore: StoreSetter<NodeType[]>;
   /** Live view of the user graph, for the garbage-collection effect. */
   readonly nodes: () => readonly NodeType[];
+  /** O(1) id → draft row resolution (see core/rowIndex.ts). */
+  readonly nodeIndex: RowIndex<NodeType>;
 };
 
 /**
@@ -23,6 +26,7 @@ export const createMeasurementIngest = <NodeType extends Node>({
   setMeasurementsStore,
   setNodesStore,
   nodes,
+  nodeIndex,
 }: MeasurementIngestDeps<NodeType>) => {
   /** Applies a DOM measuring pass's writes to the measurements root. */
   const applyMeasurementWrites = (writes: NodeMeasurementWrite[]) => {
@@ -45,12 +49,12 @@ export const createMeasurementIngest = <NodeType extends Node>({
     if (changes.length === 0) return;
 
     setNodesStore((nodes) => {
-      const nodeById = new Map(nodes.map((node) => [node.id, node]));
-
       // Applied in order: parent expansion can emit BOTH a position and a
-      // dimensions change for the same node, and both must land.
+      // dimensions change for the same node, and both must land. Rows resolve
+      // by index — a per-batch Map over the draft walked every row (a
+      // NodeResizer frame is one change against 10k rows).
       for (const change of changes) {
-        const node = nodeById.get(change.id);
+        const node = nodeIndex.get(nodes, change.id);
         if (!node) continue;
 
         switch (change.type) {

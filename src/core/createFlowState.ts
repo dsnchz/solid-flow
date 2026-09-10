@@ -52,7 +52,9 @@ import { createEdgeLookup } from "./projections/edgeLookup";
 import { createInternalNodes, type NodeMeasurements } from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
+import { getSelectedNodesBounds } from "./projections/selectedBounds";
 import { createSelectedIds } from "./projections/selectedIds";
+import { createRowIndex } from "./rowIndex";
 import { type SelectionOverlay } from "./selectionOverlay";
 import { createSeededGraphStores } from "./stores/seeding";
 
@@ -380,6 +382,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       .map((id) => edgeLookup[id])
       .filter((edge): edge is EdgeType => edge !== undefined),
   );
+  // Selection-wrapper box: O(selected) reads through the presence record
+  // (NodeSelection renders it; see projections/selectedBounds.ts).
+  const selectedNodesBounds = createMemo(() => getSelectedNodesBounds(selectedNodeIds, nodeLookup));
 
   const store = merge({ width: 0, height: 0 }, config, {
     get ariaLabelConfig() {
@@ -551,6 +556,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // (#3085; spike 30). Renderers guard per-row against not-yet-materialized
   // projection rows.
   const visibleNodeIds = createMemo(() => nodesStore.map((node) => node.id));
+  // Membership-cadence id → index maps for the per-frame writers.
+  const nodeIndex = createRowIndex<NodeType>(visibleNodeIds);
 
   // Which nodes currently have children (reactive "is parent" answers)
   const parentIds = createParentIds<NodeType>({
@@ -603,6 +610,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Same membership-vs-layout split as visibleNodeIds; unlayouted edges are
   // filtered by the renderer's per-row guard (their layouted row is null).
   const visibleEdgeIds = createMemo(() => edgesStore.map((edge) => edge.id));
+  const edgeIndex = createRowIndex<EdgeType>(visibleEdgeIds);
 
   // Named for what it returns: the LAYOUTED row (geometry joined in).
   // Raw user edges live in `edgeLookup` — near-identical names once made
@@ -652,6 +660,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     setSelectionOverlay,
     setDragOverlay,
     nodeLookup,
+    nodeIndex,
+    edgeIndex,
     // Presence check only — referencing the store proxy is not a row read,
     // so a still-pending async-seeded store is safe here.
     controlledEdges: () => untrack(() => config().edges) !== undefined,
@@ -682,6 +692,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     setMeasurementsStore,
     setNodesStore,
     nodes: () => nodesStore,
+    nodeIndex,
   });
 
   /** Marks the first measuring pass complete (may trigger the initial fitView). */
@@ -719,6 +730,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     updateNodePositions,
     selectionOverlay,
     setSelectionOverlay,
+    selectedNodeIds,
+    selectedEdgeIds,
+    nodeIndex,
+    edgeIndex,
   });
 
   // ── overlay release (core/overlayRelease.ts): confirm-then-release
@@ -919,6 +934,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     edgeLookup,
     parentIds,
     connections,
+    selectedNodesBounds,
     actions: {
       getLayoutedEdge,
       applyInitialFitView,

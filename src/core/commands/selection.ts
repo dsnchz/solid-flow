@@ -15,6 +15,7 @@ import { flush, snapshot, type StoreSetter } from "solid-js";
 import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
 import { emitFlowError, isEdgeSelectable } from "@/utils";
 
+import type { RowIndex } from "../rowIndex";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 
 /** The slice of the internal store the selection commands read. */
@@ -48,6 +49,12 @@ export type SelectionCommandDeps<NodeType extends Node, EdgeType extends Edge> =
   ) => void;
   readonly selectionOverlay: { readonly nodes: SelectionOverlay; readonly edges: SelectionOverlay };
   readonly setSelectionOverlay: StoreSetter<{ nodes: SelectionOverlay; edges: SelectionOverlay }>;
+  /** Keyed selected-presence records (core/projections/selectedIds.ts). */
+  readonly selectedNodeIds: Record<string, unknown>;
+  readonly selectedEdgeIds: Record<string, unknown>;
+  /** O(1) id → draft row resolution (see core/rowIndex.ts). */
+  readonly nodeIndex: RowIndex<NodeType>;
+  readonly edgeIndex: RowIndex<EdgeType>;
 };
 
 /**
@@ -67,6 +74,10 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
   updateNodePositions,
   selectionOverlay,
   setSelectionOverlay,
+  selectedNodeIds,
+  selectedEdgeIds,
+  nodeIndex,
+  edgeIndex,
 }: SelectionCommandDeps<NodeType, EdgeType>) => {
   // The flow's view of an element's selection: overlay joined with the row.
   const nodeSelected = (node: { id: string; selected?: boolean }) =>
@@ -86,6 +97,41 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
       draft[kind][row.id] = { value, row };
     });
   };
+  /**
+   * Wholesale-set one axis's selection to `target`. Candidates are the DELTA
+   * between the current presence record and the target — never a walk of the
+   * graph: a 10k-row draft iteration per box-selection move (and per click
+   * selection) was the round-14 audit's finding 2. Each candidate resolves by
+   * index and is written only when its joined state actually differs.
+   */
+  const setSelection = <T extends { id: string; selected?: boolean }>(
+    kind: "nodes" | "edges",
+    setStore: StoreSetter<T[]>,
+    index: RowIndex<T>,
+    currentIds: readonly string[],
+    target: ReadonlySet<string>,
+  ) => {
+    const candidates = new Set<string>(currentIds);
+    for (const id of target) candidates.add(id);
+    if (candidates.size === 0) return;
+    // Loop fast path: a PLAIN snapshot of the overlay — per-row tracked
+    // absent-key reads on the store cost a signal registration per node
+    // (measured: a ~700ms first drag frame @10k, bench round 12).
+    const overlay = snapshot(selectionOverlay[kind]);
+    setStore((rows) => {
+      for (const id of candidates) {
+        const row = index.get(rows, id);
+        if (!row) continue;
+        const selected = target.has(id);
+        if (joinSelected(row.selected, overlay[id]) !== selected) {
+          writeOverlay(kind, row, selected);
+          row.selected = selected;
+        }
+      }
+      return undefined;
+    });
+  };
+
   const unselectNodesAndEdges = ({
     nodes: _nodes,
     edges,
@@ -108,11 +154,11 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
           );
     if (nodeTargets.size) {
       setNodesStore((nodes) => {
-        for (const node of nodes) {
-          if (nodeTargets.has(node.id)) {
-            writeOverlay("nodes", node, false);
-            node.selected = false;
-          }
+        for (const id of nodeTargets) {
+          const node = nodeIndex.get(nodes, id);
+          if (!node) continue;
+          writeOverlay("nodes", node, false);
+          node.selected = false;
         }
         return undefined;
       });
@@ -129,11 +175,11 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
           );
     if (edgeTargets.size) {
       setEdgesStore((edges) => {
-        for (const edge of edges) {
-          if (edgeTargets.has(edge.id)) {
-            writeOverlay("edges", edge, false);
-            edge.selected = false;
-          }
+        for (const id of edgeTargets) {
+          const edge = edgeIndex.get(edges, id);
+          if (!edge) continue;
+          writeOverlay("edges", edge, false);
+          edge.selected = false;
         }
         return undefined;
       });
@@ -146,25 +192,10 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
 
   const addSelectedNodes = (ids: string[]) => {
     const isMultiSelection = store.multiselectionKeyPressed;
-    const idSet = new Set(ids);
-
-    // Loop fast path: a PLAIN snapshot of the overlay — per-row tracked
-    // absent-key reads on the store cost a signal registration per node
-    // (measured: a ~700ms first drag frame @10k, bench round 12).
-    const nodeOverlay = snapshot(selectionOverlay.nodes);
-    setNodesStore((nodes) => {
-      for (const node of nodes) {
-        const nodeWillBeSelected = idSet.has(node.id);
-        const current = joinSelected(node.selected, nodeOverlay[node.id]);
-        const selected = isMultiSelection ? current || nodeWillBeSelected : nodeWillBeSelected;
-
-        if (current !== selected) {
-          writeOverlay("nodes", node, selected);
-          node.selected = selected;
-        }
-      }
-      return undefined;
-    });
+    const currentIds = Object.keys(selectedNodeIds);
+    // Multi-selection keeps what is selected; otherwise the ids replace it.
+    const target = new Set(isMultiSelection ? [...currentIds, ...ids] : ids);
+    setSelection("nodes", setNodesStore, nodeIndex, currentIds, target);
 
     if (!isMultiSelection) {
       unselectNodesAndEdges({ nodes: [] });
@@ -177,22 +208,9 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
 
   const addSelectedEdges = (ids: string[]) => {
     const isMultiSelection = store.multiselectionKeyPressed;
-    const idSet = new Set(ids);
-
-    const edgeOverlay = snapshot(selectionOverlay.edges);
-    setEdgesStore((edges) => {
-      for (const edge of edges) {
-        const edgeWillBeSelected = idSet.has(edge.id);
-        const current = joinSelected(edge.selected, edgeOverlay[edge.id]);
-        const selected = isMultiSelection ? current || edgeWillBeSelected : edgeWillBeSelected;
-
-        if (current !== selected) {
-          writeOverlay("edges", edge, selected);
-          edge.selected = selected;
-        }
-      }
-      return undefined;
-    });
+    const currentIds = Object.keys(selectedEdgeIds);
+    const target = new Set(isMultiSelection ? [...currentIds, ...ids] : ids);
+    setSelection("edges", setEdgesStore, edgeIndex, currentIds, target);
 
     if (!isMultiSelection) {
       unselectNodesAndEdges({ edges: [] });
@@ -202,7 +220,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
   };
 
   const handleNodeSelection = (id: string, unselect?: boolean, nodeRef?: HTMLDivElement | null) => {
-    const node = store.nodes.find((n) => n.id === id);
+    const node = nodeLookup.get(id)?.internals.userNode;
 
     if (!node) {
       emitFlowError(store.onError, "012", errorMessages["error012"](id));
@@ -253,14 +271,14 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     const xDiff = direction.x * xVelo * factor;
     const yDiff = direction.y * yVelo * factor;
 
-    for (const node of nodeLookup.values()) {
-      const isSelected =
-        node.selected &&
-        (node.draggable || (store.nodesDraggable && typeof node.draggable === "undefined"));
-
-      if (!isSelected) {
-        continue;
-      }
+    // Selected rows come from the presence record: O(selected), not a walk
+    // of the whole lookup per arrow keypress.
+    for (const id of Object.keys(selectedNodeIds)) {
+      const node = nodeLookup.get(id);
+      if (!node) continue;
+      const isDraggable =
+        node.draggable || (store.nodesDraggable && typeof node.draggable === "undefined");
+      if (!isDraggable) continue;
 
       let nextPosition = {
         x: node.internals.positionAbsolute.x + xDiff,
@@ -293,31 +311,11 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
   // write here would fight stale overlay entries from the gesture's
   // initial unselect.
   const applySelectionSets = (
-    selectedNodeIds: ReadonlySet<string>,
-    selectedEdgeIds: ReadonlySet<string>,
+    nodeTargets: ReadonlySet<string>,
+    edgeTargets: ReadonlySet<string>,
   ) => {
-    const nodeOverlay = snapshot(selectionOverlay.nodes);
-    setNodesStore((nodes) => {
-      for (const node of nodes) {
-        const selected = selectedNodeIds.has(node.id);
-        if (joinSelected(node.selected, nodeOverlay[node.id]) !== selected) {
-          writeOverlay("nodes", node, selected);
-          node.selected = selected;
-        }
-      }
-      return undefined;
-    });
-    const edgeOverlay = snapshot(selectionOverlay.edges);
-    setEdgesStore((edges) => {
-      for (const edge of edges) {
-        const selected = selectedEdgeIds.has(edge.id);
-        if (joinSelected(edge.selected, edgeOverlay[edge.id]) !== selected) {
-          writeOverlay("edges", edge, selected);
-          edge.selected = selected;
-        }
-      }
-      return undefined;
-    });
+    setSelection("nodes", setNodesStore, nodeIndex, Object.keys(selectedNodeIds), nodeTargets);
+    setSelection("edges", setEdgesStore, edgeIndex, Object.keys(selectedEdgeIds), edgeTargets);
   };
 
   return {

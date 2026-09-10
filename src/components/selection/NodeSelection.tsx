@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { getInternalNodesBounds, isNumeric } from "@xyflow/system";
+import { isNumeric } from "@xyflow/system";
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
@@ -16,19 +16,15 @@ export type NodeSelectionProps<NodeType extends Node = Node> = NodeSelectionEven
 export const NodeSelection = <NodeType extends Node = Node>(
   props: NodeSelectionProps<NodeType>,
 ): JSX.Element => {
-  const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
+  const { store, actions, selectedNodesBounds } = useInternalSolidFlow<NodeType>();
   const [ref, setRef] = createSignal<HTMLDivElement>();
 
-  // B6 (audit): memoized — this full-lookup scan was re-run 7x per render
-  // through the unmemoized accessor.
-  const bounds = createMemo(() => {
-    if (store.selectionRectMode === "nodes") {
-      return getInternalNodesBounds(nodeLookup, {
-        filter: (node) => !!node.selected,
-      });
-    }
-    return null;
-  });
+  // Gated on the mode so the box is only derived while the wrapper can show;
+  // the derivation itself is the core's O(selected) keyed memo (a tracked
+  // full-lookup scan used to live here — see projections/selectedBounds.ts).
+  const bounds = createMemo(() =>
+    store.selectionRectMode === "nodes" ? selectedNodesBounds() : null,
+  );
 
   createEffect(
     () => ({ el: ref(), focusable: !store.disableKeyboardA11y }),

@@ -135,3 +135,44 @@ test("BENCH box selection @10k", async ({ page }) => {
   );
   expect(selected).toBeGreaterThan(0);
 });
+
+test("BENCH selection-mode drag @10k", async ({ page }) => {
+  test.setTimeout(120000);
+  await waitForStress(page);
+
+  // Box-select a block of nodes first (Pane's listener predates instrumentation,
+  // so this part is untimed), then drag the selection wrapper: XYDrag attaches
+  // its mousemove listener at gesture start, which the wrapper catches.
+  await page.keyboard.down("Shift");
+  await page.mouse.move(200, 200);
+  await page.mouse.down();
+  await page.mouse.move(600, 500, { steps: 10 });
+  await page.mouse.up();
+  await page.keyboard.up("Shift");
+  const wrapper = page.locator(".solid-flow__selection-wrapper");
+  await expect(wrapper).toBeVisible();
+  const selected = await page.evaluate(
+    () => document.querySelectorAll(".solid-flow__node.selected").length,
+  );
+
+  await page.evaluate(instrument);
+  const box = (await wrapper.boundingBox())!;
+  let x = box.x + box.width / 2;
+  let y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let i = 0; i < 60; i++) {
+    x += 3;
+    y += 2;
+    await page.mouse.move(x, y);
+    await page.waitForTimeout(5);
+  }
+  await page.mouse.up();
+  console.log(
+    "SELECTION DRAG @10k:",
+    JSON.stringify(await page.evaluate(stats)),
+    "selected:",
+    selected,
+  );
+  expect(selected).toBeGreaterThan(0);
+});

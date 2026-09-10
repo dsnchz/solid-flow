@@ -14,6 +14,7 @@ import { isEdge, isNode } from "@/utils";
 
 import { type DragOverlay } from "../dragOverlay";
 import type { FlowCommands } from "../flowState";
+import type { RowIndex } from "../rowIndex";
 import { type SelectionOverlay } from "../selectionOverlay";
 
 /** The slice of the internal store the element commands read. */
@@ -36,6 +37,9 @@ export type ElementCommandDeps<NodeType extends Node, EdgeType extends Edge> = {
   readonly setSelectionOverlay: StoreSetter<{ nodes: SelectionOverlay; edges: SelectionOverlay }>;
   readonly setDragOverlay: StoreSetter<DragOverlay>;
   readonly nodeLookup: NodeLookup<InternalNode<NodeType>>;
+  /** O(1) id → draft row resolution (see core/rowIndex.ts). */
+  readonly nodeIndex: RowIndex<NodeType>;
+  readonly edgeIndex: RowIndex<EdgeType>;
   /** Whether the edges axis is controlled (the user's store owns membership). */
   readonly controlledEdges: () => boolean;
 };
@@ -55,6 +59,8 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
   setSelectionOverlay,
   setDragOverlay,
   nodeLookup,
+  nodeIndex,
+  edgeIndex,
   controlledEdges,
 }: ElementCommandDeps<NodeType, EdgeType>) => {
   const addEdge = (edgeParams: EdgeType | Connection) => {
@@ -90,10 +96,12 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
         rowBefore: XYPosition;
         row: NodeType;
       }[] = [];
-      for (const node of nodes) {
-        if (!nodeDragItems.has(node.id)) continue;
-        const position = nodeDragItems.get(node.id)!.position;
-        writes.push({ id: node.id, position, rowBefore: { ...node.position }, row: node });
+      // Resolve the k dragged rows by index — never walk the 10k-row draft
+      // (each visited row cost an index-get trap plus an `id` trap per frame).
+      for (const [id, { position }] of nodeDragItems) {
+        const node = nodeIndex.get(nodes, id);
+        if (!node) continue;
+        writes.push({ id, position, rowBefore: { ...node.position }, row: node });
         node.dragging = dragging;
         node.position = position;
       }
@@ -112,7 +120,7 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
     options = { replace: false },
   ) => {
     setNodesStore((nodes) => {
-      const index = nodes.findIndex((node) => node.id === id);
+      const index = nodeIndex.indexOf(nodes, id);
       if (index === -1) return undefined;
 
       const node = nodes[index]!;
@@ -160,7 +168,7 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
     },
     updateEdge: (id, edgeUpdate, options = { replace: false }) => {
       setEdgesStore((edges) => {
-        const index = edges.findIndex((edge) => edge.id === id);
+        const index = edgeIndex.indexOf(edges, id);
         if (index === -1) return undefined;
 
         const edge = edges[index]!;
