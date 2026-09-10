@@ -120,17 +120,73 @@ export const createConnections = <EdgeType extends Edge = Edge>(
     { name: "connections.rows" },
   );
 
-  return createProjection<ConnectionsRecord>(
-    () => {
-      const out: ConnectionsRecord = {};
-      for (const row of rows()) {
-        for (const { key, entry, connection } of row()) {
-          (out[key] ??= {})[entry] = connection;
+  // Draft-form, incremental (bench round 24): the return-value form rebuilt a
+  // fresh ~20k-key record on EVERY edge change and the engine reconciled and
+  // cloned it (~30 of the 34 ms per reconnect @10k). Now the derive still
+  // reads every row memo (each is equality-cut, so an unchanged row returns
+  // the SAME array), but only rows whose contributions changed touch the
+  // draft: their old entries are removed, the new ones added.
+  const prevByRow = new WeakMap<() => Contribution[], readonly Contribution[]>();
+  let prevRows: ReadonlySet<() => Contribution[]> = new Set();
+
+  // Root keys are NEVER touched by a reconnect: the engine clones the whole
+  // root raw (20k keys @10k, ~13 ms) on the first root-level write of a
+  // derive, so an emptied sub-record stays (reads as `{}`) and is pruned only
+  // when a root write happens anyway — a handle key seen for the first time.
+  const emptied = new Set<string>();
+  const remove = (draft: ConnectionsRecord, list: readonly Contribution[]) => {
+    for (const { key, entry, connection } of list) {
+      const rec = draft[key];
+      if (!rec || rec[entry]?.edgeId !== connection.edgeId) continue;
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
+      delete rec[entry];
+      if (Object.keys(rec).length === 0) emptied.add(key);
+    }
+  };
+  const add = (draft: ConnectionsRecord, list: readonly Contribution[]) => {
+    for (const { key, entry, connection } of list) {
+      let rec = draft[key];
+      if (rec === undefined) {
+        // a root write is unavoidable here: prune the emptied keys on the same clone
+        for (const stale of emptied) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
+          if (stale !== key && Object.keys(draft[stale] ?? {}).length === 0) delete draft[stale];
         }
+        emptied.clear();
+        rec = draft[key] = {};
+      } else emptied.delete(key);
+      rec[entry] = connection;
+    }
+  };
+
+  return createProjection<ConnectionsRecord>(
+    (draft) => {
+      // Removals first, adds last: a reset that recreates a row (same edge id,
+      // same pair keys) must not have its fresh entries removed by the stale
+      // row's cleanup.
+      const seen = new Set<() => Contribution[]>();
+      const changed: [() => Contribution[], readonly Contribution[]][] = [];
+      for (const row of rows()) {
+        seen.add(row);
+        const next = row();
+        const prev = prevByRow.get(row);
+        if (prev === next) continue;
+        if (prev) remove(draft, prev);
+        changed.push([row, next]);
       }
-      return out;
+      for (const row of prevRows) {
+        if (seen.has(row)) continue;
+        const prev = prevByRow.get(row);
+        if (prev) remove(draft, prev);
+        prevByRow.delete(row);
+      }
+      for (const [row, next] of changed) {
+        add(draft, next);
+        prevByRow.set(row, next);
+      }
+      prevRows = seen;
     },
     {},
-    { key: "id", name: "connections" },
+    { key: null, name: "connections" },
   );
 };

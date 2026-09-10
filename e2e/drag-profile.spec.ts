@@ -10,7 +10,8 @@ import { test } from "./helpers";
  */
 // GESTURE=connection profiles the connection gesture start (mousedown on the
 // source handle) instead of a node drag; GESTURE=minimap drags with the
-// MiniMap mounted (its first sample partitions the dragged set).
+// MiniMap mounted (its first sample partitions the dragged set); GESTURE=reconnect
+// profiles 20 programmatic updateEdge(targetHandle) writes instead.
 const GESTURE = process.env.GESTURE ?? "drag";
 
 test("PROFILE drag start @10k", async ({ page }) => {
@@ -37,15 +38,34 @@ test("PROFILE drag start @10k", async ({ page }) => {
   await cdp.send("Profiler.enable");
   await cdp.send("Profiler.setSamplingInterval", { interval: 100 });
   await cdp.send("Profiler.start");
-  await page.mouse.down();
-  for (let i = 0; i < 3; i++) {
-    x += 4;
-    y += 3;
-    await page.mouse.move(x, y);
-    await page.waitForTimeout(30);
+  if (GESTURE === "reconnect") {
+    // Programmatic edge writes (the reconnect bench's loop), no pointer.
+    await page.evaluate(() => {
+      type Api = {
+        flush: () => void;
+        api: {
+          commands: { updateEdge: (id: string, u: Record<string, unknown>) => void };
+          flow: { connections: Record<string, Record<string, unknown>> };
+        };
+      };
+      const { flush, api } = (window as unknown as { __bench: Api }).__bench;
+      for (let i = 0; i < 20; i++) {
+        api.commands.updateEdge("5-5-6-5", { targetHandle: i % 2 ? "in" : null });
+        flush();
+        void Object.keys(api.flow.connections["6-5"] ?? {}).length;
+      }
+    });
+  } else {
+    await page.mouse.down();
+    for (let i = 0; i < 3; i++) {
+      x += 4;
+      y += 3;
+      await page.mouse.move(x, y);
+      await page.waitForTimeout(30);
+    }
   }
   const { profile } = await cdp.send("Profiler.stop");
-  await page.mouse.up();
+  if (GESTURE !== "reconnect") await page.mouse.up();
 
   const dt = profile.timeDeltas ?? [];
   const samples = profile.samples ?? [];

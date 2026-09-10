@@ -236,6 +236,17 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   recalc when the root connection classes flip (~25-40 ms @10k: every handle
   matches the affordance selectors) — by design, one recalc per gesture
   instead of a class write per handle.
+- **Big keyed projections: draft form, and never touch the root per gesture.**
+  A projection that RETURNS a fresh record makes the engine reconcile it
+  against the store (`reconcileNextState`/`applyAdopt`) and clone the raw;
+  a draft-form derive that writes only the changed keys avoids that. But the
+  engine also clones a projection target's raw on the FIRST write to it in a
+  derive (`ensurePB` → `cloneRaw`; the cheap prototype overlay is reserved
+  for plain stores), so a root-level set/delete on a 20k-key record costs
+  ~13 ms @10k regardless. `connections` therefore keeps root keys stable on
+  a reconnect (an emptied handle sub-record stays `{}`) and prunes empties
+  only when a never-seen key forces a root write anyway. Reconnect 34 → 21 ms
+  (bench round 24).
 - **Reactive nodes are named** (`{ name }` on memos, effects, projections) so
   the rc.7 dev diagnostics (`HUGE_FAN_IN`, `HUGE_FAN_OUT`, `WIDE_SCOPE_DEPS`)
   and `DEV.attribution.costs()` identify them. The stress example enables

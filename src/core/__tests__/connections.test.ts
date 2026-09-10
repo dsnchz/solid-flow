@@ -84,7 +84,7 @@ describe("createConnections (core, headless)", () => {
     });
   });
 
-  it("drops keys when their last connection is removed", () => {
+  it("an emptied handle reads as no connections and its key is pruned on the next new-handle write", () => {
     const [edges, setEdges] = createStore([
       { id: "e1", source: "a", target: "b" },
       { id: "e2", source: "a", target: "c" },
@@ -104,7 +104,14 @@ describe("createConnections (core, headless)", () => {
       flush();
 
       expect(Object.keys(connections["a-source"] ?? {})).toHaveLength(1);
+      // emptied, not deleted: a root-key delete would clone the whole record
+      expect(Object.keys(connections["c-target"] ?? {})).toHaveLength(0);
+
+      // the next never-seen handle key pays the root write and prunes it
+      setEdges(() => [{ id: "e1", source: "a", target: "b", targetHandle: "fresh" }] as Edge[]);
+      flush();
       expect(connections["c-target"]).toBeUndefined();
+      expect(Object.keys(connections["b-target-fresh"] ?? {})).toHaveLength(1);
       dispose();
     });
   });
@@ -136,6 +143,45 @@ describe("createConnections (core, headless)", () => {
       expect(connections["a"]).toBe(aBefore);
       expect(connections[connectionKey("a", "source")]).toBe(aSourceBefore);
       expect(Object.keys(connections[connectionKey("d", "target", "in")] ?? {})).toHaveLength(1);
+      dispose();
+    });
+  });
+});
+
+describe("createConnections — reconnect (draft-form incremental derive)", () => {
+  it("moving an edge between handles updates exactly the two handle keys and keeps every other key's sub-record", () => {
+    const [edges, setEdges] = createStore([
+      { id: "e1", source: "a", target: "b", targetHandle: "in" },
+      { id: "e2", source: "c", target: "b" },
+    ] as Edge[]);
+    createRoot((dispose) => {
+      const connections = createConnections({
+        get edges() {
+          return edges;
+        },
+      });
+      flush();
+      const cBefore = connections[connectionKey("c", "source")];
+      const bBefore = connections[connectionKey("b", "target")];
+      expect(Object.keys(connections[connectionKey("b", "target", "in")] ?? {})).toHaveLength(1);
+
+      // reconnect e1 to b's default target handle (targetHandle null)
+      setEdges((draft) => {
+        draft[0]!.targetHandle = null;
+      });
+      flush();
+      expect(Object.keys(connections[connectionKey("b", "target", "in")] ?? {})).toHaveLength(0);
+      expect(Object.keys(connections[connectionKey("b", "target")] ?? {})).toHaveLength(2);
+      expect(connections[connectionKey("c", "source")]).toBe(cBefore);
+      expect(connections[connectionKey("b", "target")]).toBe(bBefore);
+
+      // and back
+      setEdges((draft) => {
+        draft[0]!.targetHandle = "in";
+      });
+      flush();
+      expect(Object.keys(connections[connectionKey("b", "target", "in")] ?? {})).toHaveLength(1);
+      expect(connections[connectionKey("c", "source")]).toBe(cBefore);
       dispose();
     });
   });
