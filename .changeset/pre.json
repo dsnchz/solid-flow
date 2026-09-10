@@ -7,6 +7,7 @@
   "changesets": [
     "adoption-seed-retention",
     "async-defaults-persistence",
+    "async-idle-prime",
     "async-seeded-stores",
     "audit-bug-sweep",
     "connection-ownership",
