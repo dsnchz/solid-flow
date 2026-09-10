@@ -140,8 +140,15 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
           draft.nodes[id] = { value: !!nextNode.selected, row: node };
         });
       }
-      nodes[index] =
-        options?.replace && isNode<NodeType>(nextNode) ? nextNode : { ...node, ...nextNode };
+      // Merge = FIELD writes into the draft row (not a slot replacement): a
+      // replaced slot reads as a membership change to everything keyed on
+      // row identity — the id lists, lookups and per-row mapArray rows all
+      // re-derived for one updateNodeData (~78ms per write @10k, bench
+      // round 17). Object.assign on the draft proxy is the spread's
+      // semantics (own enumerable keys, undefined values included) as
+      // per-key store writes; equal values do not notify.
+      if (options?.replace && isNode<NodeType>(nextNode)) nodes[index] = nextNode;
+      else Object.assign(node, nextNode);
       return undefined;
     });
   };
@@ -181,8 +188,9 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
             draft.edges[id] = { value: !!nextEdge.selected, row: edge };
           });
         }
-        edges[index] =
-          options.replace && isEdge<EdgeType>(nextEdge) ? nextEdge : { ...edge, ...nextEdge };
+        // Field writes for the merge path — see updateNode.
+        if (options.replace && isEdge<EdgeType>(nextEdge)) edges[index] = nextEdge;
+        else Object.assign(edge, nextEdge);
         return undefined;
       });
     },

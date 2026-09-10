@@ -3,11 +3,26 @@ import {
   Background,
   Controls,
   type Edge,
+  Handle,
   MiniMap,
   type Node,
+  type NodeProps,
+  NodeResizer,
   SolidFlow,
   useSolidFlow,
 } from "@/index";
+
+// `resizer=1`: node 5-5 renders with an always-visible NodeResizer so the
+// bench can drive the measurement-write cadence (resize frames) at scale.
+const ResizerNode = (props: NodeProps<{ label: string }>) => (
+  <>
+    <NodeResizer visible minWidth={40} minHeight={20} />
+    <Handle type="target" position="left" />
+    <div>{props.data?.label}</div>
+    <Handle type="source" position="right" />
+  </>
+);
+const stressNodeTypes = { resizer: ResizerNode };
 
 // Exposes the flow API to the bench driver (pan via commands.setViewport).
 const BenchProbe = () => {
@@ -26,6 +41,8 @@ const BenchProbe = () => {
 //   minimap  "1" to include the MiniMap (default off, to isolate the graph pipeline)
 //   unmount  "1" to opt into unmount culling (onlyRenderVisibleElements)
 //   fit      "0" to skip fitView so the grid overflows the viewport (culling visible)
+//   resizer  "1" to give node 5-5 an always-visible NodeResizer
+//   attr     "1" to enable DEV.attribution (dev builds only)
 //
 // window.__bench.flush lets the driver force synchronous completion of a
 // dispatched interaction (Solid 2.0 defers to microtask flush; the 0.2.3
@@ -38,6 +55,7 @@ export const StressTest = () => {
   const withEdges = params.get("edges") !== "0";
   const withUnmountCulling = params.get("unmount") === "1";
   const withFitView = params.get("fit") !== "0";
+  const withResizer = params.get("resizer") === "1";
 
   const nodeItems: Node[] = [];
   const edgeItems: Edge[] = [];
@@ -53,7 +71,8 @@ export const StressTest = () => {
         id,
         data,
         position,
-        type: "default",
+        type: withResizer && id === "5-5" ? "resizer" : "default",
+        ...(withResizer && id === "5-5" ? { width: 120, height: 60 } : {}),
       };
       nodeItems.push(node);
 
@@ -76,6 +95,7 @@ export const StressTest = () => {
     <SolidFlow
       nodes={nodeItems}
       edges={edgeItems}
+      nodeTypes={stressNodeTypes}
       fitView={withFitView}
       onlyRenderVisibleElements={withUnmountCulling}
       minZoom={0.1}

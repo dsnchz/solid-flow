@@ -44,6 +44,7 @@ import { getDefaultFlowStateProps } from "./defaults";
 import { type DragOverlay } from "./dragOverlay";
 import { RecordMapFacade } from "./facades";
 import type { SolidFlowProps } from "./flowProps";
+import { FLOW_PROP_KEYS } from "./flowProps";
 import { type FlowCommands, type FlowSelection, type FlowState } from "./flowState";
 import { createMeasurementIngest } from "./measurementIngest";
 import { createOverlayRelease } from "./overlayRelease";
@@ -100,6 +101,26 @@ const getInitialViewport = (
  * renderer maps) are injected by createSolidFlow; commands invoked by user
  * code may read injected DOM handles (domNode, panZoom) at call time.
  */
+/**
+ * Plain enumerable getters over a signal-held props object, one per key —
+ * merge-compatible (no proxy, no memo) so the merged store stays a plain
+ * object with bound getters. See the `store` construction below.
+ */
+const propGetters = <T extends object, K extends keyof T>(
+  source: () => T,
+  keys: readonly K[],
+): { readonly [P in K]: T[P] } => {
+  const out = {} as { [P in K]: T[P] };
+  for (const key of keys) {
+    Object.defineProperty(out, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => source()[key],
+    });
+  }
+  return out;
+};
+
 export const createFlowState = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: SolidFlowProps<NodeType, EdgeType>,
   injections: FlowStateInjections = {},
@@ -421,7 +442,13 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     { name: "selectedNodesBounds" },
   );
 
-  const store = merge({ width: 0, height: 0 }, config, {
+  // The config-backed keys are PLAIN getters over the config signal. Passing
+  // `config` itself as a merge source made merge wrap it in a memo, and every
+  // store read then pulled that memo — which marks the dirty heap first
+  // (`read -> markHeap`). During a 10k mount, with thousands of pending row
+  // computations in the heap, that was ~5s of a 12s mount (profile, bench
+  // round 17). Plain getters read the signal directly: no heap marking.
+  const store = merge({ width: 0, height: 0 }, propGetters(config, FLOW_PROP_KEYS), {
     get ariaLabelConfig() {
       return ariaLabelConfig();
     },

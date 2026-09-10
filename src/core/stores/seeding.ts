@@ -67,11 +67,18 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   const edgeDefaultsPending =
     props.edges === undefined && isPending(() => props.defaultEdges?.length);
 
+  // Uncontrolled seeds are copied ROW by row (shallow): the flow owns its
+  // draft, so flow writes must never land on the caller's objects — which
+  // may be another store's row proxies (the draft-then-commit pattern seeds
+  // from an async server store). Controlled axes keep the user's proxy: there
+  // write-through IS the contract.
+  const copyRows = <T extends object>(rows: readonly T[] | undefined): T[] =>
+    (rows ?? []).map((row) => ({ ...row }));
   const [nodesStore, setNodesStore] = createStore<NodeType[]>(
-    (props.nodes ?? (nodeDefaultsPending ? [] : [...(props.defaultNodes ?? [])])) as NodeType[],
+    (props.nodes ?? (nodeDefaultsPending ? [] : copyRows(props.defaultNodes))) as NodeType[],
   );
   const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(
-    (props.edges ?? (edgeDefaultsPending ? [] : [...(props.defaultEdges ?? [])])) as EdgeType[],
+    (props.edges ?? (edgeDefaultsPending ? [] : copyRows(props.defaultEdges))) as EdgeType[],
   );
 
   // Whether each axis has consumed its one-time seed (from either prop).
@@ -128,7 +135,7 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
       const defaultNodes = config().defaultNodes;
       // Copy in the COMPUTE: row reads must happen in a tracking scope (the
       // body is untracked, and a pending source must throw HERE to hold).
-      return defaultNodes ? ([...defaultNodes] as NodeType[]) : undefined;
+      return defaultNodes ? (copyRows(defaultNodes) as NodeType[]) : undefined;
     },
     (seed) => {
       if (seed && !nodeSeedAdopted && untrack(() => config().nodes) === undefined) {
@@ -141,7 +148,7 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   createEffect(
     () => {
       const defaultEdges = config().defaultEdges;
-      return defaultEdges ? ([...defaultEdges] as EdgeType[]) : undefined;
+      return defaultEdges ? (copyRows(defaultEdges) as EdgeType[]) : undefined;
     },
     (seed) => {
       if (seed && !edgeSeedAdopted && untrack(() => config().edges) === undefined) {

@@ -1,0 +1,5 @@
+---
+"@dschz/solid-flow": patch
+---
+
+Large-graph mount and programmatic updates. A CDP profile of a 10k-node mount attributed most of the time to one engine path: the compiler turns a JSX spread with a dynamic expression (`{...node().domAttributes}`) into a memo-backed `merge`, and every attribute binding on that element then reads through the memo, which marks the whole dirty heap while rows are still mounting. Node and edge wrappers now apply `domAttributes` with a direct spread from the ref, and the internal store reads config through plain getters instead of a memo-backed merge source. `updateNode` / `updateEdge` merge by writing fields into the draft row instead of replacing the array slot, so an `updateNodeData` no longer re-derives every id list and lookup (reconnect and marker writes at 10k edges drop accordingly). Uncontrolled seeds (`defaultNodes` / `defaultEdges`) now copy rows, so the flow's draft never writes onto the caller's objects — the draft-then-commit pattern's server truth stays untouched by drags and updates alike.

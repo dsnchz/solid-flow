@@ -73,7 +73,14 @@ Controlled vs uncontrolled is decided **per axis** by which prop you pass
   Auto-inserting would duplicate the documented adoption push.
 - **Uncontrolled**: defaults seed once (including from a _pending_ async
   store, via an `isPending` probe plus a one-shot adoption effect), then the
-  flow owns membership.
+  flow owns membership. Rows are shallow-copied at seed: the flow owns its
+  draft, so no flow write may land on the caller's objects (which may be
+  another store's row proxies in the draft-then-commit pattern).
+- **`updateNode` / `updateEdge` merge by writing fields into the draft row**,
+  never by replacing the array slot. A replaced slot reads as a membership
+  change to everything keyed on row identity (id lists, lookups, per-row
+  mapArray rows) and re-derived the whole graph for one `updateNodeData`.
+  `replace: true` is the only slot write.
 
 The stores are plain writable stores, **not** the projection form of
 `createStore`: deriving from a store-proxy source rewraps every element on
@@ -152,6 +159,15 @@ are the same code path as arrays.
   deciding its own presence, O(changed-row); `selectedIds` and the unmeasured
   set behind `nodesInitialized` use it; `connections` and the marker index use
   per-row memos merged by a record projection).
+- **No memo-backed prop sources on per-row paths.** `merge()` wraps a
+  function source in a memo, and the compiler emits exactly that for a JSX
+  spread with a dynamic expression (`{...node().domAttributes}` becomes
+  `merge({…bindings}, () => …)`). Every binding on that element then reads
+  through the memo, and each read marks the whole dirty heap while thousands
+  of rows are mounting — ~3s of a 12s 10k mount (profile, bench round 17).
+  Per-row components apply dynamic attribute bags with a direct
+  `spread(el, () => attrs, true)` from the ref, and the internal `store`
+  reads config through plain getters (`propGetters`), never a memo source.
 - **Reactive nodes are named** (`{ name }` on memos, effects, projections) so
   the rc.7 dev diagnostics (`HUGE_FAN_IN`, `HUGE_FAN_OUT`, `WIDE_SCOPE_DEPS`)
   and `DEV.attribution.costs()` identify them. The stress example enables

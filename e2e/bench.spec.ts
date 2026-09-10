@@ -243,3 +243,112 @@ test("BENCH mount @10k", async ({ page }) => {
   console.log("MOUNT @10k (ms to nodesInitialized):", Math.round(ms));
   expect(ms).toBeGreaterThan(0);
 });
+
+test("BENCH node resize @10k", async ({ page }) => {
+  test.setTimeout(120000);
+  // The measurement ingest runs in requestIdleCallback, which the library
+  // binds at module load — wrap it BEFORE any page script runs so the idle
+  // callbacks (the measurement-write cadence) are timed too.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __idle: number[] };
+    w.__idle = [];
+    const original = window.requestIdleCallback.bind(window);
+    window.requestIdleCallback = (cb: IdleRequestCallback, opts?: IdleRequestOptions) =>
+      original((deadline) => {
+        const t0 = performance.now();
+        cb(deadline);
+        w.__idle.push(performance.now() - t0);
+      }, opts);
+  });
+  await waitForStress(page, "&resizer=1");
+  await page.evaluate(instrument);
+  // Reset: mount's own idle passes are not the resize cost.
+  await page.evaluate(() => {
+    (window as unknown as { __idle: number[] }).__idle = [];
+  });
+
+  // XYResizer attaches its d3-drag listeners at gesture start, so the wrapper
+  // times each resize frame; the DOM re-measure lands as a measurement write
+  // in the idle callback — the cadence nodesInitialized used to re-derive on.
+  const handle = page.locator(
+    '.solid-flow__node[data-id="5-5"] .solid-flow__resize-control.handle.bottom.right',
+  );
+  await expect(handle).toBeVisible();
+  const box = (await handle.boundingBox())!;
+  let x = box.x + box.width / 2;
+  let y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let i = 0; i < 60; i++) {
+    x += 2;
+    y += 1;
+    await page.mouse.move(x, y);
+    await page.waitForTimeout(5);
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  console.log("RESIZE listener @10k:", JSON.stringify(await page.evaluate(stats)));
+  console.log(
+    "RESIZE idle-ingest @10k:",
+    JSON.stringify(
+      await page.evaluate(() => {
+        const s = [...(window as unknown as { __idle: number[] }).__idle].sort((a, b) => a - b);
+        const mean = s.reduce((a, b) => a + b, 0) / (s.length || 1);
+        return {
+          n: s.length,
+          mean: Math.round(mean * 100) / 100,
+          p95: Math.round((s[Math.floor(s.length * 0.95)] ?? 0) * 100) / 100,
+          worst: Math.round((s[s.length - 1] ?? 0) * 100) / 100,
+        };
+      }),
+    ),
+  );
+});
+
+test("BENCH reconnect + marker writes @10k", async ({ page }) => {
+  test.setTimeout(120000);
+  await waitForStress(page);
+  // In-page timing of programmatic edge writes: the connections index and the
+  // marker definitions re-derive on these — the round-16 fan-in targets.
+  // Each sample = write + flush + a read that pulls the derived record.
+  const result = await page.evaluate(() => {
+    type Api = {
+      flush: () => void;
+      api: {
+        commands: { updateEdge: (id: string, u: Record<string, unknown>) => void };
+        flow: { connections: Record<string, Record<string, unknown>> };
+      };
+    };
+    const { flush, api } = (window as unknown as { __bench: Api }).__bench;
+    const edgeId = "5-5-6-5";
+    const summarize = (s: number[]) => {
+      s.sort((a, b) => a - b);
+      const mean = s.reduce((a, b) => a + b, 0) / s.length;
+      return {
+        mean: Math.round(mean * 100) / 100,
+        p95: Math.round(s[Math.floor(s.length * 0.95)]! * 100) / 100,
+        worst: Math.round(s[s.length - 1]! * 100) / 100,
+      };
+    };
+    const reconnect: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      const t0 = performance.now();
+      api.commands.updateEdge(edgeId, { targetHandle: i % 2 ? "in" : null });
+      flush();
+      void Object.keys(api.flow.connections["6-5"] ?? {}).length;
+      reconnect.push(performance.now() - t0);
+    }
+    const marker: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      const t0 = performance.now();
+      api.commands.updateEdge(edgeId, { markerEnd: i % 2 ? { type: "arrow" } : undefined });
+      flush();
+      void document.querySelectorAll(".solid-flow__marker marker").length;
+      marker.push(performance.now() - t0);
+    }
+    return { reconnect: summarize(reconnect), marker: summarize(marker) };
+  });
+  console.log("RECONNECT @10k:", JSON.stringify(result.reconnect));
+  console.log("MARKER @10k:", JSON.stringify(result.marker));
+  expect(result.reconnect.mean).toBeGreaterThan(0);
+});

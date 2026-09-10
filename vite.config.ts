@@ -40,7 +40,11 @@ const viteConfig = defineConfig({
     target: "esnext",
   },
   resolve: {
-    conditions: ["development", "browser"],
+    // The playground runs solid-js DEV builds (diagnostics, attribution). Bench
+    // builds must resolve the PRODUCTION artifacts instead: `SOLID_PROD=1 vite
+    // build` — every "prod" bench before round 17 unknowingly measured the dev
+    // build (relative A/Bs hold; absolute numbers carried dev instrumentation).
+    conditions: process.env.SOLID_PROD ? ["browser"] : ["development", "browser"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },

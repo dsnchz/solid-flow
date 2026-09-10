@@ -11,7 +11,9 @@ export default defineConfig({
   // playwright test e2e/bench.spec.ts` (against the prod preview on :3010,
   // see .agent/bench) or `e2e/attribution-probe.spec.ts` (dev server,
   // prints rc.7 diagnostics + DEV.attribution.costs()).
-  testIgnore: process.env.BENCH ? [] : ["**/bench.spec.ts", "**/attribution-probe.spec.ts"],
+  testIgnore: process.env.BENCH
+    ? []
+    : ["**/bench.spec.ts", "**/attribution-probe.spec.ts", "**/mount-profile.spec.ts"],
   fullyParallel: true,
   reporter: "list",
   timeout: 30_000,

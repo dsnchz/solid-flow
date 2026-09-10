@@ -1,8 +1,8 @@
 import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
-import { Dynamic } from "@solidjs/web";
+import { Dynamic, spread } from "@solidjs/web";
 import { elementSelectionKeys, errorMessages, getMarkerId } from "@xyflow/system";
-import { createEffect, createMemo, createSignal, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, getOwner, runWithOwner, Show } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
@@ -22,6 +22,9 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   let edgeRef!: SVGGElement;
   const [edgeEl, setEdgeEl] = createSignal<SVGGElement>();
   const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
+  // The ref callback runs outside the component owner; the domAttributes
+  // spread effects must be owned (disposal + no NO_OWNER diagnostics).
+  const owner = getOwner();
 
   const edgeId = () => props.edgeId;
   const edge = () => actions.getLayoutedEdge(edgeId())!;
@@ -110,6 +113,8 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
             ref={(el) => {
               edgeRef = el;
               setEdgeEl(el);
+              // Direct spread for user domAttributes — see NodeWrapper.
+              runWithOwner(owner, () => spread(el, () => edge()?.domAttributes ?? {}, true));
             }}
             data-id={edge().id}
             tabindex={focusable() ? 0 : undefined}
@@ -133,7 +138,6 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
             onPointerEnter={onPointerEnter}
             onPointerLeave={onPointerLeave}
             onPointerMove={onPointerMove}
-            {...edge().domAttributes}
           >
             <Dynamic
               component={edgeComponent()}

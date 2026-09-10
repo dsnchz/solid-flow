@@ -1,6 +1,6 @@
 import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
-import { Dynamic } from "@solidjs/web";
+import { Dynamic, spread } from "@solidjs/web";
 import {
   elementSelectionKeys,
   errorMessages,
@@ -8,7 +8,15 @@ import {
   isInputDOMNode,
   nodeHasDimensions,
 } from "@xyflow/system";
-import { createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  getOwner,
+  onCleanup,
+  runWithOwner,
+  Show,
+} from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
 import { ARIA_NODE_DESC_KEY } from "@/components/accessibility";
@@ -31,6 +39,9 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   props: NodeWrapperProps<NodeType>,
 ): JSX.Element => {
   const { store, nodeLookup, parentIds, actions } = useInternalSolidFlow<NodeType>();
+  // The ref callback runs outside the component owner; the domAttributes
+  // spread effects must be owned (disposal + no NO_OWNER diagnostics).
+  const owner = getOwner();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
@@ -259,7 +270,16 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   return (
     <Show when={!node().hidden}>
       <div
-        ref={setNodeRef}
+        ref={(el) => {
+          setNodeRef(el);
+          // User `domAttributes` via a direct spread, NOT a JSX spread: the
+          // compiler folds a JSX spread into `merge({...bindings}, () => attrs)`
+          // and that function source becomes a memo every attribute binding
+          // reads — each read marks the whole dirty heap during a large
+          // mount (~3s of a 12s 10k mount, profile round 17). This spread's
+          // effect reads the row store directly.
+          runWithOwner(owner, () => spread(el, () => node()?.domAttributes ?? {}, true));
+        }}
         data-id={node().id}
         class={[
           "solid-flow__node",
@@ -289,7 +309,6 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         aria-describedby={
           store.disableKeyboardA11y ? undefined : `${ARIA_NODE_DESC_KEY}-${store.id}`
         }
-        {...node().domAttributes}
       >
         <NodeIdContext value={nodeId}>
           <NodeConnectableContext value={connectable}>
