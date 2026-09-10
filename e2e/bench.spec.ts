@@ -434,3 +434,53 @@ test("BENCH memory @10k", async ({ page }) => {
   );
   expect(mounted.heapMB).toBeGreaterThan(blank.heapMB);
 });
+
+test("BENCH memory unmount @10k", async ({ page }) => {
+  test.setTimeout(300000);
+  // What a full SolidFlow unmount releases, against the delete-all number of
+  // the scenario above: if the unmount lands near the blank page while
+  // delete-all retains, the retention lives in the live flow's projections.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Performance.enable");
+  await cdp.send("HeapProfiler.enable");
+  const sample = async (label: string) => {
+    await page.waitForTimeout(300);
+    await cdp.send("HeapProfiler.collectGarbage");
+    await cdp.send("HeapProfiler.collectGarbage");
+    const { metrics } = await cdp.send("Performance.getMetrics");
+    const m = Object.fromEntries(metrics.map((x) => [x.name, x.value]));
+    const heapMB = Math.round((m.JSHeapUsedSize! / 1048576) * 10) / 10;
+    console.log(`MEMORY ${label}:`, JSON.stringify({ heapMB, domNodes: m.Nodes }));
+    return heapMB;
+  };
+  type W = { __bench: { setMounted: (v: boolean) => void; flush: () => void } };
+  const extra = process.env.MEM_PARAMS ?? "";
+  await page.goto("about:blank");
+  const blank = await sample("blank page");
+  await waitForStress(page, extra);
+  const mounted = await sample(`mounted @10k${extra}`);
+  await page.evaluate(() => {
+    const { setMounted, flush } = (window as unknown as W).__bench;
+    setMounted(false);
+    flush();
+  });
+  await expect
+    .poll(async () => page.evaluate(() => document.querySelectorAll(".solid-flow").length))
+    .toBe(0);
+  const unmounted = await sample("after unmounting SolidFlow");
+  await page.evaluate(() => {
+    const { setMounted, flush } = (window as unknown as W).__bench;
+    setMounted(true);
+    flush();
+  });
+  await expect
+    .poll(async () => page.evaluate(() => document.querySelectorAll(".solid-flow__node").length), {
+      timeout: 60000,
+    })
+    .toBeGreaterThan(9000);
+  const remounted = await sample("after remounting");
+  console.log(
+    `MEMORY unmount summary: mount +${(mounted - blank).toFixed(1)} MB; retained after unmount ${(unmounted - blank).toFixed(1)} MB; remount ${remounted.toFixed(1)} MB`,
+  );
+  expect(unmounted).toBeLessThan(mounted);
+});

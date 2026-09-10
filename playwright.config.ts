@@ -26,7 +26,9 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3010",
     viewport: { width: 1280, height: 800 },
-    trace: "retain-on-failure",
+    // Tracing installs Playwright's snapshot streamer, which pins every DOM
+    // element it has seen — off for benches (it fakes retention on unmount).
+    trace: process.env.BENCH ? "off" : "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {

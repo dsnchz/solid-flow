@@ -74,6 +74,9 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
 
     return () => {
       actions.reset();
+      // The state may outlive this canvas (SolidFlowProvider): drop the DOM
+      // handle so a hoisted state never pins the detached canvas subtree.
+      actions.setDomNode(null);
     };
   });
 

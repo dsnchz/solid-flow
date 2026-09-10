@@ -174,10 +174,35 @@ are the same code path as arrays.
   in the engine's pure heap; every later row's first memo pull re-marks that
   whole heap (`markHeap`), which made a 10k mount O(N²) — 9.6s → 4.3s once
   removed (bench rounds 17–18, standalone repro in
-  `.agent/spikes/p34-markheap-mount`). Per-row components wire their element
+  `.agent/spikes/p34-markheap-mount`; upstream solidjs/solid#3350). Per-row components wire their element
   from the ref callback, owner-bound: `runWithOwner(owner, () =>
 mountElement(el))`, with `el` captured as a plain value and the effects
   inside depending on node fields and props only.
+- **Keyed records hold frozen holders, never row proxies.** A projection
+  slot assigned a store proxy is unwrapped on write and re-wrapped on read
+  under the RECORD's projection family, so every nested leaf a consumer
+  reads through `internalNodes[id]` (`measured.width`,
+  `internals.positionAbsolute`, …) becomes a signal owned by the long-lived
+  record instead of the row — and the engine never unlinks a projection's
+  leaf signals when a key is deleted, so deleted rows stayed reachable (with
+  their last values) for the flow's lifetime: ~26 KB per deleted node+edge
+  pair, 260 MB after delete-all @10k (bench round 20, headless repro in
+  `.agent/spikes/p35-retained-after-delete`; upstream solidjs/solid#3351).
+  `createRowRecordProjection`
+  stores one `Object.freeze({ get row() })` holder per row store (frozen
+  objects are not wrappable — served raw) behind `createRecordFacade`, so
+  `record[id]` IS the row store's own proxy and nested leaves die with the
+  row. `edgeLookup` is the same helper over a keyed `mapArray`. Retained
+  after delete-all @10k: 260 → 37 MB (the example's own arrays); mounted
+  heap −13% (one signal per leaf instead of two).
+- **The state never holds DOM past the canvas.** `SolidFlowProvider` hoists
+  the state above `SolidFlow`, so the canvas can unmount while the state
+  lives on; `domNode` alone pinned the whole detached subtree and every
+  delegated handler on it (~490 MB after unmount @10k). The canvas clears
+  `domNode` in its cleanup and `Zoom` destroys the pan/zoom controller and
+  clears `panZoom` with the pane (`unmountRelease.test.tsx`). A hoisted
+  state keeps its DATA by contract (~320 MB @10k); a flow under its own
+  provider releases everything (24 MB, the example's arrays).
 - **Reactive nodes are named** (`{ name }` on memos, effects, projections) so
   the rc.7 dev diagnostics (`HUGE_FAN_IN`, `HUGE_FAN_OUT`, `WIDE_SCOPE_DEPS`)
   and `DEV.attribution.costs()` identify them. The stress example enables

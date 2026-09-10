@@ -1,0 +1,5 @@
+---
+"@dschz/solid-flow": patch
+---
+
+Memory: deleted rows are now released. The keyed row records (`internalNodes`, `layoutedEdges`, `edgeLookup`) stored row proxies, which the store engine re-wraps under the record's own projection family — every nested field a consumer read through a record then belonged to the long-lived record rather than the row, and deleting the row left those signals (and their last values) attached for the flow's lifetime (~26 KB per deleted node+edge pair; 260 MB retained after deleting a 10k graph). Records now hold frozen holders that hand out the row store's own proxy, so `record[id]` is identity-stable with the row and its leaves die with it: 37 MB retained after delete-all at 10k, and the mounted heap is ~13% smaller (one signal per leaf instead of two). Also, unmounting a `SolidFlow` canvas under a `SolidFlowProvider` now clears the state's `domNode` and destroys the pan/zoom controller, so a hoisted state no longer pins the detached canvas DOM (~490 MB → the state's own data at 10k).

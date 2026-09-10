@@ -76,6 +76,13 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
       actions.setPanZoom(panZoomInstance);
 
       props.onViewportInitialized?.();
+
+      // Tear the controller down with the pane: a hoisted state must not keep
+      // the d3 bindings and the detached pane element alive.
+      return () => {
+        panZoomInstance.destroy();
+        actions.setPanZoom(null);
+      };
     },
   );
 

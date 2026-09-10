@@ -1,4 +1,4 @@
-import { DEV, flush } from "solid-js";
+import { createSignal, DEV, flush, onCleanup, Show } from "solid-js";
 import {
   Background,
   Controls,
@@ -9,6 +9,7 @@ import {
   type NodeProps,
   NodeResizer,
   SolidFlow,
+  SolidFlowProvider,
   useSolidFlow,
 } from "@/index";
 
@@ -32,7 +33,15 @@ const BenchProbe = () => {
   if (DEV && new URLSearchParams(window.location.search).get("attr") === "1") {
     DEV.attribution.enable();
   }
-  (window as Window & { __bench?: unknown }).__bench = { flush, api, DEV };
+  const w = window as Window & { __bench?: { api?: unknown; DEV?: unknown } };
+  const bench = (w.__bench ??= {});
+  Object.assign(bench, { api, DEV });
+  // An unmounted flow must not stay reachable through the probe (the memory
+  // bench measures what an unmount releases).
+  onCleanup(() => {
+    delete bench.api;
+    delete bench.DEV;
+  });
   return null;
 };
 
@@ -44,6 +53,12 @@ const BenchProbe = () => {
 //   resizer  "1" to give node 5-5 an always-visible NodeResizer
 //   uncontrolled "1" to seed via defaultNodes/defaultEdges (the flow copies and owns the rows)
 //   attr     "1" to enable DEV.attribution (dev builds only)
+//   provider "1" to give the flow its own SolidFlowProvider INSIDE the unmount
+//            toggle (full teardown; the playground's app-level provider
+//            otherwise owns the state and survives the canvas)
+//
+// window.__bench.setMounted(false) unmounts the whole SolidFlow (the memory
+// bench compares what an unmount releases against a delete-all).
 //
 // window.__bench.flush lets the driver force synchronous completion of a
 // dispatched interaction (Solid 2.0 defers to microtask flush; the 0.2.3
@@ -58,6 +73,7 @@ export const StressTest = () => {
   const withFitView = params.get("fit") !== "0";
   const withResizer = params.get("resizer") === "1";
   const uncontrolled = params.get("uncontrolled") === "1";
+  const ownProvider = params.get("provider") === "1";
 
   const nodeItems: Node[] = [];
   const edgeItems: Edge[] = [];
@@ -91,9 +107,10 @@ export const StressTest = () => {
     }
   }
 
-  (window as Window & { __bench?: unknown }).__bench = { flush };
+  const [mounted, setMounted] = createSignal(true);
+  (window as Window & { __bench?: unknown }).__bench = { flush, setMounted };
 
-  return (
+  const canvas = () => (
     <SolidFlow
       {...(uncontrolled
         ? { defaultNodes: nodeItems, defaultEdges: edgeItems }
@@ -111,5 +128,13 @@ export const StressTest = () => {
       <Background variant="lines" />
       {withMiniMap && <MiniMap />}
     </SolidFlow>
+  );
+
+  return (
+    <Show when={mounted()}>
+      <Show when={ownProvider} fallback={canvas()}>
+        <SolidFlowProvider>{canvas()}</SolidFlowProvider>
+      </Show>
+    </Show>
   );
 };

@@ -8,7 +8,13 @@ import { expect, test } from "./helpers";
  *   bunx vite build --outDir .bench-names --minify false
  *   bunx vite preview --outDir .bench-names --port 3010
  *   BENCH=1 bunx playwright test e2e/heap-snapshot.spec.ts
+ * HEAP_MODE=unmount unmounts the whole SolidFlow instead of deleting rows;
+ * HEAP_SAMPLE is the regex of heap node names whose retaining paths are
+ * sampled (default: store targets; e.g. "^native:Detached HTMLDivElement").
  */
+const SAMPLE = new RegExp(process.env.HEAP_SAMPLE ?? "^object:TargetShape");
+const MODE = process.env.HEAP_MODE ?? "delete";
+const FRAMES = Number(process.env.HEAP_FRAMES ?? 6);
 type Agg = Map<string, { size: number; count: number }>;
 
 const snapshot = async (cdp: import("@playwright/test").CDPSession): Promise<Agg> => {
@@ -134,7 +140,7 @@ const snapshot = async (cdp: import("@playwright/test").CDPSession): Promise<Agg
   const chains: Agg = new Map();
   let sampled = 0;
   for (let n = 0; n < nodeCount && sampled < 3000; n++) {
-    if (!nodeName(n).startsWith("object:TargetShape")) continue;
+    if (!SAMPLE.test(nodeName(n))) continue;
     sampled++;
     const frames: string[] = [];
     let cur = n;
@@ -149,7 +155,7 @@ const snapshot = async (cdp: import("@playwright/test").CDPSession): Promise<Agg
     const key =
       parent[n] === -1
         ? "(reachable ONLY through a weak collection — key must be alive elsewhere)"
-        : frames.slice(0, 6).join("  <=  ") || "(root)";
+        : frames.slice(0, FRAMES).join("  <=  ") || "(root)";
     const c = chains.get(key) ?? { size: 0, count: 0 };
     c.count += 1;
     chains.set(key, c);
@@ -203,6 +209,7 @@ test("PROBE heap attribution after delete-all", async ({ page }) => {
         };
       };
       flush: () => void;
+      setMounted: (v: boolean) => void;
     };
   };
   await expect
@@ -215,20 +222,33 @@ test("PROBE heap attribution after delete-all", async ({ page }) => {
   await page.waitForTimeout(500);
   const mounted = await snapshot(cdp);
   print(`mounted @${side * side}`, mounted);
-  await page.evaluate(async () => {
-    const { api, flush } = (window as unknown as W).__bench;
-    await api.commands.deleteElements({ nodes: [...api.flow.nodes], edges: [...api.flow.edges] });
-    flush();
-  });
-  await expect
-    .poll(async () => page.evaluate(() => document.querySelectorAll(".solid-flow__node").length))
-    .toBe(0);
+  if (MODE === "unmount") {
+    await page.evaluate(() => {
+      const { setMounted, flush } = (window as unknown as W).__bench;
+      setMounted(false);
+      flush();
+      // Nothing from the harness may keep the unmounted flow reachable.
+      delete (window as { __bench?: unknown }).__bench;
+    });
+    await expect
+      .poll(async () => page.evaluate(() => document.querySelectorAll(".solid-flow").length))
+      .toBe(0);
+  } else {
+    await page.evaluate(async () => {
+      const { api, flush } = (window as unknown as W).__bench;
+      await api.commands.deleteElements({ nodes: [...api.flow.nodes], edges: [...api.flow.edges] });
+      flush();
+    });
+    await expect
+      .poll(async () => page.evaluate(() => document.querySelectorAll(".solid-flow__node").length))
+      .toBe(0);
+  }
   await page.waitForTimeout(1500); // let deferred release timers run
   const emptied = await snapshot(cdp);
-  print(`after delete-all @${side * side} (retained)`, emptied, 14);
+  print(`after ${MODE} @${side * side} (retained)`, emptied, 14);
   const chains = (globalThis as unknown as { __lastChains: Agg }).__lastChains;
   console.log(
-    "RETAINERS of store targets after delete-all (first 4000 sampled; count, holder + owner chain):",
+    `RETAINERS of ${SAMPLE.source} after ${MODE} (sampled; count, holder + owner chain):`,
   );
   for (const [k, v] of [...chains].sort((a, b) => b[1].count - a[1].count).slice(0, 12))
     console.log(`  ${String(v.count).padStart(7)}  ${k}`);
