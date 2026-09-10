@@ -29,6 +29,10 @@ export type OnScreenSource = {
  */
 export const createOnScreenIds = (source: OnScreenSource, name: string): Record<string, true> => {
   let lastViewport: Rect | null = null;
+  // Plain mirror of the record's keys: the full pass tests every geometry
+  // entry, and `id in draft` is a proxy trap each time (~5 ms of a step
+  // @10k); only the flips touch the draft.
+  const present = new Set<string>();
   return createProjection<Record<string, true>>(
     (draft) => {
       const viewport = source.cullingViewport;
@@ -37,8 +41,12 @@ export const createOnScreenIds = (source: OnScreenSource, name: string): Record<
       const apply = (id: string, rect: Rect | undefined) => {
         const on = !!rect && !!viewport && rectsOverlap(rect, viewport);
         if (on) {
-          if (!(id in draft)) draft[id] = true;
-        } else if (id in draft) {
+          if (!present.has(id)) {
+            present.add(id);
+            draft[id] = true;
+          }
+        } else if (present.has(id)) {
+          present.delete(id);
           // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
           delete draft[id];
         }
@@ -47,7 +55,8 @@ export const createOnScreenIds = (source: OnScreenSource, name: string): Record<
         lastViewport = viewport;
         if (!viewport) {
           // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
-          for (const id of Object.keys(draft)) delete draft[id];
+          for (const id of present) delete draft[id];
+          present.clear();
           return;
         }
         source.geometry.forEach((rect, id) => apply(id, rect));

@@ -69,7 +69,7 @@ test("PROBE pan trace @10k", async ({ page }) => {
       `TRACE ${v.ms.toFixed(1).padStart(8)}ms total  n=${String(v.n).padStart(5)}  max ${v.max.toFixed(1).padStart(6)}ms  ${name}`,
     );
   const long = events.filter(
-    (e) => e.dur && e.dur / 1000 > 20 && e.name !== "RunTask" && e.name !== "EventDispatch",
+    (e) => e.dur && e.dur / 1000 > 8 && e.name !== "RunTask" && e.name !== "EventDispatch",
   );
   for (const e of long.slice(0, 12))
     console.log(
