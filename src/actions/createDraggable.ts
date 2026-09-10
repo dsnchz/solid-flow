@@ -87,6 +87,7 @@ const createDraggable = (
         dragInstance.destroy();
       };
     },
+    { name: "draggable" },
   );
 
   return dragging;

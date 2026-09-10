@@ -168,6 +168,16 @@ are the same code path as arrays.
   Per-row components apply dynamic attribute bags with a direct
   `spread(el, () => attrs, true)` from the ref, and the internal `store`
   reads config through plain getters (`propGetters`), never a memo source.
+- **No effects over a row's own ref signal.** An effect whose source is
+  written while the row mounts (`createEffect(() => nodeRef(), …)` with
+  `ref={setNodeRef}`) is dirty for the rest of the synchronous mount and sits
+  in the engine's pure heap; every later row's first memo pull re-marks that
+  whole heap (`markHeap`), which made a 10k mount O(N²) — 9.6s → 4.3s once
+  removed (bench rounds 17–18, standalone repro in
+  `.agent/spikes/p34-markheap-mount`). Per-row components wire their element
+  from the ref callback, owner-bound: `runWithOwner(owner, () =>
+mountElement(el))`, with `el` captured as a plain value and the effects
+  inside depending on node fields and props only.
 - **Reactive nodes are named** (`{ name }` on memos, effects, projections) so
   the rc.7 dev diagnostics (`HUGE_FAN_IN`, `HUGE_FAN_OUT`, `WIDE_SCOPE_DEPS`)
   and `DEV.attribution.costs()` identify them. The stress example enables

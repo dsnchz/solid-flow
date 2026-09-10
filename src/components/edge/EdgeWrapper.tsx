@@ -2,7 +2,7 @@ import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
 import { Dynamic, spread } from "@solidjs/web";
 import { elementSelectionKeys, errorMessages, getMarkerId } from "@xyflow/system";
-import { createEffect, createMemo, createSignal, getOwner, runWithOwner, Show } from "solid-js";
+import { createEffect, createMemo, getOwner, runWithOwner, Show } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
@@ -20,7 +20,6 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   props: EdgeWrapperProps<EdgeType>,
 ): JSX.Element => {
   let edgeRef!: SVGGElement;
-  const [edgeEl, setEdgeEl] = createSignal<SVGGElement>();
   const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
   // The ref callback runs outside the component owner; the domAttributes
   // spread effects must be owned (disposal + no NO_OWNER diagnostics).
@@ -71,11 +70,16 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const onPointerMove = (event: PointerEvent) => props.onEdgePointerMove?.({ edge: edge(), event });
   // The native compiler's delegated `dblclick` never fires and `on:`
   // namespaces are not planned for it — direct attachment is the permanent
-  // form here, not a workaround. The target
-  // must be a SIGNAL: the <g> mounts after layout, later than this effect's
-  // first run, and a plain ref never re-triggers the attach.
+  // form here, not a workaround. Attached from the ref callback (see
+  // mountElement below): an effect over a ref SIGNAL is dirty for the whole
+  // synchronous mount and sits in the pure heap, and every later row's memo
+  // pull re-marks that heap (bench round 17/18 — the O(N^2) mount).
   const onDblClick = (event: MouseEvent) => props.onEdgeDoubleClick?.({ edge: edge(), event });
-  createEventListener(edgeEl, "dblclick", onDblClick);
+  const mountElement = (el: SVGGElement) => {
+    createEventListener(el, "dblclick", onDblClick);
+    // Direct spread for user domAttributes — see NodeWrapper.
+    spread(el, () => edge()?.domAttributes ?? {}, true);
+  };
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (store.disableKeyboardA11y || !elementSelectionKeys.includes(event.key) || !selectable()) {
@@ -112,9 +116,8 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
           <g
             ref={(el) => {
               edgeRef = el;
-              setEdgeEl(el);
-              // Direct spread for user domAttributes — see NodeWrapper.
-              runWithOwner(owner, () => spread(el, () => edge()?.domAttributes ?? {}, true));
+              // Ref callbacks run outside the component owner: keep the wiring owned.
+              runWithOwner(owner, () => mountElement(el));
             }}
             data-id={edge().id}
             tabindex={focusable() ? 0 : undefined}

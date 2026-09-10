@@ -39,20 +39,12 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   props: NodeWrapperProps<NodeType>,
 ): JSX.Element => {
   const { store, nodeLookup, parentIds, actions } = useInternalSolidFlow<NodeType>();
-  // The ref callback runs outside the component owner; the domAttributes
-  // spread effects must be owned (disposal + no NO_OWNER diagnostics).
+  // Captured for `mountElement` (ref callbacks run outside the component owner).
   const owner = getOwner();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
   const node = () => nodeLookup.get(props.nodeId)!;
-
-  // The native compiler's delegated `dblclick` never fires and `on:`
-  // namespaces are not planned for it — direct attachment is the permanent
-  // form here, not a workaround.
-  createEventListener(nodeRef, "dblclick", (event) =>
-    props.onNodeDoubleClick?.({ node: userNode(), event }),
-  );
 
   // The shared observer outlives this wrapper — without unobserve on dispose
   // it pins the detached element in the observer's target list.
@@ -115,60 +107,6 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     ({ valid, nodeType }) => {
       if (!valid) {
         emitFlowError(store.onError, "003", errorMessages["error003"](nodeType));
-      }
-    },
-  );
-
-  createEffect(
-    () => ({
-      id: node().id,
-      nodeElement: nodeRef(),
-      nodeType: nodeType(),
-      sourcePosition: node().sourcePosition,
-      targetPosition: node().targetPosition,
-    }),
-    (current, prev) => {
-      // Nothing to measure until the node's element has mounted
-      if (!current.nodeElement) return;
-
-      if (
-        prev &&
-        prev.nodeElement === current.nodeElement &&
-        prev.sourcePosition === current.sourcePosition &&
-        prev.targetPosition === current.targetPosition &&
-        prev.nodeType === current.nodeType
-      ) {
-        return;
-      }
-
-      actions.requestUpdateNodeInternals([
-        [current.id, { id: current.id, nodeElement: current.nodeElement, force: true }],
-      ]);
-    },
-  );
-
-  // (Re)observe when the element or observer changes, and re-observe the same
-  // element when its dimensions are lost so it gets measured again
-  createEffect(
-    () => ({
-      nodeElement: nodeRef(),
-      hasDimensions: nodeHasDimensions(node()),
-      resizeObserver: props.resizeObserver,
-    }),
-    (current, prev) => {
-      if (
-        current.nodeElement === prev?.nodeElement &&
-        current.resizeObserver === prev?.resizeObserver &&
-        current.hasDimensions
-      ) {
-        return;
-      }
-
-      if (prev?.nodeElement) {
-        prev.resizeObserver?.unobserve(prev.nodeElement);
-      }
-      if (current.nodeElement) {
-        current.resizeObserver?.observe(current.nodeElement);
       }
     },
   );
@@ -240,45 +178,109 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     );
   };
 
-  const dragging = createDraggable(nodeRef, () => ({
-    nodeId: node().id,
-    isSelectable: selectable(),
-    disabled: !draggable(),
-    handleSelector: node().dragHandle,
-    noDragClass: store.noDragClass,
-    nodeClickDistance: props.nodeClickDistance,
-    onNodeMouseDown: actions.handleNodeSelection,
-    onDrag: (event, _, targetNode, nodes) => {
-      props.onNodeDrag?.({ event, targetNode: targetNode as NodeType, nodes: nodes as NodeType[] });
-    },
-    onDragStart: (event, _, targetNode, nodes) => {
-      props.onNodeDragStart?.({
-        event,
-        targetNode: targetNode as NodeType,
-        nodes: nodes as NodeType[],
-      });
-    },
-    onDragStop: (event, _, targetNode, nodes) => {
-      props.onNodeDragStop?.({
-        event,
-        targetNode: targetNode as NodeType,
-        nodes: nodes as NodeType[],
-      });
-    },
-  }));
+  // Element-dependent wiring lives in `mountElement` (below): effects created
+  // there depend on the node's fields and props, never on the ref signal.
+  // An effect over a signal written during the row's own mount (`nodeRef`)
+  // is dirty for the whole synchronous mount and sits in the pure heap; every
+  // later row's memo pull re-marks that heap (`markHeap`), which made a 10k
+  // mount O(N^2) — .agent/spikes/p34-markheap-mount, bench round 17.
+  const mountElement = (el: HTMLDivElement) => {
+    // The native compiler's delegated `dblclick` never fires and `on:`
+    // namespaces are not planned for it — direct attachment is the permanent
+    // form here, not a workaround.
+    createEventListener(el, "dblclick", (event) =>
+      props.onNodeDoubleClick?.({ node: userNode(), event }),
+    );
+
+    // Request a (re)measure when the node's type or handle positions change.
+    createEffect(
+      () => ({
+        id: node().id,
+        nodeType: nodeType(),
+        sourcePosition: node().sourcePosition,
+        targetPosition: node().targetPosition,
+      }),
+      (current, prev) => {
+        if (
+          prev &&
+          prev.sourcePosition === current.sourcePosition &&
+          prev.targetPosition === current.targetPosition &&
+          prev.nodeType === current.nodeType
+        ) {
+          return;
+        }
+        actions.requestUpdateNodeInternals([
+          [current.id, { id: current.id, nodeElement: el, force: true }],
+        ]);
+      },
+      { name: "node.measure" },
+    );
+
+    // (Re)observe when the observer changes, and re-observe when the node's
+    // dimensions are lost so it gets measured again.
+    createEffect(
+      () => ({
+        hasDimensions: nodeHasDimensions(node()),
+        resizeObserver: props.resizeObserver,
+      }),
+      (current, prev) => {
+        if (prev && current.resizeObserver === prev.resizeObserver && current.hasDimensions) {
+          return;
+        }
+        prev?.resizeObserver?.unobserve(el);
+        current.resizeObserver?.observe(el);
+      },
+      { name: "node.resizeObserver" },
+    );
+
+    // User `domAttributes` via a direct spread, NOT a JSX spread: the compiler
+    // folds a JSX spread into `merge({...bindings}, () => attrs)` — a
+    // memo-backed source every attribute binding reads.
+    spread(el, () => node()?.domAttributes ?? {}, true);
+
+    createDraggable(
+      () => el,
+      () => ({
+        nodeId: node().id,
+        isSelectable: selectable(),
+        disabled: !draggable(),
+        handleSelector: node().dragHandle,
+        noDragClass: store.noDragClass,
+        nodeClickDistance: props.nodeClickDistance,
+        onNodeMouseDown: actions.handleNodeSelection,
+        onDrag: (event, _, targetNode, nodes) => {
+          props.onNodeDrag?.({
+            event,
+            targetNode: targetNode as NodeType,
+            nodes: nodes as NodeType[],
+          });
+        },
+        onDragStart: (event, _, targetNode, nodes) => {
+          props.onNodeDragStart?.({
+            event,
+            targetNode: targetNode as NodeType,
+            nodes: nodes as NodeType[],
+          });
+        },
+        onDragStop: (event, _, targetNode, nodes) => {
+          props.onNodeDragStop?.({
+            event,
+            targetNode: targetNode as NodeType,
+            nodes: nodes as NodeType[],
+          });
+        },
+      }),
+    );
+  };
 
   return (
     <Show when={!node().hidden}>
       <div
         ref={(el) => {
           setNodeRef(el);
-          // User `domAttributes` via a direct spread, NOT a JSX spread: the
-          // compiler folds a JSX spread into `merge({...bindings}, () => attrs)`
-          // and that function source becomes a memo every attribute binding
-          // reads — each read marks the whole dirty heap during a large
-          // mount (~3s of a 12s 10k mount, profile round 17). This spread's
-          // effect reads the row store directly.
-          runWithOwner(owner, () => spread(el, () => node()?.domAttributes ?? {}, true));
+          // Ref callbacks run outside the component owner: keep the wiring
+          // owned (disposal, no NO_OWNER diagnostics).
+          runWithOwner(owner, () => mountElement(el));
         }}
         data-id={node().id}
         class={[
@@ -287,7 +289,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
           {
             connectable: !!connectable(),
             draggable: !!draggable(),
-            dragging: dragging(),
+            dragging: !!node().dragging,
             nopan: !!draggable(),
             parent: isParentNode(),
             selectable: !!selectable(),
@@ -322,7 +324,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
               sourcePosition={node().sourcePosition}
               targetPosition={node().targetPosition}
               zIndex={node().internals.z}
-              dragging={dragging()}
+              dragging={!!node().dragging}
               draggable={draggable()}
               dragHandle={node().dragHandle}
               parentId={node().parentId}
