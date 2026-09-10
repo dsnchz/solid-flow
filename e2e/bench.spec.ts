@@ -176,3 +176,49 @@ test("BENCH selection-mode drag @10k", async ({ page }) => {
   );
   expect(selected).toBeGreaterThan(0);
 });
+
+test("BENCH minimap rAF sampling @10k", async ({ page }) => {
+  test.setTimeout(120000);
+  await waitForStress(page, "&minimap=1");
+
+  // The listener wrapper cannot see rAF work; time every requestAnimationFrame
+  // callback registered after instrumentation instead (the minimap's drag
+  // sampling tick registers at drag start).
+  await page.evaluate(() => {
+    const w = window as unknown as { __raf: number[] };
+    w.__raf = [];
+    const original = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (cb: FrameRequestCallback) =>
+      original((t) => {
+        const t0 = performance.now();
+        cb(t);
+        w.__raf.push(performance.now() - t0);
+      });
+  });
+
+  const node = page.locator('.solid-flow__node[data-id="5-5"]');
+  const box = (await node.boundingBox())!;
+  let x = box.x + box.width / 2;
+  let y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let i = 0; i < 60; i++) {
+    x += 3;
+    y += 2;
+    await page.mouse.move(x, y);
+    await page.waitForTimeout(5);
+  }
+  await page.mouse.up();
+  const raf = await page.evaluate(() => {
+    const s = [...(window as unknown as { __raf: number[] }).__raf].sort((a, b) => a - b);
+    const mean = s.reduce((a, b) => a + b, 0) / (s.length || 1);
+    return {
+      n: s.length,
+      mean: Math.round(mean * 100) / 100,
+      p95: Math.round((s[Math.floor(s.length * 0.95)] ?? 0) * 100) / 100,
+      worst: Math.round((s[s.length - 1] ?? 0) * 100) / 100,
+    };
+  });
+  console.log("MINIMAP rAF @10k:", JSON.stringify(raf));
+  expect(raf.n).toBeGreaterThan(0);
+});

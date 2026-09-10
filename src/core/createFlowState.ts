@@ -180,6 +180,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // The adoption pass as a projection: user nodes joined with measurements
   // into internal nodes (absolute positions, z ordering, handle bounds).
   // Replaces the ReactiveMap + mapArray adoption pipeline — no write side.
+  // Plain (non-reactive) count of row geometry changes — see
+  // InternalNodesSource.onGeometryChange. Samplers poll it.
+  let geometryTick = 0;
+  const geometryVersion = () => geometryTick;
   const internalNodes = createInternalNodes<NodeType>({
     get nodes() {
       return nodesStore;
@@ -192,6 +196,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
     get dragOverlay() {
       return dragOverlay;
+    },
+    onGeometryChange: () => {
+      geometryTick++;
     },
     get nodeOrigin() {
       return config().nodeOrigin;
@@ -935,6 +942,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     parentIds,
     connections,
     selectedNodesBounds,
+    dragOverlay,
+    geometryVersion,
     actions: {
       getLayoutedEdge,
       applyInitialFitView,

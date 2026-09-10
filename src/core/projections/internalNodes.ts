@@ -83,6 +83,13 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly onError?: (id: string, message: string) => void;
   readonly elevateNodesOnSelect: boolean;
   readonly zIndexMode?: ZIndexMode;
+  /**
+   * Called (untracked, plain) whenever a row's derive lands a different
+   * absolute position or size — the graph's geometry "version" for consumers
+   * that sample instead of subscribe (the minimap's bounds). Not reactive
+   * state by design: a signal write inside a derive is forbidden.
+   */
+  readonly onGeometryChange?: () => void;
 };
 
 const EMPTY_AUTO_INDEX: ReadonlyMap<string, number> = new Map();
@@ -147,6 +154,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       // wrapper is what keeps TS happy across the Store<T>=Readonly<T>
       // mapped type with an unresolved NodeType generic, and the inner
       // `.row` proxy is what the public record holds.
+      let geometry = "";
       const store: { row: InternalNode<NodeType> } = createProjection<{
         row: InternalNode<NodeType>;
       }>(
@@ -240,6 +248,15 @@ export const createInternalNodes = <NodeType extends Node = Node>(
                 "parent-missing",
                 `Parent node ${userNode.parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
               );
+            }
+          }
+
+          if (source.onGeometryChange) {
+            const { x, y } = row.internals.positionAbsolute;
+            const next = `${x},${y},${dimensions.width},${dimensions.height}`;
+            if (next !== geometry) {
+              geometry = next;
+              source.onGeometryChange();
             }
           }
 

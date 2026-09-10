@@ -2,7 +2,6 @@ import type { JSX } from "@solidjs/web";
 import { Dynamic } from "@solidjs/web";
 import {
   getBoundsOfRects,
-  getInternalNodesBounds,
   getNodeDimensions,
   nodeHasDimensions,
   type PanelPosition,
@@ -23,6 +22,7 @@ import {
 
 import { Panel } from "@/components/container";
 import { useInternalSolidFlow } from "@/contexts";
+import { createGraphBoundsSampler } from "@/core/graphBounds";
 import type { Node } from "@/types";
 import { propDefaults } from "@/utils";
 
@@ -97,7 +97,7 @@ const getAttrFunction = <NodeType extends Node>(
 export const MiniMap = <NodeType extends Node>(
   props: ParentProps<Partial<MiniMapProps<NodeType>>>,
 ): JSX.Element => {
-  const { store, nodeLookup } = useInternalSolidFlow<NodeType>();
+  const { store, nodeLookup, dragOverlay, geometryVersion } = useInternalSolidFlow<NodeType>();
 
   const _props = propDefaults(props, {
     position: "bottom-right" as PanelPosition,
@@ -163,38 +163,38 @@ export const MiniMap = <NodeType extends Node>(
     height: store.height / store.viewport.zoom,
   }));
 
-  // Graph bounds are SAMPLED, not tracked (bench round 7's residual): the
-  // previous memo ran the O(n) bounds scan through the reactive lookup, so
-  // every position write during a drag re-ran it with a full subscription
-  // teardown/rebuild — ~60ms of the 76ms minimap drag cost at 10k. The
-  // untracked sample runs per animation frame while dragging, on membership
-  // and measurement milestones, and on a coarse safety interval that
-  // catches exotic write paths (programmatic moves outside drags).
+  // Graph bounds are SAMPLED, not tracked (bench round 7's residual): a
+  // tracked memo re-ran the O(n) bounds scan through the reactive lookup on
+  // every position write during a drag. Round 15 made the sample itself
+  // cheap: while dragging, the core sampler partitions the graph once per
+  // dragged set and unions only the MOVING rows per animation frame (a full
+  // pass reads ~7 proxy leaves per row — ~38ms @10k headless — and used to
+  // run every frame AND every 500ms forever). Idle re-samples are driven by
+  // the core geometry version (bumped when any row's derive lands a new
+  // position/size), polled cheaply — no periodic full scans of a still graph.
   const rectsEqual = (a: Rect | null, b: Rect | null) =>
     a === b ||
     (!!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height);
-  const sampleBounds = (): Rect | null =>
-    untrack(() => {
-      if (nodeLookup.size === 0) return null;
-      const bounds = getInternalNodesBounds(nodeLookup);
-      // Pre-measurement graphs yield an Infinity rect; folding that in
-      // poisons viewScale with NaN, which XYMinimap writes into the SHARED
-      // panZoom viewport. Treat as "no bounds yet".
-      return Number.isFinite(bounds.x) && Number.isFinite(bounds.width) ? bounds : null;
-    });
-  const [graphBounds, setGraphBounds] = createSignal<Rect | null>(sampleBounds(), {
+  const sampler = createGraphBoundsSampler<NodeType>({
+    nodeLookup,
+    draggedIds: () => new Set(Object.keys(dragOverlay)),
+  });
+  const sample = (dragging: boolean) => untrack(() => sampler.sample(dragging));
+  const [graphBounds, setGraphBounds] = createSignal<Rect | null>(sample(false), {
     equals: rectsEqual,
   });
+  let sampledVersion = untrack(geometryVersion);
 
   createEffect(
     () => store.dragging,
     (dragging) => {
       if (!dragging) {
-        setGraphBounds(sampleBounds());
+        setGraphBounds(sample(false));
+        sampledVersion = geometryVersion();
         return;
       }
       let raf = requestAnimationFrame(function tick() {
-        setGraphBounds(sampleBounds());
+        setGraphBounds(sample(true));
         raf = requestAnimationFrame(tick);
       });
       return () => cancelAnimationFrame(raf);
@@ -203,13 +203,23 @@ export const MiniMap = <NodeType extends Node>(
   createEffect(
     () => ({ count: store.nodes.length, initialized: store.nodesInitialized }),
     () => {
-      setGraphBounds(sampleBounds());
+      setGraphBounds(sample(false));
+      sampledVersion = geometryVersion();
     },
   );
+  // Idle change detection: O(1) per tick; the full pass runs only when some
+  // row's geometry actually changed outside a drag (programmatic moves, user
+  // draft writes, resizes).
   createEffect(
     () => null,
     () => {
-      const interval = setInterval(() => setGraphBounds(sampleBounds()), 500);
+      const interval = setInterval(() => {
+        if (untrack(() => store.dragging)) return;
+        const version = geometryVersion();
+        if (version === sampledVersion) return;
+        sampledVersion = version;
+        setGraphBounds(sample(false));
+      }, 250);
       return () => clearInterval(interval);
     },
   );

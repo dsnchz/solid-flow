@@ -37,10 +37,15 @@ const createDraggable = (
         onDrag,
         onDragStart: (event, dragItems, node, nodes) => {
           setDragging(true);
+          // Flow-level `dragging` (upstream parity): consumers such as the
+          // minimap's per-frame bounds sampling key off the graph-wide flag,
+          // which previously only pane drags (Zoom) ever set.
+          actions.setDragging(true);
           onDragStart?.(event, dragItems, node, nodes);
         },
         onDragStop: (event, dragItems, node, nodes) => {
           setDragging(false);
+          actions.setDragging(false);
           onDragStop?.(event, dragItems, node, nodes);
         },
         onNodeMouseDown,
