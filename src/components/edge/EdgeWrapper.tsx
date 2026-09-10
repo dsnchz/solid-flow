@@ -7,7 +7,7 @@ import { createEffect, createMemo, getOwner, runWithOwner, Show } from "solid-js
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
-import { isEdgeCulled } from "@/core";
+import { edgeCulled } from "@/core";
 import type { Edge, EdgeEvents, Node } from "@/types";
 import { cx, emitFlowError, isEdgeSelectable } from "@/utils";
 
@@ -20,7 +20,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   props: EdgeWrapperProps<EdgeType>,
 ): JSX.Element => {
   let edgeRef!: SVGGElement;
-  const { store, actions } = useInternalSolidFlow<NodeType, EdgeType>();
+  const { store, actions, onScreenEdgeIds } = useInternalSolidFlow<NodeType, EdgeType>();
   // The ref callback runs outside the component owner; the domAttributes
   // spread effects must be owned (disposal + no NO_OWNER diagnostics).
   const owner = getOwner();
@@ -105,7 +105,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
 
   // #15 culling flag: the drawn segment's AABB against the quantized culling
   // viewport. CSS-only — the edge row and its subscriptions stay live.
-  const culled = createMemo(() => isEdgeCulled(edge(), store.cullingViewport));
+  const culled = createMemo(() => edgeCulled(edge(), store.cullingActive, onScreenEdgeIds));
 
   return (
     <EdgeIdContext value={edgeId}>

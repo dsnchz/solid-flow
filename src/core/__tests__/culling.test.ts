@@ -5,7 +5,14 @@ import { describe, expect, it } from "vitest";
 
 import type { InternalNode, Node } from "@/types";
 
-import { createCullingViewport, isEdgeCulled, isNodeCulled, rectsOverlap } from "../culling";
+import {
+  createCullingViewport,
+  edgeCulled,
+  isEdgeCulled,
+  isNodeCulled,
+  nodeCulled,
+  rectsOverlap,
+} from "../culling";
 
 const makeInternalNode = (
   overrides: {
@@ -241,5 +248,38 @@ describe("rectsOverlap", () => {
     expect(rectsOverlap(a, { x: 50, y: 50, width: 100, height: 100 })).toBe(true);
     expect(rectsOverlap(a, { x: 100, y: 0, width: 100, height: 100 })).toBe(true);
     expect(rectsOverlap(a, { x: 101, y: 0, width: 100, height: 100 })).toBe(false);
+  });
+});
+
+// Row-level rules over the keyed on-screen record (bench round 26): the
+// never-cull guards stay at the row; the rect overlap lives in the record.
+describe("nodeCulled / edgeCulled (keyed on-screen record)", () => {
+  const onScreen = { n: true } as Record<string, true>;
+  it("culls a measured, mounted, unselected node that is not in the on-screen record", () => {
+    expect(nodeCulled(makeInternalNode(), true, {})).toBe(true);
+    expect(nodeCulled(makeInternalNode(), true, onScreen)).toBe(false);
+  });
+  it("never culls while culling is inactive, or selected / cullable:false / unmeasured / unmounted nodes", () => {
+    expect(nodeCulled(makeInternalNode(), false, {})).toBe(false);
+    expect(nodeCulled(makeInternalNode({ selected: true }), true, {})).toBe(false);
+    expect(nodeCulled(makeInternalNode({ cullable: false }), true, {})).toBe(false);
+    expect(nodeCulled(makeInternalNode({ measured: false }), true, {})).toBe(false);
+    expect(nodeCulled(makeInternalNode({ mounted: false }), true, {})).toBe(false);
+  });
+  it("edges: culled when absent from the record, never when inactive / selected / cullable:false", () => {
+    const row = {
+      id: "e",
+      sourceX: 0,
+      sourceY: 0,
+      targetX: 10,
+      targetY: 10,
+      selected: false,
+      cullable: undefined,
+    };
+    expect(edgeCulled(row, true, {})).toBe(true);
+    expect(edgeCulled(row, true, { e: true })).toBe(false);
+    expect(edgeCulled(row, false, {})).toBe(false);
+    expect(edgeCulled({ ...row, selected: true }, true, {})).toBe(false);
+    expect(edgeCulled({ ...row, cullable: false }, true, {})).toBe(false);
   });
 });

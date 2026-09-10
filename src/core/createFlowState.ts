@@ -10,6 +10,7 @@ import {
   type NodeLookup,
   type PanZoomInstance,
   pointToRendererPoint,
+  type Rect,
   type SelectionRect,
   type Transform,
   type Viewport,
@@ -46,6 +47,7 @@ import { RecordMapFacade } from "./facades";
 import type { SolidFlowProps } from "./flowProps";
 import { FLOW_PROP_KEYS } from "./flowProps";
 import { type FlowCommands, type FlowSelection, type FlowState } from "./flowState";
+import { createGeometryFeed } from "./geometryFeed";
 import { createMeasurementIngest } from "./measurementIngest";
 import { createOverlayRelease } from "./overlayRelease";
 import { connectionKey, createConnections } from "./projections/connections";
@@ -56,6 +58,7 @@ import {
   type NodeMeasurements,
 } from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
+import { createOnScreenIds } from "./projections/onScreenIds";
 import { createParentIds } from "./projections/parentIds";
 import { createPresenceIds } from "./projections/presenceIds";
 import { getSelectedNodesBounds } from "./projections/selectedBounds";
@@ -217,8 +220,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Plain map of every row's absolute rect, maintained by the row derive:
   // gesture starts (connection arm, box selection, minimap partition) read it
   // instead of walking the rows through the store proxies.
-  const geometryMap = new Map<string, NodeGeometry>();
-  const nodeGeometry: ReadonlyMap<string, NodeGeometry> = geometryMap;
+  const nodeGeometryFeed = createGeometryFeed<NodeGeometry>("nodeGeometry");
+  const nodeGeometry = nodeGeometryFeed.map;
+  const edgeGeometryFeed = createGeometryFeed<Rect>("edgeGeometry");
   const internalNodes = createInternalNodes<NodeType>({
     get nodes() {
       return nodesStore;
@@ -233,8 +237,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return dragOverlay;
     },
     onGeometryChange: (id, rect) => {
-      if (rect) geometryMap.set(id, rect);
-      else geometryMap.delete(id);
+      nodeGeometryFeed.report(id, rect);
       geometryTick++;
     },
     get nodeOrigin() {
@@ -567,6 +570,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     get cullingViewport() {
       return cullingViewport();
     },
+    get cullingActive() {
+      return cullingActive();
+    },
     get transform() {
       return transform();
     },
@@ -617,6 +623,33 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return transform();
     },
   });
+  // Equality-cut flag for the row rules: rows must not subscribe to the
+  // viewport itself (every quantization step would wake all 20k of them).
+  const cullingActive = createMemo(() => cullingViewport() !== null, { name: "cullingActive" });
+  // Keyed on-screen presence, computed once per viewport step / geometry
+  // change from the plain geometry maps (see projections/onScreenIds.ts).
+  const onScreenNodeIds = createOnScreenIds(
+    {
+      geometry: nodeGeometry,
+      get cullingViewport() {
+        return cullingViewport();
+      },
+      changes: nodeGeometryFeed.changes,
+      takeChanged: nodeGeometryFeed.takeChanged,
+    },
+    "onScreenNodeIds",
+  );
+  const onScreenEdgeIds = createOnScreenIds(
+    {
+      geometry: edgeGeometryFeed.map,
+      get cullingViewport() {
+        return cullingViewport();
+      },
+      changes: edgeGeometryFeed.changes,
+      takeChanged: edgeGeometryFeed.takeChanged,
+    },
+    "onScreenEdgeIds",
+  );
 
   // Structural read only (record keys = node ids): row-level changes — e.g.
   // the dragged node's row rebuilding every move — must not re-run this.
@@ -658,6 +691,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Edge layout join (core projection): id-keyed record, row identity stable
   // across derive re-runs. Replaces the mapArray layout effect + ReactiveMap.
   const layoutedEdges = createLayoutedEdges<NodeType, EdgeType>({
+    onGeometryChange: edgeGeometryFeed.report,
     get selectionOverlay() {
       return selectionOverlay.edges;
     },
@@ -1021,6 +1055,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     dragOverlay,
     geometryVersion,
     nodeGeometry,
+    onScreenNodeIds,
+    onScreenEdgeIds,
     actions: {
       getLayoutedEdge,
       applyInitialFitView,

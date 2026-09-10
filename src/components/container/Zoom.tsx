@@ -8,7 +8,7 @@ import {
   type Viewport,
   XYPanZoom,
 } from "@xyflow/system";
-import { createEffect, createMemo, createSignal, type ParentProps, untrack } from "solid-js";
+import { createEffect, createMemo, createSignal, type ParentProps, Show, untrack } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 import type { PanOnScrollMode } from "@/types";
@@ -34,6 +34,8 @@ export type ZoomProps = {
 /** Internal viewport controller wiring pan/zoom gestures (XYPanZoom) to the flow. */
 export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
   const [ref, setRef] = createSignal<HTMLDivElement>();
+  // Pan in progress (pointer moved): drives the cursor cover element below.
+  const [panning, setPanning] = createSignal(false);
   const { store, actions } = useInternalSolidFlow();
 
   const viewPort = () => props.initialViewport || { x: 0, y: 0, zoom: 1 };
@@ -60,8 +62,17 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
           viewport: viewPort(),
           onDraggingChange: actions.setDragging,
           onPanZoomStart: props.onMoveStart,
-          onPanZoom: props.onMove,
-          onPanZoomEnd: props.onMoveEnd,
+          // The pan cursor cover appears on the first MOVE of a pointer pan,
+          // never on start: a plain click also starts a d3-zoom gesture, and a
+          // cover under the mouseup would swallow the click.
+          onPanZoom: (event, viewport) => {
+            if (!panning() && untrack(() => store.dragging)) setPanning(true);
+            props.onMove?.(event, viewport);
+          },
+          onPanZoomEnd: (event, viewport) => {
+            setPanning(false);
+            props.onMoveEnd?.(event, viewport);
+          },
         }),
       );
 
@@ -126,6 +137,12 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
   return (
     <div ref={setRef} class="solid-flow__container solid-flow__zoom">
       {props.children}
+      {/* Cursor cover for a held pan: `cursor` is inherited, so setting it on
+          the pane re-styles every descendant (~70ms style recalc at pan start
+          and end @10k, bench round 26); a leaf element on top costs nothing. */}
+      <Show when={panning()}>
+        <div class="solid-flow__pan-cursor" />
+      </Show>
     </div>
   );
 };

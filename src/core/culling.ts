@@ -137,3 +137,30 @@ export const isEdgeCulled = (
     cullingViewport,
   );
 };
+
+/**
+ * Row-level culling over the keyed on-screen record (bench round 26). The
+ * never-cull guards live here — inactive culling, selected, `cullable:
+ * false`, unmeasured, handle bounds not yet populated in this instance — and
+ * the rect overlap is the record's job. `id in onScreen` subscribes per key.
+ */
+export const nodeCulled = <NodeType extends Node>(
+  node: InternalNode<NodeType>,
+  cullingActive: boolean,
+  onScreen: Record<string, true>,
+): boolean => {
+  if (!cullingActive || node.selected || node.cullable === false) return false;
+  const { width, height } = node.measured;
+  if (!width || !height) return false;
+  if (!node.internals.handleBounds) return false;
+  return !(node.id in onScreen);
+};
+
+export const edgeCulled = (
+  row: Pick<EdgeLayouted, "id" | "selected" | "cullable">,
+  cullingActive: boolean,
+  onScreen: Record<string, true>,
+): boolean => {
+  if (!cullingActive || row.selected || row.cullable === false) return false;
+  return !(row.id in onScreen);
+};

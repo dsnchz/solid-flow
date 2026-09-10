@@ -23,7 +23,7 @@ import { ARIA_NODE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { NodeConnectableContext } from "@/contexts/nodeConnectable";
 import { NodeIdContext } from "@/contexts/nodeId";
-import { isNodeCulled } from "@/core";
+import { nodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
 import { cx, emitFlowError } from "@/utils";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
@@ -38,7 +38,8 @@ export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType
 export const NodeWrapper = <NodeType extends Node = Node>(
   props: NodeWrapperProps<NodeType>,
 ): JSX.Element => {
-  const { store, nodeLookup, parentIds, actions } = useInternalSolidFlow<NodeType>();
+  const { store, nodeLookup, parentIds, actions, onScreenNodeIds } =
+    useInternalSolidFlow<NodeType>();
   // Captured for `mountElement` (ref callbacks run outside the component owner).
   const owner = getOwner();
 
@@ -94,7 +95,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   // #15 culling flag: arithmetic re-runs only when this node's geometry,
   // selection, or the quantized culling viewport change; the style only
   // rewrites visibility when the flag actually flips.
-  const culled = createMemo(() => isNodeCulled(node(), store.cullingViewport));
+  const culled = createMemo(() => nodeCulled(node(), store.cullingActive, onScreenNodeIds));
 
   // Ownership contract: the user's style (spread first, inside sizeStyle)
   // controls everything cosmetic; the flow owns size, stacking, positioning,

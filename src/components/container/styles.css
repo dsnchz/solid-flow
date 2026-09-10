@@ -19,13 +19,21 @@
     cursor: grab;
   }
 
-  &.dragging {
-    cursor: grabbing;
-  }
-
+  /* No cursor rule on `.dragging`: `cursor` is inherited, so changing it on
+     the pane re-styles every descendant — one ~70ms style recalc at drag
+     start and end @10k (bench round 26). The pan cursor is a leaf cover
+     element (`.solid-flow__pan-cursor`, rendered by Zoom while a pan is
+     held); node drags show the node's own cursor. */
   &.selection {
     cursor: pointer;
   }
+}
+
+.solid-flow__pan-cursor {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  cursor: grabbing;
 }
 
 .solid-flow__panel {

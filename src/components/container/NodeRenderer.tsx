@@ -4,7 +4,7 @@ import { createMemo, For, onCleanup, Show } from "solid-js";
 
 import { NodeWrapper } from "@/components/node/NodeWrapper";
 import { useInternalSolidFlow } from "@/contexts";
-import { isNodeCulled } from "@/core";
+import { nodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
 
 import { createFocusedIdTracker } from "./focusedIdTracker";
@@ -17,7 +17,7 @@ export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeTyp
 export const NodeRenderer = <NodeType extends Node = Node>(
   props: NodeRendererProps<NodeType>,
 ): JSX.Element => {
-  const { actions, store, nodeLookup } = useInternalSolidFlow<NodeType>();
+  const { actions, store, nodeLookup, onScreenNodeIds } = useInternalSolidFlow<NodeType>();
 
   // Nodes are measured in the browser only; during SSR the observer is absent
   // and NodeWrapper's measurement effect never runs.
@@ -64,7 +64,7 @@ export const NodeRenderer = <NodeType extends Node = Node>(
           const unmounted = createMemo(() => {
             if (!store.onlyRenderVisibleElements || focusedNodeId() === nodeId) return false;
             const node = nodeLookup.get(nodeId);
-            return !!node && isNodeCulled(node, store.cullingViewport);
+            return !!node && nodeCulled(node, store.cullingActive, onScreenNodeIds);
           });
 
           // Membership now comes from the user-facing store; the projection

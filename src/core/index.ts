@@ -17,8 +17,10 @@ export {
 export {
   createCullingViewport,
   type CullingSource,
+  edgeCulled,
   isEdgeCulled,
   isNodeCulled,
+  nodeCulled,
   rectsOverlap,
 } from "./culling";
 export { getDefaultFlowStateProps } from "./defaults";

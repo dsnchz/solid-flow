@@ -20,3 +20,27 @@ test.describe("pan and zoom", () => {
     expect(afterPan.y - beforePan.y).toBeLessThan(-80);
   });
 });
+
+test.describe("pan cursor cover", () => {
+  test("appears only while a pan is held, never on a plain click", async ({ page }) => {
+    await page.goto("/?example=StressTest&x=6&y=6");
+    await page.waitForSelector(".solid-flow__node");
+    const cover = page.locator(".solid-flow__pan-cursor");
+    const pane = page.locator(".solid-flow__pane");
+    const box = (await pane.boundingBox())!;
+    const x = box.x + box.width - 30;
+    const y = box.y + box.height - 30;
+    // a click starts and ends a d3-zoom gesture without moving: no cover
+    await page.mouse.click(x, y);
+    await expect(cover).toHaveCount(0);
+    // a held pan: cover after the first move, gone after release
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await expect(cover).toHaveCount(0);
+    await page.mouse.move(x - 40, y - 20, { steps: 4 });
+    await expect(cover).toHaveCount(1);
+    await expect(cover).toHaveCSS("cursor", "grabbing");
+    await page.mouse.up();
+    await expect(cover).toHaveCount(0);
+  });
+});

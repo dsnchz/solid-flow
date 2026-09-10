@@ -4,7 +4,7 @@ import { createMemo, For, Show } from "solid-js";
 import { EdgeWrapper } from "@/components/edge";
 import { MarkerDefinition } from "@/components/marker";
 import { useInternalSolidFlow } from "@/contexts";
-import { isEdgeCulled } from "@/core";
+import { edgeCulled } from "@/core";
 import type { Edge, EdgeEvents, Node } from "@/types";
 
 import { createFocusedIdTracker } from "./focusedIdTracker";
@@ -15,7 +15,7 @@ type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType>;
 export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: EdgeRendererProps<EdgeType>,
 ): JSX.Element => {
-  const { store, actions } = useInternalSolidFlow();
+  const { store, actions, onScreenEdgeIds } = useInternalSolidFlow();
 
   // The unmount tier's focus guard for keyboard-focused edges (the focusable
   // `g` carries data-id and focusin bubbles here). Edge-LABEL content lives
@@ -34,7 +34,7 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
           const unmounted = createMemo(() => {
             if (!store.onlyRenderVisibleElements || focusedEdgeId() === edgeId) return false;
             const edge = actions.getLayoutedEdge(edgeId);
-            return !!edge && isEdgeCulled(edge, store.cullingViewport);
+            return !!edge && edgeCulled(edge, store.cullingActive, onScreenEdgeIds);
           });
 
           // Membership comes from the user-facing edges store; an edge whose

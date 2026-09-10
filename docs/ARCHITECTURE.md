@@ -248,6 +248,27 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   a reconnect (an emptied handle sub-record stays `{}`) and prunes empties
   only when a never-seen key forces a root write anyway. Reconnect 34 → 21 ms
   (bench round 24).
+- **Culling is a keyed record, not a per-row read of the viewport.** The
+  quantized culling viewport steps every quarter-viewport of pan; a per-row
+  memo over it makes every step re-run all ~20k row memos through the store
+  proxies (50–66 ms frames @10k, bench round 26). `onScreenNodeIds` /
+  `onScreenEdgeIds` (`projections/onScreenIds.ts`) compute overlap once per
+  step over the plain geometry maps (a full pass, ~1 ms) and only for the
+  reported ids on a geometry change (`geometryFeed.ts`: rows report rects,
+  the feed bumps one `ownedWrite` tick per batch so the record settles in
+  the same flush), writing only the keys that flip. Rows read `id in
+record` — the engine subscribes per key, including absent keys — through
+  `nodeCulled` / `edgeCulled`, which keep the never-cull guards, and read the
+  equality-cut `store.cullingActive` instead of the viewport.
+- **Never change an inherited CSS property on an ancestor of the graph.**
+  `cursor: grabbing` on the pane at drag start cost one ~70 ms style recalc
+  of all 460k descendants @10k (measured: 69 ms per flip; an unrelated class
+  or a non-inherited property 0 ms). The pan cursor is a leaf cover
+  (`.solid-flow__pan-cursor`, rendered by `Zoom` from the first pan MOVE —
+  never on start, a click also starts a d3-zoom gesture and a cover under
+  the mouseup swallows it — until the gesture ends); `.dragging` on the pane
+  keeps its name (parity) but no cursor rule. `selection` keeps its cursor:
+  it can be on at rest, and a cover would intercept clicks.
 - **Reactive nodes are named** (`{ name }` on memos, effects, projections) so
   the rc.7 dev diagnostics (`HUGE_FAN_IN`, `HUGE_FAN_OUT`, `WIDE_SCOPE_DEPS`)
   and `DEV.attribution.costs()` identify them. The stress example enables

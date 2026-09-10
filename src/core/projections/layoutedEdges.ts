@@ -3,9 +3,10 @@ import {
   getEdgePosition,
   getElevatedEdgeZIndex,
   type OnError,
+  type Rect,
   type ZIndexMode,
 } from "@xyflow/system";
-import { createProjection, mapArray } from "solid-js";
+import { createProjection, mapArray, onCleanup } from "solid-js";
 
 import type { DefaultEdgeOptions, Edge, EdgeLayouted, InternalNode, Node } from "@/types";
 
@@ -27,6 +28,8 @@ export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends E
   readonly zIndexMode?: ZIndexMode;
   readonly onError?: OnError;
   readonly nodeLookup: Pick<Map<string, InternalNode<NodeType>>, "get" | "size">;
+  /** Called with the edge's segment box whenever it changes, null when the row is gone. */
+  readonly onGeometryChange?: (id: string, box: Rect | null) => void;
 };
 
 /**
@@ -60,6 +63,7 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
     () => source.edges,
     (edgeAccessor) => {
       const id = edgeAccessor().id;
+      let geometry = "";
       const store: { row: EdgeLayouted<EdgeType> | null } = createProjection<{
         row: EdgeLayouted<EdgeType> | null;
       }>(
@@ -71,11 +75,22 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
           // (rc.1 carried post-build dependency re-asserts here — first
           // nested derives could strand subscriptions; fixed upstream in
           // solidjs/solid#3037, removed with the rc.2 bump.)
-          return { row: buildRow(source, edge) };
+          const row = buildRow(source, edge);
+          if (source.onGeometryChange) {
+            const next = row ? `${row.sourceX},${row.sourceY},${row.targetX},${row.targetY}` : "";
+            if (next !== geometry) {
+              geometry = next;
+              source.onGeometryChange(id, row ? segmentBox(row) : null);
+            }
+          }
+          return { row };
         },
         { row: null },
         { key: "id", name: "layoutedEdges.row" },
       );
+      onCleanup(() => {
+        if (geometry !== "") source.onGeometryChange?.(id, null);
+      });
       return { id, store };
     },
     { keyed: (edge) => edge.id },
@@ -84,6 +99,15 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
   // Shared keyed-record tail — see createRowRecordProjection.
   return createRowRecordProjection(rowStores, "layoutedEdges");
 };
+
+const segmentBox = (
+  row: Pick<EdgeLayouted, "sourceX" | "sourceY" | "targetX" | "targetY">,
+): Rect => ({
+  x: Math.min(row.sourceX, row.targetX),
+  y: Math.min(row.sourceY, row.targetY),
+  width: Math.abs(row.sourceX - row.targetX),
+  height: Math.abs(row.sourceY - row.targetY),
+});
 
 const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   source: LayoutedEdgesSource<NodeType, EdgeType>,
