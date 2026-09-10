@@ -13,7 +13,12 @@ export default defineConfig({
   // prints rc.7 diagnostics + DEV.attribution.costs()).
   testIgnore: process.env.BENCH
     ? []
-    : ["**/bench.spec.ts", "**/attribution-probe.spec.ts", "**/mount-profile.spec.ts"],
+    : [
+        "**/bench.spec.ts",
+        "**/attribution-probe.spec.ts",
+        "**/mount-profile.spec.ts",
+        "**/mount-repro.spec.ts",
+      ],
   fullyParallel: true,
   reporter: "list",
   timeout: 30_000,
