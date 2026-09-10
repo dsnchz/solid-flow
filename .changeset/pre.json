@@ -47,6 +47,7 @@
     "node-domattributes-type",
     "optimistic-factories",
     "optimistic-membership",
+    "pan-stutter",
     "perf-sweep",
     "release-effect-row-refs",
     "remove-deprecated-getters",
