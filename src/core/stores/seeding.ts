@@ -130,17 +130,24 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   // read throws NotReadyError, the effect holds, and adoption happens on
   // settle). Not deferred: a pending-at-mount default needs its initial run.
   // Each axis adopts at most once, and never over a controlled axis.
+  // The compute hands the copied seed over in a BOX the effect empties: an
+  // effect keeps its last computed value for its lifetime, so returning the
+  // array itself pinned every seeded row (and its store target) after the
+  // rows were deleted from the flow — the largest library-side retention in
+  // the heap attribution (bench round 19).
   createEffect(
     () => {
       const defaultNodes = config().defaultNodes;
       // Copy in the COMPUTE: row reads must happen in a tracking scope (the
       // body is untracked, and a pending source must throw HERE to hold).
-      return defaultNodes ? (copyRows(defaultNodes) as NodeType[]) : undefined;
+      return defaultNodes ? { rows: copyRows(defaultNodes) as NodeType[] | undefined } : undefined;
     },
-    (seed) => {
-      if (seed && !nodeSeedAdopted && untrack(() => config().nodes) === undefined) {
+    (box) => {
+      const rows = box?.rows;
+      if (box) box.rows = undefined;
+      if (rows && !nodeSeedAdopted && untrack(() => config().nodes) === undefined) {
         nodeSeedAdopted = true;
-        setNodesStore(() => seed);
+        setNodesStore(() => rows);
       }
     },
     { name: "defaultNodesAdoption" },
@@ -148,12 +155,14 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   createEffect(
     () => {
       const defaultEdges = config().defaultEdges;
-      return defaultEdges ? (copyRows(defaultEdges) as EdgeType[]) : undefined;
+      return defaultEdges ? { rows: copyRows(defaultEdges) as EdgeType[] | undefined } : undefined;
     },
-    (seed) => {
-      if (seed && !edgeSeedAdopted && untrack(() => config().edges) === undefined) {
+    (box) => {
+      const rows = box?.rows;
+      if (box) box.rows = undefined;
+      if (rows && !edgeSeedAdopted && untrack(() => config().edges) === undefined) {
         edgeSeedAdopted = true;
-        setEdgesStore(() => seed);
+        setEdgesStore(() => rows);
       }
     },
     { name: "defaultEdgesAdoption" },

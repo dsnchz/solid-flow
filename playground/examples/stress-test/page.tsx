@@ -42,6 +42,7 @@ const BenchProbe = () => {
 //   unmount  "1" to opt into unmount culling (onlyRenderVisibleElements)
 //   fit      "0" to skip fitView so the grid overflows the viewport (culling visible)
 //   resizer  "1" to give node 5-5 an always-visible NodeResizer
+//   uncontrolled "1" to seed via defaultNodes/defaultEdges (the flow copies and owns the rows)
 //   attr     "1" to enable DEV.attribution (dev builds only)
 //
 // window.__bench.flush lets the driver force synchronous completion of a
@@ -56,6 +57,7 @@ export const StressTest = () => {
   const withUnmountCulling = params.get("unmount") === "1";
   const withFitView = params.get("fit") !== "0";
   const withResizer = params.get("resizer") === "1";
+  const uncontrolled = params.get("uncontrolled") === "1";
 
   const nodeItems: Node[] = [];
   const edgeItems: Edge[] = [];
@@ -93,8 +95,9 @@ export const StressTest = () => {
 
   return (
     <SolidFlow
-      nodes={nodeItems}
-      edges={edgeItems}
+      {...(uncontrolled
+        ? { defaultNodes: nodeItems, defaultEdges: edgeItems }
+        : { nodes: nodeItems, edges: edgeItems })}
       nodeTypes={stressNodeTypes}
       fitView={withFitView}
       onlyRenderVisibleElements={withUnmountCulling}

@@ -18,6 +18,7 @@ export default defineConfig({
         "**/attribution-probe.spec.ts",
         "**/mount-profile.spec.ts",
         "**/mount-repro.spec.ts",
+        "**/heap-snapshot.spec.ts",
       ],
   fullyParallel: true,
   reporter: "list",

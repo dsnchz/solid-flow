@@ -374,10 +374,15 @@ test("BENCH memory @10k", async ({ page }) => {
     console.log(`MEMORY ${label}:`, JSON.stringify(row));
     return row;
   };
+  // MEM_PARAMS adds stress-page params, e.g. "&uncontrolled=1" (the flow copies
+  // and owns the rows). The controlled default keeps the raw nodeItems array
+  // alive in the example, which pins the engine's per-object store targets
+  // (WeakMap-keyed on the raw rows) — expected there, not a leak.
+  const extra = process.env.MEM_PARAMS ?? "";
   await page.goto("about:blank");
   const blank = await sample("blank page");
-  await waitForStress(page);
-  const mounted = await sample("mounted @10k");
+  await waitForStress(page, extra);
+  const mounted = await sample(`mounted @10k${extra}`);
   await page.evaluate(async () => {
     const { api, flush } = (
       window as unknown as {
@@ -385,6 +390,7 @@ test("BENCH memory @10k", async ({ page }) => {
           api: {
             flow: { nodes: unknown[]; edges: unknown[] };
             commands: {
+              toObject: () => { nodes: unknown[]; edges: unknown[] };
               deleteElements: (p: { nodes: unknown[]; edges: unknown[] }) => Promise<unknown>;
             };
           };
@@ -392,10 +398,9 @@ test("BENCH memory @10k", async ({ page }) => {
         };
       }
     ).__bench;
-    (window as unknown as { __saved: unknown }).__saved = {
-      nodes: [...api.flow.nodes],
-      edges: [...api.flow.edges],
-    };
+    // Plain clones for the re-add — never the row proxies (keeping those alive
+    // would pin every store target and fake a leak).
+    (window as unknown as { __saved: unknown }).__saved = api.commands.toObject();
     await api.commands.deleteElements({ nodes: [...api.flow.nodes], edges: [...api.flow.edges] });
     flush();
   });
