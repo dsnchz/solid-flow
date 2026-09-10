@@ -116,7 +116,7 @@ in the user's rows.
 
 ## The SolidJS 2.0 async rules
 
-Three rules keep the graph correct under 2.0's async model:
+Four rules keep the graph correct under 2.0's async model:
 
 - **Never swallow `NotReadyError`.** A broad `try/catch` around store reads in
   a computation breaks the server build: propagation is the re-derive channel
@@ -135,6 +135,17 @@ Three rules keep the graph correct under 2.0's async model:
   box-selection handlers, connection start, and the scheduled measurement
   ingest. Promoting an internal action to `FlowCommands` means moving its
   flush out to the gesture call site first.
+- **Scheduled callbacks have no owner.** A timer, idle, animation-frame or
+  microtask callback runs outside every tracking scope, so a graph read in
+  one that meets a still-pending async source throws `NotReadyError` with
+  nothing to catch it: an uncaught error in the browser. Any callback that
+  can fire before the first data lands (the idle selection-view prime at
+  construction was the one case) must probe through `isPending`, which does
+  the reads when the graph is ready and stays quiet otherwise. Callbacks
+  that only follow a gesture or a measurement are safe by construction: a
+  revalidating store keeps serving its last value after the first one.
+  Pinned by `src/browser/__tests__/asyncSeedIdle.test.tsx` (fake timers, so
+  a throwing callback fails inside the test instead of escaping the run).
 
 Async seeds and async generators need no special machinery: `createStore`
 accepts them natively, so `createNodeStore(async () => …)` and live streams

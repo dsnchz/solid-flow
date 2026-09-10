@@ -1,5 +1,5 @@
 import { createMediaQuery } from "@solid-primitives/media";
-import { flush } from "solid-js";
+import { flush, isPending } from "solid-js";
 
 import {
   BezierEdgeInternal,
@@ -50,9 +50,17 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
   // the whole graph (~180ms @10k) and otherwise lands inside the first
   // selection-adjacent gesture (drag start deselects edges) — profiled as
   // the largest slice of the drag-start spike (bench round 12 follow-up).
+  // The timer callback has no reactive owner, so a read of a still-pending
+  // async-seeded store would throw NotReadyError with nothing to catch it.
+  // isPending is the contract's non-throwing probe: it evaluates the reads
+  // (the priming) when the graph is ready and reports pending otherwise —
+  // then there is nothing worth priming yet, and the first gesture cannot
+  // happen before the data lands.
   const prime = () => {
-    void store.selectedNodes;
-    void store.selectedEdges;
+    isPending(() => {
+      void store.selectedNodes;
+      void store.selectedEdges;
+    });
   };
   if (typeof requestIdleCallback === "function") requestIdleCallback(prime);
   else setTimeout(prime, 50);

@@ -24,6 +24,15 @@ import type { Edge, Node } from "@/types";
  */
 const ALLOWED_DIAGNOSTICS = new Set(["WIDE_SCOPE_DEPS:selectedIds", "WIDE_SCOPE_DEPS:connections"]);
 
+// Wall-clock diagnostics measure the machine, not the graph: the engine's
+// HOT_SCOPE_TIME budget (8 ms of compute per scope per second) trips on a
+// slow or busy core and would fail a granularity assertion. Milliseconds are
+// the timing benches' job (e2e/bench.spec.ts); every other channel stays on.
+const ATTRIBUTION = {
+  log: false,
+  hotTime: { budgetMs: Number.POSITIVE_INFINITY, windowMs: 1000 },
+};
+
 const expectOnlyByDesignDiagnostics = (artifact: DiagnosticsArtifact) => {
   const unexpected = artifact.diagnostics
     .map((d) => `${d.code}:${d.nodeName ?? d.ownerName ?? ""}`)
@@ -77,7 +86,7 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
         );
         flush();
       },
-      { scenario: "drag-frame" },
+      { scenario: "drag-frame", attribution: ATTRIBUTION },
     );
     expectOnlyByDesignDiagnostics(artifact);
     expectRerunBudget(artifact, 4);
@@ -89,7 +98,7 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
         flow.actions.addSelectedNodes(["n7"]);
         flush();
       },
-      { scenario: "select" },
+      { scenario: "select", attribution: ATTRIBUTION },
     );
     expectOnlyByDesignDiagnostics(artifact);
     expectRerunBudget(artifact, 10);
@@ -101,7 +110,7 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
         flow.commands.updateEdge("e5", { targetHandle: "in" });
         flush();
       },
-      { scenario: "reconnect" },
+      { scenario: "reconnect", attribution: ATTRIBUTION },
     );
     expectOnlyByDesignDiagnostics(artifact);
     expectRerunBudget(artifact, 6);
