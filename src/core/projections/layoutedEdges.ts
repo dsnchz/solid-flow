@@ -74,7 +74,7 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
           return { row: buildRow(source, edge) };
         },
         { row: null },
-        { key: "id" },
+        { key: "id", name: "layoutedEdges.row" },
       );
       return { id, store };
     },

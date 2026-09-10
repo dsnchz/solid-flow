@@ -33,7 +33,7 @@ export const createPresenceIds = <Row extends { readonly id: string }>(
           if (next !== (draft.row !== null)) draft.row = next ? { id: row.id } : null;
         },
         { row: null },
-        { key: null },
+        { key: null, name: `${name}.row` },
       );
       return { id: row.id, store };
     }),

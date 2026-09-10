@@ -260,6 +260,16 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   purpose — each changes once per gesture or pan frame and costs O(1) per
   subscriber). Anything else the diagnostics name is a finding.
 
+- **Update budgets in CI** (`src/__tests__/diagnosticsBudget.test.ts`, via
+  `@solidjs/diagnostics`): a 400-node headless flow, one gesture write per
+  scenario (drag frame, select, reconnect), asserting how many scopes re-ran
+  (measured values with headroom: 2 / 6 / 3 at the time of writing) and that
+  the only diagnostics are the by-design ones (`WIDE_SCOPE_DEPS` on the
+  `selectedIds` and `connections` record merges). The timing benches measure
+  milliseconds; this pins the granularity they come from. `expectNoWaste` is
+  not usable: draft-form projections return no value, so every per-row derive
+  reads as an unchanged recompute.
+
 ## Typing
 
 - **Guided unions**: `createNodeStore<typeof nodeTypes>` narrows each row's

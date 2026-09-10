@@ -287,7 +287,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           return { row };
         },
         {},
-        { key: "id" },
+        { key: "id", name: "internalNodes.row" },
       );
 
       const entry = { store, index };

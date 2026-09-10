@@ -250,11 +250,13 @@ test("BENCH node resize @10k", async ({ page }) => {
   // binds at module load — wrap it BEFORE any page script runs so the idle
   // callbacks (the measurement-write cadence) are timed too.
   await page.addInitScript(() => {
-    const w = window as unknown as { __idle: number[] };
+    const w = window as unknown as { __idle: number[]; __idleScheduled: number };
     w.__idle = [];
+    w.__idleScheduled = 0;
     const original = window.requestIdleCallback.bind(window);
     window.requestIdleCallback = (cb: IdleRequestCallback, opts?: IdleRequestOptions) =>
       original((deadline) => {
+        w.__idleScheduled++;
         const t0 = performance.now();
         cb(deadline);
         w.__idle.push(performance.now() - t0);
@@ -289,7 +291,15 @@ test("BENCH node resize @10k", async ({ page }) => {
   await page.waitForTimeout(300);
   console.log("RESIZE listener @10k:", JSON.stringify(await page.evaluate(stats)));
   console.log(
-    "RESIZE idle-ingest @10k:",
+    "RESIZE idle callbacks fired:",
+    await page.evaluate(() => (window as unknown as { __idleScheduled: number }).__idleScheduled),
+  );
+  console.log(
+    // The NodeResizer path writes dimensions synchronously (XYResizer →
+    // applyNodeChanges), so no idle ingest runs during the gesture — this
+    // stays 0 by design; the idle path is the DOM-measure (ResizeObserver)
+    // cadence, exercised by mount (bench round 25 resolved the "gap").
+    "RESIZE idle-ingest @10k (0 expected):",
     JSON.stringify(
       await page.evaluate(() => {
         const s = [...(window as unknown as { __idle: number[] }).__idle].sort((a, b) => a - b);

@@ -14,6 +14,7 @@
         "@dagrejs/dagre": "3.1.1",
         "@playwright/test": "1.62.1",
         "@solidjs/compiler": "2.0.0-rc.7",
+        "@solidjs/diagnostics": "2.0.0-rc.7",
         "@solidjs/signals": "2.0.0-rc.7",
         "@solidjs/testing-library": "1.0.0-beta.2",
         "@solidjs/vite-plugin": "3.0.0-next.41",
@@ -311,6 +312,8 @@
     "@solidjs/compiler-wasm32-wasi": ["@solidjs/compiler-wasm32-wasi@2.0.0-rc.7", "", { "dependencies": { "@emnapi/core": "1.11.3", "@emnapi/runtime": "1.11.3", "@napi-rs/wasm-runtime": "^1.1.6" } }, "sha512-k4vN+EHRtoIxj0D8d2VYHPEnWIok6kokbZskpn1pXrOoXBkj0OmqzzyJVBvSRYx6cWDWEjCKSWGuufRRZtgmjA=="],
 
     "@solidjs/compiler-win32-x64-msvc": ["@solidjs/compiler-win32-x64-msvc@2.0.0-rc.7", "", { "os": "win32", "cpu": "x64" }, "sha512-pZtrkWmiiZ/NRwyMASAitwAa4EO2jlt4z8Z5K9NoljnBreWrCsz4HmIKSIeZ+17++WwAyeZo2byon0AEv6FzRQ=="],
+
+    "@solidjs/diagnostics": ["@solidjs/diagnostics@2.0.0-rc.7", "", { "dependencies": { "@solidjs/signals": "^2.0.0-rc.7" }, "peerDependencies": { "vitest": ">=2.0.0" }, "optionalPeers": ["vitest"] }, "sha512-XppGGFRGc7dtX8i+eKn04A0+q2AGLdbTUbHqRhSRaN81aGHOAhMEeyXWzSoY9tABpPgy4jga1m9t4xz9FwAJzA=="],
 
     "@solidjs/signals": ["@solidjs/signals@2.0.0-rc.7", "", {}, "sha512-JY0OJ5nGeqxGKOAqCtuoHkFBkaWQYxmf+yBQE8vw/o9C7yUF+Kan9PwcrL0ZHR6+MgyixBUtTfBigwou5hwW5w=="],
 
