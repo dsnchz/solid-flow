@@ -109,7 +109,7 @@ in the user's rows.
 
 ## The SolidJS 2.0 async rules
 
-Two rules keep the graph correct under 2.0's async model:
+Three rules keep the graph correct under 2.0's async model:
 
 - **Never swallow `NotReadyError`.** A broad `try/catch` around store reads in
   a computation breaks the server build: propagation is the re-derive channel
@@ -117,6 +117,17 @@ Two rules keep the graph correct under 2.0's async model:
 - **Component setup is untracked.** Reading a pending async source there is a
   hard error — probe with `isPending` (all access inside the accessor) and
   defer the read to a tracked scope (see the seeding adoption effects).
+- **`flush()` is a gesture-boundary tool, never a command's.** The engine
+  refuses a flush inside an action body (`FLUSH_IN_ACTION`: an action's
+  writes are held by its transaction, so a flush there cannot reveal them and
+  would detach the writes that follow). Users may call any `FlowCommands`
+  member synchronously inside `action(function* …)`, so nothing on that
+  surface may flush — directly or transitively. Our flushes live only where
+  @xyflow/system reads state back synchronously through `nodeLookup` in the
+  same DOM event: the selection `actions` behind node/edge mousedown, Pane's
+  box-selection handlers, connection start, and the scheduled measurement
+  ingest. Promoting an internal action to `FlowCommands` means moving its
+  flush out to the gesture call site first.
 
 Async seeds and async generators need no special machinery: `createStore`
 accepts them natively, so `createNodeStore(async () => …)` and live streams
