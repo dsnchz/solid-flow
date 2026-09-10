@@ -4,7 +4,6 @@ import {
   calcAutoPan,
   getEventPosition,
   getNodesInside,
-  nodeToRect,
   pointToRendererPoint,
   rendererPointToPoint,
   type XYPosition,
@@ -41,10 +40,8 @@ export type PaneProps = PaneEvents & {
 export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<PaneProps>,
 ): JSX.Element => {
-  const { store, nodeLookup, edgeLookup, connections, actions } = useInternalSolidFlow<
-    NodeType,
-    EdgeType
-  >();
+  const { store, nodeLookup, edgeLookup, connections, actions, nodeGeometry } =
+    useInternalSolidFlow<NodeType, EdgeType>();
 
   const [containerRef, setContainerRef] = createSignal<HTMLDivElement>();
   let container: HTMLDivElement | undefined;
@@ -129,7 +126,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     // RFC-4239 win #3: node geometry is frozen during a selection gesture —
     // snapshot it so the per-move getNodesInside sweep only sees candidates
     // near the selection rect instead of every node.
-    selectionSpatialLookup.arm((node) => nodeToRect(node));
+    selectionSpatialLookup.armFrom(nodeGeometry);
 
     selectionInProgress = false;
     autoPanStarted = false;

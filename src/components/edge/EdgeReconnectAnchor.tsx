@@ -46,7 +46,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     "children",
   );
 
-  const { store, nodeLookup, edgeLookup, actions } = useInternalSolidFlow();
+  const { store, nodeLookup, edgeLookup, actions, nodeGeometry } = useInternalSolidFlow();
 
   const edgeId = useEdgeId();
   const [reconnecting, setReconnecting] = createSignal(false);
@@ -88,6 +88,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     const gestureLookup = armConnectionGestureLookup({
       event,
       real: nodeLookup,
+      geometry: nodeGeometry,
       domNode: store.domNode,
       getTransform: () => store.transform,
       connectionRadius: store.connectionRadius,

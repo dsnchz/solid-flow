@@ -50,7 +50,11 @@ import { createMeasurementIngest } from "./measurementIngest";
 import { createOverlayRelease } from "./overlayRelease";
 import { connectionKey, createConnections } from "./projections/connections";
 import { createEdgeLookup } from "./projections/edgeLookup";
-import { createInternalNodes, type NodeMeasurements } from "./projections/internalNodes";
+import {
+  createInternalNodes,
+  type NodeGeometry,
+  type NodeMeasurements,
+} from "./projections/internalNodes";
 import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createParentIds } from "./projections/parentIds";
 import { createPresenceIds } from "./projections/presenceIds";
@@ -210,6 +214,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // InternalNodesSource.onGeometryChange. Samplers poll it.
   let geometryTick = 0;
   const geometryVersion = () => geometryTick;
+  // Plain map of every row's absolute rect, maintained by the row derive:
+  // gesture starts (connection arm, box selection, minimap partition) read it
+  // instead of walking the rows through the store proxies.
+  const geometryMap = new Map<string, NodeGeometry>();
+  const nodeGeometry: ReadonlyMap<string, NodeGeometry> = geometryMap;
   const internalNodes = createInternalNodes<NodeType>({
     get nodes() {
       return nodesStore;
@@ -223,7 +232,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     get dragOverlay() {
       return dragOverlay;
     },
-    onGeometryChange: () => {
+    onGeometryChange: (id, rect) => {
+      if (rect) geometryMap.set(id, rect);
+      else geometryMap.delete(id);
       geometryTick++;
     },
     get nodeOrigin() {
@@ -1001,8 +1012,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     parentIds,
     connections,
     selectedNodesBounds,
+    selectedNodeIds,
     dragOverlay,
     geometryVersion,
+    nodeGeometry,
     actions: {
       getLayoutedEdge,
       applyInitialFitView,

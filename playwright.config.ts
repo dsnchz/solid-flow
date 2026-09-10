@@ -19,6 +19,7 @@ export default defineConfig({
         "**/mount-profile.spec.ts",
         "**/mount-repro.spec.ts",
         "**/heap-snapshot.spec.ts",
+        "**/drag-profile.spec.ts",
       ],
   fullyParallel: true,
   reporter: "list",

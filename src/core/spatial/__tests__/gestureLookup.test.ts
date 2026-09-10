@@ -104,3 +104,26 @@ describe("GestureSpatialLookup", () => {
     expect([...lookup.values()].length).toBe(200);
   });
 });
+
+describe("GestureSpatialLookup.armFrom", () => {
+  it("arming from a plain geometry map is equivalent to arming from the rows", () => {
+    const nodes = Array.from({ length: 120 }, (_, i) =>
+      internalNode(`g${i}`, (i % 12) * 130, Math.floor(i / 12) * 90),
+    );
+    const real = makeReal(nodes);
+    const geometry = new Map(nodes.map((n) => [n.id, nodeToRect(n)]));
+    const fromRows = new GestureSpatialLookup(real, 250);
+    fromRows.arm((node) => nodeToRect(node));
+    const fromMap = new GestureSpatialLookup(real, 250);
+    fromMap.armFrom(geometry);
+    for (const center of [
+      { x: 0, y: 0 },
+      { x: 700, y: 400 },
+      { x: 1500, y: 900 },
+    ]) {
+      fromRows.setQueryCenter(center, 270);
+      fromMap.setQueryCenter(center, 270);
+      expect([...fromMap.keys()].sort()).toEqual([...fromRows.keys()].sort());
+    }
+  });
+});

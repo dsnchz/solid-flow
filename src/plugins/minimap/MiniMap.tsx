@@ -97,7 +97,8 @@ const getAttrFunction = <NodeType extends Node>(
 export const MiniMap = <NodeType extends Node>(
   props: ParentProps<Partial<MiniMapProps<NodeType>>>,
 ): JSX.Element => {
-  const { store, nodeLookup, dragOverlay, geometryVersion } = useInternalSolidFlow<NodeType>();
+  const { store, nodeLookup, dragOverlay, geometryVersion, nodeGeometry } =
+    useInternalSolidFlow<NodeType>();
 
   const _props = propDefaults(props, {
     position: "bottom-right" as PanelPosition,
@@ -175,8 +176,8 @@ export const MiniMap = <NodeType extends Node>(
   const rectsEqual = (a: Rect | null, b: Rect | null) =>
     a === b ||
     (!!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height);
-  const sampler = createGraphBoundsSampler<NodeType>({
-    nodeLookup,
+  const sampler = createGraphBoundsSampler({
+    geometry: nodeGeometry,
     draggedIds: () => new Set(Object.keys(dragOverlay)),
   });
   const sample = (dragging: boolean) => untrack(() => sampler.sample(dragging));

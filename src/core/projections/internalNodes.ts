@@ -71,6 +71,15 @@ export type NodeMeasurementWrite =
  */
 export type NodeMeasurements = Record<string, NodeMeasurement>;
 
+/** A node's absolute rect as the row derive computes it (renderer space). */
+export type NodeGeometry = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly parentId?: string;
+};
+
 export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly nodes: readonly NodeType[];
   readonly measurements: NodeMeasurements;
@@ -89,7 +98,13 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
    * that sample instead of subscribe (the minimap's bounds). Not reactive
    * state by design: a signal write inside a derive is forbidden.
    */
-  readonly onGeometryChange?: () => void;
+  /**
+   * Called with a row's absolute rect (and parentId) whenever it changes, and
+   * with `null` when the row is removed — the one place geometry is known the
+   * moment it changes. Gesture starts read the resulting plain map instead of
+   * walking every row through the store proxies (bench round 23).
+   */
+  readonly onGeometryChange?: (id: string, rect: NodeGeometry | null) => void;
 };
 
 const EMPTY_AUTO_INDEX: ReadonlyMap<string, number> = new Map();
@@ -256,10 +271,16 @@ export const createInternalNodes = <NodeType extends Node = Node>(
 
           if (source.onGeometryChange) {
             const { x, y } = row.internals.positionAbsolute;
-            const next = `${x},${y},${dimensions.width},${dimensions.height}`;
+            const next = `${x},${y},${dimensions.width},${dimensions.height},${userNode.parentId ?? ""}`;
             if (next !== geometry) {
               geometry = next;
-              source.onGeometryChange();
+              source.onGeometryChange(id, {
+                x,
+                y,
+                width: dimensions.width,
+                height: dimensions.height,
+                ...(userNode.parentId ? { parentId: userNode.parentId } : {}),
+              });
             }
           }
 
@@ -274,7 +295,10 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       // mapArray creates replacement rows BEFORE disposing removed ones, so
       // only delete the registration this row actually owns.
       onCleanup(() => {
-        if (entryById.get(id) === entry) entryById.delete(id);
+        if (entryById.get(id) === entry) {
+          entryById.delete(id);
+          source.onGeometryChange?.(id, null);
+        }
       });
 
       return { id, store };

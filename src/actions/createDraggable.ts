@@ -2,6 +2,7 @@ import { type OnDrag, XYDrag } from "@xyflow/system";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts/flow";
+import { SubsetMapView } from "@/core/subsetMapView";
 
 import type { Node } from "../types";
 
@@ -22,7 +23,18 @@ const createDraggable = (
   elem: Accessor<HTMLElement | undefined>,
   params: Accessor<Partial<CreateDraggableParams>>,
 ) => {
-  const { store, nodeLookup, actions } = useInternalSolidFlow();
+  const { store, nodeLookup, selectedNodeIds, actions } = useInternalSolidFlow();
+  // Gesture-scoped lookup for XYDrag: its start scans the whole map to pick
+  // the selected nodes and the dragged node (~19ms first frame @10k through
+  // the record facade, bench round 22). Iteration yields only those
+  // candidates; keyed reads (parents, deleted-while-dragging) still resolve
+  // every node. Candidates are read when XYDrag iterates, at gesture start.
+  let dragNodeId: string | undefined;
+  const dragLookup = new SubsetMapView(nodeLookup, () => {
+    const ids = Object.keys(selectedNodeIds);
+    if (dragNodeId !== undefined && !(dragNodeId in selectedNodeIds)) ids.push(dragNodeId);
+    return ids;
+  });
   const [dragging, setDragging] = createSignal(false);
 
   // Mount the drag controller on the element (external system: XYDrag/d3-drag)
@@ -32,6 +44,7 @@ const createDraggable = (
       if (!el || current.disabled) return;
 
       const { onDrag, onDragStart, onDragStop, onNodeMouseDown } = current;
+      dragNodeId = current.nodeId;
 
       const dragInstance = XYDrag<Node>({
         onDrag,
@@ -52,7 +65,7 @@ const createDraggable = (
         getStoreItems: () => {
           return {
             nodes: store.nodes,
-            nodeLookup,
+            nodeLookup: dragLookup,
             edges: store.edges,
             nodeExtent: store.nodeExtent,
             snapGrid: store.snapGrid ?? [0, 0],

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { InternalNode, Node } from "@/types";
 
 import { createGraphBoundsSampler } from "../graphBounds";
+import type { NodeGeometry } from "../projections/internalNodes";
 
 const internal = (
   id: string,
@@ -21,25 +22,35 @@ const internal = (
     internals: { positionAbsolute: { x, y }, z: 0, userNode: { id } as Node },
   }) as unknown as InternalNode;
 
-/** Counts keyed gets; throws on any enumeration (the per-frame path must never walk). */
-class CountingLookup extends Map<string, InternalNode> {
+/** The sampler reads the plain geometry map the row derive maintains (never
+ * the row proxies). Counts keyed gets and enumerations (the per-frame path
+ * must never walk). */
+class CountingGeometry extends Map<string, NodeGeometry> {
   gets = 0;
   walks = 0;
   override get(key: string) {
     this.gets++;
     return super.get(key);
   }
-  override forEach(cb: (v: InternalNode, k: string, m: Map<string, InternalNode>) => void) {
+  override forEach(cb: (v: NodeGeometry, k: string, m: Map<string, NodeGeometry>) => void) {
     this.walks++;
     super.forEach(cb);
   }
 }
 
+const geometryOf = (n: InternalNode): NodeGeometry => ({
+  x: n.internals.positionAbsolute.x,
+  y: n.internals.positionAbsolute.y,
+  width: n.measured.width!,
+  height: n.measured.height!,
+  ...(n.parentId ? { parentId: n.parentId } : {}),
+});
+
 const setup = (nodes: InternalNode[]) => {
-  const lookup = new CountingLookup(nodes.map((n) => [n.id, n]));
+  const lookup = new CountingGeometry(nodes.map((n) => [n.id, geometryOf(n)]));
   const dragged = new Set<string>();
-  const sampler = createGraphBoundsSampler<Node>({
-    nodeLookup: lookup,
+  const sampler = createGraphBoundsSampler({
+    geometry: lookup,
     draggedIds: () => dragged,
   });
   const expected = () => getInternalNodesBounds(new Map(nodes.map((n) => [n.id, n])));
@@ -51,8 +62,8 @@ describe("createGraphBoundsSampler", () => {
     const { sampler, expected } = setup([internal("a", 0, 0), internal("b", 500, -20, { w: 30 })]);
     expect(sampler.sample(false)).toEqual(expected());
 
-    const empty = createGraphBoundsSampler<Node>({
-      nodeLookup: new Map(),
+    const empty = createGraphBoundsSampler({
+      geometry: new Map(),
       draggedIds: () => new Set(),
     });
     expect(empty.sample(false)).toBeNull();
@@ -73,6 +84,7 @@ describe("createGraphBoundsSampler", () => {
       const n = nodes.find((r) => r.id === id)!;
       n.internals.positionAbsolute = { x, y };
       n.position = { x, y };
+      Map.prototype.set.call(lookup, id, geometryOf(n));
     };
     move("n7", -900, -900);
     move("n300", 9000, 9000);
@@ -94,12 +106,14 @@ describe("createGraphBoundsSampler", () => {
     expect(sampler.sample(true)).toEqual(expected());
 
     // Simulate the graph's per-frame result: parent and all descendants shift.
+    // (the row derive re-reports every descendant's absolute rect)
     for (const id of ["p", "c1", "g"]) {
       const n = nodes.find((r) => r.id === id)!;
       n.internals.positionAbsolute = {
         x: n.internals.positionAbsolute.x - 5000,
         y: n.internals.positionAbsolute.y,
       };
+      Map.prototype.set.call(lookup, id, geometryOf(n));
     }
     lookup.walks = 0;
     const bounds = sampler.sample(true)!;

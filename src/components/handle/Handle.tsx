@@ -47,7 +47,10 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     isConnectableEnd: true,
   });
 
-  const { store, nodeLookup, connections, actions } = useInternalSolidFlow<NodeType, EdgeType>();
+  const { store, nodeLookup, connections, actions, nodeGeometry } = useInternalSolidFlow<
+    NodeType,
+    EdgeType
+  >();
 
   const rest = omit(
     _props,
@@ -135,6 +138,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     const gestureLookup = armConnectionGestureLookup({
       event,
       real: nodeLookup,
+      geometry: nodeGeometry,
       domNode: store.domNode,
       getTransform: () => store.transform,
       connectionRadius: store.connectionRadius,

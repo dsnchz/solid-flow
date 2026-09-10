@@ -40,6 +40,16 @@ export class GestureSpatialLookup<V> implements Map<string, V> {
     this.#queryRect = null;
   }
 
+  /** Snapshot from a plain geometry map (the row derive's) — no proxy reads. */
+  armFrom(geometry: ReadonlyMap<string, Rect>): void {
+    const grid = new SpatialGrid(this.#cellSize);
+    geometry.forEach((rect, id) => {
+      grid.insert(id, rect);
+    });
+    this.#grid = grid;
+    this.#queryRect = null;
+  }
+
   /** Focus iteration on the neighborhood of the pointer (per move). */
   setQueryCenter(center: XYPosition, radius: number): void {
     this.#queryRect = {

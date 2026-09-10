@@ -6,8 +6,8 @@ import {
   type InternalNodeBase,
   type IsValidConnection as SystemIsValidConnection,
   type NodeBase,
-  nodeToRect,
   pointToRendererPoint,
+  type Rect,
   type Transform,
   type UpdateConnection,
 } from "@xyflow/system";
@@ -42,18 +42,20 @@ const SAFETY_PAD = 50;
 export const armConnectionGestureLookup = <V extends NodeBase>(options: {
   readonly event: PointerEvent;
   readonly real: Map<string, V>;
+  /** The row derive's plain geometry map (see InternalNodesSource.onGeometryChange). */
+  readonly geometry: ReadonlyMap<string, Rect>;
   readonly domNode: HTMLElement | null;
   readonly getTransform: () => Transform;
   readonly connectionRadius: number;
 }): Map<string, V> => {
-  const { event, real, domNode, getTransform, connectionRadius } = options;
+  const { event, real, geometry, domNode, getTransform, connectionRadius } = options;
 
   const containerBounds = domNode?.getBoundingClientRect();
   if (!containerBounds) return real;
 
   const radius = connectionRadius + UPSTREAM_ADDITIONAL_DISTANCE + SAFETY_PAD;
   const lookup = new GestureSpatialLookup<V>(real, radius);
-  lookup.arm((node) => nodeToRect(node));
+  lookup.armFrom(geometry);
 
   const update = (moveEvent: MouseEvent | TouchEvent) => {
     lookup.setQueryCenter(

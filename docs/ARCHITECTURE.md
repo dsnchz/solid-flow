@@ -217,6 +217,25 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   mount profile is engine store reads, DOM creation, GC and the row derive;
   Handle's per-instance `propDefaults`/`omit`/`merge` (~100 ms @10k) is the
   one library-side item left.
+- **Gesture-scoped lookups for @xyflow/system.** System helpers that take a
+  `Map` and SCAN it (XYDrag's `getDragItems` at drag start) get a
+  `SubsetMapView` (`core/subsetMapView.ts`): iteration yields only the
+  candidates the helper will pick anyway (selected ids + the dragged id from
+  the keyed `selectedNodeIds` record), keyed `get`/`has` resolve any node
+  through the full facade. First drag frame @10k 19 → 2 ms (bench round 22).
+  Prefer this over a bespoke drag path: XYDrag's semantics stay upstream's.
+- **Geometry is reported once, by the row derive.** `internalNodes`'s row
+  derive calls `onGeometryChange(id, rect | null)` with the node's absolute
+  rect (plus `parentId`) whenever it changes; the state keeps a plain
+  `nodeGeometry: ReadonlyMap` from it (and bumps `geometryVersion`). Anything
+  that needs EVERY node's rect at a gesture start reads that map — the
+  connection arm (`GestureSpatialLookup.armFrom`), box selection, the
+  minimap's bounds partition (`core/graphBounds.ts`) — never the row proxies
+  (~2.5 µs per row through the store traps; 25-40 ms per start @10k, bench
+  round 23). The one remaining gesture-start cost is the browser's style
+  recalc when the root connection classes flip (~25-40 ms @10k: every handle
+  matches the affordance selectors) — by design, one recalc per gesture
+  instead of a class write per handle.
 - **Reactive nodes are named** (`{ name }` on memos, effects, projections) so
   the rc.7 dev diagnostics (`HUGE_FAN_IN`, `HUGE_FAN_OUT`, `WIDE_SCOPE_DEPS`)
   and `DEV.attribution.costs()` identify them. The stress example enables

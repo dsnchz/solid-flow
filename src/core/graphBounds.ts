@@ -1,35 +1,37 @@
-import { boxToRect, getBoundsOfBoxes, nodeToBox, type Rect } from "@xyflow/system";
+import { type Rect } from "@xyflow/system";
 
-import type { InternalNode, Node } from "@/types";
+import type { NodeGeometry } from "./projections/internalNodes";
 
+/**
+ * Incremental graph-bounds sampling for per-frame consumers (the minimap
+ * during a drag). Reads the plain geometry map the row derive maintains —
+ * never the row proxies. Outside a drag, one pass over the map. During a
+ * drag, the first frame partitions the graph into the moving rows (the
+ * dragged ids and their descendants, via `parentId`) and one static box for
+ * everything else; every later frame unions the static box with the moving
+ * rows' current rects — O(moving) per frame instead of O(N).
+ */
 type Box = { x: number; y: number; x2: number; y2: number };
 const EMPTY_BOX: Box = { x: Infinity, y: Infinity, x2: -Infinity, y2: -Infinity };
 
-const finiteRect = (box: Box): Rect | null => {
-  const rect = boxToRect(box);
-  // Pre-measurement graphs yield an Infinity rect; folding that into a
-  // viewScale poisons it with NaN (which XYMinimap writes into the SHARED
-  // panZoom viewport). Treat as "no bounds yet".
-  return Number.isFinite(rect.x) && Number.isFinite(rect.width) ? rect : null;
-};
+const union = (box: Box, r: NodeGeometry): Box => ({
+  x: Math.min(box.x, r.x),
+  y: Math.min(box.y, r.y),
+  x2: Math.max(box.x2, r.x + r.width),
+  y2: Math.max(box.y2, r.y + r.height),
+});
 
-export type GraphBoundsDeps<NodeType extends Node> = {
-  readonly nodeLookup: {
-    get(id: string): InternalNode<NodeType> | undefined;
-    forEach(cb: (node: InternalNode<NodeType>, id: string) => void): void;
-  };
-  /** Ids the current gesture is writing positions for (the drag overlay's keys). */
+const finiteRect = (box: Box): Rect | null =>
+  Number.isFinite(box.x) && Number.isFinite(box.x2)
+    ? { x: box.x, y: box.y, width: box.x2 - box.x, height: box.y2 - box.y }
+    : null;
+
+export type GraphBoundsDeps = {
+  readonly geometry: ReadonlyMap<string, NodeGeometry>;
   readonly draggedIds: () => ReadonlySet<string>;
 };
 
 export type GraphBoundsSampler = {
-  /**
-   * Bounding rect of the whole graph, or null while nothing is measured.
-   * `dragging: false` is one full pass. `dragging: true` partitions the graph
-   * ONCE per dragged-set (the dragged rows plus their descendants are the
-   * MOVING set; everything else is unioned into a frozen static box) and then
-   * costs O(moving) keyed reads per call — the per-frame path never walks.
-   */
   readonly sample: (dragging: boolean) => Rect | null;
 };
 
@@ -39,50 +41,39 @@ const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) => {
   return true;
 };
 
-/**
- * Untracked graph-bounds sampling for the minimap (bench round 15, finding
- * 3). The full pass reads ~7 proxy leaves per row — ~38ms @10k, which the
- * previous design paid on EVERY animation frame of a drag (invisible to the
- * listener-timing bench) and every 500ms forever. Callers pair the per-drag
- * incremental path with a change-driven idle sample (the core geometry
- * version) instead of a periodic scan.
- */
-export const createGraphBoundsSampler = <NodeType extends Node>({
-  nodeLookup,
+export const createGraphBoundsSampler = ({
+  geometry,
   draggedIds,
-}: GraphBoundsDeps<NodeType>): GraphBoundsSampler => {
+}: GraphBoundsDeps): GraphBoundsSampler => {
   let partition: { dragged: ReadonlySet<string>; staticBox: Box; moving: string[] } | null = null;
 
   const full = (): Rect | null => {
     let box = EMPTY_BOX;
-    nodeLookup.forEach((node) => {
-      box = getBoundsOfBoxes(box, nodeToBox(node));
+    geometry.forEach((rect) => {
+      box = union(box, rect);
     });
     return finiteRect(box);
   };
 
   const repartition = (dragged: ReadonlySet<string>) => {
-    // Moving = dragged or any ancestor dragged (children ride along with a
-    // dragged parent in the derived positions). Memoized per pass so nested
-    // chains resolve once each; order-independent.
     const movingById = new Map<string, boolean>();
-    const isMoving = (node: InternalNode<NodeType>): boolean => {
-      const known = movingById.get(node.id);
+    const isMoving = (id: string, rect: NodeGeometry): boolean => {
+      const known = movingById.get(id);
       if (known !== undefined) return known;
-      let moving = dragged.has(node.id);
-      if (!moving && node.parentId) {
-        const parent = nodeLookup.get(node.parentId);
-        moving = !!parent && isMoving(parent);
+      let moving = dragged.has(id);
+      if (!moving && rect.parentId) {
+        const parent = geometry.get(rect.parentId);
+        moving = !!parent && isMoving(rect.parentId, parent);
       }
-      movingById.set(node.id, moving);
+      movingById.set(id, moving);
       return moving;
     };
 
     let staticBox = EMPTY_BOX;
     const moving: string[] = [];
-    nodeLookup.forEach((node) => {
-      if (isMoving(node)) moving.push(node.id);
-      else staticBox = getBoundsOfBoxes(staticBox, nodeToBox(node));
+    geometry.forEach((rect, id) => {
+      if (isMoving(id, rect)) moving.push(id);
+      else staticBox = union(staticBox, rect);
     });
     partition = { dragged: new Set(dragged), staticBox, moving };
   };
@@ -97,8 +88,8 @@ export const createGraphBoundsSampler = <NodeType extends Node>({
       if (!partition || !sameSet(partition.dragged, dragged)) repartition(dragged);
       let box = partition!.staticBox;
       for (const id of partition!.moving) {
-        const node = nodeLookup.get(id);
-        if (node) box = getBoundsOfBoxes(box, nodeToBox(node));
+        const rect = geometry.get(id);
+        if (rect) box = union(box, rect);
       }
       return finiteRect(box);
     },
