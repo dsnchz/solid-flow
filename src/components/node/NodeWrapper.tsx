@@ -248,13 +248,20 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         noDragClass: store.noDragClass,
         nodeClickDistance: props.nodeClickDistance,
         onNodeMouseDown: actions.handleNodeSelection,
-        onDrag: (event, _, targetNode, nodes) => {
-          props.onNodeDrag?.({
-            event,
-            targetNode: targetNode as NodeType,
-            nodes: nodes as NodeType[],
-          });
-        },
+        // Only when a user handler exists: with `onDrag` set, XYDrag builds
+        // the handler params EVERY frame — a spread of every dragged node's
+        // store proxy (audit finding 6; a 1000-node selection drag paid it
+        // with no listener registered). Start/stop stay unconditional (the
+        // drag helper needs them; once per gesture).
+        onDrag: props.onNodeDrag
+          ? (event, _, targetNode, nodes) => {
+              props.onNodeDrag?.({
+                event,
+                targetNode: targetNode as NodeType,
+                nodes: nodes as NodeType[],
+              });
+            }
+          : undefined,
         onDragStart: (event, _, targetNode, nodes) => {
           props.onNodeDragStart?.({
             event,

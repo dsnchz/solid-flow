@@ -8,7 +8,7 @@ import {
   type Viewport,
   XYPanZoom,
 } from "@xyflow/system";
-import { createEffect, createSignal, type ParentProps, untrack } from "solid-js";
+import { createEffect, createMemo, createSignal, type ParentProps, untrack } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 import type { PanOnScrollMode } from "@/types";
@@ -80,6 +80,13 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
   );
 
   // Sync reactive options into the controller
+  // Equality-cut booleans for the two gesture flags: `store.connection` is a
+  // fresh object every pointermove and `selectionRect` a new rect every
+  // box-selection move, so tracking them directly re-ran this effect — and
+  // panZoom.update() rebound every d3 handler — on every move of both
+  // gestures. Booleans change once per gesture.
+  const connectionInProgress = createMemo(() => store.connection.inProgress);
+  const userSelectionActive = createMemo(() => !!store.selectionRect);
   createEffect(
     () => ({
       panZoom: store.panZoom,
@@ -89,7 +96,7 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
         zoomActivationKeyPressed: store.zoomActivationKeyPressed,
         noPanClassName: store.noPanClass,
         noWheelClassName: store.noWheelClass,
-        userSelectionActive: !!store.selectionRect,
+        userSelectionActive: userSelectionActive(),
         panOnScrollSpeed: props.panOnScrollSpeed,
         panOnDrag: panOnDrag(),
         panOnScroll: panOnScroll(),
@@ -101,7 +108,7 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
           typeof props.preventScrolling === "boolean" ? props.preventScrolling : true,
         paneClickDistance: props.paneClickDistance,
         selectionOnDrag: props.selectionOnDrag,
-        connectionInProgress: store.connection.inProgress,
+        connectionInProgress: connectionInProgress(),
       },
     }),
     ({ panZoom, options }) => {

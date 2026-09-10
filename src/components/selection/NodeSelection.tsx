@@ -47,9 +47,12 @@ export const NodeSelection = <NodeType extends Node = Node>(
 
   createDraggable(ref, () => ({
     disabled: false,
-    onDrag: (event, _, __, nodes) => {
-      props.onNodeDrag?.({ event, targetNode: null, nodes: nodes as NodeType[] });
-    },
+    // See NodeWrapper: per-frame handler params only when a handler exists.
+    onDrag: props.onNodeDrag
+      ? (event, _, __, nodes) => {
+          props.onNodeDrag?.({ event, targetNode: null, nodes: nodes as NodeType[] });
+        }
+      : undefined,
     onDragStart: (event, _, __, nodes) => {
       props.onNodeDragStart?.({ event, targetNode: null, nodes: nodes as NodeType[] });
     },
