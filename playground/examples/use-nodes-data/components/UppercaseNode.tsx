@@ -1,4 +1,4 @@
-import { createEffect, createMemo, untrack } from "solid-js";
+import { createEffect, createMemo } from "solid-js";
 
 import { Handle, type NodeProps, useNodeConnections, useNodesData, useSolidFlow } from "@/index";
 
@@ -15,13 +15,14 @@ export const UppercaseNode = (props: NodeProps<{ text: string }, "uppercase">) =
   const nodeData = useNodesData<MyNode>(() => connections()[0]?.source);
   const textNodeData = createMemo(() => (isTextNode(nodeData()) ? nodeData()!.data.text : null));
 
+  // Solid 2 effect shape: the first function only READS (it is the tracked,
+  // owned scope; a store write there is REACTIVE_WRITE_IN_OWNED_SCOPE), the
+  // second performs the write with the computed value.
   createEffect(
-    () => {
-      const input = textNodeData()?.toUpperCase() ?? "";
-      // Use untrack to prevent the effect from being triggered by updateNodeData
-      untrack(() => updateNodeData(props.id, { text: input }));
+    () => textNodeData()?.toUpperCase() ?? "",
+    (text) => {
+      updateNodeData(props.id, { text });
     },
-    () => {},
   );
 
   return (
