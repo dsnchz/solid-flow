@@ -352,3 +352,80 @@ test("BENCH reconnect + marker writes @10k", async ({ page }) => {
   console.log("MARKER @10k:", JSON.stringify(result.marker));
   expect(result.reconnect.mean).toBeGreaterThan(0);
 });
+
+test("BENCH memory @10k", async ({ page }) => {
+  test.setTimeout(300000);
+  // JS heap + DOM/listener counts after a forced GC: after mount, after
+  // deleting every element (what the flow retains), and after re-adding them.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Performance.enable");
+  await cdp.send("HeapProfiler.enable");
+  const sample = async (label: string) => {
+    await page.waitForTimeout(300);
+    await cdp.send("HeapProfiler.collectGarbage");
+    await cdp.send("HeapProfiler.collectGarbage");
+    const { metrics } = await cdp.send("Performance.getMetrics");
+    const m = Object.fromEntries(metrics.map((x) => [x.name, x.value]));
+    const row = {
+      heapMB: Math.round((m.JSHeapUsedSize! / 1048576) * 10) / 10,
+      domNodes: m.Nodes,
+      listeners: m.JSEventListeners,
+    };
+    console.log(`MEMORY ${label}:`, JSON.stringify(row));
+    return row;
+  };
+  await page.goto("about:blank");
+  const blank = await sample("blank page");
+  await waitForStress(page);
+  const mounted = await sample("mounted @10k");
+  await page.evaluate(async () => {
+    const { api, flush } = (
+      window as unknown as {
+        __bench: {
+          api: {
+            flow: { nodes: unknown[]; edges: unknown[] };
+            commands: {
+              deleteElements: (p: { nodes: unknown[]; edges: unknown[] }) => Promise<unknown>;
+            };
+          };
+          flush: () => void;
+        };
+      }
+    ).__bench;
+    (window as unknown as { __saved: unknown }).__saved = {
+      nodes: [...api.flow.nodes],
+      edges: [...api.flow.edges],
+    };
+    await api.commands.deleteElements({ nodes: [...api.flow.nodes], edges: [...api.flow.edges] });
+    flush();
+  });
+  await expect
+    .poll(async () => page.evaluate(() => document.querySelectorAll(".solid-flow__node").length))
+    .toBe(0);
+  const emptied = await sample("after deleting all");
+  await page.evaluate(() => {
+    const { api, flush } = (
+      window as unknown as {
+        __bench: {
+          api: { commands: { addNodes: (n: unknown) => void; addEdges: (e: unknown) => void } };
+          flush: () => void;
+        };
+      }
+    ).__bench;
+    const saved = (window as unknown as { __saved: { nodes: unknown[]; edges: unknown[] } })
+      .__saved;
+    api.commands.addNodes(saved.nodes);
+    api.commands.addEdges(saved.edges);
+    flush();
+  });
+  await expect
+    .poll(async () => page.evaluate(() => document.querySelectorAll(".solid-flow__node").length), {
+      timeout: 60000,
+    })
+    .toBeGreaterThan(9000);
+  const remounted = await sample("after re-adding all");
+  console.log(
+    `MEMORY summary: mount +${(mounted.heapMB - blank.heapMB).toFixed(1)} MB; retained after delete ${(emptied.heapMB - blank.heapMB).toFixed(1)} MB; remount ${remounted.heapMB.toFixed(1)} MB`,
+  );
+  expect(mounted.heapMB).toBeGreaterThan(blank.heapMB);
+});
