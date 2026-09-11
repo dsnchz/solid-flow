@@ -1,23 +1,35 @@
 <p align="center">
-  <img src="https://assets.solidjs.com/banner?project=solid-flow&type=Ecosystem&background=tiles" alt="@dschz/solid-flow banner" />
+  <!-- the %20%20 suffix works around a banner-generator bug that clips a trailing W -->
+  <img src="https://assets.solidjs.com/banner?project=solid-flow%20%20&type=Ecosystem&background=tiles" alt="@dschz/solid-flow banner" />
 </p>
 
 # Solid Flow
 
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![npm](https://img.shields.io/npm/v/@dschz/solid-flow?color=blue)](https://www.npmjs.com/package/@dschz/solid-flow)
+[![JSR](https://jsr.io/badges/@dschz/solid-flow)](https://jsr.io/@dschz/solid-flow)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@dschz/solid-flow)](https://bundlephobia.com/package/@dschz/solid-flow)
 [![CI](https://github.com/dsnchz/solid-flow/actions/workflows/ci.yaml/badge.svg)](https://github.com/dsnchz/solid-flow/actions/workflows/ci.yaml)
 
 > Solid Flow is a port of [React Flow](https://reactflow.dev/) and [Svelte Flow](https://svelteflow.dev/) for SolidJS.
 
-☣️ **Solid Flow is alpha and currently under development. The API intends to follow React/Svelte Flow closely but some things might change for the sake of SolidJS.** ☣️
+## Version pairing
 
-## Current Unsupported Features:
+This branch (`main`) is the **0.2.x** line for SolidJS 1.x. Solid Flow **1.x**, built for SolidJS 2.0, lives on the [`next` branch](https://github.com/dsnchz/solid-flow/tree/next) and ships under the `next` tag.
 
-- [onlyRenderVisibleElements](https://github.com/dsnchz/solid-flow/issues/15): render only visible elements.
-- [Custom MiniMap Nodes](https://github.com/dsnchz/solid-flow/issues/12): define custom minimap jsx node elements.
-- [Edge Reconnect Anchors](https://github.com/dsnchz/solid-flow/issues/13): the ability to re-connect already connected edges.
+| Solid Flow | SolidJS         | Branch | Status                          |
+| ---------- | --------------- | ------ | ------------------------------- |
+| `1.x`      | `solid-js` 2.x  | `next` | Active development (`next` tag) |
+| `0.2.x`    | `solid-js` 1.8+ | `main` | Maintenance (fixes only)        |
+
+New features land on 1.x only. The following are not part of 0.2.x and are available in 1.x:
+
+- Viewport culling (on by default) and the opt-in `onlyRenderVisibleElements` mode
+- Custom MiniMap node components
+- Edge reconnection (`EdgeReconnectAnchor`)
+- Async-seeded and live-streamed stores, optimistic updates (SolidJS 2.0's async model)
+
+The [`next` README](https://github.com/dsnchz/solid-flow/blob/next/README.md) documents the 1.x API and includes a migration guide from 0.2.x.
 
 ## Key Features
 
@@ -33,13 +45,19 @@
 
 ## Installation
 
-The easiest way to get the latest version of Solid Flow is to install it via npm, yarn or pnpm:
-
 ```sh
 npm install @dschz/solid-flow
 pnpm install @dschz/solid-flow
 yarn install @dschz/solid-flow
 bun install @dschz/solid-flow
+```
+
+`solid-js` (1.8 or newer) is a **peer dependency**. Also available on [JSR](https://jsr.io/@dschz/solid-flow).
+
+Using SolidJS 2.0? Install the 1.x line instead — 0.2.x does not run on SolidJS 2.0:
+
+```sh
+npm install @dschz/solid-flow@next solid-js@next @solidjs/web@next
 ```
 
 ## Quick Start
@@ -292,9 +310,9 @@ Solid Flow includes comprehensive accessibility features:
 ## Performance
 
 - **Reactive Updates**: Only re-renders components when their specific data changes
-- **Viewport Optimization**: Option to render only visible elements (coming soon)
 - **Memory Efficient**: Optimized data structures for large graphs
 - **Stress Tested**: Handles hundreds of nodes smoothly
+- **Viewport Culling**: Available in the 1.x line (see [Version pairing](#version-pairing)), not in 0.2.x
 
 ## Examples
 
