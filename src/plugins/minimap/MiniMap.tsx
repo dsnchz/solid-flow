@@ -273,129 +273,130 @@ export const MiniMap = <NodeType extends Node>(
       }}
       {...paneProps}
     >
-      <Show when={store.panZoom}>
-        {(panZoom) => {
-          const [ref, setRef] = createSignal<SVGSVGElement>();
+      {(() => {
+        const [ref, setRef] = createSignal<SVGSVGElement>();
 
-          // Mount the minimap controller on the svg (external system: XYMinimap)
-          const [minimap, setMinimap] = createSignal<ReturnType<typeof XYMinimap>>();
+        // Mount the minimap controller on the svg (external system: XYMinimap)
+        // once the flow's pan-zoom instance exists. The svg itself does not
+        // wait for it: server rendering has no pan-zoom and must still
+        // produce the node shapes and the mask.
+        const [minimap, setMinimap] = createSignal<ReturnType<typeof XYMinimap>>();
 
-          createEffect(
-            () => ({ el: ref(), panZoom: panZoom() }),
-            ({ el, panZoom }) => {
-              if (!el) return;
-              const instance = XYMinimap({
-                domNode: el,
-                panZoom,
-                getTransform: () => store.transform,
-                getViewScale: viewScale,
-              });
-              setMinimap(instance);
-              return () => {
-                instance.destroy();
-              };
+        createEffect(
+          () => ({ el: ref(), panZoom: store.panZoom }),
+          ({ el, panZoom }) => {
+            if (!el || !panZoom) return;
+            const instance = XYMinimap({
+              domNode: el,
+              panZoom,
+              getTransform: () => store.transform,
+              getViewScale: viewScale,
+            });
+            setMinimap(instance);
+            return () => {
+              instance.destroy();
+            };
+          },
+        );
+
+        createEffect(
+          () => ({
+            instance: minimap(),
+            options: {
+              translateExtent: store.translateExtent,
+              width: store.width,
+              height: store.height,
+              inversePan: _props.inversePan,
+              zoomStep: _props.zoomStep,
+              pannable: _props.pannable,
+              zoomable: _props.zoomable,
             },
-          );
+          }),
+          ({ instance, options }) => {
+            instance?.update(options);
+          },
+        );
 
-          createEffect(
-            () => ({
-              instance: minimap(),
-              options: {
-                translateExtent: store.translateExtent,
-                width: store.width,
-                height: store.height,
-                inversePan: _props.inversePan,
-                zoomStep: _props.zoomStep,
-                pannable: _props.pannable,
-                zoomable: _props.zoomable,
-              },
-            }),
-            ({ instance, options }) => {
-              instance?.update(options);
-            },
-          );
+        const onSvgClick = (event: MouseEvent) => {
+          if (!_props.onClick) return;
+          const [x, y] = minimap()?.pointer(event) ?? [0, 0];
+          _props.onClick(event, { x, y });
+        };
 
-          const onSvgClick = (event: MouseEvent) => {
-            if (!_props.onClick) return;
-            const [x, y] = minimap()?.pointer(event) ?? [0, 0];
-            _props.onClick(event, { x, y });
-          };
+        const onSvgNodeClick = (event: MouseEvent, nodeId: string) => {
+          const node = nodeLookup.get(nodeId)?.internals.userNode;
+          if (node) _props.onNodeClick?.(event, node);
+        };
 
-          const onSvgNodeClick = (event: MouseEvent, nodeId: string) => {
-            const node = nodeLookup.get(nodeId)?.internals.userNode;
-            if (node) _props.onNodeClick?.(event, node);
-          };
+        return (
+          <svg
+            ref={setRef}
+            width={_props.width}
+            height={_props.height}
+            viewBox={`${getX()} ${getY()} ${getViewboxWidth()} ${getViewboxHeight()}`}
+            class="solid-flow__minimap-svg"
+            role="img"
+            aria-labelledby={labelledBy()}
+            onClick={_props.onClick ? onSvgClick : undefined}
+            style={{
+              "--xy-minimap-mask-background-color-props": _props.maskColor,
+              "--xy-minimap-mask-stroke-color-props": _props.maskStrokeColor,
+              "--xy-minimap-mask-stroke-width-props": strokeWidth(),
+            }}
+          >
+            <title id={labelledBy()}>{store.ariaLabelConfig["minimap.ariaLabel"]}</title>
+            <For keyed={false} each={nodeIds()}>
+              {(nodeId) => {
+                // Narrow once through Show: inside the callback the row is
+                // non-null by type, not by assertion (audit D).
+                const visibleNode = createMemo(() => {
+                  const row = nodeLookup.get(nodeId());
+                  return row && nodeHasDimensions(row) && !row.hidden ? row : null;
+                });
 
-          return (
-            <svg
-              ref={setRef}
-              width={_props.width}
-              height={_props.height}
-              viewBox={`${getX()} ${getY()} ${getViewboxWidth()} ${getViewboxHeight()}`}
-              class="solid-flow__minimap-svg"
-              role="img"
-              aria-labelledby={labelledBy()}
-              onClick={_props.onClick ? onSvgClick : undefined}
-              style={{
-                "--xy-minimap-mask-background-color-props": _props.maskColor,
-                "--xy-minimap-mask-stroke-color-props": _props.maskStrokeColor,
-                "--xy-minimap-mask-stroke-width-props": strokeWidth(),
+                return (
+                  <Show when={visibleNode()}>
+                    {(node) => {
+                      const dimensions = () => getNodeDimensions(node());
+                      // Attribute callbacks receive the USER node (upstream
+                      // parity), not the internal row.
+                      const userNode = () => node().internals.userNode;
+                      return (
+                        <Dynamic
+                          component={_props.nodeComponent ?? MiniMapNode}
+                          id={nodeId()}
+                          x={node().internals.positionAbsolute.x}
+                          y={node().internals.positionAbsolute.y}
+                          borderRadius={_props.nodeBorderRadius}
+                          strokeWidth={_props.nodeStrokeWidth}
+                          shapeRendering={shapeRendering}
+                          width={dimensions().width}
+                          height={dimensions().height}
+                          selected={node().selected}
+                          color={nodeColorFunc()?.call(null, userNode())}
+                          strokeColor={nodeStrokeColorFunc().call(null, userNode())}
+                          class={nodeClassFunc().call(null, userNode())}
+                          style={node().style}
+                          onClick={_props.onNodeClick ? onSvgNodeClick : undefined}
+                        />
+                      );
+                    }}
+                  </Show>
+                );
               }}
-            >
-              <title id={labelledBy()}>{store.ariaLabelConfig["minimap.ariaLabel"]}</title>
-              <For keyed={false} each={nodeIds()}>
-                {(nodeId) => {
-                  // Narrow once through Show: inside the callback the row is
-                  // non-null by type, not by assertion (audit D).
-                  const visibleNode = createMemo(() => {
-                    const row = nodeLookup.get(nodeId());
-                    return row && nodeHasDimensions(row) && !row.hidden ? row : null;
-                  });
-
-                  return (
-                    <Show when={visibleNode()}>
-                      {(node) => {
-                        const dimensions = () => getNodeDimensions(node());
-                        // Attribute callbacks receive the USER node (upstream
-                        // parity), not the internal row.
-                        const userNode = () => node().internals.userNode;
-                        return (
-                          <Dynamic
-                            component={_props.nodeComponent ?? MiniMapNode}
-                            id={nodeId()}
-                            x={node().internals.positionAbsolute.x}
-                            y={node().internals.positionAbsolute.y}
-                            borderRadius={_props.nodeBorderRadius}
-                            strokeWidth={_props.nodeStrokeWidth}
-                            shapeRendering={shapeRendering}
-                            width={dimensions().width}
-                            height={dimensions().height}
-                            selected={node().selected}
-                            color={nodeColorFunc()?.call(null, userNode())}
-                            strokeColor={nodeStrokeColorFunc().call(null, userNode())}
-                            class={nodeClassFunc().call(null, userNode())}
-                            style={node().style}
-                            onClick={_props.onNodeClick ? onSvgNodeClick : undefined}
-                          />
-                        );
-                      }}
-                    </Show>
-                  );
-                }}
-              </For>
-              <path
-                class="solid-flow__minimap-mask"
-                d={`M${getX() - getOffset()},${getY() - getOffset()}h${getViewboxWidth() + getOffset() * 2}v${
-                  getViewboxHeight() + getOffset() * 2
-                }h${-getViewboxWidth() - getOffset() * 2}z
+            </For>
+            <path
+              class="solid-flow__minimap-mask"
+              d={`M${getX() - getOffset()},${getY() - getOffset()}h${getViewboxWidth() + getOffset() * 2}v${
+                getViewboxHeight() + getOffset() * 2
+              }h${-getViewboxWidth() - getOffset() * 2}z
             M${viewBB().x},${viewBB().y}h${viewBB().width}v${viewBB().height}h${-viewBB().width}z`}
-                fill-rule="evenodd"
-                pointer-events="none"
-              />
-            </svg>
-          );
-        }}
-      </Show>
+              fill-rule="evenodd"
+              pointer-events="none"
+            />
+          </svg>
+        );
+      })()}
     </Panel>
   );
 };

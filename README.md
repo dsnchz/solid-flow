@@ -370,9 +370,18 @@ The MiniMap always renders the full graph in either mode — it reads the data g
 
 ## Server-side rendering
 
-`<SolidFlow>` renders with `renderToString` and hydrates cleanly. For meaningful server-rendered layout, give nodes explicit `width` / `height` (there is no DOM to measure on the server) — the same guidance as React/Svelte Flow.
+`<SolidFlow>` renders with `renderToString` and hydrates cleanly. For meaningful server-rendered layout, give nodes explicit `width` / `height` (there is no DOM to measure on the server) — the same guidance as React/Svelte Flow. What the server markup contains, and what it does not:
 
-One contract note for headless **server-side** usage (from SolidJS 2.0's server semantics): constructing a flow and reading its derived state works under every runtime condition, but _mutating_ stores on the server (commands, setter writes) is deprecated upstream and will eventually throw — server-side state that changes over time should come from async sources (`createNodeStore(async () => …)`), which are fully supported on both builds. One rule when writing your own computations over flow stores: never wrap store reads in a broad `try/catch` — a not-ready async read throws `NotReadyError`, and that propagation is how the server build re-derives (the browser build masks the mistake). Branch on readiness with `isPending()` instead. Rendering, jsdom tests, and browser apps are unaffected.
+- **Nodes** render at their positions when they declare `width` / `height`; custom node components render like any other.
+- **Edges** render only when both endpoint nodes also declare their `handles` (position, `x`, `y`, `width`, `height` — React Flow 12's SSR contract); with no DOM to measure handles there is nothing else to lay an edge out from. Custom edge components render through the same path.
+- **Background, Controls, MiniMap and NodeResizer** render on the server; the MiniMap shows one shape per node from the declared dimensions.
+- **NodeToolbar** does not render on the server: it portals into the mounted flow, and appears on hydration.
+- **Culling** is off on the server (there is no viewport to be off-screen of), so every element is in the markup — `onlyRenderVisibleElements` included. The client takes over once the container is measured.
+- **Async-seeded stores** suspend the render to the nearest `<Loading>` boundary while pending, exactly as on the client.
+
+The SSR test lane (`bun run test:ssr`) pins each of these against the server builds.
+
+One contract note for headless **server-side** usage (from SolidJS 2.0's server semantics): constructing a flow and reading its derived state works under every runtime condition, but _mutating_ stores on the server (commands, setter writes) is deprecated upstream and will eventually throw — server-side state that changes over time should come from async sources (`createNodeStore(async () => …)`), which are fully supported on both builds. One rule when writing your own computations over flow stores: never wrap store reads in a broad `try/catch` — a not-ready async read throws `NotReadyError`, and that propagation is how the server build re-derives (the browser build masks the mistake). Branch on readiness with `isPending()` instead — noting that on the server build `isPending` does not branch either: it rethrows a pending read so the render suspends to the nearest `<Loading>` boundary, which is the server's way of waiting. Rendering, jsdom tests, and browser apps are unaffected.
 
 ## Accessibility
 

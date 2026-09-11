@@ -612,7 +612,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // memos in NodeWrapper/EdgeWrapper (always-on CSS tier), and the
   // renderers' per-row unmount gates (opt-in onlyRenderVisibleElements
   // tier, design doc §4 + bench round 6).
-  const cullingViewport = createCullingViewport({
+  const viewportRect = createCullingViewport({
     get width() {
       return store.width;
     },
@@ -622,6 +622,14 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     get transform() {
       return transform();
     },
+  });
+  // Culling is a DOM-viewport concern: without a mounted container there is
+  // nothing to be off-screen of. On the server this keeps every element in
+  // the markup and visible (edges would otherwise render hidden — the
+  // on-screen pass never runs there); on the client the container mounts
+  // before it is measured, so this adds no extra flip to the row memos.
+  const cullingViewport = createMemo(() => (domNode() ? viewportRect() : null), {
+    name: "cullingViewport",
   });
   // Equality-cut flag for the row rules: rows must not subscribe to the
   // viewport itself (every quantization step would wake all 20k of them).
