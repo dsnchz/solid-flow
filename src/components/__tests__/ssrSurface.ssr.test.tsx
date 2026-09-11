@@ -141,7 +141,7 @@ describe("plugins on the server", () => {
   it("renders NodeResizer controls inside a custom node", () => {
     const ResizableNode = (props: NodeProps) => (
       <>
-        <NodeResizer isVisible />
+        <NodeResizer visible />
         <span>{String(props.data.label)}</span>
       </>
     );
@@ -224,9 +224,16 @@ describe("flow options on the server", () => {
   });
 });
 
+type SeedNode = {
+  id: string;
+  type: "default";
+  position: { x: number; y: number };
+  data: { label: string };
+};
+
 describe("async-seeded stores on the server", () => {
   it("holds the Loading boundary while the seed is pending", () => {
-    const [nodes] = createNodeStore(() => new Promise<Node[]>(() => undefined));
+    const [nodes] = createNodeStore(() => new Promise<SeedNode[]>(() => undefined));
     const html = renderToString(() => (
       <Loading fallback={<div data-testid="loading">loading graph</div>}>
         <SolidFlow nodes={nodes} edges={[]} width={800} height={600} />
