@@ -248,17 +248,17 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   recalc when the root connection classes flip (~25-40 ms @10k: every handle
   matches the affordance selectors) — by design, one recalc per gesture
   instead of a class write per handle.
-- **Big keyed projections: draft form, and never touch the root per gesture.**
-  A projection that RETURNS a fresh record makes the engine reconcile it
-  against the store (`reconcileNextState`/`applyAdopt`) and clone the raw;
-  a draft-form derive that writes only the changed keys avoids that. But the
-  engine also clones a projection target's raw on the FIRST write to it in a
-  derive (`ensurePB` → `cloneRaw`; the cheap prototype overlay is reserved
-  for plain stores), so a root-level set/delete on a 20k-key record costs
-  ~13 ms @10k regardless. `connections` therefore keeps root keys stable on
-  a reconnect (an emptied handle sub-record stays `{}`) and prunes empties
-  only when a never-seen key forces a root write anyway. Reconnect 34 → 21 ms
-  (bench round 24).
+- **Big keyed projections: draft form.** A projection that RETURNS a fresh
+  record makes the engine reconcile it against the store
+  (`reconcileNextState`/`applyAdopt`) and clone the raw; a draft-form derive
+  that writes only the changed keys avoids that. Reconnect 34 → 21 ms (bench
+  round 24). Until solid-js rc.8 the engine also cloned a projection target's
+  raw on the first root-level write in a derive (~13 ms on a 20k-key record),
+  so `connections` kept root keys stable and pruned emptied sub-records
+  lazily; rc.8 gives projections the prototype-overlay path
+  (solidjs/solid#3352, filed from this code), root writes are O(1), and the
+  derive deletes emptied keys directly. Reconnect 21 → 11 ms on the bump
+  (round 27).
 - **Culling is a keyed record, not a per-row read of the viewport.** The
   quantized culling viewport steps every quarter-viewport of pan; a per-row
   memo over it makes every step re-run all ~20k row memos through the store

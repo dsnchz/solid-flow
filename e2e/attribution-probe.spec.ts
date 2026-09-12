@@ -1,12 +1,10 @@
 import { expect, test } from "./helpers";
 type W = {
   __bench: {
-    DEV: {
-      attribution: {
-        costs(): {
-          scopes: { name: string; kind: string; runs: number; selfMs: number; wastedMs: number }[];
-          writes: { name: string; runs: number; downstreamMs: number }[];
-        };
+    attribution: {
+      costs(): {
+        scopes: { name: string; kind: string; runs: number; selfMs: number; wastedMs: number }[];
+        writes: { name: string; runs: number; downstreamMs: number }[];
       };
     };
   };
@@ -33,7 +31,7 @@ test("PROBE attribution on a 30x30 stress load + drag", async ({ page }) => {
   }
   const dump = async (label: string) => {
     const c = await page.evaluate(() => {
-      const { scopes, writes } = (window as unknown as W).__bench.DEV.attribution.costs();
+      const { scopes, writes } = (window as unknown as W).__bench.attribution.costs();
       const top = (arr: typeof scopes, key: "selfMs" | "runs") =>
         [...arr]
           .sort((a, b) => b[key] - a[key])

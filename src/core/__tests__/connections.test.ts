@@ -84,7 +84,7 @@ describe("createConnections (core, headless)", () => {
     });
   });
 
-  it("an emptied handle reads as no connections and its key is pruned on the next new-handle write", () => {
+  it("an emptied handle key is removed from the record", () => {
     const [edges, setEdges] = createStore([
       { id: "e1", source: "a", target: "b" },
       { id: "e2", source: "a", target: "c" },
@@ -104,13 +104,12 @@ describe("createConnections (core, headless)", () => {
       flush();
 
       expect(Object.keys(connections["a-source"] ?? {})).toHaveLength(1);
-      // emptied, not deleted: a root-key delete would clone the whole record
-      expect(Object.keys(connections["c-target"] ?? {})).toHaveLength(0);
+      // deleted, not left as an empty sub-record (rc.8: root deletes are O(1))
+      expect(connections["c-target"]).toBeUndefined();
+      expect("c-target" in connections).toBe(false);
 
-      // the next never-seen handle key pays the root write and prunes it
       setEdges(() => [{ id: "e1", source: "a", target: "b", targetHandle: "fresh" }] as Edge[]);
       flush();
-      expect(connections["c-target"]).toBeUndefined();
       expect(Object.keys(connections["b-target-fresh"] ?? {})).toHaveLength(1);
       dispose();
     });

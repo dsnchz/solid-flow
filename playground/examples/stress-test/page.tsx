@@ -1,4 +1,5 @@
 import { createSignal, DEV, flush, onCleanup, Show } from "solid-js";
+import { attribution } from "solid-js/attribution";
 import {
   Background,
   Controls,
@@ -28,19 +29,20 @@ const stressNodeTypes = { resizer: ResizerNode };
 // Exposes the flow API to the bench driver (pan via commands.setViewport).
 const BenchProbe = () => {
   const api = useSolidFlow();
-  // Dev-only attribution (solid-js rc.7+): `?attr=1` enables the engine's
-  // why-chains/costs() for the perf loop; DEV is undefined in prod builds.
+  // Dev-only attribution (solid-js rc.8+: the `solid-js/attribution` entry,
+  // a no-op twin in prod builds): `?attr=1` enables the engine's
+  // why-chains/costs() for the perf loop.
   if (DEV && new URLSearchParams(window.location.search).get("attr") === "1") {
-    DEV.attribution.enable();
+    attribution.enable();
   }
-  const w = window as Window & { __bench?: { api?: unknown; DEV?: unknown } };
+  const w = window as Window & { __bench?: { api?: unknown; attribution?: unknown } };
   const bench = (w.__bench ??= {});
-  Object.assign(bench, { api, DEV });
+  Object.assign(bench, { api, attribution });
   // An unmounted flow must not stay reachable through the probe (the memory
   // bench measures what an unmount releases).
   onCleanup(() => {
     delete bench.api;
-    delete bench.DEV;
+    delete bench.attribution;
   });
   return null;
 };
@@ -52,7 +54,7 @@ const BenchProbe = () => {
 //   fit      "0" to skip fitView so the grid overflows the viewport (culling visible)
 //   resizer  "1" to give node 5-5 an always-visible NodeResizer
 //   uncontrolled "1" to seed via defaultNodes/defaultEdges (the flow copies and owns the rows)
-//   attr     "1" to enable DEV.attribution (dev builds only)
+//   attr     "1" to enable attribution (dev builds only)
 //   provider "1" to give the flow its own SolidFlowProvider INSIDE the unmount
 //            toggle (full teardown; the playground's app-level provider
 //            otherwise owns the state and survives the canvas)

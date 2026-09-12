@@ -129,32 +129,23 @@ export const createConnections = <EdgeType extends Edge = Edge>(
   const prevByRow = new WeakMap<() => Contribution[], readonly Contribution[]>();
   let prevRows: ReadonlySet<() => Contribution[]> = new Set();
 
-  // Root keys are NEVER touched by a reconnect: the engine clones the whole
-  // root raw (20k keys @10k, ~13 ms) on the first root-level write of a
-  // derive, so an emptied sub-record stays (reads as `{}`) and is pruned only
-  // when a root write happens anyway — a handle key seen for the first time.
-  const emptied = new Set<string>();
+  // An emptied handle key is removed right away. (Until solid-js rc.8 a
+  // root-level write in a projection derive cloned the whole root raw — 20k
+  // keys @10k, ~13 ms — so emptied keys were kept and pruned lazily; rc.8's
+  // overlay path makes the root delete O(1): solidjs/solid#3352.)
   const remove = (draft: ConnectionsRecord, list: readonly Contribution[]) => {
     for (const { key, entry, connection } of list) {
       const rec = draft[key];
       if (!rec || rec[entry]?.edgeId !== connection.edgeId) continue;
       // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
       delete rec[entry];
-      if (Object.keys(rec).length === 0) emptied.add(key);
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
+      if (Object.keys(rec).length === 0) delete draft[key];
     }
   };
   const add = (draft: ConnectionsRecord, list: readonly Contribution[]) => {
     for (const { key, entry, connection } of list) {
-      let rec = draft[key];
-      if (rec === undefined) {
-        // a root write is unavoidable here: prune the emptied keys on the same clone
-        for (const stale of emptied) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
-          if (stale !== key && Object.keys(draft[stale] ?? {}).length === 0) delete draft[stale];
-        }
-        emptied.clear();
-        rec = draft[key] = {};
-      } else emptied.delete(key);
+      const rec = (draft[key] ??= {});
       rec[entry] = connection;
     }
   };
