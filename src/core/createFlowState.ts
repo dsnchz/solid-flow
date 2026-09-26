@@ -1066,6 +1066,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     connections,
     selectedNodesBounds,
     selectedNodeIds,
+    selectedEdgeIds,
     dragOverlay,
     geometryVersion,
     nodeGeometry,

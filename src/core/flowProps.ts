@@ -30,6 +30,7 @@ import type {
   EdgeEvents,
   EdgeTypes,
   FitViewOptions,
+  IsNodeSelectable,
   IsValidConnection,
   KeyDefinition,
   Node,
@@ -228,7 +229,7 @@ export type SolidFlowViewportProps<NodeType extends Node = Node> = {
 };
 
 /** Pointer interaction: drag/click thresholds, pan/zoom gestures, selection behavior, and per-element interactivity switches. */
-export type SolidFlowInteractionProps = {
+export type SolidFlowInteractionProps<NodeType extends Node = Node> = {
   /**
    * With a threshold greater than zero you can control the distinction between node drag and click events.
    * If threshold equals 1, you need to drag the node 1 pixel before a drag event is fired.
@@ -341,6 +342,19 @@ export type SolidFlowInteractionProps = {
    * @default false
    */
   readonly selectionOnDrag?: boolean;
+  /**
+   * Whether starting a selection box deselects the previously selected elements.
+   * Set to `false` to keep the existing selection and add the boxed elements to it.
+   * @default true
+   */
+  readonly deselectOnSelection?: boolean;
+  /**
+   * Excludes nodes from box and lasso selection after they are found inside the
+   * selection rect; a node is kept only when the predicate returns true. Click
+   * selection is not affected.
+   * @example isNodeSelectable={(node) => node.type !== "group"}
+   */
+  readonly isNodeSelectable?: IsNodeSelectable<NodeType>;
   /**
    * When set to "partial", when the user creates a selection box by click and dragging
    * nodes that are only partially in the box are still selected.
@@ -632,7 +646,7 @@ export type SolidFlowProps<
   SolidFlowGraphProps<NodeType, EdgeType> &
   SolidFlowKeyboardProps &
   SolidFlowViewportProps<NodeType> &
-  SolidFlowInteractionProps &
+  SolidFlowInteractionProps<NodeType> &
   SolidFlowConnectionProps<NodeType, EdgeType> &
   SolidFlowRenderingProps &
   SolidFlowA11yProps &
@@ -674,6 +688,7 @@ export const FLOW_PROP_KEYS = [
   "defaultMarkerColor",
   "defaultNodes",
   "deleteKey",
+  "deselectOnSelection",
   "disableKeyboardA11y",
   "edgeTypes",
   "edges",
@@ -686,6 +701,7 @@ export const FLOW_PROP_KEYS = [
   "height",
   "id",
   "initialViewport",
+  "isNodeSelectable",
   "isValidConnection",
   "maxZoom",
   "minZoom",

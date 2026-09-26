@@ -143,7 +143,9 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   const sourceNode = source.nodeLookup.get(edge.source);
   const targetNode = source.nodeLookup.get(edge.target);
 
-  if (!sourceNode || !targetNode) {
+  // A hidden endpoint hides the edge (upstream parity, xyflow#5977): the
+  // node's element is gone, so there is nothing to draw the edge to.
+  if (!sourceNode || !targetNode || sourceNode.hidden || targetNode.hidden) {
     return null;
   }
 

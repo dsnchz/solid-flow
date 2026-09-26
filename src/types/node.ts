@@ -15,6 +15,13 @@ export type InternalNode<NodeType extends Node = Node> = InternalNodeBase<NodeTy
  * The node data structure that gets used for the nodes prop.
  * @public
  */
+/**
+ * Predicate for `isNodeSelectable`: a node the box or lasso selection found
+ * inside the rect is kept only when it returns true. Click selection is not
+ * affected.
+ */
+export type IsNodeSelectable<NodeType extends Node = Node> = (node: NodeType) => boolean;
+
 export type Node<
   NodeData extends UnknownStruct = UnknownStruct,
   NodeType extends string | undefined = string | undefined,

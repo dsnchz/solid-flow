@@ -138,3 +138,20 @@ describe("audit fixes (Tier 1)", () => {
     expect(api().getIntersectingNodes({ id: "does-not-exist" })).toEqual([]);
   });
 });
+
+// Upstream parity (xyflow#5722, React Flow 12.10.2): `screenToFlowPosition`
+// takes a `snapGrid` override in its options.
+describe("screenToFlowPosition snapGrid option", () => {
+  it("snaps to the override grid, and to the flow's grid when no override is given", async () => {
+    const { api } = renderProbed({ snapGrid: [20, 20] });
+    await tick();
+    expect(api().screenToFlowPosition({ x: 33, y: 47 })).toEqual({ x: 40, y: 40 });
+    expect(api().screenToFlowPosition({ x: 33, y: 47 }, { snapGrid: [10, 10] })).toEqual({
+      x: 30,
+      y: 50,
+    });
+    expect(
+      api().screenToFlowPosition({ x: 33, y: 47 }, { snapToGrid: false, snapGrid: [10, 10] }),
+    ).toEqual({ x: 33, y: 47 });
+  });
+});

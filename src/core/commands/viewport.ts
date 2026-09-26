@@ -153,10 +153,13 @@ export const createViewportCommands = <NodeType extends Node, EdgeType extends E
       return true;
     },
     panBy,
-    screenToFlowPosition: (position, options = { snapToGrid: true }) => {
+    screenToFlowPosition: (position, options = {}) => {
       if (!store.domNode) return position;
 
-      const _snapGrid = options.snapToGrid ? store.snapGrid : false;
+      // Upstream parity (xyflow#5722): an options `snapGrid` overrides the
+      // flow's grid for this call; `snapToGrid: false` disables snapping.
+      const { snapToGrid = true, snapGrid: overrideSnapGrid } = options;
+      const _snapGrid = snapToGrid ? (overrideSnapGrid ?? store.snapGrid) : false;
       const { x, y, zoom } = store.viewport;
       const { x: domX, y: domY } = store.domNode.getBoundingClientRect();
       const correctedPosition = {

@@ -392,3 +392,39 @@ describe("createLayoutedEdges — re-layout of the same edge", () => {
     dispose();
   });
 });
+
+/** A hidden endpoint drops the edge row (upstream parity, xyflow#5977). */
+describe("createLayoutedEdges — hidden endpoints", () => {
+  it("produces no row while either endpoint is hidden, and restores it after", () => {
+    const [nodes, setNodes] = createStore<Record<string, InternalNode>>({
+      a: internalNode("a", 0, 0),
+      b: internalNode("b", 200, 100),
+    });
+    const { source } = makeSource([{ id: "e1", source: "a", target: "b" }] as Edge[], []);
+    const tracked: LayoutedEdgesSource<Node, Edge> = {
+      ...source,
+      nodeLookup: { get: (id) => nodes[id], size: 2 },
+    };
+    let layouted!: ReturnType<typeof createLayoutedEdges<Node, Edge>>;
+    let dispose!: () => void;
+    createRoot((d) => {
+      dispose = d;
+      layouted = createLayoutedEdges(tracked);
+    });
+    flush();
+    expect(layouted.e1).toBeDefined();
+
+    setNodes((draft) => {
+      draft.b!.hidden = true;
+    });
+    flush();
+    expect(layouted.e1).toBeUndefined();
+
+    setNodes((draft) => {
+      draft.b!.hidden = false;
+    });
+    flush();
+    expect(layouted.e1).toBeDefined();
+    dispose();
+  });
+});

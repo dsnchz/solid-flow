@@ -42,6 +42,7 @@ export const getDefaultFlowStateProps = () =>
     autoPanOnConnect: true,
     autoPanOnNodeFocus: true,
     autoPanOnSelection: true,
+    deselectOnSelection: true,
     autoPanSpeed: 15,
     elevateEdgesOnSelect: true,
     nodesDraggable: true,

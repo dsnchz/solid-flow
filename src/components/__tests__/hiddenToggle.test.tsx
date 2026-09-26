@@ -100,3 +100,44 @@ describe("hidden toggle round-trip", () => {
     expect(query("e1")).toBeNull();
   });
 });
+
+// Upstream parity (xyflow#5977, Svelte Flow 1.6.6): hiding a node hides the
+// edges attached to it. Here it follows from the measurement contract: a
+// hidden node's handle bounds are cleared, so its edge rows produce no
+// geometry and leave the DOM; unhiding re-measures and restores them.
+describe("hidden node hides its edges", () => {
+  it("hide → unhide on a node removes and restores its edges' DOM elements", async () => {
+    let api!: ReturnType<typeof useSolidFlow>;
+    const Probe = () => {
+      api = useSolidFlow();
+      return null;
+    };
+    const { container } = render(() => (
+      <SolidFlow
+        defaultNodes={[makeNode("a", 0), makeNode("b", 200), makeNode("c", 400)]}
+        defaultEdges={[
+          { id: "ab", source: "a", target: "b" },
+          { id: "bc", source: "b", target: "c" },
+        ]}
+        width={800}
+        height={600}
+      >
+        <Probe />
+      </SolidFlow>
+    ));
+    await tick();
+    const edge = (id: string) => container.querySelector(`.solid-flow__edge[data-id="${id}"]`);
+    expect(edge("ab")).not.toBeNull();
+    expect(edge("bc")).not.toBeNull();
+
+    api.updateNode("b", { hidden: true });
+    await tick();
+    expect(edge("ab")).toBeNull();
+    expect(edge("bc")).toBeNull();
+
+    api.updateNode("b", { hidden: false });
+    await tick();
+    expect(edge("ab")).not.toBeNull();
+    expect(edge("bc")).not.toBeNull();
+  });
+});

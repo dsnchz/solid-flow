@@ -117,10 +117,14 @@ export type FlowCommands<NodeType extends Node = Node, EdgeType extends Edge = E
   ) => Promise<boolean>;
   /** Pans the viewport by the given delta. */
   readonly panBy: (delta: XYPosition) => Promise<boolean>;
-  /** Converts a screen/client position to a flow position. */
+  /**
+   * Converts a screen/client position to a flow position. Snaps to the flow's
+   * `snapGrid` by default; `snapGrid` in the options overrides the grid for
+   * this call, and `snapToGrid: false` disables snapping.
+   */
   readonly screenToFlowPosition: (
     clientPosition: XYPosition,
-    options?: { snapToGrid: boolean },
+    options?: { snapToGrid?: boolean; snapGrid?: SnapGrid },
   ) => XYPosition;
   /** Converts a flow position to a screen/client position. */
   readonly flowToScreenPosition: (flowPosition: XYPosition) => XYPosition;

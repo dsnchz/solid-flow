@@ -1,0 +1,5 @@
+---
+"@dschz/solid-flow": patch
+---
+
+Upstream parity, first sweep (tracking issue #23). `@xyflow/system` 0.0.83: NodeResizer always fires `onResizeEnd` after `onResizeStart`, and resize values are correct when `shouldResize` returns false. `screenToFlowPosition` accepts a `snapGrid` override in its options next to `snapToGrid`. Hiding a node now hides its edges, as in React Flow and Svelte Flow. Two new flow props: `deselectOnSelection` (default `true`; set to `false` to keep the existing selection and add the boxed elements to it) and `isNodeSelectable`, a predicate that excludes nodes from box and lasso selection after they are found inside the rect, without affecting click selection.

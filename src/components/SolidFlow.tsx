@@ -230,6 +230,8 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
             onSelectionEnd={_props.onSelectionEnd}
             panOnDrag={_props.panOnDrag}
             selectionOnDrag={_props.selectionOnDrag}
+            deselectOnSelection={_props.deselectOnSelection}
+            isNodeSelectable={_props.isNodeSelectable}
             paneClickDistance={_props.paneClickDistance}
             autoPanOnSelection={_props.autoPanOnSelection}
           >

@@ -12,7 +12,7 @@ import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 import { GestureSpatialLookup } from "@/core/spatial/gestureLookup";
-import type { Edge, InternalNode, Node, PaneEvents } from "@/types";
+import type { Edge, InternalNode, IsNodeSelectable, Node, PaneEvents } from "@/types";
 import { isEdgeSelectable } from "@/utils";
 
 const isSetEqual = (a: Set<string>, b: Set<string>) => {
@@ -27,9 +27,13 @@ const isSetEqual = (a: Set<string>, b: Set<string>) => {
   return true;
 };
 
-export type PaneProps = PaneEvents & {
+export type PaneProps<NodeType extends Node = Node> = PaneEvents & {
   readonly panOnDrag?: boolean | number[];
   readonly selectionOnDrag?: boolean;
+  /** Whether starting a selection box deselects the existing selection (default true). */
+  readonly deselectOnSelection?: boolean;
+  /** Excludes nodes found inside the selection rect (upstream parity, xyflow#6004). */
+  readonly isNodeSelectable?: IsNodeSelectable<NodeType>;
   readonly paneClickDistance?: number;
   readonly autoPanOnSelection?: boolean;
   readonly onSelectionStart?: (event: PointerEvent) => void;
@@ -38,10 +42,24 @@ export type PaneProps = PaneEvents & {
 
 /** Internal interaction surface handling pane clicks, the selection box, and pan gestures. */
 export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
-  props: ParentProps<PaneProps>,
+  props: ParentProps<PaneProps<NodeType>>,
 ): JSX.Element => {
-  const { store, nodeLookup, edgeLookup, connections, actions, nodeGeometry } =
-    useInternalSolidFlow<NodeType, EdgeType>();
+  const {
+    store,
+    nodeLookup,
+    edgeLookup,
+    connections,
+    actions,
+    nodeGeometry,
+    selectedNodeIds: selectedNodeIdsRecord,
+    selectedEdgeIds: selectedEdgeIdsRecord,
+  } = useInternalSolidFlow<NodeType, EdgeType>();
+  // The selection present when a box gesture starts, kept while
+  // `deselectOnSelection` is false (upstream parity, xyflow#5960).
+  let selectedBeforeBox: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } = {
+    nodes: new Set(),
+    edges: new Set(),
+  };
 
   const [containerRef, setContainerRef] = createSignal<HTMLDivElement>();
   let container: HTMLDivElement | undefined;
@@ -186,17 +204,22 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
         height: nextUserSelectRect.height / zoom,
       });
     }
-    selectedNodeIds = new Set(
-      getNodesInside(
-        selectionSpatialLookup,
-        nextUserSelectRect,
-        store.transform,
-        store.selectionMode === "partial",
-        true,
-      ).map((n) => n.id),
+    const inside = getNodesInside(
+      selectionSpatialLookup,
+      nextUserSelectRect,
+      store.transform,
+      store.selectionMode === "partial",
+      true,
     );
+    // `isNodeSelectable` filters the candidates the rect found, never the
+    // whole graph (upstream parity, xyflow#6004).
+    const isNodeSelectable = props.isNodeSelectable;
+    const boxed = isNodeSelectable
+      ? inside.filter((n) => isNodeSelectable(n.internals.userNode))
+      : inside;
+    selectedNodeIds = new Set([...selectedBeforeBox.nodes, ...boxed.map((n) => n.id)]);
 
-    selectedEdgeIds = new Set();
+    selectedEdgeIds = new Set(selectedBeforeBox.edges);
 
     // We look for all edges connected to the selected nodes
     for (const nodeId of selectedNodeIds) {
@@ -280,7 +303,15 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
         return;
       }
 
-      actions.unselectNodesAndEdges();
+      if (props.deselectOnSelection ?? true) {
+        selectedBeforeBox = { nodes: new Set(), edges: new Set() };
+        actions.unselectNodesAndEdges();
+      } else {
+        selectedBeforeBox = {
+          nodes: new Set(Object.keys(selectedNodeIdsRecord)),
+          edges: new Set(Object.keys(selectedEdgeIdsRecord)),
+        };
+      }
       props.onSelectionStart?.(event);
     }
 
