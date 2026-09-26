@@ -33,5 +33,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "exclude": ["node_modules", "coverage", "dist", "tmp"]
+  "exclude": ["node_modules", "coverage", "dist", "tmp", ".agent/bench/apps"]
 }
