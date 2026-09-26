@@ -97,28 +97,29 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   // reads — key structure + leaves — are tracked there; leaves are immutable
   // per key, so this re-runs exactly when the connection set changes). The
   // user callbacks fire from the (untracked) apply.
-  createEffect(
-    () => {
-      if (!_props.onConnect && !_props.onDisconnect) return null;
+  // Created only for handles that pass a callback: the effect node itself
+  // costs ~5 µs per handle at mount, and the stress grid has 20,000 handles
+  // with neither callback (mount profile round 30). The check is made once
+  // at mount — pass the callbacks up front, as with any other listener.
+  if (_props.onConnect || _props.onDisconnect)
+    createEffect(
+      () => {
+        const rec = connections[connectionKey(nodeId(), _props.type, _props.id)];
+        const map = new Map<string, HandleConnection>();
+        for (const key of Object.keys(rec ?? {})) map.set(key, { ...rec![key]! });
+        return { connections: map };
+      },
+      (current) => {
+        const { connections: next } = current;
 
-      const rec = connections[connectionKey(nodeId(), _props.type, _props.id)];
-      const map = new Map<string, HandleConnection>();
-      for (const key of Object.keys(rec ?? {})) map.set(key, { ...rec![key]! });
-      return { connections: map };
-    },
-    (current) => {
-      if (!current) return;
+        if (prevConnections && !areConnectionMapsEqual(next, prevConnections)) {
+          handleConnectionChange(prevConnections, next, props.onDisconnect);
+          handleConnectionChange(next, prevConnections, props.onConnect);
+        }
 
-      const { connections: next } = current;
-
-      if (prevConnections && !areConnectionMapsEqual(next, prevConnections)) {
-        handleConnectionChange(prevConnections, next, props.onDisconnect);
-        handleConnectionChange(next, prevConnections, props.onConnect);
-      }
-
-      prevConnections = next;
-    },
-  );
+        prevConnections = next;
+      },
+    );
 
   const onConnectExtended = (connection: Connection) => {
     const handleConnection = {

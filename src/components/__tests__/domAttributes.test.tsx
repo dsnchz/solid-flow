@@ -81,4 +81,40 @@ describe("domAttributes", () => {
     flush();
     expect(edgeEl().getAttribute("data-kind")).toBe("wire");
   });
+
+  // The spread is installed on demand (mount profile round 30: an always-on
+  // spread cost ~22 µs per row at 10k for the common no-domAttributes case),
+  // so a row that starts WITHOUT domAttributes must still pick them up later,
+  // and clearing them must remove the attributes again.
+  it("a node that gains domAttributes after mount applies them, and clearing removes them", () => {
+    const { api, nodeEl } = renderProbed();
+    flush();
+    const b = () => nodeEl().parentElement!.querySelector<HTMLElement>('[data-id="b"]')!;
+    expect(b().getAttribute("data-kind")).toBeNull();
+
+    api().commands.updateNode("b", {
+      domAttributes: { "data-kind": "late" } as Node["domAttributes"],
+    });
+    flush();
+    expect(b().getAttribute("data-kind")).toBe("late");
+
+    api().commands.updateNode("b", { domAttributes: undefined });
+    flush();
+    expect(b().getAttribute("data-kind")).toBeNull();
+  });
+
+  it("an edge that gains domAttributes after mount applies them", async () => {
+    const { api, edgeEl } = renderProbed();
+    flush();
+    await new Promise((r) => setTimeout(r, 20));
+    api().commands.updateEdge("e1", { domAttributes: undefined });
+    flush();
+    expect(edgeEl().getAttribute("data-kind")).toBeNull();
+
+    api().commands.updateEdge("e1", {
+      domAttributes: { "data-kind": "late" } as Edge["domAttributes"],
+    });
+    flush();
+    expect(edgeEl().getAttribute("data-kind")).toBe("late");
+  });
 });

@@ -1,4 +1,5 @@
 import type { JSX } from "@solidjs/web";
+import { isServer } from "@solidjs/web";
 import { type ColorModeClass, infiniteExtent } from "@xyflow/system";
 import {
   createEffect,
@@ -8,6 +9,7 @@ import {
   omit,
   onSettled,
   type ParentProps,
+  sharedConfig,
   untrack,
   useContext,
 } from "solid-js";
@@ -67,10 +69,25 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   const solidFlow = useContext(TypedSolidFlowContext) ?? createSolidFlow(_props);
   const { store, actions } = solidFlow;
 
+  // Row elements mount in the settle flush, not inside the initial render():
+  // the engine builds the same 10k-row tree ~20-30% cheaper there, and the
+  // culling viewport and pan-zoom exist before the first row does (mount
+  // profile round 30: 3.6 s -> 2.8 s at 10k). The STORE is seeded
+  // synchronously as before — children read the graph during their own
+  // setup. The server has no settle and hydration must claim the
+  // server-rendered rows: both render the rows immediately.
+  // `isHydrationInProgress` is public runtime state the SharedConfig type
+  // does not declare yet — read through a structural view, not a cast.
+  const hydration: { context?: unknown; isHydrationInProgress?: () => boolean } = sharedConfig;
+  const [rowsReady, setRowsReady] = createSignal(isServer || !!hydration.isHydrationInProgress?.());
+
   onSettled(() => {
     actions.applyInitialFitView(_props.fitView);
     actions.setConfig(_props);
     actions.setDomNode(domNode);
+    // Last: the culling viewport is live (domNode set) when the rows' culled
+    // memos first compute, so nothing re-runs when it appears.
+    setRowsReady(true);
 
     return () => {
       actions.reset();
@@ -219,6 +236,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
             <Viewport>
               <div class="solid-flow__container solid-flow__viewport-back" />
               <EdgeRenderer<NodeType, EdgeType>
+                rowsReady={rowsReady}
                 onEdgeClick={_props.onEdgeClick}
                 onEdgeContextMenu={_props.onEdgeContextMenu}
                 onEdgePointerEnter={_props.onEdgePointerEnter}
@@ -234,6 +252,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
                 style={_props.connectionLineStyle}
               />
               <NodeRenderer
+                rowsReady={rowsReady}
                 nodeClickDistance={_props.nodeClickDistance}
                 onNodeClick={_props.onNodeClick}
                 onNodeDoubleClick={_props.onNodeDoubleClick}

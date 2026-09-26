@@ -10,8 +10,17 @@ import type { Node, NodeEvents } from "@/types";
 import { createFocusedIdTracker } from "./focusedIdTracker";
 
 export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
+  /**
+   * Row elements mount only once this is true (SolidFlow flips it in
+   * onSettled): the engine builds the row tree ~20-30% cheaper in the settle
+   * flush than inside the initial render(), and the culling viewport and
+   * pan-zoom exist before the first row does (mount profile round 30).
+   */
+  rowsReady?: () => boolean;
   readonly nodeClickDistance: number;
 };
+
+const NO_ROWS: readonly string[] = [];
 
 /** Internal renderer iterating the node id list into `NodeWrapper`s; owns the shared measurement `ResizeObserver`. */
 export const NodeRenderer = <NodeType extends Node = Node>(
@@ -54,7 +63,7 @@ export const NodeRenderer = <NodeType extends Node = Node>(
       onFocusIn={onFocusIn}
       onFocusOut={onFocusOut}
     >
-      <For each={store.visibleNodeIds}>
+      <For each={(props.rowsReady?.() ?? true) ? store.visibleNodeIds : NO_ROWS}>
         {(nodeId) => {
           // Opt-in unmount culling (onlyRenderVisibleElements): a per-row
           // boolean with an equality cut, so a geometry change recomputes
@@ -70,8 +79,14 @@ export const NodeRenderer = <NodeType extends Node = Node>(
           // Membership now comes from the user-facing store; the projection
           // row materializes in the same flush, but guard the window (and
           // any future null-row semantics) rather than crash NodeWrapper.
+          // `hidden` is decided here too — one Show per row instead of a
+          // second one inside the wrapper (mount profile round 30).
+          const present = () => {
+            const node = nodeLookup.get(nodeId);
+            return node !== undefined && !node.hidden;
+          };
           return (
-            <Show when={!unmounted() && nodeLookup.get(nodeId) !== undefined}>
+            <Show when={!unmounted() && present()}>
               <NodeWrapper
                 nodeId={nodeId}
                 resizeObserver={resizeObserver}

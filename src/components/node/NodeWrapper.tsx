@@ -1,6 +1,6 @@
 import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
-import { dynamic, spread } from "@solidjs/web";
+import { dynamic } from "@solidjs/web";
 import {
   elementSelectionKeys,
   errorMessages,
@@ -15,7 +15,6 @@ import {
   getOwner,
   onCleanup,
   runWithOwner,
-  Show,
 } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
@@ -25,7 +24,7 @@ import { NodeConnectableContext } from "@/contexts/nodeConnectable";
 import { NodeIdContext } from "@/contexts/nodeId";
 import { nodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
-import { cx, emitFlowError } from "@/utils";
+import { cx, emitFlowError, spreadOnDemand } from "@/utils";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
@@ -110,15 +109,6 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       "pointer-events": culled() ? "none" : undefined,
     }) as const;
 
-  createEffect(
-    () => ({ valid: nodeTypeValid(), nodeType: nodeType() }),
-    ({ valid, nodeType }) => {
-      if (!valid) {
-        emitFlowError(store.onError, "003", errorMessages["error003"](nodeType));
-      }
-    },
-  );
-
   const onSelectNodeHandler = (event: MouseEvent) => {
     if (selectable() && (!store.selectNodesOnDrag || !draggable() || store.nodeDragThreshold > 0)) {
       // this handler gets called by XYDrag on drag start when selectNodesOnDrag=true
@@ -201,14 +191,21 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     );
 
     // Request a (re)measure when the node's type or handle positions change.
+    // The unknown-type report (error003, upstream parity) rides the same
+    // effect: it is keyed on the type too, and one effect per node instead
+    // of two is measurable at 10k (mount profile round 30).
     createEffect(
       () => ({
         id: node().id,
         nodeType: nodeType(),
+        nodeTypeValid: nodeTypeValid(),
         sourcePosition: node().sourcePosition,
         targetPosition: node().targetPosition,
       }),
       (current, prev) => {
+        if (!current.nodeTypeValid && (!prev || prev.nodeType !== current.nodeType)) {
+          emitFlowError(store.onError, "003", errorMessages["error003"](current.nodeType));
+        }
         if (
           prev &&
           prev.sourcePosition === current.sourcePosition &&
@@ -243,8 +240,9 @@ export const NodeWrapper = <NodeType extends Node = Node>(
 
     // User `domAttributes` via a direct spread, NOT a JSX spread: the compiler
     // folds a JSX spread into `merge({...bindings}, () => attrs)` — a
-    // memo-backed source every attribute binding reads.
-    spread(el, () => node()?.domAttributes ?? {}, true);
+    // memo-backed source every attribute binding reads. Installed on demand:
+    // rows without domAttributes skip the spread machinery entirely.
+    spreadOnDemand(el, () => node()?.domAttributes);
 
     createDraggable(
       () => el,
@@ -288,70 +286,68 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     );
   };
 
+  // `hidden` is decided by NodeRenderer's membership Show (one Show per row,
+  // not two): this wrapper only ever runs for a present, non-hidden row.
   return (
-    <Show when={!node().hidden}>
-      <div
-        ref={(el) => {
-          setNodeRef(el);
-          // Ref callbacks run outside the component owner: keep the wiring
-          // owned (disposal, no NO_OWNER diagnostics).
-          runWithOwner(owner, () => mountElement(el));
-        }}
-        data-id={node().id}
-        class={cx(
-          "solid-flow__node",
-          `solid-flow__node-${nodeType()}`,
-          {
-            connectable: !!connectable(),
-            draggable: !!draggable(),
-            dragging: !!node().dragging,
-            nopan: !!draggable(),
-            parent: isParentNode(),
-            selectable: !!selectable(),
-            selected: !!node().selected,
-          },
-          node().class,
-        )}
-        style={style()}
-        onClick={onSelectNodeHandler}
-        onPointerEnter={(event) => props.onNodePointerEnter?.({ node: userNode(), event })}
-        onPointerLeave={(event) => props.onNodePointerLeave?.({ node: userNode(), event })}
-        onPointerMove={(event) => props.onNodePointerMove?.({ node: userNode(), event })}
-        onContextMenu={(event) => props.onNodeContextMenu?.({ node: userNode(), event })}
-        onKeyDown={(e) => focusable() && onKeyDown(e)}
-        onFocus={() => focusable() && onFocus()}
-        tabindex={focusable() ? 0 : undefined}
-        role={node().ariaRole ?? (focusable() ? "group" : undefined)}
-        aria-roledescription="node"
-        aria-describedby={
-          store.disableKeyboardA11y ? undefined : `${ARIA_NODE_DESC_KEY}-${store.id}`
-        }
-      >
-        <NodeIdContext value={nodeId}>
-          <NodeConnectableContext value={connectable}>
-            <NodeComponent
-              data={node().data}
-              id={node().id}
-              selected={Boolean(node().selected)}
-              selectable={selectable()}
-              deletable={deletable()}
-              sourcePosition={node().sourcePosition}
-              targetPosition={node().targetPosition}
-              zIndex={node().internals.z}
-              dragging={!!node().dragging}
-              draggable={draggable()}
-              dragHandle={node().dragHandle}
-              parentId={node().parentId}
-              type={nodeType()}
-              isConnectable={connectable()}
-              positionAbsoluteX={node().internals.positionAbsolute.x}
-              positionAbsoluteY={node().internals.positionAbsolute.y}
-              width={node().width}
-              height={node().height}
-            />
-          </NodeConnectableContext>
-        </NodeIdContext>
-      </div>
-    </Show>
+    <div
+      ref={(el) => {
+        setNodeRef(el);
+        // Ref callbacks run outside the component owner: keep the wiring
+        // owned (disposal, no NO_OWNER diagnostics).
+        runWithOwner(owner, () => mountElement(el));
+      }}
+      data-id={node().id}
+      class={cx(
+        "solid-flow__node",
+        `solid-flow__node-${nodeType()}`,
+        {
+          connectable: !!connectable(),
+          draggable: !!draggable(),
+          dragging: !!node().dragging,
+          nopan: !!draggable(),
+          parent: isParentNode(),
+          selectable: !!selectable(),
+          selected: !!node().selected,
+        },
+        node().class,
+      )}
+      style={style()}
+      onClick={onSelectNodeHandler}
+      onPointerEnter={(event) => props.onNodePointerEnter?.({ node: userNode(), event })}
+      onPointerLeave={(event) => props.onNodePointerLeave?.({ node: userNode(), event })}
+      onPointerMove={(event) => props.onNodePointerMove?.({ node: userNode(), event })}
+      onContextMenu={(event) => props.onNodeContextMenu?.({ node: userNode(), event })}
+      onKeyDown={(e) => focusable() && onKeyDown(e)}
+      onFocus={() => focusable() && onFocus()}
+      tabindex={focusable() ? 0 : undefined}
+      role={node().ariaRole ?? (focusable() ? "group" : undefined)}
+      aria-roledescription="node"
+      aria-describedby={store.disableKeyboardA11y ? undefined : `${ARIA_NODE_DESC_KEY}-${store.id}`}
+    >
+      <NodeIdContext value={nodeId}>
+        <NodeConnectableContext value={connectable}>
+          <NodeComponent
+            data={node().data}
+            id={node().id}
+            selected={Boolean(node().selected)}
+            selectable={selectable()}
+            deletable={deletable()}
+            sourcePosition={node().sourcePosition}
+            targetPosition={node().targetPosition}
+            zIndex={node().internals.z}
+            dragging={!!node().dragging}
+            draggable={draggable()}
+            dragHandle={node().dragHandle}
+            parentId={node().parentId}
+            type={nodeType()}
+            isConnectable={connectable()}
+            positionAbsoluteX={node().internals.positionAbsolute.x}
+            positionAbsoluteY={node().internals.positionAbsolute.y}
+            width={node().width}
+            height={node().height}
+          />
+        </NodeConnectableContext>
+      </NodeIdContext>
+    </div>
   );
 };

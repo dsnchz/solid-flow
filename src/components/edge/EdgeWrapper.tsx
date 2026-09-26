@@ -1,15 +1,15 @@
 import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
-import { dynamic, spread } from "@solidjs/web";
+import { dynamic } from "@solidjs/web";
 import { elementSelectionKeys, errorMessages, getMarkerId } from "@xyflow/system";
-import { createEffect, createMemo, getOwner, runWithOwner, Show } from "solid-js";
+import { createEffect, createMemo, getOwner, runWithOwner } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { edgeCulled } from "@/core";
 import type { Edge, EdgeEvents, Node } from "@/types";
-import { cx, emitFlowError, isEdgeSelectable } from "@/utils";
+import { cx, emitFlowError, isEdgeSelectable, spreadOnDemand } from "@/utils";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
   readonly edgeId: string;
@@ -82,8 +82,8 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const onDblClick = (event: MouseEvent) => props.onEdgeDoubleClick?.({ edge: edge(), event });
   const mountElement = (el: SVGGElement) => {
     createEventListener(el, "dblclick", onDblClick);
-    // Direct spread for user domAttributes — see NodeWrapper.
-    spread(el, () => edge()?.domAttributes ?? {}, true);
+    // Direct spread for user domAttributes, installed on demand — see NodeWrapper.
+    spreadOnDemand(el, () => edge()?.domAttributes);
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -109,72 +109,70 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
 
   return (
     <EdgeIdContext value={edgeId}>
-      <Show when={!edge().hidden}>
-        <svg
-          class="solid-flow__edge-wrapper"
-          style={{
-            "z-index": edge().zIndex,
-            visibility: culled() ? "hidden" : undefined,
-            "pointer-events": culled() ? "none" : undefined,
+      <svg
+        class="solid-flow__edge-wrapper"
+        style={{
+          "z-index": edge().zIndex,
+          visibility: culled() ? "hidden" : undefined,
+          "pointer-events": culled() ? "none" : undefined,
+        }}
+      >
+        <g
+          ref={(el) => {
+            edgeRef = el;
+            // Ref callbacks run outside the component owner: keep the wiring owned.
+            runWithOwner(owner, () => mountElement(el));
           }}
+          data-id={edge().id}
+          tabindex={focusable() ? 0 : undefined}
+          role={edge().ariaRole ?? (focusable() ? "group" : "img")}
+          aria-label={ariaLabel()}
+          aria-roledescription="edge"
+          aria-describedby={focusable() ? `${ARIA_EDGE_DESC_KEY}-${store.id}` : undefined}
+          class={cx(
+            "solid-flow__edge",
+            `solid-flow__edge-${edgeType()}`,
+            {
+              animated: !!edge().animated,
+              selected: !!edge().selected,
+              selectable: !!selectable(),
+            },
+            edge().class,
+          )}
+          onClick={onClick}
+          onKeyDown={(e) => focusable() && onKeyDown(e)}
+          onContextMenu={onContextMenu}
+          onPointerEnter={onPointerEnter}
+          onPointerLeave={onPointerLeave}
+          onPointerMove={onPointerMove}
         >
-          <g
-            ref={(el) => {
-              edgeRef = el;
-              // Ref callbacks run outside the component owner: keep the wiring owned.
-              runWithOwner(owner, () => mountElement(el));
-            }}
-            data-id={edge().id}
-            tabindex={focusable() ? 0 : undefined}
-            role={edge().ariaRole ?? (focusable() ? "group" : "img")}
-            aria-label={ariaLabel()}
-            aria-roledescription="edge"
-            aria-describedby={focusable() ? `${ARIA_EDGE_DESC_KEY}-${store.id}` : undefined}
-            class={cx(
-              "solid-flow__edge",
-              `solid-flow__edge-${edgeType()}`,
-              {
-                animated: !!edge().animated,
-                selected: !!edge().selected,
-                selectable: !!selectable(),
-              },
-              edge().class,
-            )}
-            onClick={onClick}
-            onKeyDown={(e) => focusable() && onKeyDown(e)}
-            onContextMenu={onContextMenu}
-            onPointerEnter={onPointerEnter}
-            onPointerLeave={onPointerLeave}
-            onPointerMove={onPointerMove}
-          >
-            <EdgeComponent
-              id={edge().id}
-              source={edge().source}
-              target={edge().target}
-              sourceX={edge().sourceX}
-              sourceY={edge().sourceY}
-              targetX={edge().targetX}
-              targetY={edge().targetY}
-              sourcePosition={edge().sourcePosition}
-              targetPosition={edge().targetPosition}
-              animated={edge().animated}
-              selected={edge().selected}
-              label={edge().label}
-              labelStyle={edge().labelStyle}
-              data={edge().data}
-              style={edge().style}
-              interactionWidth={edge().interactionWidth}
-              selectable={selectable()}
-              deletable={edge().deletable ?? true}
-              type={edgeType()}
-              sourceHandleId={edge().sourceHandle}
-              targetHandleId={edge().targetHandle}
-              markerStart={markerStartUrl()}
-              markerEnd={markerEndUrl()}
-            />
-          </g>
-        </svg>
-      </Show>
+          <EdgeComponent
+            id={edge().id}
+            source={edge().source}
+            target={edge().target}
+            sourceX={edge().sourceX}
+            sourceY={edge().sourceY}
+            targetX={edge().targetX}
+            targetY={edge().targetY}
+            sourcePosition={edge().sourcePosition}
+            targetPosition={edge().targetPosition}
+            animated={edge().animated}
+            selected={edge().selected}
+            label={edge().label}
+            labelStyle={edge().labelStyle}
+            data={edge().data}
+            style={edge().style}
+            interactionWidth={edge().interactionWidth}
+            selectable={selectable()}
+            deletable={edge().deletable ?? true}
+            type={edgeType()}
+            sourceHandleId={edge().sourceHandle}
+            targetHandleId={edge().targetHandle}
+            markerStart={markerStartUrl()}
+            markerEnd={markerEndUrl()}
+          />
+        </g>
+      </svg>
     </EdgeIdContext>
   );
 };

@@ -1,3 +1,4 @@
+import { spread } from "@solidjs/web";
 import {
   type Connection,
   type EdgeBase,
@@ -5,6 +6,7 @@ import {
   isNodeBase,
   type XYPosition,
 } from "@xyflow/system";
+import { createEffect, getOwner, runWithOwner } from "solid-js";
 
 import type { Edge, Node } from "./types";
 
@@ -132,4 +134,29 @@ export const emitFlowError = (
 ): void => {
   if (onError) onError(id, message);
   else console.warn(`[solid-flow] ${id}: ${message}`);
+};
+
+/**
+ * Installs a `spread` of `attrs()` on `el` the first time it is defined
+ * (user `domAttributes` on a node/edge wrapper). Rows without domAttributes —
+ * the common case — pay one boolean effect instead of the spread machinery
+ * (collectProps/assign, ~22 µs per row at 10k: mount profile round 30). Once
+ * installed the spread stays reactive (clearing removes the attributes), and
+ * its effects are owned by the calling component (disposed with it).
+ */
+export const spreadOnDemand = (
+  el: Element,
+  attrs: () => Record<string, unknown> | undefined,
+): void => {
+  const owner = getOwner();
+  let installed = false;
+  createEffect(
+    () => attrs() !== undefined,
+    (present) => {
+      if (!present || installed) return;
+      installed = true;
+      runWithOwner(owner, () => spread(el, () => attrs() ?? {}, true));
+    },
+    { name: "domAttributes" },
+  );
 };

@@ -60,4 +60,43 @@ describe("hidden toggle round-trip", () => {
     await tick();
     expect(query("a")).toBeNull();
   });
+
+  it("hide → unhide → hide removes and restores the edge's DOM element", async () => {
+    let api!: ReturnType<typeof useSolidFlow>;
+    const Probe = () => {
+      api = useSolidFlow();
+      return null;
+    };
+    const { container } = render(() => (
+      <SolidFlow
+        defaultNodes={[makeNode("a", 0), makeNode("b", 200)]}
+        defaultEdges={[
+          { id: "e1", source: "a", target: "b" },
+          { id: "eh", source: "b", target: "a", hidden: true },
+        ]}
+        width={800}
+        height={600}
+      >
+        <Probe />
+      </SolidFlow>
+    ));
+    await tick();
+
+    const query = (id: string) => container.querySelector(`.solid-flow__edge[data-id="${id}"]`);
+
+    expect(query("e1")).not.toBeNull();
+    expect(query("eh")).toBeNull();
+
+    api.updateEdge("eh", (edge) => ({ hidden: !edge.hidden }));
+    await tick();
+    expect(query("eh")).not.toBeNull();
+
+    api.updateEdge("eh", (edge) => ({ hidden: !edge.hidden }));
+    await tick();
+    expect(query("eh")).toBeNull();
+
+    api.updateEdge("e1", (edge) => ({ hidden: !edge.hidden }));
+    await tick();
+    expect(query("e1")).toBeNull();
+  });
 });

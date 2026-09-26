@@ -9,7 +9,12 @@ import type { Edge, EdgeEvents, Node } from "@/types";
 
 import { createFocusedIdTracker } from "./focusedIdTracker";
 
-type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType>;
+type EdgeRendererProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
+  /** See NodeRenderer: edge elements mount once the flow has settled. */
+  rowsReady?: () => boolean;
+};
+
+const NO_ROWS: readonly string[] = [];
 
 /** Internal renderer iterating the edge id list into `EdgeWrapper`s. */
 export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
@@ -27,7 +32,7 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
     <div class="solid-flow__edges" onFocusIn={onFocusIn} onFocusOut={onFocusOut}>
       <MarkerDefinition />
 
-      <For each={store.visibleEdgeIds}>
+      <For each={(props.rowsReady?.() ?? true) ? store.visibleEdgeIds : NO_ROWS}>
         {(edgeId) => {
           // Opt-in unmount culling — same per-row equality-cut shape as
           // NodeRenderer (see the comment there and bench round 6).
@@ -39,8 +44,13 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
 
           // Membership comes from the user-facing edges store; an edge whose
           // endpoints are not layouted yet has a null row — do not mount it.
+          // `hidden` is decided here too — one Show per row (see NodeRenderer).
+          const present = () => {
+            const edge = actions.getLayoutedEdge(edgeId);
+            return edge != null && !edge.hidden;
+          };
           return (
-            <Show when={!unmounted() && actions.getLayoutedEdge(edgeId) != null}>
+            <Show when={!unmounted() && present()}>
               <EdgeWrapper<NodeType, EdgeType>
                 edgeId={edgeId}
                 onEdgeClick={props.onEdgeClick}
