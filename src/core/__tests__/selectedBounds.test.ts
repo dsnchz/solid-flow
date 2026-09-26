@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { InternalNode, Node } from "@/types";
 
-import { getSelectedNodesBounds } from "../projections/selectedBounds";
+import { getSelectedNodesBounds, type NodeRect } from "../projections/selectedBounds";
 
 const internal = (id: string, x: number, y: number, w = 100, h = 40, selected = false) =>
   ({
@@ -16,13 +16,22 @@ const internal = (id: string, x: number, y: number, w = 100, h = 40, selected = 
     internals: { positionAbsolute: { x, y }, z: 0, userNode: { id } as Node },
   }) as unknown as InternalNode;
 
+/** The rect the row derive reports for a node: absolute position + dimensions. */
+const rectOf = (node: InternalNode): NodeRect => ({
+  x: node.internals.positionAbsolute.x,
+  y: node.internals.positionAbsolute.y,
+  width: node.measured.width ?? 0,
+  height: node.measured.height ?? 0,
+});
+
 /**
- * A `Map` that refuses to be enumerated: the bounds derivation must resolve
- * ONLY the selected ids through `get`, never walk the lookup (the previous
- * tracked full scan subscribed every node's `selected` leaf — a 20k-dependency
- * memo torn down and rebuilt on every selection-drag frame @10k).
+ * A geometry map that refuses to be enumerated: the bounds derivation must
+ * resolve ONLY the selected ids through `get`, never walk the map (the
+ * original tracked full scan subscribed every node's `selected` leaf — a
+ * 20k-dependency memo torn down and rebuilt on every selection-drag frame
+ * @10k; the later proxy-lookup form read ~40 ms of rows on a select-all).
  */
-class KeyedOnlyLookup extends Map<string, InternalNode> {
+class KeyedOnlyGeometry extends Map<string, NodeRect> {
   gets = 0;
   override get(key: string) {
     this.gets++;
@@ -45,7 +54,8 @@ class KeyedOnlyLookup extends Map<string, InternalNode> {
   }
 }
 
-const lookupOf = (nodes: InternalNode[]) => new KeyedOnlyLookup(nodes.map((n) => [n.id, n]));
+const geometryOf = (nodes: InternalNode[]) =>
+  new KeyedOnlyGeometry(nodes.map((n) => [n.id, rectOf(n)]));
 const selectedIds = (nodes: InternalNode[]) =>
   Object.fromEntries(nodes.filter((n) => n.selected).map((n) => [n.id, { id: n.id }]));
 
@@ -54,11 +64,11 @@ describe("getSelectedNodesBounds", () => {
     const nodes = Array.from({ length: 1000 }, (_, i) =>
       internal(`n${i}`, (i % 40) * 150, Math.floor(i / 40) * 100, 100, 40, i === 7 || i === 519),
     );
-    const lookup = lookupOf(nodes);
+    const geometry = geometryOf(nodes);
 
-    const bounds = getSelectedNodesBounds(selectedIds(nodes), lookup);
+    const bounds = getSelectedNodesBounds(selectedIds(nodes), geometry);
 
-    expect(lookup.gets).toBe(2);
+    expect(geometry.gets).toBe(2);
     expect(bounds).toEqual(
       getInternalNodesBounds(new Map(nodes.map((n) => [n.id, n])), {
         filter: (n) => !!n.selected,
@@ -76,12 +86,12 @@ describe("getSelectedNodesBounds", () => {
     const expected: Rect = getInternalNodesBounds(new Map(nodes.map((n) => [n.id, n])), {
       filter: (n) => !!n.selected,
     });
-    expect(getSelectedNodesBounds(selectedIds(nodes), lookupOf(nodes))).toEqual(expected);
+    expect(getSelectedNodesBounds(selectedIds(nodes), geometryOf(nodes))).toEqual(expected);
   });
 
   it("returns the system helper's zero rect when nothing is selected", () => {
     const nodes = [internal("a", 0, 0), internal("b", 100, 100)];
-    expect(getSelectedNodesBounds({}, lookupOf(nodes))).toEqual({
+    expect(getSelectedNodesBounds({}, geometryOf(nodes))).toEqual({
       x: 0,
       y: 0,
       width: 0,
@@ -89,10 +99,10 @@ describe("getSelectedNodesBounds", () => {
     });
   });
 
-  it("skips ids the lookup cannot resolve (row removed before the presence record caught up)", () => {
+  it("skips ids the map cannot resolve (row removed before the presence record caught up)", () => {
     const nodes = [internal("a", 10, 10, 30, 30, true)];
     expect(
-      getSelectedNodesBounds({ a: { id: "a" }, gone: { id: "gone" } }, lookupOf(nodes)),
+      getSelectedNodesBounds({ a: { id: "a" }, gone: { id: "gone" } }, geometryOf(nodes)),
     ).toEqual({ x: 10, y: 10, width: 30, height: 30 });
   });
 });

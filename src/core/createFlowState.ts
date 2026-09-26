@@ -449,10 +449,16 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
         .filter((edge): edge is EdgeType => edge !== undefined),
     { name: "selectedEdgesView" },
   );
-  // Selection-wrapper box: O(selected) reads through the presence record
-  // (NodeSelection renders it; see projections/selectedBounds.ts).
+  // Selection-wrapper box: O(selected) PLAIN reads of the row derive's
+  // geometry map, re-run on the feed's tick (NodeSelection renders it; see
+  // projections/selectedBounds.ts).
   const selectedNodesBounds = createMemo(
-    () => getSelectedNodesBounds(selectedNodeIds, nodeLookup),
+    () => {
+      // The tick is tracked only while something is selected: with an empty
+      // selection a drag frame must not wake this memo at all.
+      if (Object.keys(selectedNodeIds).length > 0) nodeGeometryFeed.changes();
+      return getSelectedNodesBounds(selectedNodeIds, nodeGeometry);
+    },
     { name: "selectedNodesBounds" },
   );
 

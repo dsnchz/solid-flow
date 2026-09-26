@@ -191,3 +191,78 @@ describe("createConnections — reconnect (draft-form incremental derive)", () =
     dispose();
   });
 });
+
+/**
+ * A whole-graph replacement with FRESH edge objects of the same ids (bench
+ * round 41, "set graph"): the per-edge contribution memos are keyed by id,
+ * so an edge whose contributions did not change leaves its record entries
+ * untouched — no remove-and-re-add of 20k entries for a label change.
+ */
+describe("createConnections — same-id replacement", () => {
+  const setup = () => {
+    const [edges, setEdges] = createStore([
+      { id: "e1", source: "a", target: "b", sourceHandle: "h1" },
+      { id: "e2", source: "b", target: "c" },
+    ] as Edge[]);
+    let connections!: ReturnType<typeof createConnections>;
+    let dispose!: () => void;
+    const runs = { keys: 0 };
+    createRoot((d) => {
+      dispose = d;
+      connections = createConnections({
+        get edges() {
+          return edges;
+        },
+      });
+      createEffect(
+        () => Object.keys(connections).length,
+        () => {
+          runs.keys++;
+        },
+      );
+    });
+    flush();
+    return { edges, setEdges, connections: () => connections, runs, dispose };
+  };
+
+  it("keeps the entries of an edge whose contributions did not change", () => {
+    const { setEdges, connections, runs, dispose } = setup();
+    const key = connectionKey("a", "source", "h1");
+    const recBefore = connections()[key];
+    const entryBefore = Object.values(recBefore ?? {})[0];
+    setEdges(
+      () =>
+        [
+          { id: "e1", source: "a", target: "b", sourceHandle: "h1", data: { label: "v1" } },
+          { id: "e2", source: "b", target: "c", data: { label: "v1" } },
+        ] as Edge[],
+    );
+    flush();
+    expect(connections()[key]).toBe(recBefore);
+    expect(Object.values(connections()[key] ?? {})[0]).toBe(entryBefore);
+    expect(runs.keys).toBe(1);
+    dispose();
+  });
+
+  it("re-indexes an edge whose endpoints changed in the fresh object", () => {
+    const { setEdges, connections, dispose } = setup();
+    setEdges(
+      () =>
+        [
+          { id: "e1", source: "a", target: "c", sourceHandle: "h1" },
+          { id: "e2", source: "b", target: "c" },
+        ] as Edge[],
+    );
+    flush();
+    expect(Object.keys(connections()).sort()).toEqual([
+      "a",
+      "a-source",
+      "a-source-h1",
+      "b",
+      "b-source",
+      "c",
+      "c-target",
+    ]);
+    dispose();
+  });
+});

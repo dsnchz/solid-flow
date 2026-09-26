@@ -23,6 +23,46 @@ import { createRowRecordProjection } from "./rowRecord";
 const SELECTED_NODE_Z = 1000;
 const ROOT_PARENT_Z_INCREMENT = 10;
 
+/** Row keys the derive joins itself: read from the row proxy, never from the snapshot. */
+const JOINED_KEYS: ReadonlySet<string> = new Set(["selected", "dragging"]);
+
+const sameKeys = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((key, i) => key === b[i]);
+
+/**
+ * The user row's key set minus the joined keys, tracked as its own memo:
+ * the engine notifies the key set on any key add or delete, and a first
+ * `selected = true` ADDS a key — this memo absorbs that (equal value), so
+ * the copy below never re-runs for a joined key (bench round 41).
+ */
+const createUserKeys = (node: () => object): Accessor<readonly string[]> =>
+  createMemo(
+    () => {
+      const keys: string[] = [];
+      for (const key of Object.keys(node())) if (!JOINED_KEYS.has(key)) keys.push(key);
+      return keys;
+    },
+    { equals: sameKeys, name: "internalNodes.userKeys" },
+  );
+
+/**
+ * One enumeration of the user row per user change, WITHOUT reading the keys
+ * the derive joins itself (`selected`, `dragging`): a write to either wakes
+ * only the derive's own leaf read, so a select-all over 10k rows is 10k
+ * leaf writes, not 10k spreads and reconciles (bench round 41). The copy is
+ * a plain object: the derive reads it freely without proxy traps.
+ */
+const snapshotUserRow = <NodeType extends Node>(
+  node: NodeType,
+  keys: readonly string[],
+): NodeType => {
+  const copy: Partial<NodeType> = {};
+  for (const key of keys) Reflect.set(copy, key, Reflect.get(node, key));
+  // The one cast: a key-filtered copy has no expressible type; the row
+  // literal supplies the two joined keys itself.
+  return copy as NodeType;
+};
+
 export function isManualZIndexMode(zIndexMode?: ZIndexMode): boolean {
   return zIndexMode === "manual";
 }
@@ -165,6 +205,27 @@ export const createInternalNodes = <NodeType extends Node = Node>(
     { name: "autoIndex" },
   );
 
+  // The flow settings every row reads, as ONE memo (value-equal): one read
+  // per row run instead of four through the config getters (~19 ms of any
+  // 10k-row pass), and a config change that leaves them equal re-runs no
+  // row (bench round 41).
+  const settings = createMemo(
+    () => ({
+      nodeOrigin: source.nodeOrigin,
+      nodeExtent: source.nodeExtent,
+      zIndexMode: source.zIndexMode,
+      elevateNodesOnSelect: source.elevateNodesOnSelect,
+    }),
+    {
+      equals: (a, b) =>
+        a.nodeOrigin === b.nodeOrigin &&
+        a.nodeExtent === b.nodeExtent &&
+        a.zIndexMode === b.zIndexMode &&
+        a.elevateNodesOnSelect === b.elevateNodesOnSelect,
+      name: "internalNodes.settings",
+    },
+  );
+
   // id → row store (+ array position, to enforce the parents-first contract).
   const entryById = new Map<
     string,
@@ -185,7 +246,8 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       // re-runs the geometry without re-spreading the proxy — the spread ran
       // three times per node at a 10k mount, each pass ~170 ms of trap self
       // time plus a presence node per key (bench round 30, solidjs/solid#3664).
-      const userSnapshot = createMemo(() => ({ ...userNodeAccessor() }), {
+      const userKeys = createUserKeys(userNodeAccessor);
+      const userSnapshot = createMemo(() => snapshotUserRow(userNodeAccessor(), userKeys()), {
         name: "internalNodes.user",
       });
       // Two write paths (bench round 34). A user-snapshot change (or a swapped
@@ -219,9 +281,9 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           // so downstream subscriptions never strand on disposed stores
           const userNode = userNodeAccessor();
           const user = userSnapshot();
-          const { nodeOrigin, nodeExtent, zIndexMode } = source;
+          const { nodeOrigin, nodeExtent, zIndexMode, elevateNodesOnSelect } = settings();
           const selectedNodeZ =
-            source.elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
+            elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
 
           // `in` guard: subscribes even while the key is absent, so the first
           // measurement of a node re-runs (computation absent-key footgun).
@@ -229,16 +291,17 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             user.id in source.measurements ? source.measurements[user.id] : undefined;
 
           // Selection = overlay joined with the row (solid#3085 composition);
-          // the same value feeds the spread override and z elevation.
+          // the same value feeds the spread override and z elevation. Read
+          // from the row PROXY (the snapshot skips the joined keys).
           const selected = joinSelected(
-            user.selected,
+            userNode.selected,
             overlayEntry(source.selectionOverlay, user.id),
           );
           // Position/dragging = drag overlay joined with the row; the joined
           // position feeds the row field AND the absolute-position derive.
           const dragOverlayEntry = dragEntry(source.dragOverlay, user.id);
           const position = joinPosition(user.position, dragOverlayEntry);
-          const dragging = joinDragging(user.dragging, dragOverlayEntry);
+          const dragging = joinDragging(userNode.dragging, dragOverlayEntry);
 
           // The measurements root is authoritative once a DOM measurement
           // exists (the row write-through can't be relied on — it reverts on
@@ -308,7 +371,9 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           }
 
           if (source.onGeometryChange) {
-            const next = `${x},${y},${dimensions.width},${dimensions.height},${user.parentId ?? ""}`;
+            const next = `${x},${y},${dimensions.width},${dimensions.height},${
+              user.parentId ?? ""
+            }`;
             if (next !== geometryKey) {
               geometryKey = next;
               source.onGeometryChange(id, {

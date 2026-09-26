@@ -78,27 +78,32 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
   afterAll(() => dispose());
 
   it("a drag frame re-runs only the moved node's scopes", async () => {
-    const { artifact } = await captureArtifact(
-      () => {
-        flow.actions.updateNodePositions(
-          new Map([
-            [
-              "n5",
-              {
-                id: "n5",
-                position: { x: 999, y: 999 },
-                distance: { x: 0, y: 0 },
-                internals: { positionAbsolute: { x: 999, y: 999 } },
-                measured: { width: 50, height: 20 },
-              },
-            ],
-          ]),
-          true,
-        );
-        flush();
-      },
-      { scenario: "drag-frame", attribution: ATTRIBUTION },
-    );
+    const frame = (x: number) => {
+      flow.actions.updateNodePositions(
+        new Map([
+          [
+            "n5",
+            {
+              id: "n5",
+              position: { x, y: x },
+              distance: { x: 0, y: 0 },
+              internals: { positionAbsolute: { x, y: x } },
+              measured: { width: 50, height: 20 },
+            },
+          ],
+        ]),
+        true,
+      );
+      flush();
+    };
+    // The FIRST frame of a drag adds the `dragging` key to the user row,
+    // which the row's key-set memo absorbs (one extra scope, once per drag);
+    // the budget pins the steady-state frame.
+    frame(998);
+    const { artifact } = await captureArtifact(() => frame(999), {
+      scenario: "drag-frame",
+      attribution: ATTRIBUTION,
+    });
     expectOnlyByDesignDiagnostics(artifact);
     expectRerunBudget(artifact, 4);
   });

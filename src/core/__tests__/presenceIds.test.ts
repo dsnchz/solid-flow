@@ -91,3 +91,58 @@ describe("createPresenceIds", () => {
     dispose();
   });
 });
+
+/**
+ * A whole-graph replacement with FRESH row objects of the same ids (bench
+ * round 41, "set graph") must be a re-derive per row, not a dispose-and-
+ * recreate: the map is keyed by id, so each row's presence projection (and
+ * its `{ id }` entry) survives the swap, and an unflipped row stays silent.
+ */
+describe("createPresenceIds — same-id replacement", () => {
+  const setup = () => {
+    const [rows, setRows] = createStore<Row[]>([
+      { id: "a", w: 10 },
+      { id: "b" },
+      { id: "c", hidden: true },
+    ]);
+    let record!: Record<string, { id: string }>;
+    let dispose!: () => void;
+    const runs = { membership: 0 };
+    createRoot((d) => {
+      dispose = d;
+      record = createPresenceIds(
+        () => rows,
+        (row) => !row.hidden && row.w === undefined,
+        "unmeasured",
+      );
+      createEffect(
+        () => Object.keys(record).length,
+        () => {
+          runs.membership++;
+        },
+      );
+    });
+    flush();
+    return { rows, setRows, record: () => record, runs, dispose };
+  };
+
+  it("keeps every entry's identity and stays silent when no row flips", () => {
+    const { setRows, record, runs, dispose } = setup();
+    const entryBefore = record().b;
+    setRows(() => [{ id: "a", w: 10 }, { id: "b" }, { id: "c", hidden: true }]);
+    flush();
+    expect(Object.keys(record())).toEqual(["b"]);
+    expect(record().b).toBe(entryBefore);
+    expect(runs.membership).toBe(1);
+    dispose();
+  });
+
+  it("re-derives each row against its fresh object: flips still land", () => {
+    const { setRows, record, runs, dispose } = setup();
+    setRows(() => [{ id: "a" }, { id: "b", w: 3 }, { id: "c", hidden: true }]);
+    flush();
+    expect(Object.keys(record())).toEqual(["a"]);
+    expect(runs.membership).toBe(2);
+    dispose();
+  });
+});

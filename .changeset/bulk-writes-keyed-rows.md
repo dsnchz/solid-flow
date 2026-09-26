@@ -1,0 +1,5 @@
+---
+"@dschz/solid-flow": patch
+---
+
+Whole-graph writes cost less at 10,000 nodes. Replacing the graph with fresh objects of the same ids went from 706 to about 570 ms, selecting every node from 524 to 438 ms, and deselecting every node from 433 to about 345 ms. Every per-row map the flow keeps (selection presence, unmeasured presence, connections, markers) is keyed by id, so a same-id replacement re-derives each row instead of disposing and recreating it. The row's user snapshot no longer reads `selected` or `dragging`, which the row joins itself, so a selection write takes the row's leaf path instead of a full rebuild. The flow settings each row reads (origin, extent, z-index mode, elevation, connection mode, default edge options) come through one value-equal memo per projection, so a config change that leaves them equal wakes no row. The selection box bounds read the row derive's plain geometry map instead of every selected row through the store proxies. Drag frames write the moved position in place in both the row and the drag overlay. Deleting half the graph costs about 30 ms more (211 to about 240 ms) from the keyed maps.

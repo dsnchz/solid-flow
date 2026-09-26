@@ -31,10 +31,12 @@ export const createMarkerIndex = <EdgeType extends Edge = Edge>(
   const rows = createMemo(
     mapArray(
       () => source.edges,
-      (edge) =>
+      // Keyed by id (bench round 41): a same-id replacement re-runs the
+      // row memo against the fresh object instead of recreating it.
+      (edgeAccessor) =>
         createMemo(
           () =>
-            createMarkerIds([edge] as Edge[], {
+            createMarkerIds([edgeAccessor()] as Edge[], {
               id: source.id,
               defaultColor: source.defaultColor ?? undefined,
               defaultMarkerStart: source.defaultMarkerStart,
@@ -42,6 +44,7 @@ export const createMarkerIndex = <EdgeType extends Edge = Edge>(
             }),
           { equals: sameMarkers, name: "markers.row" },
         ),
+      { keyed: (edge) => edge.id },
     ),
     { name: "markers.rows" },
   );

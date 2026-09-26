@@ -115,3 +115,55 @@ describe("createMarkerIndex", () => {
     dispose();
   });
 });
+
+/**
+ * A whole-graph replacement with FRESH edge objects of the same ids (bench
+ * round 41, "set graph"): the per-edge marker memos are keyed by id and
+ * equality-cut, so unchanged markers leave the record untouched and a
+ * marker changed inside the fresh object still lands.
+ */
+describe("createMarkerIndex — same-id replacement", () => {
+  it("keeps the entries and stays silent when the markers did not change", () => {
+    const { setEdges, index, runs, actual, expected, dispose } = setup([
+      { id: "e1", source: "a", target: "b", markerEnd: arrow },
+      { id: "e2", source: "b", target: "c", markerEnd: arrow, markerStart: closed },
+    ] as Edge[]);
+    const entry = Object.values(index())[0];
+    setEdges(
+      () =>
+        [
+          {
+            id: "e1",
+            source: "a",
+            target: "b",
+            markerEnd: { type: MarkerType.Arrow },
+            data: { v: 1 },
+          },
+          {
+            id: "e2",
+            source: "b",
+            target: "c",
+            markerEnd: { type: MarkerType.Arrow },
+            markerStart: { type: MarkerType.ArrowClosed, color: "red" },
+            data: { v: 1 },
+          },
+        ] as Edge[],
+    );
+    flush();
+    expect(actual()).toEqual(expected());
+    expect(Object.values(index())[0]).toBe(entry);
+    expect(runs.membership).toBe(1);
+    dispose();
+  });
+
+  it("lands a marker changed inside the fresh object", () => {
+    const { setEdges, actual, expected, dispose } = setup([
+      { id: "e1", source: "a", target: "b", markerEnd: arrow },
+    ] as Edge[]);
+    setEdges(() => [{ id: "e1", source: "a", target: "b", markerEnd: closed }] as Edge[]);
+    flush();
+    expect(actual()).toEqual(expected());
+    expect(actual().map((m) => m.type)).toEqual([MarkerType.ArrowClosed]);
+    dispose();
+  });
+});

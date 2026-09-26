@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { infiniteExtent, type NodeOrigin, Position, type ZIndexMode } from "@xyflow/system";
-import { createEffect, createRoot, createStore, flush } from "solid-js";
+import { createEffect, createRoot, createSignal, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import type { Node } from "@/types";
@@ -541,6 +541,102 @@ describe("createInternalNodes — the user row is enumerated once per user chang
     flush();
     expect(internalNodes["a"]!.internals.positionAbsolute).toEqual({ x: 5, y: 5 });
   });
+
+  it("a user `selected` or `dragging` write re-derives the row without re-spreading it", () => {
+    // Both are geometry-owned row keys (joined with the overlays), so the
+    // derive tracks them directly and the snapshot never reads them: a
+    // select-all over 10k rows is 10k leaf writes, not 10k spreads and
+    // reconciles (bench round 41). The first write of a key ADDS it, which
+    // the key-set memo absorbs with one enumeration and no copy; a value
+    // write to an existing joined key never enumerates.
+    let enumerations = 0;
+    const raw = new Proxy(makeNode({ id: "a" }), {
+      ownKeys(target) {
+        enumerations++;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const { internalNodes, setNodes } = createRoot(() => setup([raw]));
+    flush();
+    void internalNodes["a"]!.internals.z;
+    const afterMount = enumerations;
+
+    setNodes((draft) => {
+      draft[0]!.selected = true;
+      draft[0]!.dragging = true;
+      return undefined;
+    });
+    flush();
+    expect(internalNodes["a"]!.selected).toBe(true);
+    expect(internalNodes["a"]!.dragging).toBe(true);
+    expect(internalNodes["a"]!.internals.z).toBe(1000);
+    // Bounded, not zero: the engine enumerates the raw once per ADDED key to
+    // diff the key set, and the keys memo once — no copy of the row.
+    expect(enumerations).toBeLessThanOrEqual(afterMount + 3);
+    const afterKeyAdd = enumerations;
+
+    setNodes((draft) => {
+      draft[0]!.selected = false;
+      draft[0]!.dragging = false;
+      return undefined;
+    });
+    flush();
+    expect(internalNodes["a"]!.selected).toBe(false);
+    expect(internalNodes["a"]!.dragging).toBe(false);
+    expect(internalNodes["a"]!.internals.z).toBe(0);
+    expect(enumerations).toBe(afterKeyAdd);
+
+    setNodes((draft) => {
+      draft[0]!.selected = true;
+      return undefined;
+    });
+    flush();
+    expect(internalNodes["a"]!.internals.z).toBe(1000);
+    expect(enumerations).toBe(afterKeyAdd);
+  });
+});
+
+describe("createInternalNodes — flow settings are live", () => {
+  it("re-derives every row when elevateNodesOnSelect or the origin changes", () => {
+    const [nodes] = createStore<Node[]>([
+      makeNode({ id: "a", selected: true, width: 100, height: 50 }),
+    ]);
+    const [measurements] = createStore<NodeMeasurements>({});
+    const [elevate, setElevate] = createSignal(true);
+    const [origin, setOrigin] = createSignal<NodeOrigin>([0, 0]);
+    const { internalNodes, dispose } = createRoot((dispose) => ({
+      dispose,
+      internalNodes: createInternalNodes({
+        selectionOverlay: {},
+        dragOverlay: {},
+        get nodes() {
+          return nodes;
+        },
+        get measurements() {
+          return measurements;
+        },
+        get nodeOrigin() {
+          return origin();
+        },
+        nodeExtent: infiniteExtent,
+        get elevateNodesOnSelect() {
+          return elevate();
+        },
+      }),
+    }));
+    flush();
+    expect(internalNodes.a!.internals.z).toBe(1000);
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 0, y: 0 });
+
+    setElevate(false);
+    flush();
+    expect(internalNodes.a!.internals.z).toBe(0);
+
+    setOrigin([0.5, 0.5]);
+    flush();
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: -50, y: -25 });
+    dispose();
+  });
 });
 
 describe("createInternalNodes — row writes land in place", () => {
@@ -671,5 +767,113 @@ describe("createInternalNodes — row writes land in place", () => {
     expect(row.position).toBe(position);
     expect(row.measured).toBe(measured);
     expect(row.internals.positionAbsolute).toBe(positionAbsolute);
+  });
+});
+
+/**
+ * A whole-graph replacement with FRESH user objects of the same ids (bench
+ * round 41, "set graph"): the row survives (keyed by id) and takes the
+ * changed user keys as leaf writes — geometry readers stay silent, readers
+ * of a changed (or re-created) nested object run, the userNode copy is
+ * re-adopted, and a key that appeared or vanished in the fresh object
+ * follows. (Pins: the reconcile path produced the same observable
+ * notifications; the difference is the cost, measured by the p41 spike.)
+ */
+describe("createInternalNodes — same-id replacement", () => {
+  const setupWithRuns = () => {
+    let internalNodes!: ReturnType<typeof setup>["internalNodes"];
+    let setNodes!: ReturnType<typeof setup>["setNodes"];
+    let dispose!: () => void;
+    const runs = { position: 0, label: 0, style: 0 };
+    createRoot((d) => {
+      dispose = d;
+      ({ internalNodes, setNodes } = setup([
+        makeNode({
+          id: "a",
+          position: { x: 5, y: 5 },
+          data: { label: "first" },
+          style: { color: "red" },
+          zIndex: 2,
+        }),
+      ]));
+      createEffect(
+        () => internalNodes.a!.internals.positionAbsolute.x,
+        () => {
+          runs.position++;
+        },
+      );
+      createEffect(
+        () => internalNodes.a!.data.label,
+        () => {
+          runs.label++;
+        },
+      );
+      createEffect(
+        () => internalNodes.a!.style?.color,
+        () => {
+          runs.style++;
+        },
+      );
+    });
+    flush();
+    return { internalNodes: () => internalNodes, setNodes, runs, dispose };
+  };
+
+  it("leaf-writes the changed user keys and leaves the unchanged ones silent", () => {
+    const { internalNodes, setNodes, runs, dispose } = setupWithRuns();
+    expect(runs).toEqual({ position: 1, label: 1, style: 1 });
+    const fresh = makeNode({
+      id: "a",
+      position: { x: 5, y: 5 },
+      data: { label: "second" },
+      style: { color: "red" },
+      hidden: false,
+    });
+    setNodes(() => [fresh]);
+    flush();
+    // A fresh nested object is adopted by reference (a swap), so its readers
+    // run even when its content is equal — the same notifications the
+    // reconcile path produced; the geometry reader stays silent.
+    expect(runs).toEqual({ position: 1, label: 2, style: 2 });
+    expect(internalNodes().a!.data.label).toBe("second");
+    expect(internalNodes().a!.hidden).toBe(false);
+    expect("zIndex" in internalNodes().a!).toBe(false);
+    expect(internalNodes().a!.internals.userNode.data.label).toBe("second");
+    expect(internalNodes().a!.internals.z).toBe(0);
+    dispose();
+  });
+
+  it("lands a position and a style changed inside the fresh object", () => {
+    const { internalNodes, setNodes, runs, dispose } = setupWithRuns();
+    setNodes(() => [
+      makeNode({
+        id: "a",
+        position: { x: 50, y: 5 },
+        data: { label: "first" },
+        style: { color: "blue" },
+        zIndex: 2,
+      }),
+    ]);
+    flush();
+    expect(runs).toEqual({ position: 2, label: 2, style: 2 });
+    expect(internalNodes().a!.internals.positionAbsolute).toEqual({ x: 50, y: 5 });
+    expect(internalNodes().a!.position).toEqual({ x: 50, y: 5 });
+    expect(internalNodes().a!.style).toEqual({ color: "blue" });
+    dispose();
+  });
+
+  it("keeps following the user's data after the swap (draft write on the new object)", () => {
+    const { internalNodes, setNodes, runs, dispose } = setupWithRuns();
+    setNodes(() => [makeNode({ id: "a", position: { x: 5, y: 5 }, data: { label: "first" } })]);
+    flush();
+    setNodes((draft) => {
+      draft[0]!.data.label = "third";
+      return undefined;
+    });
+    flush();
+    expect(internalNodes().a!.data.label).toBe("third");
+    expect(internalNodes().a!.internals.userNode.data.label).toBe("third");
+    expect(runs.label).toBe(3);
+    dispose();
   });
 });

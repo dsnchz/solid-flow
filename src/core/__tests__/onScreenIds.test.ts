@@ -114,7 +114,9 @@ describe("createOnScreenIds", () => {
 });
 
 describe("createGeometryFeed", () => {
-  it("stores rects, drains the changed ids once, and bumps the tick once per batch", () => {
+  it("stores rects, drains the changed ids once, and bumps the tick on every report", () => {
+    // Per report, not per batch (bench round 41): the selected-nodes bounds
+    // sample the map on the tick and never drain, so every change must wake them.
     createRoot((dispose) => {
       const feed = createGeometryFeed<Rect>();
       const before = feed.changes();
@@ -124,12 +126,12 @@ describe("createGeometryFeed", () => {
       flush();
       expect(feed.map.get("a")).toEqual({ x: 1, y: 2, width: 3, height: 4 });
       expect(feed.map.has("b")).toBe(false);
-      expect(feed.changes()).toBe(before + 1);
+      expect(feed.changes()).toBe(before + 3);
       expect([...feed.takeChanged()].sort()).toEqual(["a", "b"]);
       expect(feed.takeChanged().size).toBe(0);
       feed.report("c", { x: 0, y: 0, width: 1, height: 1 });
       flush();
-      expect(feed.changes()).toBe(before + 2);
+      expect(feed.changes()).toBe(before + 4);
       dispose();
     });
   });

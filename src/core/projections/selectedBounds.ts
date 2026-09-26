@@ -1,12 +1,20 @@
-import { boxToRect, getBoundsOfBoxes, nodeToBox, type Rect } from "@xyflow/system";
+import { boxToRect, getBoundsOfBoxes, type Rect } from "@xyflow/system";
 
-import type { InternalNode, Node } from "@/types";
+/** The plain rect a row derive reports for a node (see createGeometryFeed). */
+export type NodeRect = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
 
 /**
  * Bounding rect of the selected nodes, resolved through the KEYED
- * selected-presence record: O(selected) lookups, and — inside a tracked scope —
- * O(selected) subscriptions (record membership + each selected row's slot,
- * `positionAbsolute` and `measured` leaves).
+ * selected-presence record against the row derive's PLAIN geometry map:
+ * O(selected) plain reads, no proxy traps. Inside a tracked scope the only
+ * subscriptions are the record's membership and the geometry feed's tick
+ * (the caller reads it) — a select-all @10k used to spend ~40 ms reading
+ * every row's position and size through the store proxies (bench round 41).
  *
  * The previous derivation was `getInternalNodesBounds(nodeLookup, { filter:
  * selected })`: a tracked walk of the whole lookup that subscribed every node's
@@ -14,19 +22,24 @@ import type { InternalNode, Node } from "@/types";
  * @10k) on every frame of a selection-mode drag — the round-10 minimap
  * pathology on a path the listener bench never drove.
  *
- * Semantics mirror the system helper: union of `nodeToBox` over the rows, the
- * zero rect when nothing resolves.
+ * Semantics mirror the system helper: union of the rows' rects, the zero
+ * rect when nothing resolves.
  */
-export const getSelectedNodesBounds = <NodeType extends Node>(
+export const getSelectedNodesBounds = (
   selectedIds: Record<string, unknown>,
-  nodeLookup: { get(id: string): InternalNode<NodeType> | undefined },
+  geometry: { get(id: string): NodeRect | undefined },
 ): Rect => {
   let box = { x: Infinity, y: Infinity, x2: -Infinity, y2: -Infinity };
   let any = false;
   for (const id of Object.keys(selectedIds)) {
-    const node = nodeLookup.get(id);
-    if (!node) continue;
-    box = getBoundsOfBoxes(box, nodeToBox(node));
+    const rect = geometry.get(id);
+    if (!rect) continue;
+    box = getBoundsOfBoxes(box, {
+      x: rect.x,
+      y: rect.y,
+      x2: rect.x + rect.width,
+      y2: rect.y + rect.height,
+    });
     any = true;
   }
   return any ? boxToRect(box) : { x: 0, y: 0, width: 0, height: 0 };

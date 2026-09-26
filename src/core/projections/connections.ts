@@ -111,11 +111,16 @@ export const createConnections = <EdgeType extends Edge = Edge>(
   const rows = createMemo(
     mapArray(
       () => source.edges,
-      (edge) =>
-        createMemo(() => edgeContributions(edge), {
+      // Keyed by id: a whole-graph replacement with fresh edge objects
+      // re-runs each row memo (equality-cut, so unchanged contributions stay
+      // the same array) instead of recreating 10k memos and removing and
+      // re-adding every entry (bench round 41).
+      (edgeAccessor) =>
+        createMemo(() => edgeContributions(edgeAccessor()), {
           equals: sameContributions,
           name: "connections.row",
         }),
+      { keyed: (edge) => edge.id },
     ),
     { name: "connections.rows" },
   );

@@ -305,6 +305,29 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   whole element — no static template, and one effect that re-collects all
   of its attributes on any change (bench rounds 35/36: BaseEdge 169 → 48 ms,
   Handle 296 → 115 ms inclusive at 10k; mount 2.7 → 2.3 s).
+- **Whole-graph writes: every per-row map is keyed by id, and the row
+  snapshot skips the keys the row joins itself.** A controlled replacement
+  with fresh objects of the same ids (set graph) swaps every array slot; a
+  per-row `mapArray` keyed by identity then disposes and recreates all its
+  rows, and the connections merge removed and re-added every entry (~110
+  ms of a 771 ms set graph @10k, bench round 41). Presence records,
+  connections and markers key by id like the row stores, so a swap is a
+  re-derive per row and an unchanged row writes nothing. The node row's
+  user snapshot (`internalNodes.user`) enumerates the row WITHOUT reading
+  `selected` and `dragging` — the derive joins those with the overlays and
+  tracks them directly — through a key-set memo that absorbs a key add, so
+  a selection write is the row's leaf path, not a spread and a reconcile
+  (deselect all 433 → ~345 ms). The flow settings a row reads come through
+  one value-equal memo per projection (one read per run, no row wakes on
+  an unrelated config change), the selection box bounds sample the row
+  derive's plain geometry map on the feed's tick (40 ms → ~2 ms on a
+  select-all), and drag frames leaf-write the moved position in the row
+  and in the overlay entry. What a row must NOT do is leaf-write a foreign
+  store proxy into its draft (a fresh `data`, or the `edge`): the draft
+  path COPIES the object, and later in-place writes through the user's
+  store would no longer reach the row's readers — a same-id swap therefore
+  still takes the return-form reconcile, which adopts by reference (the
+  `internalNodes` "same-id replacement" tests pin the chaining).
 - **Culling is a keyed record, not a per-row read of the viewport.** The
   quantized culling viewport steps every quarter-viewport of pan; a per-row
   memo over it makes every step re-run all ~20k row memos through the store

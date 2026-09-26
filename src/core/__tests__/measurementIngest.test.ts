@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { infiniteExtent, type NodeOrigin, Position } from "@xyflow/system";
+import { infiniteExtent, Position } from "@xyflow/system";
 import { createEffect, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
@@ -36,11 +36,16 @@ const setup = () => {
   const [measurements, setMeasurements] = createStore<NodeMeasurements>({});
   const ids = () => nodes.map((node) => node.id);
 
-  // The row derive reads `nodeOrigin` exactly once per run, so a counting
+  // The row derive reads `selectionOverlay` exactly once per run (the flow
+  // settings are read through a shared memo since round 41), so a counting
   // getter on the (plain, untracked) source object counts derive runs.
   let deriveRuns = 0;
+  const overlay = {};
   const internalNodes = createInternalNodes({
-    selectionOverlay: {},
+    get selectionOverlay() {
+      deriveRuns++;
+      return overlay;
+    },
     dragOverlay: {},
     get nodes() {
       return nodes;
@@ -48,10 +53,7 @@ const setup = () => {
     get measurements() {
       return measurements;
     },
-    get nodeOrigin(): NodeOrigin {
-      deriveRuns++;
-      return [0, 0];
-    },
+    nodeOrigin: [0, 0],
     nodeExtent: infiniteExtent,
     elevateNodesOnSelect: true,
   });

@@ -6,7 +6,7 @@ import {
   type Rect,
   type ZIndexMode,
 } from "@xyflow/system";
-import { createProjection, mapArray, onCleanup } from "solid-js";
+import { createMemo, createProjection, mapArray, onCleanup } from "solid-js";
 
 import type { DefaultEdgeOptions, Edge, EdgeLayouted, InternalNode, Node } from "@/types";
 
@@ -59,6 +59,27 @@ export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends E
 export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   source: LayoutedEdgesSource<NodeType, EdgeType>,
 ): Record<string, EdgeLayouted<EdgeType>> => {
+  // The flow settings every edge reads, as ONE memo (value-equal): one read
+  // per row run instead of five through the config getters, and a config
+  // change that leaves them equal re-runs no edge (bench round 41).
+  const settings = createMemo(
+    (): EdgeSettings => ({
+      connectionMode: source.connectionMode,
+      defaultEdgeOptions: source.defaultEdgeOptions,
+      elevateEdgesOnSelect: source.elevateEdgesOnSelect,
+      zIndexMode: source.zIndexMode,
+      onError: source.onError,
+    }),
+    {
+      equals: (a, b) =>
+        a.connectionMode === b.connectionMode &&
+        a.defaultEdgeOptions === b.defaultEdgeOptions &&
+        a.elevateEdgesOnSelect === b.elevateEdgesOnSelect &&
+        a.zIndexMode === b.zIndexMode &&
+        a.onError === b.onError,
+      name: "layoutedEdges.settings",
+    },
+  );
   const rowStores = mapArray(
     () => source.edges,
     (edgeAccessor) => {
@@ -75,7 +96,7 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
           // (rc.1 carried post-build dependency re-asserts here — first
           // nested derives could strand subscriptions; fixed upstream in
           // solidjs/solid#3037, removed with the rc.2 bump.)
-          const row = buildRow(source, edge);
+          const row = buildRow(source, settings(), edge);
           if (source.onGeometryChange) {
             const next = row ? `${row.sourceX},${row.sourceY},${row.targetX},${row.targetY}` : "";
             if (next !== geometry) {
@@ -109,8 +130,14 @@ const segmentBox = (
   height: Math.abs(row.sourceY - row.targetY),
 });
 
+type EdgeSettings = Pick<
+  LayoutedEdgesSource,
+  "connectionMode" | "defaultEdgeOptions" | "elevateEdgesOnSelect" | "zIndexMode" | "onError"
+>;
+
 const buildRow = <NodeType extends Node, EdgeType extends Edge>(
-  source: LayoutedEdgesSource<NodeType, EdgeType>,
+  source: Pick<LayoutedEdgesSource<NodeType, EdgeType>, "nodeLookup" | "selectionOverlay">,
+  settings: EdgeSettings,
   edge: EdgeType,
 ): EdgeLayouted<EdgeType> | null => {
   const sourceNode = source.nodeLookup.get(edge.source);
@@ -126,8 +153,8 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
     targetNode,
     sourceHandle: edge.sourceHandle || null,
     targetHandle: edge.targetHandle || null,
-    connectionMode: source.connectionMode as ConnectionMode,
-    onError: source.onError,
+    connectionMode: settings.connectionMode as ConnectionMode,
+    onError: settings.onError,
   });
 
   if (!edgePosition) return null;
@@ -135,17 +162,17 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   const selected = joinSelected(edge.selected, overlayEntry(source.selectionOverlay, edge.id));
 
   return {
-    ...source.defaultEdgeOptions,
+    ...settings.defaultEdgeOptions,
     ...edge,
     selected,
     ...edgePosition,
     zIndex: getElevatedEdgeZIndex({
       selected,
-      zIndex: edge.zIndex ?? source.defaultEdgeOptions.zIndex,
+      zIndex: edge.zIndex ?? settings.defaultEdgeOptions.zIndex,
       sourceNode,
       targetNode,
-      elevateOnSelect: source.elevateEdgesOnSelect,
-      zIndexMode: source.zIndexMode,
+      elevateOnSelect: settings.elevateEdgesOnSelect,
+      zIndexMode: settings.zIndexMode,
     }),
     sourceNode,
     targetNode,

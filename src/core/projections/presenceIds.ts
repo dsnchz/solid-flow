@@ -21,22 +21,30 @@ export const createPresenceIds = <Row extends { readonly id: string }>(
   name: string,
 ): Record<string, { id: string }> => {
   const rowStores = createMemo(
-    mapArray(rows, (row) => {
-      const store: { row: { id: string } | null } = createProjection<{
-        row: { id: string } | null;
-      }>(
-        (draft) => {
-          // Write only on a FLIP: a re-derive that lands the same presence
-          // keeps the `{ id }` object, so the record slot is never repointed
-          // and record subscribers stay quiet (O(changed-row) end to end).
-          const next = present(row);
-          if (next !== (draft.row !== null)) draft.row = next ? { id: row.id } : null;
-        },
-        { row: null },
-        { key: null, name: `${name}.row` },
-      );
-      return { id: row.id, store };
-    }),
+    mapArray(
+      rows,
+      (rowAccessor) => {
+        const id = rowAccessor().id;
+        const store: { row: { id: string } | null } = createProjection<{
+          row: { id: string } | null;
+        }>(
+          (draft) => {
+            // The accessor tracks the array slot: a whole-graph replacement
+            // with fresh objects of the same ids re-derives THIS row instead
+            // of disposing and recreating it (bench round 41).
+            // Write only on a FLIP: a re-derive that lands the same presence
+            // keeps the `{ id }` object, so the record slot is never repointed
+            // and record subscribers stay quiet (O(changed-row) end to end).
+            const next = present(rowAccessor());
+            if (next !== (draft.row !== null)) draft.row = next ? { id } : null;
+          },
+          { row: null },
+          { key: null, name: `${name}.row` },
+        );
+        return { id, store };
+      },
+      { keyed: (row) => row.id },
+    ),
     { name: `${name}.rows` },
   );
 

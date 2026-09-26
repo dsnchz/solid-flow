@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { Position } from "@xyflow/system";
-import { createRoot, createStore, flush } from "solid-js";
+import { createEffect, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import type { Edge, InternalNode, Node } from "@/types";
@@ -257,6 +257,67 @@ describe("createLayoutedEdges (core, headless)", () => {
     flush();
     expect(edgesReads).toBe(2);
     expect(Object.keys(layouted)).toEqual(["e1", "e2"]);
+    dispose();
+  });
+});
+
+/**
+ * A whole-graph replacement with FRESH edge objects of the same ids (bench
+ * round 41, "set graph"): a present row stays present through leaf writes —
+ * unchanged geometry readers are silent, a changed user key lands, the
+ * `edge` reference is re-adopted, and a changed endpoint re-lays out.
+ */
+describe("createLayoutedEdges — same-id replacement", () => {
+  const setupWithRuns = () => {
+    const { source, setEdgesStore } = makeSource(
+      [{ id: "e1", source: "a", target: "b", label: "first" }] as Edge[],
+      [internalNode("a", 0, 0), internalNode("b", 200, 100), internalNode("c", 400, 300)],
+    );
+    let layouted!: ReturnType<typeof createLayoutedEdges<Node, Edge>>;
+    let dispose!: () => void;
+    const runs = { sourceX: 0, label: 0 };
+    createRoot((d) => {
+      dispose = d;
+      layouted = createLayoutedEdges(source);
+      createEffect(
+        () => layouted.e1?.sourceX,
+        () => {
+          runs.sourceX++;
+        },
+      );
+      createEffect(
+        () => layouted.e1?.label,
+        () => {
+          runs.label++;
+        },
+      );
+    });
+    flush();
+    return { layouted: () => layouted, setEdgesStore, runs, dispose };
+  };
+
+  it("leaf-writes the changed edge keys and leaves the geometry silent", () => {
+    const { layouted, setEdgesStore, runs, dispose } = setupWithRuns();
+    const before = layouted().e1!;
+    expect(runs).toEqual({ sourceX: 1, label: 1 });
+    setEdgesStore(() => [{ id: "e1", source: "a", target: "b", label: "second" }] as Edge[]);
+    flush();
+    expect(layouted().e1).toBe(before);
+    expect(layouted().e1!.label).toBe("second");
+    expect(layouted().e1!.edge.label).toBe("second");
+    expect(runs).toEqual({ sourceX: 1, label: 2 });
+    dispose();
+  });
+
+  it("re-lays out an endpoint changed inside the fresh object", () => {
+    const { layouted, setEdgesStore, runs, dispose } = setupWithRuns();
+    const targetXBefore = layouted().e1!.targetX;
+    setEdgesStore(() => [{ id: "e1", source: "a", target: "c", label: "first" }] as Edge[]);
+    flush();
+    expect(layouted().e1!.target).toBe("c");
+    expect(layouted().e1!.targetX).not.toBe(targetXBefore);
+    expect(layouted().e1!.targetNode?.id).toBe("c");
+    expect(runs).toEqual({ sourceX: 1, label: 1 });
     dispose();
   });
 });

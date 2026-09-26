@@ -104,11 +104,33 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
         if (!node) continue;
         writes.push({ id, position, rowBefore: { ...node.position }, row: node });
         node.dragging = dragging;
-        node.position = position;
+        // Leaf writes, not a slot swap (bench round 41): the row derive
+        // tracks `position.x`/`y` directly and takes its leaf path, whereas a
+        // replaced `position` object re-ran the row's user snapshot and a
+        // full reconcile per moved node per frame (and is the engine's
+        // IMMUTABLE_UPDATE_IN_STORE diagnostic).
+        const rowPosition = node.position;
+        rowPosition.x = position.x;
+        rowPosition.y = position.y;
       }
       setDragOverlay((draft) => {
         for (const { id, position, rowBefore, row } of writes) {
-          draft[id] = { position, dragging, rowBefore: draft[id]?.rowBefore ?? rowBefore, row };
+          const entry = draft[id];
+          if (entry !== undefined && entry.dragging === dragging) {
+            // Per-frame path: two leaf writes into the entry's own position
+            // object, not a replaced entry (the engine's
+            // IMMUTABLE_UPDATE_IN_STORE diagnostic; bench round 41).
+            const entryPosition = entry.position;
+            entryPosition.x = position.x;
+            entryPosition.y = position.y;
+          } else {
+            draft[id] = {
+              position: { x: position.x, y: position.y },
+              dragging,
+              rowBefore: entry?.rowBefore ?? rowBefore,
+              row,
+            };
+          }
         }
       });
       return undefined;
