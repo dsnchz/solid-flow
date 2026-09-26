@@ -1,9 +1,8 @@
 import type { JSX } from "@solidjs/web";
-import { spread } from "@solidjs/web";
-import { getOwner, type ParentProps, runWithOwner, Show } from "solid-js";
+import { getOwner, type ParentProps, Show } from "solid-js";
 
 import type { BaseEdgeProps } from "@/types";
-import { cx } from "@/utils";
+import { cx, extraKeysOf, spreadExtras } from "@/utils";
 
 import { EdgeLabel } from "./EdgeLabel";
 
@@ -38,20 +37,9 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
   // Skip-undefined default (see propDefaults) without building a getter object per edge.
   const interactionWidth = () => props.interactionWidth ?? DEFAULT_INTERACTION_WIDTH;
 
-  const extraKeys = Object.keys(props).filter((key) => !OWN_KEYS.has(key));
-  // The ref callback runs outside the component owner; the spread's effect must be owned.
+  const extraKeys = extraKeysOf(props, OWN_KEYS);
   const owner = getOwner();
-  const mountPath = (el: SVGPathElement) => {
-    if (extraKeys.length === 0) return;
-    const extras: Record<string, unknown> = {};
-    for (const key of extraKeys) {
-      Object.defineProperty(extras, key, {
-        get: () => Reflect.get(props, key),
-        enumerable: true,
-      });
-    }
-    runWithOwner(owner, () => spread(el, extras, true));
-  };
+  const mountPath = (el: SVGPathElement) => spreadExtras(el, props, extraKeys, owner);
 
   return (
     <>

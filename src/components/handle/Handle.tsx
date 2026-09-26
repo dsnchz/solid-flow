@@ -9,13 +9,11 @@ import {
   type HandleConnection,
   handleConnectionChange,
   type HandleProps as SystemHandleProps,
-  type HandleType,
   type IsValidConnection as SystemIsValidConnection,
   type Optional,
   XYHandle,
 } from "@xyflow/system";
-import { createEffect, omit, type ParentProps } from "solid-js";
-import { snapshot } from "solid-js";
+import { createEffect, getOwner, type ParentProps, snapshot } from "solid-js";
 
 import {
   armConnectionGestureLookup,
@@ -25,8 +23,7 @@ import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import { useNodeConnectable } from "@/contexts/nodeConnectable";
 import { connectionKey } from "@/core";
 import type { Edge, Node, Position } from "@/types";
-import { cx, propDefaults } from "@/utils";
-import { getEdgeId } from "@/utils";
+import { cx, extraKeysOf, getEdgeId, spreadExtras } from "@/utils";
 
 type HandleProps = Omit<SystemHandleProps, "position"> & {
   readonly position: Position;
@@ -36,57 +33,76 @@ type HandleProps = Omit<SystemHandleProps, "position"> & {
   readonly onDisconnect?: (connections: Connection[]) => void;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
+/**
+ * The props Handle consumes itself plus the attributes it sets on its
+ * element (those stay the flow's, as before: an extra prop never overrides
+ * them); every other key is an attribute of the element.
+ */
+const OWN_KEYS: ReadonlySet<string> = new Set([
+  "id",
+  "type",
+  "position",
+  "isConnectable",
+  "isConnectableStart",
+  "isConnectableEnd",
+  "isValidConnection",
+  "onConnect",
+  "onDisconnect",
+  "children",
+  "class",
+  "style",
+  "role",
+  "aria-label",
+  "tabindex",
+  "data-handleid",
+  "data-nodeid",
+  "data-handlepos",
+  "data-id",
+  "onClick",
+  "onPointerDown",
+]);
+
 /** Connection point on a node; place inside custom nodes to make them connectable. */
 export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: ParentProps<HandleProps>,
 ): JSX.Element => {
-  const _props = propDefaults(props, {
-    type: "source" as HandleType,
-    position: "top" as Position,
-    isConnectableStart: true,
-    isConnectableEnd: true,
-  });
+  // Skip-undefined defaults (see propDefaults) without a getter object per
+  // handle, and no omit record: the element takes its extra attributes
+  // through spreadExtras, so the compiler keeps a static template for the
+  // handle's own attributes instead of routing them all through one spread
+  // (bench round 36).
+  const type = () => props.type ?? "source";
+  const position = () => props.position ?? "top";
+  const isConnectableStart = () => props.isConnectableStart ?? true;
+  const isConnectableEnd = () => props.isConnectableEnd ?? true;
+  const extraKeys = extraKeysOf(props, OWN_KEYS);
+  const owner = getOwner();
+  const mountElement = (el: HTMLDivElement) => spreadExtras(el, props, extraKeys, owner);
 
   const { store, nodeLookup, connections, actions, nodeGeometry } = useInternalSolidFlow<
     NodeType,
     EdgeType
   >();
 
-  const rest = omit(
-    _props,
-    "id",
-    "type",
-    "position",
-    "isConnectable",
-    "isConnectableStart",
-    "isConnectableEnd",
-    "isValidConnection",
-    "onConnect",
-    "onDisconnect",
-    "children",
-    "class",
-    "style",
-  );
-
   // Computed values
   const nodeId = useNodeId();
   const nodeConnectable = useNodeConnectable();
-  const connectable = () => _props.isConnectable ?? nodeConnectable();
-  const isTarget = () => _props.type === "target";
-  const handleId = () => _props.id ?? null;
+  const connectable = () => props.isConnectable ?? nodeConnectable();
+  const isTarget = () => type() === "target";
+  const handleId = () => props.id ?? null;
 
   // KEYED subscriptions only (perf P2): a handle re-runs when ITS entries
   // flip, never on every-gesture or every-move connection state. The
   // possible-target affordance (formerly the per-handle connectionindicator
   // computation, ~490ms at gesture start @10k) is now ROOT classes + CSS.
   const originState = () =>
-    store.connectionOriginByHandle[connectionKey(nodeId(), _props.type, handleId())];
+    store.connectionOriginByHandle[connectionKey(nodeId(), type(), handleId())];
   const connectingFrom = () => originState() === "from";
 
   // Keyed subscription: this handle re-runs only when ITS entry flips, not
   // on every hover-target change anywhere in the graph.
   const targetState = () =>
-    store.connectionTargetByHandle[connectionKey(nodeId(), _props.type, handleId())];
+    store.connectionTargetByHandle[connectionKey(nodeId(), type(), handleId())];
   const connectingTo = () => targetState() !== undefined;
 
   const valid = () => targetState() === "valid";
@@ -101,10 +117,10 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   // costs ~5 µs per handle at mount, and the stress grid has 20,000 handles
   // with neither callback (mount profile round 30). The check is made once
   // at mount — pass the callbacks up front, as with any other listener.
-  if (_props.onConnect || _props.onDisconnect)
+  if (props.onConnect || props.onDisconnect)
     createEffect(
       () => {
-        const rec = connections[connectionKey(nodeId(), _props.type, _props.id)];
+        const rec = connections[connectionKey(nodeId(), type(), props.id)];
         const map = new Map<string, HandleConnection>();
         for (const key of Object.keys(rec ?? {})) map.set(key, { ...rec![key]! });
         return { connections: map };
@@ -150,35 +166,35 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       nodeId: nodeId(),
       isTarget: isTarget(),
       // Per-handle validation override is this call site's genuine delta.
-      isValidConnection: (_props.isValidConnection ??
+      isValidConnection: (props.isValidConnection ??
         store.isValidConnection) as SystemIsValidConnection,
       onConnect: onConnectExtended,
     });
   };
 
   const onClick = (event: MouseEvent) => {
-    if (!nodeId() || (!store.clickConnectStartHandle && !_props.isConnectableStart)) {
+    if (!nodeId() || (!store.clickConnectStartHandle && !isConnectableStart())) {
       return;
     }
     if (!store.clickConnectStartHandle) {
       store.onClickConnectStart?.(event, {
         nodeId: nodeId(),
         handleId: handleId(),
-        handleType: _props.type,
+        handleType: type(),
       });
-      actions.setClickConnectStartHandle({ nodeId: nodeId(), type: _props.type, id: handleId() });
+      actions.setClickConnectStartHandle({ nodeId: nodeId(), type: type(), id: handleId() });
       return;
     }
 
     const doc = getHostForElement(event.target);
-    const isValidConnectionHandler = (_props.isValidConnection ??
+    const isValidConnectionHandler = (props.isValidConnection ??
       store.isValidConnection) as SystemIsValidConnection;
 
     const { connection, isValid } = XYHandle.isValid(event, {
       handle: {
         nodeId: nodeId(),
         id: handleId(),
-        type: _props.type,
+        type: type(),
       },
       connectionMode: store.connectionMode as ConnectionMode,
       fromNodeId: store.clickConnectStartHandle.nodeId,
@@ -212,38 +228,38 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
 
   return (
     <div
-      {...rest}
+      ref={mountElement}
       role="button"
       aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
       tabindex={-1}
       data-handleid={handleId()}
       data-nodeid={nodeId()}
-      data-handlepos={_props.position}
-      data-id={`${store.id}-${nodeId()}-${_props.id || null}-${_props.type}`}
+      data-handlepos={position()}
+      data-id={`${store.id}-${nodeId()}-${props.id || null}-${type()}`}
       onClick={store.clickConnect ? onClick : undefined}
       onPointerDown={onPointerDown}
-      style={_props.style}
+      style={props.style}
       class={cx(
         "solid-flow__handle",
-        `solid-flow__handle-${_props.position}`,
+        `solid-flow__handle-${position()}`,
         store.noDragClass,
         store.noPanClass,
-        _props.class,
+        props.class,
         {
           valid: valid(),
           connectingto: !!connectingTo(),
           connectingfrom: !!connectingFrom(),
           source: !isTarget(),
           target: isTarget(),
-          connectablestart: _props.isConnectableStart,
-          connectableend: _props.isConnectableEnd,
+          connectablestart: isConnectableStart(),
+          connectableend: isConnectableEnd(),
           connectable: !!connectable(),
           // Loose-mode target exclusion: the origin node's same-id handles.
           excluded: !!originState(),
         },
       )}
     >
-      {_props.children}
+      {props.children}
     </div>
   );
 };

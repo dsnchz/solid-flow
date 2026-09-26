@@ -297,9 +297,14 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   and EdgeWrapper attach them from the ref callback only when the flow
   passes the matching prop. Likewise an attribute spread is a render effect
   that re-enumerates its source on every run: `domAttributes` are spread
-  only once a row has them (`spreadOnDemand`), and BaseEdge installs a
-  spread only when it was given extra attributes, read from the keys present
-  when it mounts (bench round 35: BaseEdge 169 → 48 ms inclusive at 10k).
+  only once a row has them (`spreadOnDemand`), and BaseEdge and Handle
+  install one only when they were given extra attributes, read once from
+  the keys present when they mount (`extraKeysOf`/`spreadExtras` in
+  `src/utils.ts`). Never write `{...rest}` on a per-row element: the
+  compiler then emits one `spread(el, [rest, {every attribute}])` for the
+  whole element — no static template, and one effect that re-collects all
+  of its attributes on any change (bench rounds 35/36: BaseEdge 169 → 48 ms,
+  Handle 296 → 115 ms inclusive at 10k; mount 2.7 → 2.3 s).
 - **Culling is a keyed record, not a per-row read of the viewport.** The
   quantized culling viewport steps every quarter-viewport of pan; a per-row
   memo over it makes every step re-run all ~20k row memos through the store

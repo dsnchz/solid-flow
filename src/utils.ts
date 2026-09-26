@@ -6,7 +6,7 @@ import {
   isNodeBase,
   type XYPosition,
 } from "@xyflow/system";
-import { createEffect, getOwner, runWithOwner } from "solid-js";
+import { createEffect, getOwner, type Owner, runWithOwner } from "solid-js";
 
 import type { Edge, Node } from "./types";
 
@@ -134,6 +134,40 @@ export const emitFlowError = (
 ): void => {
   if (onError) onError(id, message);
   else console.warn(`[solid-flow] ${id}: ${message}`);
+};
+
+/**
+ * Extra props as element attributes, decided ONCE from the keys present when
+ * the component mounts: a JSX props object has a fixed key set, so this is
+ * exact for JSX usage, and a component given no extra prop installs no
+ * spread at all. A spread is a render effect that re-collects every key of
+ * its source on every run, and with a spread on the element the compiler
+ * routes ALL of the element's attributes through it (bench rounds 35/36:
+ * BaseEdge 169 -> 48 ms, Handle 296 -> 115 ms inclusive at 10k).
+ */
+export const extraKeysOf = (props: object, own: ReadonlySet<string>): readonly string[] =>
+  Object.keys(props).filter((key) => !own.has(key));
+
+/**
+ * Installs the spread of `keys` from `props` onto `el` (nothing when there
+ * are none). Call from the element's ref with the component's owner: ref
+ * callbacks run outside it.
+ */
+export const spreadExtras = (
+  el: Element,
+  props: object,
+  keys: readonly string[],
+  owner: Owner | null,
+): void => {
+  if (keys.length === 0) return;
+  const extras: Record<string, unknown> = {};
+  for (const key of keys) {
+    Object.defineProperty(extras, key, {
+      get: () => Reflect.get(props, key),
+      enumerable: true,
+    });
+  }
+  runWithOwner(owner, () => spread(el, extras, true));
 };
 
 /**
