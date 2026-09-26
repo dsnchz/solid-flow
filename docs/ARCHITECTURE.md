@@ -189,6 +189,20 @@ are the same code path as arrays.
   from the ref callback, owner-bound: `runWithOwner(owner, () =>
 mountElement(el))`, with `el` captured as a plain value and the effects
   inside depending on node fields and props only.
+- **Row elements mount in the settle flush, never inside the initial
+  render.** The engine builds the same 10k-row tree 20–30% cheaper in a
+  post-settle flush than inside `render()` (engine-only repro in
+  `.agent/spikes/p37-mount-split`), and in the standalone path the pan-zoom's
+  first layout read and the culling viewport otherwise land AFTER the rows
+  (forced layout of 10k nodes, every culled memo re-run). `NodeRenderer` and
+  `EdgeRenderer` gate their lists on a `rowsReady` signal that `SolidFlow`
+  flips at the end of `onSettled`, after `setDomNode` — 10k standalone mount
+  3.6 s → 3.1 s (bench round 30). The STORE is still seeded synchronously:
+  children read the graph during their own setup (the hooks contract), and
+  the async/optimistic seeding paths are untouched — deferring the seed
+  itself was tried and rejected for both reasons. The server has no settle
+  and hydration must claim the server-rendered rows, so both render rows
+  immediately (`isServer`, `sharedConfig.isHydrationInProgress`).
 - **Keyed records hold frozen holders, never row proxies.** A projection
   slot assigned a store proxy is unwrapped on write and re-wrapped on read
   under the RECORD's projection family, so every nested leaf a consumer
