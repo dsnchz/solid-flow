@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { Dynamic } from "@solidjs/web";
+import { dynamic } from "@solidjs/web";
 import {
   getBoundsOfRects,
   getNodeDimensions,
@@ -140,6 +140,11 @@ export const MiniMap = <NodeType extends Node>(
     "onNodeClick",
   );
 
+  // One `dynamic()` factory per MiniMap instance (rc.9 deprecates <Dynamic>:
+  // it re-merged/omitted `component` per node and rebuilt a factory each
+  // time); the source tracks the prop, so a runtime swap re-renders every
+  // node with the new component.
+  const NodeComponent = dynamic(() => _props.nodeComponent ?? MiniMapNode);
   const nodeColorFunc = () =>
     _props.nodeColor === undefined ? undefined : getAttrFunction(_props.nodeColor);
 
@@ -362,8 +367,7 @@ export const MiniMap = <NodeType extends Node>(
                       // parity), not the internal row.
                       const userNode = () => node().internals.userNode;
                       return (
-                        <Dynamic
-                          component={_props.nodeComponent ?? MiniMapNode}
+                        <NodeComponent
                           id={nodeId()}
                           x={node().internals.positionAbsolute.x}
                           y={node().internals.positionAbsolute.y}

@@ -1,4 +1,6 @@
 import { fireEvent, render } from "@solidjs/testing-library";
+import type { JSX } from "@solidjs/web";
+import { createSignal, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
@@ -63,6 +65,35 @@ describe("MiniMap", () => {
     });
     expect(a.style).toMatchObject({ background: "rgb(255, 0, 0)" });
     expect(a.shapeRendering).toBeDefined();
+  });
+
+  it("follows a runtime swap of nodeComponent for every rendered node", async () => {
+    const Circle = (props: MiniMapNodeProps) => (
+      <circle class="mini-circle" cx={props.x} cy={props.y} r={4} />
+    );
+    const Square = (props: MiniMapNodeProps) => (
+      <rect class="mini-square" x={props.x} y={props.y} width={8} height={8} />
+    );
+    // Boxed: a bare function handed to createSignal is a compute, not a value.
+    const [shape, setShape] = createSignal<{ C: (props: MiniMapNodeProps) => JSX.Element }>({
+      C: Circle,
+    });
+
+    const { container } = render(() => (
+      <SolidFlow nodes={nodes} edges={[]} width={800} height={600}>
+        <MiniMap nodeComponent={shape().C} />
+      </SolidFlow>
+    ));
+    await tick();
+    expect(container.querySelectorAll(".mini-circle")).toHaveLength(2);
+    expect(container.querySelectorAll(".mini-square")).toHaveLength(0);
+
+    setShape({ C: Square });
+    flush();
+    await tick();
+    expect(container.querySelectorAll(".mini-circle")).toHaveLength(0);
+    expect(container.querySelectorAll(".mini-square")).toHaveLength(2);
+    expect(container.querySelectorAll(".solid-flow__minimap-node")).toHaveLength(0);
   });
 
   it("onNodeClick fires with the clicked user node", async () => {
