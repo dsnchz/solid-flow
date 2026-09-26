@@ -26,9 +26,9 @@ import type { Edge, Node } from "@/types";
 // the two record merges. `internalNodes.row` joined the list on solid-js
 // rc.9: the row spreads its user node, and rc.9 subscribes an enumerating
 // reader to a presence node PER KEY (rc.8: the one key-set node), which
-// pushes the row memo to 33-35 sources. Upstream perf regression, isolated
-// repro + draft: .agent/upstream-rc9-ownkeys-presence-nodes-draft.md — drop
-// this entry when the engine fix lands.
+// pushes the row memo to 33-35 sources. Upstream perf regression, filed with
+// an isolated repro as solidjs/solid#3664 — drop this entry when the fix
+// lands.
 const ALLOWED_DIAGNOSTICS = new Set([
   "WIDE_SCOPE_DEPS:selectedIds",
   "WIDE_SCOPE_DEPS:connections",

@@ -301,7 +301,7 @@ record` — the engine subscribes per key, including absent keys — through
   allowed too since solid-js rc.9, where enumerating a store object — the
   row's `...userNode` spread — subscribes a presence node per key instead of
   the one key-set node, pushing the row memo past the 30-source line: an
-  upstream perf regression with an isolated repro, not a library shape). The timing benches measure
+  upstream perf regression, solidjs/solid#3664, not a library shape). The timing benches measure
   milliseconds; this pins the granularity they come from. `expectNoWaste` is
   not usable: draft-form projections return no value, so every per-row derive
   reads as an unchanged recompute.

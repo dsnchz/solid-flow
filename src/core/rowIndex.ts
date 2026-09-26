@@ -38,8 +38,7 @@ export const createRowIndex = <T extends { readonly id: string }>(
     // The scan is the correctness floor, never the per-frame path. `row?.`:
     // an optimistic draft read inside an open action can present a hole at a
     // slot a previous same-action setter pushed (solid-js 2.0.0-rc.9
-    // regression, .agent/upstream-rc9-optimistic-draft-hole.md); a hole is a
-    // miss, not a crash.
+    // regression, solidjs/solid#3665); a hole is a miss, not a crash.
     return rows.findIndex((row) => row?.id === id);
   };
 
