@@ -273,6 +273,21 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   (solidjs/solid#3352, filed from this code), root writes are O(1), and the
   derive deletes emptied keys directly. Reconnect 21 → 11 ms on the bump
   (round 27).
+- **Per-row projections: reconcile the user change, leaf-write the rest.**
+  Draft writes are not free either: every draft read allocates a wrapper
+  proxy and every draft op toggles the engine's write flags, so writing all
+  ~25 row keys through the draft costs about twice the reconcile (bench
+  round 34). The node row derive (`projections/internalNodes.ts`) therefore
+  RETURNS a fresh row when the user snapshot changes (the engine reconciles
+  it, which is also what keeps the `internals.userNode` copy in sync — a
+  proxy written into a store backing is copied, its leaves chain but its
+  slots do not) and on every other run (measurement, overlay, drag, parent
+  move) writes only the leaves that changed, compared against closure-held
+  last values. Handle bounds are frozen records: frozen objects are not
+  wrappable, so every store serves them raw by identity, the reconcile
+  compares them by reference, and the measurement ingest writes its root
+  leaf-wise with a structural compare so an identical pass notifies nothing
+  (10k mount 2.9 → 2.7 s, heap 819 → 713 MB).
 - **Culling is a keyed record, not a per-row read of the viewport.** The
   quantized culling viewport steps every quarter-viewport of pan; a per-row
   memo over it makes every step re-run all ~20k row memos through the store

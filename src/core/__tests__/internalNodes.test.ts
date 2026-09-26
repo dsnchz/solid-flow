@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Node } from "@/types";
 
+import type { DragOverlay } from "../dragOverlay";
 import {
   calculateZ,
   createInternalNodes,
@@ -539,5 +540,136 @@ describe("createInternalNodes — the user row is enumerated once per user chang
     });
     flush();
     expect(internalNodes["a"]!.internals.positionAbsolute).toEqual({ x: 5, y: 5 });
+  });
+});
+
+describe("createInternalNodes — row writes land in place", () => {
+  const mount = (...args: Parameters<typeof setup>) =>
+    createRoot((dispose) => ({ dispose, ...setup(...args) }));
+
+  it("catches a key REMOVED from the node after adoption", () => {
+    // The static half of the row is written only when the user row changes;
+    // a removed user key must leave the row (not linger as a stale own key).
+    const { internalNodes, setNodes, dispose } = mount([makeNode({ id: "a", zIndex: 7 })]);
+    flush();
+    expect(internalNodes.a!.zIndex).toBe(7);
+    expect(internalNodes.a!.internals.z).toBe(7);
+
+    setNodes((draft) => {
+      delete draft[0]!.zIndex;
+      return undefined;
+    });
+    flush();
+
+    expect(internalNodes.a!.zIndex).toBeUndefined();
+    expect("zIndex" in internalNodes.a!).toBe(false);
+    expect(internalNodes.a!.internals.z).toBe(0);
+    dispose();
+  });
+
+  it("a replaced data object shows through internals.userNode", () => {
+    // The user proxy is adopted into the row by shallow copy, so a slot
+    // replacement inside the user node (updateNodeData) must re-adopt it.
+    const { internalNodes, setNodes, dispose } = mount([
+      makeNode({ id: "a", data: { label: "first" } }),
+    ]);
+    flush();
+    expect(internalNodes.a!.internals.userNode.data).toEqual({ label: "first" });
+
+    setNodes((draft) => {
+      draft[0]!.data = { label: "replaced" };
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.a!.internals.userNode.data).toEqual({ label: "replaced" });
+    dispose();
+  });
+
+  it("after a controlled reset, a replaced data object still shows through internals.userNode", () => {
+    // A controlled nodes prop that yields a fresh array re-seeds the store:
+    // the row keeps its store (keyed by id) but the user object is swapped,
+    // and the re-adopted userNode copy must keep following slot
+    // replacements (the hooks round-trip caught this, bench round 34).
+    const { internalNodes, setNodes, dispose } = mount([
+      makeNode({ id: "a", data: { label: "first" } }),
+    ]);
+    flush();
+    void internalNodes.a!.data.label;
+
+    setNodes(() => [makeNode({ id: "a", data: { label: "first" } })]);
+    flush();
+    setNodes((draft) => {
+      draft[0]!.data = { label: "replaced" };
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.a!.data).toEqual({ label: "replaced" });
+    expect(internalNodes.a!.internals.userNode.data).toEqual({ label: "replaced" });
+    dispose();
+  });
+
+  it("a drag-overlay move lands in the row's position, never in the user's object", () => {
+    // Geometry-only runs write leaves in place: the row's position must be
+    // the row's own object, not the user's position adopted by identity.
+    const userPosition = { x: 10, y: 10 };
+    const [nodes] = createStore<Node[]>([makeNode({ id: "a", position: userPosition })]);
+    const [measurements] = createStore<NodeMeasurements>({});
+    const [dragOverlay, setDragOverlay] = createStore<DragOverlay>({});
+    const internalNodes = createRoot(() =>
+      createInternalNodes({
+        selectionOverlay: {},
+        get dragOverlay() {
+          return dragOverlay;
+        },
+        get nodes() {
+          return nodes;
+        },
+        get measurements() {
+          return measurements;
+        },
+        nodeOrigin: [0, 0],
+        nodeExtent: infiniteExtent,
+        elevateNodesOnSelect: true,
+      }),
+    );
+    flush();
+    expect(internalNodes.a!.position).toEqual({ x: 10, y: 10 });
+
+    setDragOverlay((draft) => {
+      draft["a"] = {
+        position: { x: 50, y: 60 },
+        dragging: true,
+        rowBefore: { x: 10, y: 10 },
+        row: nodes[0]!,
+      };
+      return undefined;
+    });
+    flush();
+
+    expect(internalNodes.a!.position).toEqual({ x: 50, y: 60 });
+    expect(internalNodes.a!.dragging).toBe(true);
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 50, y: 60 });
+    expect(nodes[0]!.position).toEqual({ x: 10, y: 10 });
+    expect(userPosition).toEqual({ x: 10, y: 10 });
+  });
+
+  it("keeps position, measured and positionAbsolute identity across a measurement pass", () => {
+    const { internalNodes, setMeasurements } = createRoot(() => setup([makeNode({ id: "a" })]));
+    flush();
+    const row = internalNodes.a!;
+    const position = row.position;
+    const measured = row.measured;
+    const positionAbsolute = row.internals.positionAbsolute;
+
+    setMeasurements((draft) => {
+      draft["a"] = { measured: { width: 120, height: 60 }, handleBounds: handleBounds("a") };
+      return undefined;
+    });
+    flush();
+
+    expect(row.measured).toEqual({ width: 120, height: 60 });
+    expect(row.position).toBe(position);
+    expect(row.measured).toBe(measured);
+    expect(row.internals.positionAbsolute).toBe(positionAbsolute);
   });
 });

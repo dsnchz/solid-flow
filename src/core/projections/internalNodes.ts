@@ -6,6 +6,7 @@ import {
   getNodePositionWithOrigin,
   isCoordinateExtent,
   isNumeric,
+  type NodeBase,
   type NodeHandleBounds,
   type NodeOrigin,
   type ZIndexMode,
@@ -43,7 +44,13 @@ export function calculateZ(
 /** One node's DOM-derived state, written by the measurement ingest. */
 export type NodeMeasurement = {
   measured: { width: number; height: number };
-  /** Cleared (not deleted) while the node is hidden, so unhiding re-measures. */
+  /**
+   * Cleared (not deleted) while the node is hidden, so unhiding re-measures.
+   * An immutable record (the ingest deep-freezes it): the stores serve it
+   * RAW by identity, so a changed measurement is a replaced slot and an
+   * equal one is no write at all — the row rebuild and the edge layouts
+   * compare it by reference.
+   */
   handleBounds?: NodeHandleBounds;
 };
 
@@ -172,7 +179,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       // wrapper is what keeps TS happy across the Store<T>=Readonly<T>
       // mapped type with an unresolved NodeType generic, and the inner
       // `.row` proxy is what the public record holds.
-      let geometry = "";
+      let geometryKey = "";
       // ONE enumeration of the user row per USER change: the projection
       // reads this plain snapshot, so a measurement or overlay change
       // re-runs the geometry without re-spreading the proxy — the spread ran
@@ -181,10 +188,32 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       const userSnapshot = createMemo(() => ({ ...userNodeAccessor() }), {
         name: "internalNodes.user",
       });
+      // Two write paths (bench round 34). A user-snapshot change (or a swapped
+      // user object) RETURNS a fresh row and lets the engine reconcile it —
+      // the cheap path for a ~25-key change, and what keeps the userNode
+      // copy in sync. A geometry-only run (measurement, overlay, drag,
+      // parent move) writes the few leaves that changed IN PLACE, compared
+      // against closure-held last values so an unchanged leaf never touches
+      // the draft: every draft read allocates a wrapper and every draft op
+      // toggles the engine's write flags, so writing all ~25 keys through
+      // the draft cost twice the reconcile.
+      let lastUser: NodeType | undefined;
+      let lastUserNode: NodeType | undefined;
+      let lastSelected: boolean | undefined;
+      let lastDragging: boolean | undefined;
+      let lastPositionX = NaN;
+      let lastPositionY = NaN;
+      let lastWidth: number | undefined;
+      let lastHeight: number | undefined;
+      let lastX = NaN;
+      let lastY = NaN;
+      let lastZ = NaN;
+      let lastHandleBounds: NodeHandleBounds | undefined;
+      let lastRootParentIndex: number | undefined;
       const store: { row: InternalNode<NodeType> } = createProjection<{
         row: InternalNode<NodeType>;
       }>(
-        () => {
+        (draft) => {
           // the accessor tracks the item slot: a controlled array reset swaps
           // the user node object while THIS row store (keyed by id) survives,
           // so downstream subscriptions never strand on disposed stores
@@ -219,35 +248,34 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             width: measurement?.measured.width ?? user.measured?.width,
             height: measurement?.measured.height ?? user.measured?.height,
           };
-          const dimensions = getNodeDimensions({
+          // The inputs the upstream geometry helpers read, as one small plain
+          // object — not a spread of the user row per run.
+          const geometry: RowGeometryInput = {
+            id: user.id,
+            data: user.data,
+            position,
+            origin: user.origin,
+            extent: user.extent,
+            zIndex: user.zIndex,
+            selected,
             measured,
             width: user.width,
             height: user.height,
             initialWidth: user.initialWidth,
             initialHeight: user.initialHeight,
-          });
+          };
+          const dimensions = getNodeDimensions(geometry);
 
           const rootParentIndex = autoIndex().get(user.id);
-          const row = {
-            ...user,
-            selected,
-            position,
-            dragging,
-            measured,
-            internals: {
-              positionAbsolute: clampPosition(
-                getNodePositionWithOrigin({ ...user, position, measured }, nodeOrigin),
-                isCoordinateExtent(user.extent) ? user.extent : nodeExtent,
-                dimensions,
-              ),
-              handleBounds: measurement?.handleBounds,
-              z:
-                calculateZ({ zIndex: user.zIndex, selected }, selectedNodeZ, zIndexMode) +
-                (rootParentIndex !== undefined ? rootParentIndex * ROOT_PARENT_Z_INCREMENT : 0),
-              ...(rootParentIndex !== undefined ? { rootParentIndex } : {}),
-              userNode,
-            },
-          } as InternalNode<NodeType>;
+          const absolute = clampPosition(
+            getNodePositionWithOrigin(geometry, nodeOrigin),
+            isCoordinateExtent(user.extent) ? user.extent : nodeExtent,
+            dimensions,
+          );
+          let { x, y } = absolute;
+          let z =
+            calculateZ(geometry, selectedNodeZ, zIndexMode) +
+            (rootParentIndex !== undefined ? rootParentIndex * ROOT_PARENT_Z_INCREMENT : 0);
 
           if (user.parentId) {
             const parentEntry = entryById.get(user.parentId);
@@ -256,16 +284,17 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             // store subscribes to exactly the parent leaves the child's
             // geometry depends on.
             if (parentEntry && parentEntry.index() < index()) {
-              const { x, y, z } = calculateChildXYZ(
-                row,
+              const child = calculateChildXYZ(
+                geometry,
                 parentEntry.store.row,
                 nodeOrigin,
                 nodeExtent,
                 selectedNodeZ,
                 zIndexMode,
               );
-              row.internals.positionAbsolute = { x, y };
-              row.internals.z = z;
+              x = child.x;
+              y = child.y;
+              z = child.z;
             } else {
               // Subscribe to membership so the row re-runs if the parent is
               // added (or reordered to the front) later.
@@ -279,10 +308,9 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           }
 
           if (source.onGeometryChange) {
-            const { x, y } = row.internals.positionAbsolute;
             const next = `${x},${y},${dimensions.width},${dimensions.height},${user.parentId ?? ""}`;
-            if (next !== geometry) {
-              geometry = next;
+            if (next !== geometryKey) {
+              geometryKey = next;
               source.onGeometryChange(id, {
                 x,
                 y,
@@ -293,7 +321,89 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             }
           }
 
-          return { row };
+          const handleBounds = measurement?.handleBounds;
+          const previous = {
+            selected: lastSelected,
+            dragging: lastDragging,
+            positionX: lastPositionX,
+            positionY: lastPositionY,
+            width: lastWidth,
+            height: lastHeight,
+            x: lastX,
+            y: lastY,
+            z: lastZ,
+            handleBounds: lastHandleBounds,
+            rootParentIndex: lastRootParentIndex,
+          };
+          lastSelected = selected;
+          lastDragging = dragging;
+          lastPositionX = position.x;
+          lastPositionY = position.y;
+          lastWidth = measured.width;
+          lastHeight = measured.height;
+          lastX = x;
+          lastY = y;
+          lastZ = z;
+          lastHandleBounds = handleBounds;
+          lastRootParentIndex = rootParentIndex;
+
+          if (user !== lastUser || userNode !== lastUserNode) {
+            lastUser = user;
+            lastUserNode = userNode;
+            // Geometry-owned objects are the row's own copies: the in-place
+            // leaf writes below must never land in the user's or an
+            // overlay's object.
+            const row = {
+              ...user,
+              selected,
+              position: { x: position.x, y: position.y },
+              dragging,
+              measured,
+              internals: {
+                positionAbsolute: { x, y },
+                handleBounds,
+                z,
+                ...(rootParentIndex !== undefined ? { rootParentIndex } : {}),
+                userNode,
+              },
+            } as InternalNode<NodeType>;
+            return { row };
+          }
+
+          const row = draft.row;
+          if (selected !== previous.selected) row.selected = selected;
+          if (dragging !== previous.dragging) row.dragging = dragging;
+          if (position.x !== previous.positionX || position.y !== previous.positionY) {
+            const rowPosition = row.position;
+            rowPosition.x = position.x;
+            rowPosition.y = position.y;
+          }
+          if (measured.width !== previous.width || measured.height !== previous.height) {
+            const rowMeasured = row.measured;
+            rowMeasured.width = measured.width;
+            rowMeasured.height = measured.height;
+          }
+          if (
+            x !== previous.x ||
+            y !== previous.y ||
+            z !== previous.z ||
+            handleBounds !== previous.handleBounds ||
+            rootParentIndex !== previous.rootParentIndex
+          ) {
+            const { internals } = row;
+            if (x !== previous.x || y !== previous.y) {
+              const { positionAbsolute } = internals;
+              positionAbsolute.x = x;
+              positionAbsolute.y = y;
+            }
+            if (z !== previous.z) internals.z = z;
+            if (handleBounds !== previous.handleBounds) internals.handleBounds = handleBounds;
+            if (rootParentIndex !== previous.rootParentIndex) {
+              if (rootParentIndex === undefined) delete internals.rootParentIndex;
+              else internals.rootParentIndex = rootParentIndex;
+            }
+          }
+          return undefined;
         },
         {},
         { key: "id", name: "internalNodes.row" },
@@ -320,8 +430,25 @@ export const createInternalNodes = <NodeType extends Node = Node>(
   return createRowRecordProjection(rowStores, "internalNodes");
 };
 
+/** The user-row fields the geometry derive reads, plus the joined values. */
+type RowGeometryInput = Pick<
+  NodeBase,
+  | "id"
+  | "data"
+  | "position"
+  | "origin"
+  | "extent"
+  | "zIndex"
+  | "selected"
+  | "measured"
+  | "width"
+  | "height"
+  | "initialWidth"
+  | "initialHeight"
+>;
+
 function calculateChildXYZ<NodeType extends Node>(
-  childNode: InternalNode<NodeType>,
+  childNode: RowGeometryInput,
   parentNode: InternalNode<NodeType>,
   nodeOrigin: NodeOrigin,
   nodeExtent: CoordinateExtent,
