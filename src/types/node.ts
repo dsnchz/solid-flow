@@ -33,6 +33,17 @@ export type Node<
    * pre-measurement window and is superseded by the DOM measurement.
    */
   measured?: { width?: number; height?: number };
+  /**
+   * Flow-owned selection state, explicit on every adopted row: rows from
+   * `defaultNodes`, the node store factories and `addNodes` carry
+   * `selected: false` from the start, like `measured`, so a fresh row reads
+   * as unselected rather than "not written yet". A value you supply is
+   * kept; a row from a raw store you built yourself gets the key on its
+   * first selection.
+   */
+  selected?: boolean;
+  /** Flow-owned drag state; explicit `false` on adopted rows exactly like `selected`. */
+  dragging?: boolean;
   focusable?: boolean;
   /**
    * When `false`, the node is exempt from viewport culling on both tiers:

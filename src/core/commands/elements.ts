@@ -14,7 +14,7 @@ import { isEdge, isNode } from "@/utils";
 
 import { type DragOverlay } from "../dragOverlay";
 import type { FlowCommands } from "../flowState";
-import { seedMeasured } from "../measuredSeed";
+import { seedNodeRow } from "../nodeSeed";
 import type { RowIndex } from "../rowIndex";
 import { type SelectionOverlay } from "../selectionOverlay";
 
@@ -178,8 +178,8 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
 
   const commands = {
     addNodes: (payload) => {
-      // Seeded while still plain (see core/measuredSeed.ts).
-      const newNodes = (Array.isArray(payload) ? payload : [payload]).map(seedMeasured);
+      // Seeded while still plain (see core/nodeSeed.ts).
+      const newNodes = (Array.isArray(payload) ? payload : [payload]).map(seedNodeRow);
       setNodesStore((nodes) => [...nodes, ...newNodes]);
     },
     addEdges: (payload) => {

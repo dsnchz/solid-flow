@@ -73,3 +73,45 @@ describe("measured is seeded on adoption", () => {
     expect(state.store.nodes[2]!.measured).toEqual({ width: 50, height: 20 });
   });
 });
+
+/**
+ * The flow-owned booleans are seeded the same way, as explicit state: a
+ * fresh adopted row reads `selected: false` and `dragging: false` rather
+ * than an absent key (user decision, 2026-09-26; no performance claim —
+ * bench round 43 measured none). A value the user supplied is kept;
+ * raw-store rows are left alone until their first write.
+ */
+describe("selected and dragging are seeded on adoption", () => {
+  it("uncontrolled: default rows carry selected: false and dragging: false", () => {
+    const state = createRoot(() =>
+      createSolidFlow({ defaultNodes: [makeNode("a"), { ...makeNode("b"), selected: true }] }),
+    );
+    flush();
+    const [a, b] = state.store.nodes;
+    expect(a!.selected).toBe(false);
+    expect(a!.dragging).toBe(false);
+    expect("selected" in a! && "dragging" in a!).toBe(true);
+    expect(b!.selected).toBe(true);
+    expect(state.internalNodes.b!.selected).toBe(true);
+    expect(state.internalNodes.a!.selected).toBe(false);
+  });
+
+  it("controlled: factory rows and added rows carry both keys", () => {
+    const [nodes] = createNodeStore([defaultNode("a")]);
+    expect(nodes[0]!.selected).toBe(false);
+    expect(nodes[0]!.dragging).toBe(false);
+    const state = createRoot(() => createSolidFlow<Node>({ defaultNodes: [] }));
+    state.commands.addNodes([makeNode("late")]);
+    flush();
+    expect(state.store.nodes[0]!.selected).toBe(false);
+    expect(state.store.nodes[0]!.dragging).toBe(false);
+  });
+
+  it("controlled: a raw store's rows are left alone", () => {
+    const [nodes] = createStore<Node[]>([makeNode("a")]);
+    createRoot(() => createSolidFlow({ nodes }));
+    flush();
+    expect("selected" in nodes[0]!).toBe(false);
+    expect("dragging" in nodes[0]!).toBe(false);
+  });
+});

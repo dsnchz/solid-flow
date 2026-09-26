@@ -127,7 +127,7 @@ export const createMeasurementIngest = <NodeType extends Node>({
 
             // Leaf writes into the seeded `measured` object (a replaced slot
             // would rebuild the row — the row projection's user snapshot
-            // tracks slots and keys, not leaves; core/measuredSeed.ts). A row
+            // tracks slots and keys, not leaves; core/nodeSeed.ts). A row
             // from a raw user store lacks the key and gets it here, once.
             if (node.measured === undefined) {
               node.measured = { ...change.dimensions };

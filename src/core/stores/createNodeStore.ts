@@ -2,7 +2,7 @@ import type { Refreshable, Store, StoreSetter } from "solid-js";
 
 import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes, UnknownStruct } from "@/types";
 
-import { seedMeasured } from "../measuredSeed";
+import { seedNodeRow } from "../nodeSeed";
 import { createSeededOptimisticStore, createSeededStore, mapSeedInput } from "./factory";
 
 // Extract the data type from a node component's props; components whose
@@ -137,8 +137,8 @@ export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string
         | Promise<NoInfer<NodesInput<TUserNodeTypes>>[]>
         | AsyncIterable<NoInfer<NodesInput<TUserNodeTypes>>[]>),
 ): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>] => {
-  // Rows leave the factory with `measured` seeded (see core/measuredSeed.ts).
-  return createSeededStore<NodesInput<TUserNodeTypes>>(mapSeedInput(nodes, seedMeasured));
+  // Rows leave the factory with `measured` seeded (see core/nodeSeed.ts).
+  return createSeededStore<NodesInput<TUserNodeTypes>>(mapSeedInput(nodes, seedNodeRow));
 };
 
 /**
@@ -170,5 +170,5 @@ export function createOptimisticNodeStore<TUserNodeTypes extends NodeTypes = Rec
 ): readonly [Store<NodesInput<TUserNodeTypes>[]>, StoreSetter<NodesInput<TUserNodeTypes>[]>] {
   // Mirrors the full core surface (value | promise | stream), like the plain
   // factory: the wrapper's only value-add is the guided-union typing.
-  return createSeededOptimisticStore<NodesInput<TUserNodeTypes>>(mapSeedInput(nodes, seedMeasured));
+  return createSeededOptimisticStore<NodesInput<TUserNodeTypes>>(mapSeedInput(nodes, seedNodeRow));
 }

@@ -2,7 +2,7 @@ import { createEffect, createStore, isPending, untrack } from "solid-js";
 
 import type { Edge, Node } from "@/types";
 
-import { seedMeasured } from "../measuredSeed";
+import { seedNodeRow } from "../nodeSeed";
 
 /**
  * The graph-membership slice of the flow's props: the two controlled axes
@@ -77,10 +77,10 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   const copyRows = <T extends object>(rows: readonly T[] | undefined): T[] =>
     (rows ?? []).map((row) => ({ ...row }));
   // Uncontrolled node rows leave the copy with `measured` seeded (see
-  // core/measuredSeed.ts); controlled rows are the user's own objects and
+  // core/nodeSeed.ts); controlled rows are the user's own objects and
   // are seeded by the node store factories instead.
   const copyNodeRows = (rows: readonly NodeType[] | undefined): NodeType[] =>
-    (rows ?? []).map((row) => seedMeasured({ ...row }));
+    (rows ?? []).map((row) => seedNodeRow({ ...row }));
   const [nodesStore, setNodesStore] = createStore<NodeType[]>(
     (props.nodes ?? (nodeDefaultsPending ? [] : copyNodeRows(props.defaultNodes))) as NodeType[],
   );
