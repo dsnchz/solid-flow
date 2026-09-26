@@ -1,5 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { getStraightPath } from "@xyflow/system";
+import { createMemo } from "solid-js";
 
 import type { StraightEdgeProps } from "@/types";
 
@@ -9,7 +10,8 @@ import { BaseEdge } from "./BaseEdge";
 export const StraightEdgeInternal = (
   props: Omit<StraightEdgeProps, "sourcePosition" | "targetPosition">,
 ): JSX.Element => {
-  const pathData = () => {
+  // One path computation per input change: three getters read it (bench round 35).
+  const pathData = createMemo(() => {
     const [path, labelX, labelY] = getStraightPath({
       sourceX: props.sourceX,
       sourceY: props.sourceY,
@@ -18,7 +20,7 @@ export const StraightEdgeInternal = (
     });
 
     return { path, labelX, labelY };
-  };
+  });
 
   return (
     <BaseEdge

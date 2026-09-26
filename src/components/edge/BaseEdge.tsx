@@ -1,56 +1,84 @@
 import type { JSX } from "@solidjs/web";
-import { omit, type ParentProps, Show } from "solid-js";
+import { spread } from "@solidjs/web";
+import { getOwner, type ParentProps, runWithOwner, Show } from "solid-js";
 
 import type { BaseEdgeProps } from "@/types";
-import { propDefaults } from "@/utils";
+import { cx } from "@/utils";
 
 import { EdgeLabel } from "./EdgeLabel";
 
-/** Lowest-level edge primitive: renders the SVG path, label, and interaction width. */
-export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
-  const _props = propDefaults(props, {
-    interactionWidth: 20,
-  });
+/** The props BaseEdge consumes itself; every other key is an attribute of the path. */
+const OWN_KEYS: ReadonlySet<string> = new Set([
+  "id",
+  "class",
+  "style",
+  "path",
+  "interactionWidth",
+  "label",
+  "labelStyle",
+  "labelX",
+  "labelY",
+  "markerStart",
+  "markerEnd",
+  "children",
+]);
 
-  const rest = omit(
-    _props,
-    "class",
-    "style",
-    "path",
-    "interactionWidth",
-    "label",
-    "labelStyle",
-    "labelX",
-    "labelY",
-    "markerStart",
-    "markerEnd",
-  );
+const DEFAULT_INTERACTION_WIDTH = 20;
+
+/**
+ * Lowest-level edge primitive: renders the SVG path, label, and interaction width.
+ *
+ * Extra props reach the path as attributes and stay reactive. Which keys are
+ * extra is read once, from the keys present when the edge mounts (a JSX
+ * props object has a fixed key set); the built-in edge types pass none, and
+ * for them no attribute spread is installed at all — the spread is a render
+ * effect that re-enumerates its source on every run (bench round 35).
+ */
+export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
+  // Skip-undefined default (see propDefaults) without building a getter object per edge.
+  const interactionWidth = () => props.interactionWidth ?? DEFAULT_INTERACTION_WIDTH;
+
+  const extraKeys = Object.keys(props).filter((key) => !OWN_KEYS.has(key));
+  // The ref callback runs outside the component owner; the spread's effect must be owned.
+  const owner = getOwner();
+  const mountPath = (el: SVGPathElement) => {
+    if (extraKeys.length === 0) return;
+    const extras: Record<string, unknown> = {};
+    for (const key of extraKeys) {
+      Object.defineProperty(extras, key, {
+        get: () => Reflect.get(props, key),
+        enumerable: true,
+      });
+    }
+    runWithOwner(owner, () => spread(el, extras, true));
+  };
 
   return (
     <>
       <path
-        d={_props.path}
-        class={["solid-flow__edge-path", _props.class]}
-        marker-start={_props.markerStart}
-        marker-end={_props.markerEnd}
+        ref={mountPath}
+        id={props.id}
+        d={props.path}
+        class={cx("solid-flow__edge-path", props.class)}
+        marker-start={props.markerStart}
+        marker-end={props.markerEnd}
         fill="none"
-        style={_props.style}
-        {...rest}
+        style={props.style}
       />
 
-      <Show when={_props.interactionWidth > 0}>
+      <Show when={interactionWidth() > 0}>
         <path
-          d={_props.path}
+          d={props.path}
           stroke-opacity={0}
-          stroke-width={_props.interactionWidth}
+          stroke-width={interactionWidth()}
           fill="none"
           class="solid-flow__edge-interaction"
         />
       </Show>
 
-      <Show when={_props.label}>
-        <EdgeLabel x={_props.labelX} y={_props.labelY} style={_props.labelStyle}>
-          {_props.label}
+      <Show when={props.label}>
+        <EdgeLabel x={props.labelX} y={props.labelY} style={props.labelStyle}>
+          {props.label}
         </EdgeLabel>
       </Show>
     </>

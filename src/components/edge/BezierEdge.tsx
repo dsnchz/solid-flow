@@ -1,5 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { getBezierPath } from "@xyflow/system";
+import { createMemo } from "solid-js";
 
 import type { BezierEdgeProps } from "@/types";
 
@@ -7,7 +8,8 @@ import { BaseEdge } from "./BaseEdge";
 
 /** Built-in bezier edge component. */
 export const BezierEdge = (props: BezierEdgeProps): JSX.Element => {
-  const pathData = () => {
+  // One path computation per input change: three getters read it (bench round 35).
+  const pathData = createMemo(() => {
     const [path, labelX, labelY] = getBezierPath({
       sourceX: props.sourceX,
       sourceY: props.sourceY,
@@ -19,7 +21,7 @@ export const BezierEdge = (props: BezierEdgeProps): JSX.Element => {
     });
 
     return { path, labelX, labelY };
-  };
+  });
 
   return (
     <BaseEdge

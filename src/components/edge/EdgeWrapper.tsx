@@ -80,8 +80,13 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   // synchronous mount and sits in the pure heap, and every later row's memo
   // pull re-marks that heap (bench round 17/18 — the O(N^2) mount).
   const onDblClick = (event: MouseEvent) => props.onEdgeDoubleClick?.({ edge: edge(), event });
+  // The runtime does not delegate pointerenter/pointerleave, and dblclick is
+  // attached directly: wired only when the flow passes the callback (see
+  // NodeWrapper), or they are three listeners per edge for nobody.
   const mountElement = (el: SVGGElement) => {
-    createEventListener(el, "dblclick", onDblClick);
+    if (props.onEdgeDoubleClick) createEventListener(el, "dblclick", onDblClick);
+    if (props.onEdgePointerEnter) createEventListener(el, "pointerenter", onPointerEnter);
+    if (props.onEdgePointerLeave) createEventListener(el, "pointerleave", onPointerLeave);
     // Direct spread for user domAttributes, installed on demand — see NodeWrapper.
     spreadOnDemand(el, () => edge()?.domAttributes);
   };
@@ -142,8 +147,6 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
           onClick={onClick}
           onKeyDown={(e) => focusable() && onKeyDown(e)}
           onContextMenu={onContextMenu}
-          onPointerEnter={onPointerEnter}
-          onPointerLeave={onPointerLeave}
           onPointerMove={onPointerMove}
         >
           <EdgeComponent

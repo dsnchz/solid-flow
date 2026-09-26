@@ -288,6 +288,18 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   compares them by reference, and the measurement ingest writes its root
   leaf-wise with a structural compare so an identical pass notifies nothing
   (10k mount 2.9 → 2.7 s, heap 819 → 713 MB).
+- **Per-row listeners and attribute spreads only on demand.** The runtime
+  does not delegate `pointerenter`/`pointerleave`, `dblclick` is attached
+  directly, and the compiler attaches a listener even for an `undefined`
+  handler expression, so a wrapper that wires them unconditionally pays one
+  listener per row per event for callbacks nobody passed: 2 per node plus 3
+  per edge at 10k before rounds 31 and 35, 20,025 total after. NodeWrapper
+  and EdgeWrapper attach them from the ref callback only when the flow
+  passes the matching prop. Likewise an attribute spread is a render effect
+  that re-enumerates its source on every run: `domAttributes` are spread
+  only once a row has them (`spreadOnDemand`), and BaseEdge installs a
+  spread only when it was given extra attributes, read from the keys present
+  when it mounts (bench round 35: BaseEdge 169 → 48 ms inclusive at 10k).
 - **Culling is a keyed record, not a per-row read of the viewport.** The
   quantized culling viewport steps every quarter-viewport of pan; a per-row
   memo over it makes every step re-run all ~20k row memos through the store

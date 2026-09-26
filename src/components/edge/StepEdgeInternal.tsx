@@ -1,5 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { getSmoothStepPath } from "@xyflow/system";
+import { createMemo } from "solid-js";
 
 import type { StepEdgeProps } from "@/types";
 
@@ -7,7 +8,8 @@ import { BaseEdge } from "./BaseEdge";
 
 /** Renderer-internal step edge variant. */
 export const StepEdgeInternal = (props: StepEdgeProps): JSX.Element => {
-  const pathData = () => {
+  // One path computation per input change: three getters read it (bench round 35).
+  const pathData = createMemo(() => {
     const [path, labelX, labelY] = getSmoothStepPath({
       sourceX: props.sourceX,
       sourceY: props.sourceY,
@@ -19,7 +21,7 @@ export const StepEdgeInternal = (props: StepEdgeProps): JSX.Element => {
     });
 
     return { path, labelX, labelY };
-  };
+  });
 
   return (
     <BaseEdge
