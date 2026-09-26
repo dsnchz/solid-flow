@@ -229,6 +229,32 @@ describe("FlowCommands", () => {
     );
   });
 
+  it("a one-off intersection query and a repeated one in the same task agree", async () => {
+    // A single query walks the geometry map directly (xyflow's cost shape);
+    // only a second query in the same task builds the microtask-cached grid
+    // (head-to-head round 1: 1.4 ms vs 0.35 for one query at 10k). Both
+    // paths feed the same exact predicate, so their results must agree —
+    // including partial vs full containment.
+    const nodes = [];
+    for (let y = 0; y < 20; y++)
+      for (let x = 0; x < 20; x++)
+        nodes.push(makeNode({ id: `${x}-${y}`, position: { x: x * 100, y: y * 50 } }));
+    await withFlow({ nodes, edges: [] }, ({ commands }) => {
+      const rect = { x: 250, y: 120, width: 400, height: 300 };
+      const ids = (rows: { id: string }[]) => rows.map((n) => n.id).sort();
+      const first = ids(commands.getIntersectingNodes(rect));
+      const second = ids(commands.getIntersectingNodes(rect));
+      const fullFirst = ids(commands.getIntersectingNodes(rect, false));
+      expect(first.length).toBeGreaterThan(0);
+      expect(second).toEqual(first);
+      expect(fullFirst.length).toBeLessThan(first.length);
+      expect(ids(commands.getIntersectingNodes(rect, false))).toEqual(fullFirst);
+      // A node query excludes the node itself on both paths.
+      expect(ids(commands.getIntersectingNodes({ id: "5-5" }))).not.toContain("5-5");
+      expect(ids(commands.getIntersectingNodes({ id: "5-5" }))).not.toContain("5-5");
+    });
+  });
+
   it("computes node bounds and intersections from declared dimensions", async () => {
     await withFlow(
       {

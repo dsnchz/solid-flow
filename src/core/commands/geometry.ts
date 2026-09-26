@@ -49,22 +49,46 @@ export const createGeometryCommands = <NodeType extends Node, EdgeType extends E
   // subscription (a reactive index would recreate the round-6
   // central-collection anti-pattern).
   let intersectionGrid: SpatialGrid | null = null;
+  let queriesThisTask = 0;
   const queryIntersectionCandidates = (rect: Rect): NodeType[] =>
     untrack(() => {
+      const rows = store.nodes;
+      const result: NodeType[] = [];
+      // The first query of a task walks the geometry map directly — one
+      // rect overlap per node, the cost shape of xyflow's nodeLookup walk
+      // (head-to-head round 1: building the grid for a single query cost
+      // 1.4 ms vs 0.35 at 10k). Only a second query in the same task pays
+      // for the grid, which every later query in that task shares
+      // (collision patterns per dragged node per frame, bench round 25).
+      if (queriesThisTask++ === 0) {
+        queueMicrotask(() => {
+          queriesThisTask = 0;
+          intersectionGrid = null;
+        });
+        const right = rect.x + rect.width;
+        const bottom = rect.y + rect.height;
+        geometry.forEach((nodeRect, id) => {
+          if (
+            nodeRect.x < right &&
+            nodeRect.x + nodeRect.width > rect.x &&
+            nodeRect.y < bottom &&
+            nodeRect.y + nodeRect.height > rect.y
+          ) {
+            const row = nodeIndex.get(rows, id);
+            if (row) result.push(row);
+          }
+        });
+        return result;
+      }
       if (!intersectionGrid) {
         // Built from the row derive's geometry map (no proxy reads), released
-        // at the end of the task (bench round 25).
+        // at the end of the task with the query count.
         const grid = new SpatialGrid(300);
         geometry.forEach((nodeRect, id) => {
           grid.insert(id, nodeRect);
         });
         intersectionGrid = grid;
-        queueMicrotask(() => {
-          intersectionGrid = null;
-        });
       }
-      const rows = store.nodes;
-      const result: NodeType[] = [];
       for (const id of intersectionGrid.queryRect(rect)) {
         const row = nodeIndex.get(rows, id);
         if (row) result.push(row);

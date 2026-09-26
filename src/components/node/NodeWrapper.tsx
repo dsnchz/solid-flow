@@ -183,6 +183,22 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   // later row's memo pull re-marks that heap (`markHeap`), which made a 10k
   // mount O(N^2) — .agent/spikes/p34-markheap-mount, bench round 17.
   const mountElement = (el: HTMLDivElement) => {
+    // `pointerenter`/`pointerleave` cannot be delegated (they do not bubble)
+    // and the compiler attaches a listener even for an undefined handler:
+    // attached here only when the flow passes the callback, so the common
+    // case pays no listener per node (head-to-head round 1: 8 per node vs
+    // 5/4). pointermove, contextmenu, keydown, click and focusin are
+    // delegated by the runtime.
+    if (props.onNodePointerEnter) {
+      createEventListener(el, "pointerenter", (event) =>
+        props.onNodePointerEnter?.({ node: userNode(), event }),
+      );
+    }
+    if (props.onNodePointerLeave) {
+      createEventListener(el, "pointerleave", (event) =>
+        props.onNodePointerLeave?.({ node: userNode(), event }),
+      );
+    }
     // The native compiler's delegated `dblclick` never fires and `on:`
     // namespaces are not planned for it — direct attachment is the permanent
     // form here, not a workaround.
@@ -313,12 +329,12 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       )}
       style={style()}
       onClick={onSelectNodeHandler}
-      onPointerEnter={(event) => props.onNodePointerEnter?.({ node: userNode(), event })}
-      onPointerLeave={(event) => props.onNodePointerLeave?.({ node: userNode(), event })}
       onPointerMove={(event) => props.onNodePointerMove?.({ node: userNode(), event })}
       onContextMenu={(event) => props.onNodeContextMenu?.({ node: userNode(), event })}
       onKeyDown={(e) => focusable() && onKeyDown(e)}
-      onFocus={() => focusable() && onFocus()}
+      // Delegated focusin (React's onFocus bubbles the same way); onFocus guards
+      // on THIS element matching :focus-visible, so a descendant's focus returns.
+      onFocusIn={() => focusable() && onFocus()}
       tabindex={focusable() ? 0 : undefined}
       role={node().ariaRole ?? (focusable() ? "group" : undefined)}
       aria-roledescription="node"
