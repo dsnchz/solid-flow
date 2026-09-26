@@ -293,9 +293,9 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   directly, and the compiler attaches a listener even for an `undefined`
   handler expression, so a wrapper that wires them unconditionally pays one
   listener per row per event for callbacks nobody passed: 2 per node plus 3
-  per edge at 10k before rounds 31 and 35, 20,025 total after. NodeWrapper
-  and EdgeWrapper attach them from the ref callback only when the flow
-  passes the matching prop. Likewise an attribute spread is a render effect
+  per edge at 10k before rounds 31, 35 and 37, 10,025 total after (the one
+  left per node is d3-drag's). NodeWrapper and EdgeWrapper attach them from
+  the ref callback only when the flow passes the matching prop. Likewise an attribute spread is a render effect
   that re-enumerates its source on every run: `domAttributes` are spread
   only once a row has them (`spreadOnDemand`), and BaseEdge and Handle
   install one only when they were given extra attributes, read once from

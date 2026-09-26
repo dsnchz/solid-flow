@@ -75,39 +75,34 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   const NodeComponent = dynamic(nodeComponent);
   const isParentNode = () => !!parentIds[node().id];
 
-  const transform = () => {
-    const { x, y } = node().internals.positionAbsolute;
-    return `translate(${x}px, ${y}px)`;
-  };
-
-  const sizeStyle = () => {
-    const w = node().width ?? node().initialWidth;
-    const h = node().height ?? node().initialHeight;
-
-    return {
-      ...node().style,
-      ...(w ? { width: toPxString(w) } : {}),
-      ...(h ? { height: toPxString(h) } : {}),
-    };
-  };
-
   // #15 culling flag: arithmetic re-runs only when this node's geometry,
   // selection, or the quantized culling viewport change; the style only
   // rewrites visibility when the flag actually flips.
   const culled = createMemo(() => nodeCulled(node(), store.cullingActive, onScreenNodeIds));
 
-  // Ownership contract: the user's style (spread first, inside sizeStyle)
-  // controls everything cosmetic; the flow owns size, stacking, positioning,
-  // culling visibility, and pointer-events — those come LAST so no user
-  // style key can defeat measured size or resurrect a culled node.
-  const style = () =>
-    ({
-      ...sizeStyle(),
-      "z-index": node().internals.z,
-      transform: transform(),
-      visibility: culled() || !nodeHasDimensions(node()) ? "hidden" : "visible",
-      "pointer-events": culled() ? "none" : undefined,
-    }) as const;
+  // Ownership contract: the user's style (spread first) controls everything
+  // cosmetic; the flow owns size, stacking, positioning, culling visibility,
+  // and pointer-events — those are assigned LAST so no user style key can
+  // defeat measured size or resurrect a culled node. `visibility: visible`
+  // is explicit by contract (a user `visibility` never applies). One
+  // literal, no intermediate objects: this getter runs inside the element's
+  // combined attribute effect, once per node at mount and once per moved
+  // node per drag frame (bench round 37).
+  const style = (): JSX.CSSProperties => {
+    const row = node();
+    const isCulled = culled();
+    const out: JSX.CSSProperties = row.style ? { ...row.style } : {};
+    const w = row.width ?? row.initialWidth;
+    const h = row.height ?? row.initialHeight;
+    if (w) out.width = toPxString(w);
+    if (h) out.height = toPxString(h);
+    out["z-index"] = row.internals.z;
+    const { x, y } = row.internals.positionAbsolute;
+    out.transform = `translate(${x}px, ${y}px)`;
+    out.visibility = isCulled || !nodeHasDimensions(row) ? "hidden" : "visible";
+    out["pointer-events"] = isCulled ? "none" : undefined;
+    return out;
+  };
 
   const onSelectNodeHandler = (event: MouseEvent) => {
     if (selectable() && (!store.selectNodesOnDrag || !draggable() || store.nodeDragThreshold > 0)) {
@@ -201,15 +196,19 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     }
     // The native compiler's delegated `dblclick` never fires and `on:`
     // namespaces are not planned for it — direct attachment is the permanent
-    // form here, not a workaround.
-    createEventListener(el, "dblclick", (event) =>
-      props.onNodeDoubleClick?.({ node: userNode(), event }),
-    );
+    // form here, not a workaround; like the pointer pair, only with a callback.
+    if (props.onNodeDoubleClick) {
+      createEventListener(el, "dblclick", (event) =>
+        props.onNodeDoubleClick?.({ node: userNode(), event }),
+      );
+    }
 
-    // Request a (re)measure when the node's type or handle positions change.
-    // The unknown-type report (error003, upstream parity) rides the same
-    // effect: it is keyed on the type too, and one effect per node instead
-    // of two is measurable at 10k (mount profile round 30).
+    // One effect per node for the element-dependent lifecycle (two cost a
+    // measurable 10k effect nodes, bench round 37): the (re)measure request
+    // when the node's type or handle positions change — the unknown-type
+    // report (error003, upstream parity) rides on the type too — and the
+    // resize observation, (re)done when the observer changes or the node's
+    // dimensions are lost so it gets measured again.
     createEffect(
       () => ({
         id: node().id,
@@ -217,41 +216,33 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         nodeTypeValid: nodeTypeValid(),
         sourcePosition: node().sourcePosition,
         targetPosition: node().targetPosition,
+        hasDimensions: nodeHasDimensions(node()),
+        resizeObserver: props.resizeObserver,
       }),
       (current, prev) => {
         if (!current.nodeTypeValid && (!prev || prev.nodeType !== current.nodeType)) {
           emitFlowError(store.onError, "003", errorMessages["error003"](current.nodeType));
         }
         if (
-          prev &&
-          prev.sourcePosition === current.sourcePosition &&
-          prev.targetPosition === current.targetPosition &&
-          prev.nodeType === current.nodeType
+          !prev ||
+          prev.resizeObserver !== current.resizeObserver ||
+          (prev.hasDimensions && !current.hasDimensions)
         ) {
-          return;
+          prev?.resizeObserver?.unobserve(el);
+          current.resizeObserver?.observe(el);
         }
-        actions.requestUpdateNodeInternals([
-          [current.id, { id: current.id, nodeElement: el, force: true }],
-        ]);
-      },
-      { name: "node.measure" },
-    );
-
-    // (Re)observe when the observer changes, and re-observe when the node's
-    // dimensions are lost so it gets measured again.
-    createEffect(
-      () => ({
-        hasDimensions: nodeHasDimensions(node()),
-        resizeObserver: props.resizeObserver,
-      }),
-      (current, prev) => {
-        if (prev && current.resizeObserver === prev.resizeObserver && current.hasDimensions) {
-          return;
+        if (
+          !prev ||
+          prev.sourcePosition !== current.sourcePosition ||
+          prev.targetPosition !== current.targetPosition ||
+          prev.nodeType !== current.nodeType
+        ) {
+          actions.requestUpdateNodeInternals([
+            [current.id, { id: current.id, nodeElement: el, force: true }],
+          ]);
         }
-        prev?.resizeObserver?.unobserve(el);
-        current.resizeObserver?.observe(el);
       },
-      { name: "node.resizeObserver" },
+      { name: "node.element" },
     );
 
     // User `domAttributes` via a direct spread, NOT a JSX spread: the compiler

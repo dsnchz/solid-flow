@@ -71,4 +71,26 @@ describe("per-node listeners", () => {
     fireEvent.pointerLeave(el);
     expect(events).toEqual(["pointerenter:a", "pointerleave:a"]);
   });
+
+  it("attaches dblclick only when onNodeDoubleClick is passed, and it fires", async () => {
+    render(() => <SolidFlow nodes={[makeNode("a", 0)]} edges={[]} width={800} height={600} />);
+    await tick();
+    expect(nodeListeners("dblclick")).toBe(0);
+    spy.mockClear();
+
+    const events: string[] = [];
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={[makeNode("b", 0)]}
+        edges={[]}
+        width={800}
+        height={600}
+        onNodeDoubleClick={({ node, event }) => events.push(`${event.type}:${node.id}`)}
+      />
+    ));
+    await tick();
+    expect(nodeListeners("dblclick")).toBe(1);
+    fireEvent.dblClick(container.querySelector('.solid-flow__node[data-id="b"]')!);
+    expect(events).toEqual(["dblclick:b"]);
+  });
 });
