@@ -817,110 +817,45 @@ That is the architectural direction for Solid Flow `next`.
 
 # Appendix: Empirical Ground Truth (repo-specific)
 
-Everything above states the ideals. This section pins them to what has been
-**measured** in this repository on solid-js `2.0.0-rc.1`, so the ideals are
-not misread as license to ignore the measurements. When this appendix and the
-body disagree about implementation tactics, the appendix wins until upstream
-changes the facts.
+Everything above states the ideals. This section pins them to what has been **measured** in this repository, on solid-js `2.0.0-rc.1` through `rc.9` (current), so the ideals are not misread as license to ignore the measurements. When this appendix and the body disagree about implementation tactics, the appendix wins until upstream changes the facts. The engine findings below are dated; `docs/ARCHITECTURE.md` carries the current rules and the numbers behind them.
 
 ## The naive projection expression is not yet the performant one (§14, §15)
 
-The straightforward derivation of this exact architecture — monolithic
-projections over the roots — benchmarked at **19.4 ms per drag move at 625
-nodes**, 34× worse than the 0.2.x mutable-store line. The shipped
-implementation reaches **0.5–0.7 ms** with identical DOM output granularity
-by _refining the projection implementation_, not abandoning the model:
+The straightforward derivation of this exact architecture — monolithic projections over the roots — benchmarked at **19.4 ms per drag move at 625 nodes**, 34× worse than the 0.2.x mutable-store line. The first shipped implementation reached **0.5–0.7 ms** with identical DOM output granularity by _refining the projection implementation_, not abandoning the model; after the rounds recorded in `docs/ARCHITECTURE.md` it is **0.09 ms per move at 10,000 nodes** (31 ms of script over a 60-move drag, against 10,634 ms for React Flow 12.12 and 495 ms for Svelte Flow 1.7 on the same private bench, 2026-09-26). The refinements:
 
-- **Per-row sub-stores**: each internal node / layouted edge is its own keyed
-  `createProjection` in a `{ row }` wrapper, created inside an id-keyed
-  `mapArray` (item-accessor form, so controlled array resets reuse row
-  scopes). Leaf signals hang off their row's computed, which keeps
-  invalidation O(changed).
-- **Shallow record-of-proxies**: the public records are shallow draft-form
-  projections holding row proxies by reference, with explicit `delete` for
-  removed ids. The `assigned` identity maps inside them are §14's "cache as
-  implementation detail" — they carry no semantic authority.
-- **Input roots are plain writable stores, not projections of props**:
-  deriving the node/edge arrays from a store-proxy source rewraps every
-  element on structural writes and churns the whole pipeline (verified
-  empirically).
+- **Per-row sub-stores**: each internal node / layouted edge is its own keyed `createProjection` in a `{ row }` wrapper, created inside an id-keyed `mapArray` (item-accessor form, so controlled array resets reuse row scopes). Leaf signals hang off their row's computed, which keeps invalidation O(changed). Every other per-row map (presence records, connections, markers, the edge lookup) is keyed by id the same way, so a whole-graph replacement with fresh objects re-derives rows instead of recreating them.
+- **Shallow record-of-holders**: the public records are shallow draft-form projections holding one frozen holder per row store (a row proxy assigned directly would be re-wrapped under the record's family and its leaves retained after deletion), with explicit `delete` for removed ids. The `assigned` identity maps inside them are §14's "cache as implementation detail" — they carry no semantic authority.
+- **Input roots are plain writable stores, not projections of props**: deriving the node/edge arrays from a store-proxy source rewraps every element on structural writes and churns the whole pipeline (verified empirically).
+- **Flow-owned state joins the rows at read time** (the sidecar composition): selection and drag positions live in keyed overlays and the row derive joins them, so an optimistic user store never has to accept a flow write for rendering to be right.
 
-Full history and numbers: `.agent/bench/p32-vs-023.md` (four rounds of
-architecture bake-off, plus round 5 for viewport culling).
+Full history and numbers live in the maintainer's private bench notes (four rounds of architecture bake-off, round 5 for viewport culling, then the head-to-head rounds 1 to 45 against React Flow and Svelte Flow).
 
-## rc.1 sharp edges every projection must respect
+## Engine sharp edges every projection must respect (found on rc.1, status as of rc.9)
 
-Discovered empirically, each pinned by a spike or test; two are filed
-upstream (solidjs/solid **#3037** dead computed, **#3038** companion walk —
-dossiers in `.agent/issues/`, runnable repros on branch
-`repro/solid-rc1-issues`):
+Discovered empirically, each pinned by a spike or test. The two rc.1 issues filed from this code are both fixed upstream: solidjs/solid **#3037** (dead computed, fixed in rc.2 — the workarounds were deleted with that bump) and **#3038** (companion walk, closed 2026-08-25 — it was the 10k drag ceiling). Runnable repros stay on branch `repro/solid-rc1-issues`. Later findings, also filed from this code and all worked around here: #3350 (an effect over a row's own ref signal makes a 10k mount quadratic), #3351 (a projection's leaf signals are never unlinked on key delete), #3352 (root-level writes cloned a projection's raw; fixed in rc.8), #3664 and #3665 (rc.9 presence node per enumerated key; the optimistic draft hole — both fixed, shipping in rc.10). The rules that remain:
 
-- Absent-key reads do not subscribe inside derives; structural reads
-  (`Object.keys`, `.size`) do. Bail-out paths must take a structural read.
-- `delete draft[k]` is REQUIRED to remove a key; assigning `undefined` keeps
-  the own key and skips the structural notify.
-- The first nested projection derive can register **zero** dependencies while
-  another projection's store commits beneath its reads (browser-only, #3037).
-  Workaround: re-assert the presence-deciding reads at the END of the derive.
-- Every flush pays a companion-chain walk proportional to materialized
-  signals (#3038). The sub-store shape shortens the chains; the residual tax
-  is why drag cost still grows with N at 10k nodes.
-- Projections derive on flush even when unread; signal writes inside
-  `createRoot` callbacks throw (store drafts are fine); `mapArray` creates
-  replacement rows BEFORE disposing removed ones.
+- Absent-key reads do not subscribe inside derives; structural reads (`Object.keys`, `.size`) do. Bail-out paths must take a structural read.
+- `delete draft[k]` is REQUIRED to remove a key; assigning `undefined` keeps the own key and skips the structural notify.
+- The sub-store shape is still what keeps invalidation O(changed): with #3038 fixed the per-flush companion walk is gone, and the remaining drag cost at 10k is the moved rows' own derives and DOM writes.
+- Projections derive on flush even when unread; signal writes inside `createRoot` callbacks throw (store drafts are fine); `mapArray` creates replacement rows BEFORE disposing removed ones.
 
-If upstream fixes land, the workarounds should be deleted and the gap the
-body calls "naive vs optimized" narrows — re-run the bench before and after.
+When an upstream fix lands, the corresponding workaround is deleted and the bench is re-run before and after (the rc.2 and rc.8 bumps did exactly that); the rc.10 bump is the next such step.
 
 ## Visibility is core knowledge with leaf-granular application (§5)
 
-§5 lists `visibleElements` as a projection. Deliberately, there is **no
-core-level visible-elements collection**: a single derived collection is
-exactly the broad-subscription, identity-churning shape that benchmarked
-worse than rendering everything (v1 autopsy in
-`.agent/planning/only-render-visible-elements.md`). Instead:
+§5 lists `visibleElements` as a projection. Deliberately, there is **no core-level visible-elements collection**: a single derived collection is exactly the broad-subscription, identity-churning shape that benchmarked worse than rendering everything (v1 autopsy in the maintainer's private planning notes). Instead:
 
-- The _determination_ is core-owned and headless-tested:
-  `src/core/culling.ts` — the overscanned, quantized `cullingViewport` memo
-  plus pure `isNodeCulled` / `isEdgeCulled` predicates.
-- The _application_ is two tiers, both leaf-granular:
-  - **CSS tier (always on)**: a per-element flag memo in each wrapper
-    writing `visibility` + `pointer-events` only.
-  - **Unmount tier (opt-in `onlyRenderVisibleElements`, bench round 6)**: a
-    per-row flag memo in each renderer gating a `<Show>` around the wrapper.
-    Off-viewport rows are not mounted at all — at 10k that is 16x less DOM,
-    ~half the heap, and 3.7x faster drags (fewer live observers under
-    upstream #3038). The equality cut is the point: a geometry change
-    recomputes one row's boolean; the id lists (`visibleNodeIds` /
-    `visibleEdgeIds`) stay full and stable. Guards: selected, unmeasured,
-    `cullable: false` (user opt-out, both tiers), the focused element
-    (renderer-local focusin/focusout tracking), and nodes whose
-    `internals.handleBounds` have not populated in THIS flow instance —
-    `measured` is written back to the user's node objects, so a persisted
-    layout or a remounted flow arrives "pre-measured", and trusting it
-    would cull the node before its one mount, permanently starving its
-    edges of `getEdgePosition` geometry (found via the cullable tests;
-    handle bounds live in the per-flow measurements store and survive
-    unmount-culling, so the guard cannot oscillate). `NodeWrapper`
-    unobserves its element from the shared ResizeObserver on dispose. The
-    data graph is untouched — remounted rows return at their cached
-    measured size.
+- The _determination_ is core-owned and headless-tested: `src/core/culling.ts` — the overscanned, quantized `cullingViewport` memo plus pure `isNodeCulled` / `isEdgeCulled` predicates.
+- The _application_ is two tiers, both leaf-granular, both reading the keyed on-screen records (`projections/onScreenIds.ts`: overlap computed once per viewport step over the plain geometry maps, writing only the keys that flip; a row subscribes to its own key with `id in record`, bench round 26):
+  - **CSS tier (always on)**: a per-row `culled` memo in each wrapper writing `visibility` + `pointer-events` only.
+  - **Unmount tier (opt-in `onlyRenderVisibleElements`, bench round 6)**: a per-row gate in each renderer around a `<Show>` for the wrapper. Off-viewport rows are not mounted at all — at 10k that is 16x less DOM, ~half the heap, and several times faster drags (fewer live observers). The equality cut is the point: a geometry change recomputes one row's boolean; the id lists (`visibleNodeIds` / `visibleEdgeIds`) stay full and stable. Guards: selected, unmeasured, `cullable: false` (user opt-out, both tiers), the focused element (renderer-local focusin/focusout tracking), and nodes whose `internals.handleBounds` have not populated in THIS flow instance — `measured` is written back to the user's node objects, so a persisted layout or a remounted flow arrives "pre-measured", and trusting it would cull the node before its one mount, permanently starving its edges of `getEdgePosition` geometry (found via the cullable tests; handle bounds live in the per-flow measurements store and survive unmount-culling, so the guard cannot oscillate). `NodeWrapper` unobserves its element from the shared ResizeObserver on dispose. The data graph is untouched — remounted rows return at their cached measured size.
 
-Either way there is still no derived collection: the central filtered-list
-shape re-reads every row per change and measured 5x slower at 10k than the
-per-row gate (round 6). This is §15 applied to §5 — do not "fix" it into a
-collection.
+Either way there is still no derived collection: the central filtered-list shape re-reads every row per change and measured 5x slower at 10k than the per-row gate (round 6). This is §15 applied to §5 — do not "fix" it into a collection.
 
 ## Verification discipline
 
-- Spike before believing: runnable scripts in `.agent/spikes/p32/`, run with
-  `node --conditions=browser --conditions=development`.
-- jsdom passing ≠ browser passing for projection-timing bugs; smoke the
-  playground in a real browser.
-- Check `document.visibilityState` before diagnosing browser misbehavior:
-  hidden tabs suspend rendering steps, which suspends ResizeObserver
-  delivery and rAF — convincingly impersonating "the build is broken"
-  (dead container measurement, inert zoom/fitView, inert culling).
-- Benchmarks: prod build, visible tab, fully synchronous drivers
-  (`window.__bench.flush` + `window.__bench.api` seams in the stress
-  example; `unmount=1` / `fit=0` params for A/B).
+- Spike before believing: headless probes and signals-only repros in the maintainer's private spikes (run with `node --conditions=browser --conditions=development`, or as vitest files under the repo config); a finding goes upstream only with a pinned, reproducible headless repro.
+- Measure before refactoring, and record the negative results too: seeding `selected`/`dragging` for speed (round 43) and one keyed map per array (round 44) were both measured to buy nothing on the bench and are recorded as such, so they are not retried.
+- jsdom passing ≠ browser passing for projection-timing bugs; smoke the playground in a real browser.
+- Check `document.visibilityState` before diagnosing browser misbehavior: hidden tabs suspend rendering steps, which suspends ResizeObserver delivery and rAF — convincingly impersonating "the build is broken" (dead container measurement, inert zoom/fitView, inert culling).
+- Benchmarks: prod build, visible tab, fully synchronous drivers (`window.__bench.flush` + `window.__bench.api` seams in the stress example; `unmount=1` / `fit=0` params for A/B). The private head-to-head bench runs the same 10,000-node page as twins for React Flow 12.12 and Svelte Flow 1.7 under one Playwright driver, with CDP cost metrics and DOM mutation counts as the equivalence gate, and every performance round re-runs the whole suite before it lands under a keep-the-lead rule (no row where Solid Flow leads may fall behind either library).
