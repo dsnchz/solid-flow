@@ -1,5 +1,5 @@
 import { createSignal, DEV, flush, onCleanup, Show } from "solid-js";
-import { attribution } from "solid-js/attribution";
+import { attribution, costs } from "solid-js/attribution";
 import {
   Background,
   Controls,
@@ -31,18 +31,22 @@ const BenchProbe = () => {
   const api = useSolidFlow();
   // Dev-only attribution (solid-js rc.8+: the `solid-js/attribution` entry,
   // a no-op twin in prod builds): `?attr=1` enables the engine's
-  // why-chains/costs() for the perf loop.
+  // why-chains/costs() for the perf loop. rc.9 moved the folds (`costs`,
+  // `feedback`, `why`) to named exports; the probe reads `__bench.costs()`.
   if (DEV && new URLSearchParams(window.location.search).get("attr") === "1") {
     attribution.enable();
   }
-  const w = window as Window & { __bench?: { api?: unknown; attribution?: unknown } };
+  const w = window as Window & {
+    __bench?: { api?: unknown; attribution?: unknown; costs?: unknown };
+  };
   const bench = (w.__bench ??= {});
-  Object.assign(bench, { api, attribution });
+  Object.assign(bench, { api, attribution, costs });
   // An unmounted flow must not stay reachable through the probe (the memory
   // bench measures what an unmount releases).
   onCleanup(() => {
     delete bench.api;
     delete bench.attribution;
+    delete bench.costs;
   });
   return null;
 };

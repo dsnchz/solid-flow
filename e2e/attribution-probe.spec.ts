@@ -1,11 +1,11 @@
 import { expect, test } from "./helpers";
 type W = {
   __bench: {
-    attribution: {
-      costs(): {
-        scopes: { name: string; kind: string; runs: number; selfMs: number; wastedMs: number }[];
-        writes: { name: string; runs: number; downstreamMs: number }[];
-      };
+    // rc.9: `costs` is a named export of `solid-js/attribution`, no longer a
+    // method of `attribution`; the stress page exposes it beside the engine.
+    costs(): {
+      scopes: { name: string; kind: string; runs: number; selfMs: number; wastedMs: number }[];
+      writes: { name: string; runs: number; downstreamMs: number }[];
     };
   };
 };
@@ -31,7 +31,7 @@ test("PROBE attribution on a 30x30 stress load + drag", async ({ page }) => {
   }
   const dump = async (label: string) => {
     const c = await page.evaluate(() => {
-      const { scopes, writes } = (window as unknown as W).__bench.attribution.costs();
+      const { scopes, writes } = (window as unknown as W).__bench.costs();
       const top = (arr: typeof scopes, key: "selfMs" | "runs") =>
         [...arr]
           .sort((a, b) => b[key] - a[key])

@@ -297,7 +297,11 @@ record` — the engine subscribes per key, including absent keys — through
   scenario (drag frame, select, reconnect), asserting how many scopes re-ran
   (measured values with headroom: 2 / 6 / 3 at the time of writing) and that
   the only diagnostics are the by-design ones (`WIDE_SCOPE_DEPS` on the
-  `selectedIds` and `connections` record merges). The timing benches measure
+  `selectedIds` and `connections` record merges; `internalNodes.row` is
+  allowed too since solid-js rc.9, where enumerating a store object — the
+  row's `...userNode` spread — subscribes a presence node per key instead of
+  the one key-set node, pushing the row memo past the 30-source line: an
+  upstream perf regression with an isolated repro, not a library shape). The timing benches measure
   milliseconds; this pins the granularity they come from. `expectNoWaste` is
   not usable: draft-form projections return no value, so every per-row derive
   reads as an unchanged recompute.

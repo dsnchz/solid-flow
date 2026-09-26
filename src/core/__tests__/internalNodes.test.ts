@@ -185,245 +185,240 @@ describe("createInternalNodes (core, headless)", () => {
     });
   });
 
+  // rc.9 (#3500): a root body is tree construction — store writes there throw
+  // REACTIVE_WRITE_IN_OWNED_SCOPE in dev. Each test below builds its graph
+  // under the root and drives every write, flush and assertion from mainline.
+  const mount = (...args: Parameters<typeof setup>) =>
+    createRoot((dispose) => ({ dispose, ...setup(...args) }));
+
   it("joins DOM measurements from the measurements root", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setMeasurements } = setup([makeNode({ id: "a" })]);
-      flush();
-      expect(internalNodes.a!.measured).toEqual({ width: undefined, height: undefined });
-      expect(internalNodes.a!.internals.handleBounds).toBeUndefined();
+    const { internalNodes, setMeasurements, dispose } = mount([makeNode({ id: "a" })]);
+    flush();
+    expect(internalNodes.a!.measured).toEqual({ width: undefined, height: undefined });
+    expect(internalNodes.a!.internals.handleBounds).toBeUndefined();
 
-      setMeasurements((draft) => {
-        draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
-        return undefined;
-      });
-      flush();
-
-      expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
-      expect(internalNodes.a!.internals.handleBounds?.source).toHaveLength(1);
-      dispose();
+    setMeasurements((draft) => {
+      draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
+      return undefined;
     });
+    flush();
+
+    expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
+    expect(internalNodes.a!.internals.handleBounds?.source).toHaveLength(1);
+    dispose();
   });
 
   it("user-seeded dimensions cover the pre-measurement window; a DOM measurement supersedes them", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setMeasurements } = setup([
-        makeNode({ id: "a", measured: { width: 500, height: 300 } }),
-      ]);
-      // Pre-measurement: the user seed governs (SSR sizing, persisted layout).
-      expect(internalNodes.a!.measured).toEqual({ width: 500, height: 300 });
+    const { internalNodes, setMeasurements, dispose } = mount([
+      makeNode({ id: "a", measured: { width: 500, height: 300 } }),
+    ]);
+    // Pre-measurement: the user seed governs (SSR sizing, persisted layout).
+    expect(internalNodes.a!.measured).toEqual({ width: 500, height: 300 });
 
-      setMeasurements((draft) => {
-        draft.a = { measured: { width: 120, height: 48 } };
-        return undefined;
-      });
-      flush();
-
-      // Sidecar composition (solid#3085): the measurements root is
-      // authoritative once a real measurement exists — rendering must not
-      // depend on the row write-through, which reverts on optimistic stores.
-      expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
-      dispose();
+    setMeasurements((draft) => {
+      draft.a = { measured: { width: 120, height: 48 } };
+      return undefined;
     });
+    flush();
+
+    // Sidecar composition (solid#3085): the measurements root is
+    // authoritative once a real measurement exists — rendering must not
+    // depend on the row write-through, which reverts on optimistic stores.
+    expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
+    dispose();
   });
 
   it("preserves measurements across a controlled nodes-array reset (two-root)", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes, setMeasurements } = setup([makeNode({ id: "a" })]);
-      setMeasurements((draft) => {
-        draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
-        return undefined;
-      });
-      flush();
-      expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
-
-      // fresh node objects, no measured — the old adoption pipeline preserved
-      // measurements on the surviving internal node; the measurements root
-      // survives the reset by construction
-      setNodes(() => [makeNode({ id: "a", position: { x: 1, y: 1 } })]);
-      flush();
-
-      expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
-      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 1, y: 1 });
-      dispose();
+    const { internalNodes, setNodes, setMeasurements, dispose } = mount([makeNode({ id: "a" })]);
+    setMeasurements((draft) => {
+      draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
+      return undefined;
     });
+    flush();
+    expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
+
+    // fresh node objects, no measured — the old adoption pipeline preserved
+    // measurements on the surviving internal node; the measurements root
+    // survives the reset by construction
+    setNodes(() => [makeNode({ id: "a", position: { x: 1, y: 1 } })]);
+    flush();
+
+    expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 1, y: 1 });
+    dispose();
   });
 
   it("clears handle bounds when the ingest reports a hidden node", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setMeasurements } = setup([makeNode({ id: "a", hidden: true })]);
-      setMeasurements((draft) => {
-        draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
-        return undefined;
-      });
-      flush();
-      expect(internalNodes.a!.internals.handleBounds).toBeDefined();
-
-      // the ingest writes `handleBounds: undefined` for hidden nodes
-      setMeasurements((draft) => {
-        draft.a!.handleBounds = undefined;
-        return undefined;
-      });
-      flush();
-
-      expect(internalNodes.a!.internals.handleBounds).toBeUndefined();
-      expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
-      dispose();
+    const { internalNodes, setMeasurements, dispose } = mount([
+      makeNode({ id: "a", hidden: true }),
+    ]);
+    setMeasurements((draft) => {
+      draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
+      return undefined;
     });
+    flush();
+    expect(internalNodes.a!.internals.handleBounds).toBeDefined();
+
+    // the ingest writes `handleBounds: undefined` for hidden nodes
+    setMeasurements((draft) => {
+      draft.a!.handleBounds = undefined;
+      return undefined;
+    });
+    flush();
+
+    expect(internalNodes.a!.internals.handleBounds).toBeUndefined();
+    expect(internalNodes.a!.measured).toEqual({ width: 120, height: 48 });
+    dispose();
   });
 
   it("drops rows for removed nodes", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup([makeNode({ id: "a" }), makeNode({ id: "b" })]);
-      flush();
-      expect(Object.keys(internalNodes).sort()).toEqual(["a", "b"]);
+    const { internalNodes, setNodes, dispose } = mount([
+      makeNode({ id: "a" }),
+      makeNode({ id: "b" }),
+    ]);
+    flush();
+    expect(Object.keys(internalNodes).sort()).toEqual(["a", "b"]);
 
-      setNodes(() => [makeNode({ id: "a" })]);
-      flush();
+    setNodes(() => [makeNode({ id: "a" })]);
+    flush();
 
-      expect(Object.keys(internalNodes)).toEqual(["a"]);
-      expect(internalNodes.b).toBeUndefined();
-      dispose();
-    });
+    expect(Object.keys(internalNodes)).toEqual(["a"]);
+    expect(internalNodes.b).toBeUndefined();
+    dispose();
   });
 
   it("does not re-run a node's position subscriber when another node moves", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup([
+    let aRuns = 0;
+    const { internalNodes, setNodes, dispose } = createRoot((dispose) => {
+      const graph = setup([
         makeNode({ id: "a", position: { x: 0, y: 0 } }),
         makeNode({ id: "b", position: { x: 100, y: 0 } }),
       ]);
-      let aRuns = 0;
-
       createEffect(
-        () => internalNodes.a?.internals.positionAbsolute.x,
+        () => graph.internalNodes.a?.internals.positionAbsolute.x,
         () => {
           aRuns++;
         },
       );
-      flush();
-      expect(aRuns).toBe(1);
-
-      setNodes((draft) => {
-        draft[1]!.position = { x: 250, y: 50 };
-        return undefined;
-      });
-      flush();
-
-      expect(internalNodes.b!.internals.positionAbsolute).toEqual({ x: 250, y: 50 });
-      expect(aRuns).toBe(1);
-      dispose();
+      return { dispose, ...graph };
     });
+    flush();
+    expect(aRuns).toBe(1);
+
+    setNodes((draft) => {
+      draft[1]!.position = { x: 250, y: 50 };
+      return undefined;
+    });
+    flush();
+
+    expect(internalNodes.b!.internals.positionAbsolute).toEqual({ x: 250, y: 50 });
+    expect(aRuns).toBe(1);
+    dispose();
   });
 
   // Row-cache invalidation classes (spike 10): every kind of input change
   // must invalidate the cached row — these pin the snapshot's coverage.
 
   it("catches an IN-PLACE position mutation (same object identity)", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup([makeNode({ id: "a", position: { x: 1, y: 1 } })]);
-      flush();
+    const { internalNodes, setNodes, dispose } = mount([
+      makeNode({ id: "a", position: { x: 1, y: 1 } }),
+    ]);
+    flush();
 
-      setNodes((draft) => {
-        draft[0]!.position.x = 99;
-        return undefined;
-      });
-      flush();
-
-      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 99, y: 1 });
-      dispose();
+    setNodes((draft) => {
+      draft[0]!.position.x = 99;
+      return undefined;
     });
+    flush();
+
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 99, y: 1 });
+    dispose();
   });
 
   it("catches a pass-through prop change (draggable)", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup([makeNode({ id: "a", draggable: false })]);
-      flush();
-      expect(internalNodes.a!.draggable).toBe(false);
+    const { internalNodes, setNodes, dispose } = mount([makeNode({ id: "a", draggable: false })]);
+    flush();
+    expect(internalNodes.a!.draggable).toBe(false);
 
-      setNodes((draft) => {
-        draft[0]!.draggable = true;
-        return undefined;
-      });
-      flush();
-
-      expect(internalNodes.a!.draggable).toBe(true);
-      dispose();
+    setNodes((draft) => {
+      draft[0]!.draggable = true;
+      return undefined;
     });
+    flush();
+
+    expect(internalNodes.a!.draggable).toBe(true);
+    dispose();
   });
 
   it("catches a key that gets ADDED to the node after adoption", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup([makeNode({ id: "a" })]);
-      flush();
-      expect(internalNodes.a!.zIndex).toBeUndefined();
+    const { internalNodes, setNodes, dispose } = mount([makeNode({ id: "a" })]);
+    flush();
+    expect(internalNodes.a!.zIndex).toBeUndefined();
 
-      setNodes((draft) => {
-        draft[0]!.zIndex = 7;
-        return undefined;
-      });
-      flush();
-
-      expect(internalNodes.a!.zIndex).toBe(7);
-      expect(internalNodes.a!.internals.z).toBe(7);
-      dispose();
+    setNodes((draft) => {
+      draft[0]!.zIndex = 7;
+      return undefined;
     });
+    flush();
+
+    expect(internalNodes.a!.zIndex).toBe(7);
+    expect(internalNodes.a!.internals.z).toBe(7);
+    dispose();
   });
 
   it("catches an in-place coordinate-extent mutation", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup([
-        makeNode({
-          id: "a",
-          position: { x: 50, y: 50 },
-          extent: [
-            [0, 0],
-            [100, 100],
-          ],
-          measured: { width: 10, height: 10 },
-        }),
-      ]);
-      flush();
-      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 50, y: 50 });
+    const { internalNodes, setNodes, dispose } = mount([
+      makeNode({
+        id: "a",
+        position: { x: 50, y: 50 },
+        extent: [
+          [0, 0],
+          [100, 100],
+        ],
+        measured: { width: 10, height: 10 },
+      }),
+    ]);
+    flush();
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 50, y: 50 });
 
-      setNodes((draft) => {
-        (draft[0]!.extent as [[number, number], [number, number]])[1][0] = 30;
-        return undefined;
-      });
-      flush();
-
-      // clamped against the mutated extent: x <= 30 - width
-      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 20, y: 50 });
-      dispose();
+    setNodes((draft) => {
+      (draft[0]!.extent as [[number, number], [number, number]])[1][0] = 30;
+      return undefined;
     });
+    flush();
+
+    // clamped against the mutated extent: x <= 30 - width
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 20, y: 50 });
+    dispose();
   });
 
   it("replaced data repoints the row; deep data writes flow through unrebuilt", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup([makeNode({ id: "a", data: { label: "first" } })]);
-      flush();
-      expect(internalNodes.a!.data.label).toBe("first");
+    const { internalNodes, setNodes, dispose } = mount([
+      makeNode({ id: "a", data: { label: "first" } }),
+    ]);
+    flush();
+    expect(internalNodes.a!.data.label).toBe("first");
 
-      // deep write: chained backing — visible through the row with no rebuild
-      setNodes((draft) => {
-        draft[0]!.data.label = "deep";
-        return undefined;
-      });
-      flush();
-      expect(internalNodes.a!.data.label).toBe("deep");
-
-      // slot replacement: row must repoint at the new object
-      setNodes((draft) => {
-        draft[0]!.data = { label: "replaced" };
-        return undefined;
-      });
-      flush();
-      expect(internalNodes.a!.data.label).toBe("replaced");
-      dispose();
+    // deep write: chained backing — visible through the row with no rebuild
+    setNodes((draft) => {
+      draft[0]!.data.label = "deep";
+      return undefined;
     });
+    flush();
+    expect(internalNodes.a!.data.label).toBe("deep");
+
+    // slot replacement: row must repoint at the new object
+    setNodes((draft) => {
+      draft[0]!.data = { label: "replaced" };
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.a!.data.label).toBe("replaced");
+    dispose();
   });
 
   it("recomputes every row when a shared config input (nodeOrigin) changes", () => {
-    createRoot((dispose) => {
+    const { internalNodes, setConfig, dispose } = createRoot((dispose) => {
       const [nodes] = createStore<Node[]>([
         makeNode({ id: "a", position: { x: 100, y: 100 }, measured: { width: 50, height: 20 } }),
       ]);
@@ -445,67 +440,66 @@ describe("createInternalNodes (core, headless)", () => {
         nodeExtent: infiniteExtent,
         elevateNodesOnSelect: true,
       });
-      flush();
-      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 100, y: 100 });
-
-      setConfig((draft) => {
-        draft.nodeOrigin = [0.5, 0.5];
-        return undefined;
-      });
-      flush();
-
-      expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 75, y: 90 });
-      dispose();
+      return { internalNodes, setConfig, dispose };
     });
+    flush();
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 100, y: 100 });
+
+    setConfig((draft) => {
+      draft.nodeOrigin = [0.5, 0.5];
+      return undefined;
+    });
+    flush();
+
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 75, y: 90 });
+    dispose();
   });
 
   it("updates a parent's auto z block when it gains its first child", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup(
-        [makeNode({ id: "p1" }), makeNode({ id: "c1", parentId: "p1" }), makeNode({ id: "p2" })],
-        { zIndexMode: "auto" },
-      );
-      flush();
-      expect(internalNodes.p2!.internals.z).toBe(0);
+    const { internalNodes, setNodes, dispose } = mount(
+      [makeNode({ id: "p1" }), makeNode({ id: "c1", parentId: "p1" }), makeNode({ id: "p2" })],
+      { zIndexMode: "auto" },
+    );
+    flush();
+    expect(internalNodes.p2!.internals.z).toBe(0);
 
-      setNodes((draft) => {
-        draft.push(makeNode({ id: "c2", parentId: "p2" }));
-        return undefined;
-      });
-      flush();
-
-      expect(internalNodes.p2!.internals.z).toBe(20);
-      expect(internalNodes.c2!.internals.z).toBeGreaterThan(20);
-      dispose();
+    setNodes((draft) => {
+      draft.push(makeNode({ id: "c2", parentId: "p2" }));
+      return undefined;
     });
+    flush();
+
+    expect(internalNodes.p2!.internals.z).toBe(20);
+    expect(internalNodes.c2!.internals.z).toBeGreaterThan(20);
+    dispose();
   });
 
   it("re-runs subscribers of an absent key when the node appears", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes } = setup([makeNode({ id: "a" })]);
-      let seen: number | undefined;
-      let runs = 0;
-
+    let seen: number | undefined;
+    let runs = 0;
+    const { setNodes, dispose } = createRoot((dispose) => {
+      const graph = setup([makeNode({ id: "a" })]);
       createEffect(
-        () => internalNodes.late?.internals.positionAbsolute.x,
+        () => graph.internalNodes.late?.internals.positionAbsolute.x,
         (x) => {
           runs++;
           seen = x;
         },
       );
-      flush();
-      expect(runs).toBe(1);
-      expect(seen).toBeUndefined();
-
-      setNodes((draft) => {
-        draft.push(makeNode({ id: "late", position: { x: 42, y: 0 } }));
-        return undefined;
-      });
-      flush();
-
-      expect(runs).toBe(2);
-      expect(seen).toBe(42);
-      dispose();
+      return { dispose, ...graph };
     });
+    flush();
+    expect(runs).toBe(1);
+    expect(seen).toBeUndefined();
+
+    setNodes((draft) => {
+      draft.push(makeNode({ id: "late", position: { x: 42, y: 0 } }));
+      return undefined;
+    });
+    flush();
+
+    expect(runs).toBe(2);
+    expect(seen).toBe(42);
+    dispose();
   });
 });

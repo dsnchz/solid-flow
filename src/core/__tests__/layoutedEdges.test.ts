@@ -96,20 +96,23 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    createRoot((dispose) => {
-      const layouted = createLayoutedEdges(source);
-      flush();
-      const row1 = layouted.e1;
+    // Graph construction under the root; writes from mainline (rc.9: a root
+    // body is an owned scope, so a store write inside it throws in dev).
+    const { layouted, dispose } = createRoot((dispose) => ({
+      dispose,
+      layouted: createLayoutedEdges(source),
+    }));
+    flush();
+    const row1 = layouted.e1;
 
-      setEdgesStore((draft) => {
-        draft[1]!.selected = true;
-      });
-      flush();
-
-      expect(layouted.e1).toBe(row1);
-      expect(layouted.e2!.zIndex).toBeGreaterThan(0);
-      dispose();
+    setEdgesStore((draft) => {
+      draft[1]!.selected = true;
     });
+    flush();
+
+    expect(layouted.e1).toBe(row1);
+    expect(layouted.e2!.zIndex).toBeGreaterThan(0);
+    dispose();
   });
 
   it("removes rows when their edge leaves the input", () => {
@@ -121,17 +124,18 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    createRoot((dispose) => {
-      const layouted = createLayoutedEdges(source);
-      flush();
-      expect(Object.keys(layouted)).toHaveLength(2);
+    const { layouted, dispose } = createRoot((dispose) => ({
+      dispose,
+      layouted: createLayoutedEdges(source),
+    }));
+    flush();
+    expect(Object.keys(layouted)).toHaveLength(2);
 
-      setEdgesStore(() => [{ id: "e2", source: "b", target: "a" }] as Edge[]);
-      flush();
+    setEdgesStore(() => [{ id: "e2", source: "b", target: "a" }] as Edge[]);
+    flush();
 
-      expect(Object.keys(layouted)).toEqual(["e2"]);
-      dispose();
-    });
+    expect(Object.keys(layouted)).toEqual(["e2"]);
+    dispose();
   });
 
   // Row-cache invalidation classes (spike 10): in-place node-geometry
@@ -144,22 +148,23 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    createRoot((dispose) => {
-      const layouted = createLayoutedEdges(source);
-      flush();
-      const sourceXBefore = layouted.e1!.sourceX;
+    const { layouted, dispose } = createRoot((dispose) => ({
+      dispose,
+      layouted: createLayoutedEdges(source),
+    }));
+    flush();
+    const sourceXBefore = layouted.e1!.sourceX;
 
-      // same objects, mutated in place (as reconcile does to projection rows)
-      nodeLookup.get("a")!.internals.positionAbsolute.x = 500;
-      // any derive trigger (nodes are a plain Map in this fixture)
-      setEdgesStore((draft) => {
-        draft[0]!.animated = true;
-      });
-      flush();
-
-      expect(layouted.e1!.sourceX).toBe(sourceXBefore + 500);
-      dispose();
+    // same objects, mutated in place (as reconcile does to projection rows)
+    nodeLookup.get("a")!.internals.positionAbsolute.x = 500;
+    // any derive trigger (nodes are a plain Map in this fixture)
+    setEdgesStore((draft) => {
+      draft[0]!.animated = true;
     });
+    flush();
+
+    expect(layouted.e1!.sourceX).toBe(sourceXBefore + 500);
+    dispose();
   });
 
   it("catches an in-place handle-bounds mutation on the next derive", () => {
@@ -168,20 +173,21 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    createRoot((dispose) => {
-      const layouted = createLayoutedEdges(source);
-      flush();
-      const sourceXBefore = layouted.e1!.sourceX;
+    const { layouted, dispose } = createRoot((dispose) => ({
+      dispose,
+      layouted: createLayoutedEdges(source),
+    }));
+    flush();
+    const sourceXBefore = layouted.e1!.sourceX;
 
-      nodeLookup.get("a")!.internals.handleBounds!.source![0]!.x += 40;
-      setEdgesStore((draft) => {
-        draft[0]!.animated = true;
-      });
-      flush();
-
-      expect(layouted.e1!.sourceX).toBe(sourceXBefore + 40);
-      dispose();
+    nodeLookup.get("a")!.internals.handleBounds!.source![0]!.x += 40;
+    setEdgesStore((draft) => {
+      draft[0]!.animated = true;
     });
+    flush();
+
+    expect(layouted.e1!.sourceX).toBe(sourceXBefore + 40);
+    dispose();
   });
 
   it("re-elevates an edge when its own selected flag changes", () => {
@@ -190,19 +196,20 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    createRoot((dispose) => {
-      const layouted = createLayoutedEdges(source);
-      flush();
-      const zBefore = layouted.e1!.zIndex ?? 0;
+    const { layouted, dispose } = createRoot((dispose) => ({
+      dispose,
+      layouted: createLayoutedEdges(source),
+    }));
+    flush();
+    const zBefore = layouted.e1!.zIndex ?? 0;
 
-      setEdgesStore((draft) => {
-        draft[0]!.selected = true;
-      });
-      flush();
-
-      expect(layouted.e1!.zIndex).toBe(zBefore + 1000);
-      dispose();
+    setEdgesStore((draft) => {
+      draft[0]!.selected = true;
     });
+    flush();
+
+    expect(layouted.e1!.zIndex).toBe(zBefore + 1000);
+    dispose();
   });
 
   it("derives once on creation and once per source change, read or not", () => {
@@ -232,23 +239,24 @@ describe("createLayoutedEdges (core, headless)", () => {
       nodeLookup,
     };
 
-    createRoot((dispose) => {
-      const layouted = createLayoutedEdges(source);
-      flush();
-      expect(edgesReads).toBe(1);
+    const { layouted, dispose } = createRoot((dispose) => ({
+      dispose,
+      layouted: createLayoutedEdges(source),
+    }));
+    flush();
+    expect(edgesReads).toBe(1);
 
-      // memoized: reading does not re-derive
-      expect(Object.keys(layouted)).toEqual(["e1"]);
-      expect(edgesReads).toBe(1);
+    // memoized: reading does not re-derive
+    expect(Object.keys(layouted)).toEqual(["e1"]);
+    expect(edgesReads).toBe(1);
 
-      // unread source change still re-derives on flush
-      setEdgesStore((draft) => {
-        draft.push({ id: "e2", source: "b", target: "a" } as Edge);
-      });
-      flush();
-      expect(edgesReads).toBe(2);
-      expect(Object.keys(layouted)).toEqual(["e1", "e2"]);
-      dispose();
+    // unread source change still re-derives on flush
+    setEdgesStore((draft) => {
+      draft.push({ id: "e2", source: "b", target: "a" } as Edge);
     });
+    flush();
+    expect(edgesReads).toBe(2);
+    expect(Object.keys(layouted)).toEqual(["e1", "e2"]);
+    dispose();
   });
 });

@@ -82,91 +82,96 @@ const makeSource = (initial: { width?: number; height?: number; transform?: Tran
 describe("createCullingViewport (core, headless)", () => {
   it("is null while the container is unmeasured, and stays null across pans", () => {
     const { setTransform, source } = makeSource({ width: 0, height: 0 });
-    createRoot((dispose) => {
+    // Graph construction under the root; writes and reads from mainline
+    // (rc.9: a root body is an owned scope, writes there throw in dev).
+    const runs = { count: 0 };
+    const { rect, dispose } = createRoot((dispose) => {
       const cullingViewport = createCullingViewport(source);
-      let runs = 0;
       const rect = createMemo(() => {
-        runs++;
+        runs.count++;
         return cullingViewport();
       });
-      flush();
-      expect(rect()).toBeNull();
-      expect(runs).toBe(1);
-
-      // Geometry changes must not recompute the unmeasured memo's consumers
-      // (null-equals-null holds through the rect equality).
-      setTransform([-100, -50, 1]);
-      flush();
-      expect(rect()).toBeNull();
-      expect(runs).toBe(1);
-      dispose();
+      return { rect, dispose };
     });
+    flush();
+    expect(rect()).toBeNull();
+    expect(runs.count).toBe(1);
+
+    // Geometry changes must not recompute the unmeasured memo's consumers
+    // (null-equals-null holds through the rect equality).
+    setTransform([-100, -50, 1]);
+    flush();
+    expect(rect()).toBeNull();
+    expect(runs.count).toBe(1);
+    dispose();
   });
 
   it("always covers the actual visible rect (property sweep)", () => {
     const { setTransform, setState, source } = makeSource();
-    createRoot((dispose) => {
-      const cullingViewport = createCullingViewport(source);
-      // Deterministic pseudo-random sweep over pans and zooms.
-      let seed = 42;
-      const rand = () => {
-        seed = (seed * 1103515245 + 12345) % 2147483648;
-        return seed / 2147483648;
-      };
-      for (let i = 0; i < 200; i++) {
-        const zoom = 0.3 + rand() * 3.7;
-        const tx = (rand() - 0.5) * 10000;
-        const ty = (rand() - 0.5) * 10000;
-        setTransform([tx, ty, zoom]);
-        setState((draft) => {
-          draft.width = 400 + Math.floor(rand() * 1200);
-        });
-        flush();
+    const { cullingViewport, dispose } = createRoot((dispose) => ({
+      cullingViewport: createCullingViewport(source),
+      dispose,
+    }));
+    // Deterministic pseudo-random sweep over pans and zooms.
+    let seed = 42;
+    const rand = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    for (let i = 0; i < 200; i++) {
+      const zoom = 0.3 + rand() * 3.7;
+      const tx = (rand() - 0.5) * 10000;
+      const ty = (rand() - 0.5) * 10000;
+      setTransform([tx, ty, zoom]);
+      setState((draft) => {
+        draft.width = 400 + Math.floor(rand() * 1200);
+      });
+      flush();
 
-        const { width, height } = source;
-        const visible: Rect = {
-          x: -tx / zoom,
-          y: -ty / zoom,
-          width: width / zoom,
-          height: height / zoom,
-        };
-        const rect = cullingViewport()!;
-        expect(rect.x).toBeLessThanOrEqual(visible.x);
-        expect(rect.y).toBeLessThanOrEqual(visible.y);
-        expect(rect.x + rect.width).toBeGreaterThanOrEqual(visible.x + visible.width);
-        expect(rect.y + rect.height).toBeGreaterThanOrEqual(visible.y + visible.height);
-      }
-      dispose();
-    });
+      const { width, height } = source;
+      const visible: Rect = {
+        x: -tx / zoom,
+        y: -ty / zoom,
+        width: width / zoom,
+        height: height / zoom,
+      };
+      const rect = cullingViewport()!;
+      expect(rect.x).toBeLessThanOrEqual(visible.x);
+      expect(rect.y).toBeLessThanOrEqual(visible.y);
+      expect(rect.x + rect.width).toBeGreaterThanOrEqual(visible.x + visible.width);
+      expect(rect.y + rect.height).toBeGreaterThanOrEqual(visible.y + visible.height);
+    }
+    dispose();
   });
 
   it("holds its value (and downstream memos) while panning inside the quantization step", () => {
     const { setTransform, source } = makeSource();
-    createRoot((dispose) => {
+    const runs = { count: 0 };
+    const { dependent, dispose } = createRoot((dispose) => {
       const cullingViewport = createCullingViewport(source);
-      let runs = 0;
       const dependent = createMemo(() => {
-        runs++;
+        runs.count++;
         return cullingViewport();
       });
-      flush();
-      const initial = dependent();
-      expect(initial).not.toBeNull();
-      expect(runs).toBe(1);
-
-      // Step is 0.25 * 800 = 200 flow units; a 30px pan stays inside it.
-      setTransform([-30, -10, 1]);
-      flush();
-      expect(dependent()).toBe(initial);
-      expect(runs).toBe(1);
-
-      // A pan past the step crosses a quantization boundary.
-      setTransform([-450, 0, 1]);
-      flush();
-      expect(dependent()).not.toBe(initial);
-      expect(runs).toBe(2);
-      dispose();
+      return { dependent, dispose };
     });
+    flush();
+    const initial = dependent();
+    expect(initial).not.toBeNull();
+    expect(runs.count).toBe(1);
+
+    // Step is 0.25 * 800 = 200 flow units; a 30px pan stays inside it.
+    setTransform([-30, -10, 1]);
+    flush();
+    expect(dependent()).toBe(initial);
+    expect(runs.count).toBe(1);
+
+    // A pan past the step crosses a quantization boundary.
+    setTransform([-450, 0, 1]);
+    flush();
+    expect(dependent()).not.toBe(initial);
+    expect(runs.count).toBe(2);
+    dispose();
   });
 });
 

@@ -46,12 +46,19 @@ const setup = (initial: Node[]) => {
 
 describe("internal node geometry reporting", () => {
   it("reports each row's absolute rect on creation and on every geometry change", () => {
-    createRoot((dispose) => {
-      const { internalNodes, setNodes, setMeasurements, geometry, calls } = setup([
-        makeNode({ id: "a", position: { x: 10, y: 20 }, width: 100, height: 40 }),
-        makeNode({ id: "p", position: { x: 500, y: 0 } }),
-        makeNode({ id: "c", position: { x: 5, y: 5 }, parentId: "p", width: 20, height: 10 }),
-      ]);
+    // Graph construction under the root; writes and reads from mainline
+    // (rc.9: a root body is an owned scope, writes there throw in dev).
+    const { internalNodes, setNodes, setMeasurements, geometry, calls, dispose } = createRoot(
+      (dispose) => ({
+        ...setup([
+          makeNode({ id: "a", position: { x: 10, y: 20 }, width: 100, height: 40 }),
+          makeNode({ id: "p", position: { x: 500, y: 0 } }),
+          makeNode({ id: "c", position: { x: 5, y: 5 }, parentId: "p", width: 20, height: 10 }),
+        ]),
+        dispose,
+      }),
+    );
+    {
       flush();
       void internalNodes.a;
       expect(geometry.get("a")).toEqual({ x: 10, y: 20, width: 100, height: 40 });
@@ -83,12 +90,15 @@ describe("internal node geometry reporting", () => {
       expect(calls.length).toBe(n);
       expect(calls.length).toBeGreaterThan(before);
       dispose();
-    });
+    }
   });
 
   it("reports null when a row is removed", () => {
-    createRoot((dispose) => {
-      const { setNodes, geometry, calls } = setup([makeNode({ id: "a" }), makeNode({ id: "b" })]);
+    const { setNodes, geometry, calls, dispose } = createRoot((dispose) => ({
+      ...setup([makeNode({ id: "a" }), makeNode({ id: "b" })]),
+      dispose,
+    }));
+    {
       flush();
       expect(geometry.has("a")).toBe(true);
       setNodes((draft) => {
@@ -99,6 +109,6 @@ describe("internal node geometry reporting", () => {
       expect(geometry.has("b")).toBe(true);
       expect(calls.at(-1)).toEqual(["a", null]);
       dispose();
-    });
+    }
   });
 });

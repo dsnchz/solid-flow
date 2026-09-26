@@ -52,7 +52,9 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
   // id makes resets REUSE the stores (the item accessor swaps instead), so
   // subscriptions can never strand.
   it("edges appear after measurements even when a controlled reset replaced both arrays", () => {
-    createRoot((dispose) => {
+    // Graph construction under the root; writes and reads from mainline
+    // (rc.9: a root body is an owned scope, writes there throw in dev).
+    const g = createRoot((dispose) => {
       const [nodes, setNodes] = createStore<Node[]>([
         makeNode("a", 0),
         makeNode("b", 200),
@@ -109,13 +111,28 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
         },
       );
       // and EdgeWrapper-ish per-leaf subscriber once present
-      let sourceXSeen: number | undefined;
+      const sourceXSeen: { value: number | undefined } = { value: undefined };
       createEffect(
         () => layouted.e1?.sourceX,
         (x) => {
-          sourceXSeen = x;
+          sourceXSeen.value = x;
         },
       );
+      return {
+        dispose,
+        setNodes,
+        setEdges,
+        setMeasurements,
+        internalNodes,
+        nodeLookup,
+        layouted,
+        seenIds,
+        sourceXSeen,
+      };
+    });
+    const { dispose, setNodes, setEdges, setMeasurements, internalNodes, nodeLookup, layouted } = g;
+    const { seenIds, sourceXSeen } = g;
+    {
       flush();
       expect(seenIds).toEqual([[]]);
       expect({ keys: Object.keys(internalNodes.a ?? {}), width: internalNodes.a?.width }).toEqual({
@@ -173,8 +190,8 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
 
       expect(Object.keys(layouted).sort()).toEqual(["e1", "e2", "e3"]);
       expect([...(seenIds.at(-1) ?? [])].sort()).toEqual(["e1", "e2", "e3"]);
-      expect(sourceXSeen).toBeTypeOf("number");
+      expect(sourceXSeen.value).toBeTypeOf("number");
       dispose();
-    });
+    }
   });
 });

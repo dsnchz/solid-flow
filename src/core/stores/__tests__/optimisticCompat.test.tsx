@@ -153,7 +153,13 @@ describe("createOptimisticStore compat", () => {
     expect(container.querySelector('.solid-flow__node[data-id="c"].selected')).not.toBeNull();
   });
 
-  it("flow commands (with their flush boundaries) work inside an open action transaction", async () => {
+  // solid-js 2.0.0-rc.9 REGRESSION (passes on rc.8): inside an open action,
+  // an optimistic store's second setter sees the row the first setter pushed
+  // as a HOLE — `draft.length` grew, `draft[length - 1]` is undefined — so
+  // updateNode cannot find the node addNodes just added. Signals-only repro
+  // and issue draft: .agent/upstream-rc9-optimistic-draft-hole.md. `it.fails`
+  // flips red the day the engine fixes it, which is the cue to drop this.
+  it.fails("flow commands (with their flush boundaries) work inside an open action transaction", async () => {
     const server = { rows: [makeNode("a", 0)] };
     const { api, nodes, flowApi, inDom, container } = await setup(server);
 

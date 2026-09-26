@@ -22,7 +22,18 @@ import type { Edge, Node } from "@/types";
  * merges (`selectedIds`, `connections`) read one memo per row, which the
  * engine reports as a wide scope. Anything else is a finding.
  */
-const ALLOWED_DIAGNOSTICS = new Set(["WIDE_SCOPE_DEPS:selectedIds", "WIDE_SCOPE_DEPS:connections"]);
+// By-design wide scopes (docs/ARCHITECTURE.md, "Reactive nodes are named"):
+// the two record merges. `internalNodes.row` joined the list on solid-js
+// rc.9: the row spreads its user node, and rc.9 subscribes an enumerating
+// reader to a presence node PER KEY (rc.8: the one key-set node), which
+// pushes the row memo to 33-35 sources. Upstream perf regression, isolated
+// repro + draft: .agent/upstream-rc9-ownkeys-presence-nodes-draft.md — drop
+// this entry when the engine fix lands.
+const ALLOWED_DIAGNOSTICS = new Set([
+  "WIDE_SCOPE_DEPS:selectedIds",
+  "WIDE_SCOPE_DEPS:connections",
+  "WIDE_SCOPE_DEPS:internalNodes.row",
+]);
 
 // Wall-clock diagnostics measure the machine, not the graph: the engine's
 // HOT_SCOPE_TIME budget (8 ms of compute per scope per second) trips on a

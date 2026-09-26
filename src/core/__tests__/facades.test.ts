@@ -42,80 +42,82 @@ describe("RecordMapFacade (core, headless)", () => {
   });
 
   it("size and membership reads are reactive", () => {
-    createRoot((dispose) => {
+    // Graph construction under the root; writes from mainline (rc.9: a root
+    // body is an owned scope, so a store write inside it throws in dev).
+    const sizes: number[] = [];
+    const { setRecord, dispose } = createRoot((dispose) => {
       const { facade, setRecord } = setup({ a: { id: "a", value: 1 } });
-      const sizes: number[] = [];
-
       createEffect(
         () => facade.size,
         (size) => {
           sizes.push(size);
         },
       );
-      flush();
-      expect(sizes).toEqual([1]);
-
-      setRecord((draft) => {
-        draft.b = { id: "b", value: 2 };
-        return undefined;
-      });
-      flush();
-      expect(sizes).toEqual([1, 2]);
-      dispose();
+      return { setRecord, dispose };
     });
+    flush();
+    expect(sizes).toEqual([1]);
+
+    setRecord((draft) => {
+      draft.b = { id: "b", value: 2 };
+      return undefined;
+    });
+    flush();
+    expect(sizes).toEqual([1, 2]);
+    dispose();
   });
 
   it("get on an ABSENT key still subscribes (in-guard)", () => {
     // The projection absent-key footgun: a bare record[key] read of a missing
     // key does not subscribe inside derives. The facade guards every get with
     // `in`, so consumers re-run once the key materializes.
-    createRoot((dispose) => {
+    const seen: (number | undefined)[] = [];
+    const { setRecord, dispose } = createRoot((dispose) => {
       const { facade, setRecord } = setup({});
-      const seen: (number | undefined)[] = [];
-
       createEffect(
         () => facade.get("late")?.value,
         (value) => {
           seen.push(value);
         },
       );
-      flush();
-      expect(seen).toEqual([undefined]);
-
-      setRecord((draft) => {
-        draft.late = { id: "late", value: 7 };
-        return undefined;
-      });
-      flush();
-      expect(seen).toEqual([undefined, 7]);
-      dispose();
+      return { setRecord, dispose };
     });
+    flush();
+    expect(seen).toEqual([undefined]);
+
+    setRecord((draft) => {
+      draft.late = { id: "late", value: 7 };
+      return undefined;
+    });
+    flush();
+    expect(seen).toEqual([undefined, 7]);
+    dispose();
   });
 
   it("does not re-run a per-key subscriber for unrelated rows", () => {
-    createRoot((dispose) => {
+    let aRuns = 0;
+    const { setRecord, dispose } = createRoot((dispose) => {
       const { facade, setRecord } = setup({
         a: { id: "a", value: 1 },
         b: { id: "b", value: 2 },
       });
-      let aRuns = 0;
-
       createEffect(
         () => facade.get("a")?.value,
         () => {
           aRuns++;
         },
       );
-      flush();
-      expect(aRuns).toBe(1);
-
-      setRecord((draft) => {
-        draft.b!.value = 99;
-        return undefined;
-      });
-      flush();
-      expect(aRuns).toBe(1);
-      dispose();
+      return { setRecord, dispose };
     });
+    flush();
+    expect(aRuns).toBe(1);
+
+    setRecord((draft) => {
+      draft.b!.value = 99;
+      return undefined;
+    });
+    flush();
+    expect(aRuns).toBe(1);
+    dispose();
   });
 });

@@ -35,7 +35,9 @@ describe("createParentIds (core, headless)", () => {
     const [nodes, setNodes] = createStore<Node[]>([makeNode("group"), makeNode("child", "group")]);
     let groupRuns = 0;
 
-    createRoot((dispose) => {
+    // Graph construction under the root; writes and reads from mainline
+    // (rc.9: a root body is an owned scope, writes there throw in dev).
+    const { parentIds, dispose } = createRoot((dispose) => {
       const parentIds = createParentIds({
         get nodes() {
           return nodes;
@@ -47,16 +49,17 @@ describe("createParentIds (core, headless)", () => {
           groupRuns++;
         },
       );
-      flush();
-      expect(parentIds.group).toBe(true);
-      expect(groupRuns).toBe(1);
-
-      setNodes(() => [makeNode("group")]);
-      flush();
-      expect(parentIds.group).toBeUndefined();
-      expect(groupRuns).toBe(2);
-      dispose();
+      return { parentIds, dispose };
     });
+    flush();
+    expect(parentIds.group).toBe(true);
+    expect(groupRuns).toBe(1);
+
+    setNodes(() => [makeNode("group")]);
+    flush();
+    expect(parentIds.group).toBeUndefined();
+    expect(groupRuns).toBe(2);
+    dispose();
   });
 
   it("does not re-run a parent's subscriber for unrelated membership changes", () => {
@@ -67,7 +70,7 @@ describe("createParentIds (core, headless)", () => {
     ]);
     let g1Runs = 0;
 
-    createRoot((dispose) => {
+    const dispose = createRoot((dispose) => {
       const parentIds = createParentIds({
         get nodes() {
           return nodes;
@@ -79,16 +82,17 @@ describe("createParentIds (core, headless)", () => {
           g1Runs++;
         },
       );
-      flush();
-      expect(g1Runs).toBe(1);
-
-      // g2 becomes a parent; g1's subscriber must not care
-      setNodes((draft) => {
-        draft.push(makeNode("c2", "g2"));
-      });
-      flush();
-      expect(g1Runs).toBe(1);
-      dispose();
+      return dispose;
     });
+    flush();
+    expect(g1Runs).toBe(1);
+
+    // g2 becomes a parent; g1's subscriber must not care
+    setNodes((draft) => {
+      draft.push(makeNode("c2", "g2"));
+    });
+    flush();
+    expect(g1Runs).toBe(1);
+    dispose();
   });
 });

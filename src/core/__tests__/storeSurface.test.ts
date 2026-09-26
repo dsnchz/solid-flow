@@ -1,6 +1,4 @@
 // @vitest-environment node
-import { isProxy } from "node:util/types";
-
 import { createRoot, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
@@ -31,9 +29,13 @@ describe("internal store surface", () => {
     return { state, dispose };
   };
 
-  it("is a plain object with own getters, not a proxy over a memo-backed source", () => {
+  // solid-js rc.9+: `merge()` is always a lazy view (a Proxy) over its
+  // sources, never a copy — so the pin is no longer "not a proxy". What
+  // mattered (bench round 17) is that no config key sits behind a memo-backed
+  // source: the keys are own, enumerable getters on the merge's sources, read
+  // live. Measured on rc.9: the view costs nothing on mount or memory.
+  it("exposes every flow prop as an own key over plain getters, not a memo-backed source", () => {
     const { state, dispose } = setup();
-    expect(isProxy(state.store)).toBe(false);
     const own = new Set(Object.getOwnPropertyNames(state.store));
     for (const key of FLOW_PROP_KEYS) expect(own.has(key)).toBe(true);
     dispose();

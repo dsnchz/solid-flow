@@ -35,8 +35,12 @@ export const createRowIndex = <T extends { readonly id: string }>(
     if (i !== undefined && rows[i]?.id === id) return i;
     // Miss or slot mismatch: the index lags the draft (writes commit at
     // flush, so a same-batch add is not indexed yet) or the id is unknown.
-    // The scan is the correctness floor, never the per-frame path.
-    return rows.findIndex((row) => row.id === id);
+    // The scan is the correctness floor, never the per-frame path. `row?.`:
+    // an optimistic draft read inside an open action can present a hole at a
+    // slot a previous same-action setter pushed (solid-js 2.0.0-rc.9
+    // regression, .agent/upstream-rc9-optimistic-draft-hole.md); a hole is a
+    // miss, not a crash.
+    return rows.findIndex((row) => row?.id === id);
   };
 
   return {
