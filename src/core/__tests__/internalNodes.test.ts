@@ -503,3 +503,41 @@ describe("createInternalNodes (core, headless)", () => {
     dispose();
   });
 });
+
+describe("createInternalNodes — the user row is enumerated once per user change", () => {
+  it("a measurement write re-derives the row without re-spreading the user node", () => {
+    // The raw seed is a Proxy counting ownKeys: the store's own enumeration
+    // reaches the target, so every `{...userNode}` spread is counted. A
+    // measurement (or overlay) change must re-run the geometry only — the
+    // spread ran three times per node at a 10k mount (bench round 30:
+    // ~170 ms self per pass plus a presence node per key per pass, #3664).
+    let enumerations = 0;
+    const raw = new Proxy(makeNode({ id: "a" }), {
+      ownKeys(target) {
+        enumerations++;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const { internalNodes, setMeasurements, setNodes } = createRoot(() => setup([raw]));
+    flush();
+    expect(internalNodes["a"]!.internals.positionAbsolute).toEqual({ x: 0, y: 0 });
+    const afterMount = enumerations;
+    expect(afterMount).toBeGreaterThan(0);
+
+    setMeasurements((draft) => {
+      draft["a"] = { measured: { width: 120, height: 60 }, handleBounds: handleBounds("a") };
+      return undefined;
+    });
+    flush();
+    expect(internalNodes["a"]!.measured).toEqual({ width: 120, height: 60 });
+    expect(enumerations).toBe(afterMount);
+
+    // A user-row change is the one thing that must re-enumerate.
+    setNodes((draft) => {
+      draft[0]!.position = { x: 5, y: 5 };
+      return undefined;
+    });
+    flush();
+    expect(internalNodes["a"]!.internals.positionAbsolute).toEqual({ x: 5, y: 5 });
+  });
+});

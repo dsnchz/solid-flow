@@ -173,6 +173,14 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       // mapped type with an unresolved NodeType generic, and the inner
       // `.row` proxy is what the public record holds.
       let geometry = "";
+      // ONE enumeration of the user row per USER change: the projection
+      // reads this plain snapshot, so a measurement or overlay change
+      // re-runs the geometry without re-spreading the proxy — the spread ran
+      // three times per node at a 10k mount, each pass ~170 ms of trap self
+      // time plus a presence node per key (bench round 30, solidjs/solid#3664).
+      const userSnapshot = createMemo(() => ({ ...userNodeAccessor() }), {
+        name: "internalNodes.user",
+      });
       const store: { row: InternalNode<NodeType> } = createProjection<{
         row: InternalNode<NodeType>;
       }>(
@@ -181,6 +189,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           // the user node object while THIS row store (keyed by id) survives,
           // so downstream subscriptions never strand on disposed stores
           const userNode = userNodeAccessor();
+          const user = userSnapshot();
           const { nodeOrigin, nodeExtent, zIndexMode } = source;
           const selectedNodeZ =
             source.elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
@@ -188,60 +197,60 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           // `in` guard: subscribes even while the key is absent, so the first
           // measurement of a node re-runs (computation absent-key footgun).
           const measurement =
-            userNode.id in source.measurements ? source.measurements[userNode.id] : undefined;
+            user.id in source.measurements ? source.measurements[user.id] : undefined;
 
           // Selection = overlay joined with the row (solid#3085 composition);
           // the same value feeds the spread override and z elevation.
           const selected = joinSelected(
-            userNode.selected,
-            overlayEntry(source.selectionOverlay, userNode.id),
+            user.selected,
+            overlayEntry(source.selectionOverlay, user.id),
           );
           // Position/dragging = drag overlay joined with the row; the joined
           // position feeds the row field AND the absolute-position derive.
-          const dragOverlayEntry = dragEntry(source.dragOverlay, userNode.id);
-          const position = joinPosition(userNode.position, dragOverlayEntry);
-          const dragging = joinDragging(userNode.dragging, dragOverlayEntry);
+          const dragOverlayEntry = dragEntry(source.dragOverlay, user.id);
+          const position = joinPosition(user.position, dragOverlayEntry);
+          const dragging = joinDragging(user.dragging, dragOverlayEntry);
 
           // The measurements root is authoritative once a DOM measurement
           // exists (the row write-through can't be relied on — it reverts on
           // optimistic stores); the user seed covers the pre-measurement
           // window (SSR sizing, persisted layouts).
           const measured = {
-            width: measurement?.measured.width ?? userNode.measured?.width,
-            height: measurement?.measured.height ?? userNode.measured?.height,
+            width: measurement?.measured.width ?? user.measured?.width,
+            height: measurement?.measured.height ?? user.measured?.height,
           };
           const dimensions = getNodeDimensions({
             measured,
-            width: userNode.width,
-            height: userNode.height,
-            initialWidth: userNode.initialWidth,
-            initialHeight: userNode.initialHeight,
+            width: user.width,
+            height: user.height,
+            initialWidth: user.initialWidth,
+            initialHeight: user.initialHeight,
           });
 
-          const rootParentIndex = autoIndex().get(userNode.id);
+          const rootParentIndex = autoIndex().get(user.id);
           const row = {
-            ...userNode,
+            ...user,
             selected,
             position,
             dragging,
             measured,
             internals: {
               positionAbsolute: clampPosition(
-                getNodePositionWithOrigin({ ...userNode, position, measured }, nodeOrigin),
-                isCoordinateExtent(userNode.extent) ? userNode.extent : nodeExtent,
+                getNodePositionWithOrigin({ ...user, position, measured }, nodeOrigin),
+                isCoordinateExtent(user.extent) ? user.extent : nodeExtent,
                 dimensions,
               ),
               handleBounds: measurement?.handleBounds,
               z:
-                calculateZ({ zIndex: userNode.zIndex, selected }, selectedNodeZ, zIndexMode) +
+                calculateZ({ zIndex: user.zIndex, selected }, selectedNodeZ, zIndexMode) +
                 (rootParentIndex !== undefined ? rootParentIndex * ROOT_PARENT_Z_INCREMENT : 0),
               ...(rootParentIndex !== undefined ? { rootParentIndex } : {}),
               userNode,
             },
           } as InternalNode<NodeType>;
 
-          if (userNode.parentId) {
-            const parentEntry = entryById.get(userNode.parentId);
+          if (user.parentId) {
+            const parentEntry = entryById.get(user.parentId);
             // Only link backwards: matches the upstream parents-first contract
             // and rules out parentId-cycle recursion. Reading the parent's row
             // store subscribes to exactly the parent leaves the child's
@@ -264,14 +273,14 @@ export const createInternalNodes = <NodeType extends Node = Node>(
               emitFlowError(
                 source.onError,
                 "parent-missing",
-                `Parent node ${userNode.parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
+                `Parent node ${user.parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
               );
             }
           }
 
           if (source.onGeometryChange) {
             const { x, y } = row.internals.positionAbsolute;
-            const next = `${x},${y},${dimensions.width},${dimensions.height},${userNode.parentId ?? ""}`;
+            const next = `${x},${y},${dimensions.width},${dimensions.height},${user.parentId ?? ""}`;
             if (next !== geometry) {
               geometry = next;
               source.onGeometryChange(id, {
@@ -279,7 +288,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
                 y,
                 width: dimensions.width,
                 height: dimensions.height,
-                ...(userNode.parentId ? { parentId: userNode.parentId } : {}),
+                ...(user.parentId ? { parentId: user.parentId } : {}),
               });
             }
           }
