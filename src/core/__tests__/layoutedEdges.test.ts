@@ -321,3 +321,74 @@ describe("createLayoutedEdges — same-id replacement", () => {
     dispose();
   });
 });
+
+/**
+ * A re-layout of the same edge object (an endpoint moved) lands as leaf
+ * writes of the changed geometry: readers of untouched keys stay silent, the
+ * row keeps its identity, and a nested value or a swapped edge object still
+ * goes through the adopting path. (Pin: the return-form reconcile was as
+ * quiet; the difference is the per-edge commit cost, bench round 41.)
+ */
+describe("createLayoutedEdges — re-layout of the same edge", () => {
+  it("moves the geometry as leaf writes and keeps untouched readers silent", () => {
+    const a = internalNode("a", 0, 0);
+    const [nodes, setNodes] = createStore<Record<string, InternalNode>>({
+      a,
+      b: internalNode("b", 200, 100),
+    });
+    const { source, setEdgesStore } = makeSource(
+      [{ id: "e1", source: "a", target: "b", label: "first", data: { weight: 1 } }] as Edge[],
+      [],
+    );
+    const tracked: LayoutedEdgesSource<Node, Edge> = {
+      ...source,
+      nodeLookup: { get: (id) => nodes[id], size: 2 },
+    };
+    let layouted!: ReturnType<typeof createLayoutedEdges<Node, Edge>>;
+    let dispose!: () => void;
+    const runs = { targetX: 0, label: 0, weight: 0 };
+    createRoot((d) => {
+      dispose = d;
+      layouted = createLayoutedEdges(tracked);
+      createEffect(
+        () => layouted.e1?.targetX,
+        () => {
+          runs.targetX++;
+        },
+      );
+      createEffect(
+        () => layouted.e1?.label,
+        () => {
+          runs.label++;
+        },
+      );
+      createEffect(
+        () => layouted.e1?.data?.weight,
+        () => {
+          runs.weight++;
+        },
+      );
+    });
+    flush();
+    const before = layouted.e1!;
+    expect(runs).toEqual({ targetX: 1, label: 1, weight: 1 });
+
+    setNodes((draft) => {
+      draft.b!.internals.positionAbsolute.x = 400;
+    });
+    flush();
+    expect(layouted.e1).toBe(before);
+    expect(layouted.e1!.targetX).not.toBe(200 + 46 + 4);
+    expect(runs).toEqual({ targetX: 2, label: 1, weight: 1 });
+
+    // A nested value changed on the same edge object: adopted by reference.
+    setEdgesStore((draft) => {
+      draft[0]!.data = { weight: 2 };
+    });
+    flush();
+    expect(layouted.e1!.data?.weight).toBe(2);
+    expect(runs.weight).toBe(2);
+    expect(runs.targetX).toBe(2);
+    dispose();
+  });
+});

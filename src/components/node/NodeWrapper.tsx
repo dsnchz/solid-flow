@@ -1,6 +1,6 @@
 import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
-import { dynamic } from "@solidjs/web";
+import { dynamic, isServer } from "@solidjs/web";
 import {
   elementSelectionKeys,
   errorMessages,
@@ -11,6 +11,7 @@ import {
 import {
   createEffect,
   createMemo,
+  createRenderEffect,
   createSignal,
   getOwner,
   onCleanup,
@@ -97,8 +98,18 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     if (w) out.width = toPxString(w);
     if (h) out.height = toPxString(h);
     out["z-index"] = row.internals.z;
-    const { x, y } = row.internals.positionAbsolute;
-    out.transform = `translate(${x}px, ${y}px)`;
+    // The transform is written straight onto the element by its own render
+    // effect (mountElement): a moved node then writes one property instead
+    // of rebuilding and diffing this whole object per frame (bench round
+    // 42: ~55 ms of a 10k move-all). Server markup still carries it so a
+    // node is positioned before hydration.
+    // A user `transform` never applies (the binding would otherwise write it
+    // over the render effect's).
+    if (out.transform !== undefined) delete out.transform;
+    if (isServer) {
+      const { x, y } = row.internals.positionAbsolute;
+      out.transform = `translate(${x}px, ${y}px)`;
+    }
     out.visibility = isCulled || !nodeHasDimensions(row) ? "hidden" : "visible";
     out["pointer-events"] = isCulled ? "none" : undefined;
     return out;
@@ -178,6 +189,17 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   // later row's memo pull re-marks that heap (`markHeap`), which made a 10k
   // mount O(N^2) — .agent/spikes/p34-markheap-mount, bench round 17.
   const mountElement = (el: HTMLDivElement) => {
+    // The one per-frame DOM write of a moved node (see `style`): a render
+    // effect over the row's absolute position, no style-object diff.
+    createRenderEffect(
+      () => {
+        const { x, y } = node().internals.positionAbsolute;
+        return `translate(${x}px, ${y}px)`;
+      },
+      (transform) => {
+        el.style.transform = transform;
+      },
+    );
     // `pointerenter`/`pointerleave` cannot be delegated (they do not bubble)
     // and the compiler attaches a listener even for an undefined handler:
     // attached here only when the flow passes the callback, so the common

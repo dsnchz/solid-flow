@@ -328,6 +328,14 @@ mountElement(el))`, with `el` captured as a plain value and the effects
   store would no longer reach the row's readers — a same-id swap therefore
   still takes the return-form reconcile, which adopts by reference (the
   `internalNodes` "same-id replacement" tests pin the chaining).
+- **A node's transform is its own DOM write.** The `style` binding diffs a
+  whole object per run; with the transform inside it, every moved node
+  rebuilt and diffed ~7 keys per frame (~55 ms of a 10k move-all, bench
+  round 42). NodeWrapper writes `el.style.transform` from a render effect
+  over `internals.positionAbsolute` and keeps the transform out of the
+  style object on the client (server markup still carries it); a user
+  `transform` is stripped there, since the binding would otherwise write it
+  over the effect's.
 - **Culling is a keyed record, not a per-row read of the viewport.** The
   quantized culling viewport steps every quarter-viewport of pan; a per-row
   memo over it makes every step re-run all ~20k row memos through the store
