@@ -29,7 +29,10 @@ const handleBounds = (nodeId: string, x = 46) => ({
 });
 
 const setup = () => {
-  const [nodes, setNodes] = createStore<Node[]>([{ id: "a", position: { x: 0, y: 0 }, data: {} }]);
+  // Adopted rows carry `measured` from the start (seeded by the flow).
+  const [nodes, setNodes] = createStore<Node[]>([
+    { id: "a", position: { x: 0, y: 0 }, data: {}, measured: {} },
+  ]);
   const [measurements, setMeasurements] = createStore<NodeMeasurements>({});
   const ids = () => nodes.map((node) => node.id);
 
@@ -155,8 +158,92 @@ describe("createMeasurementIngest — applyMeasurementWrites", () => {
     ]);
     flush();
     expect(internalNodes["a"]!.measured).toEqual({ width: 120, height: 60 });
-    expect(runs()).toBe(3);
+    // Measurement-first: with a DOM measurement present the derive never
+    // reads the user row's `measured`, so the leaf write-through into the
+    // seeded object does not even re-run it (bench round 38).
+    expect(runs()).toBe(2);
     expect(boundsRuns).toBe(1);
+  });
+
+  it("the measured write-through into a seeded row does not re-enumerate the user node", () => {
+    // Every adopted row carries `measured` from the start, so the DOM pass's
+    // write-through is two leaf writes into an existing object — the row's
+    // key set and slots are untouched, the user snapshot does not re-run,
+    // and the row is not rebuilt (bench round 38).
+    let enumerations = 0;
+    const raw = new Proxy({ id: "a", position: { x: 0, y: 0 }, data: {}, measured: {} } as Node, {
+      ownKeys(target) {
+        enumerations++;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const [nodes, setNodes] = createStore<Node[]>([raw]);
+    const [measurements, setMeasurements] = createStore<NodeMeasurements>({});
+    const ids = () => nodes.map((node) => node.id);
+    const internalNodes = createRoot(() =>
+      createInternalNodes({
+        selectionOverlay: {},
+        dragOverlay: {},
+        get nodes() {
+          return nodes;
+        },
+        get measurements() {
+          return measurements;
+        },
+        nodeOrigin: [0, 0],
+        nodeExtent: infiniteExtent,
+        elevateNodesOnSelect: true,
+      }),
+    );
+    const ingest = createRoot(() =>
+      createMeasurementIngest<Node>({
+        setMeasurementsStore: setMeasurements,
+        setNodesStore: setNodes,
+        nodeIds: ids,
+        nodeIndex: createRowIndex<Node>(ids),
+      }),
+    );
+    flush();
+    void internalNodes["a"]!.internals.positionAbsolute;
+
+    const pass = (width: number) => {
+      ingest.applyMeasurementWrites([
+        { id: "a", measured: { width, height: 60 }, handleBounds: handleBounds("a") },
+      ]);
+      flush();
+      ingest.applyNodeChanges([{ id: "a", type: "dimensions", dimensions: { width, height: 60 } }]);
+      flush();
+    };
+    // The first write into a caller-owned raw object is the engine's one-time
+    // copy-on-write privatization (it clones the row, which enumerates it);
+    // from then on the raw is owned and a leaf write enumerates nothing.
+    pass(120);
+    const afterFirstPass = enumerations;
+    pass(130);
+    expect(nodes[0]!.measured).toEqual({ width: 130, height: 60 });
+    expect(internalNodes["a"]!.measured).toEqual({ width: 130, height: 60 });
+    expect(enumerations).toBe(afterFirstPass);
+  });
+
+  it("a row without measured (a raw user store) gets the key from its first write-through", () => {
+    const [nodes, setNodes] = createStore<Node[]>([
+      { id: "a", position: { x: 0, y: 0 }, data: {} },
+    ]);
+    const [, setMeasurements] = createStore<NodeMeasurements>({});
+    const ids = () => nodes.map((node) => node.id);
+    const ingest = createRoot(() =>
+      createMeasurementIngest<Node>({
+        setMeasurementsStore: setMeasurements,
+        setNodesStore: setNodes,
+        nodeIds: ids,
+        nodeIndex: createRowIndex<Node>(ids),
+      }),
+    );
+    ingest.applyNodeChanges([
+      { id: "a", type: "dimensions", dimensions: { width: 120, height: 60 } },
+    ]);
+    flush();
+    expect(nodes[0]!.measured).toEqual({ width: 120, height: 60 });
   });
 
   it("changed handle bounds replace the previous bounds", () => {

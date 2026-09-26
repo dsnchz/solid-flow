@@ -2,6 +2,8 @@ import { createEffect, createStore, isPending, untrack } from "solid-js";
 
 import type { Edge, Node } from "@/types";
 
+import { seedMeasured } from "../measuredSeed";
+
 /**
  * The graph-membership slice of the flow's props: the two controlled axes
  * and their uncontrolled counterparts. Expressed structurally so the
@@ -74,8 +76,13 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   // write-through IS the contract.
   const copyRows = <T extends object>(rows: readonly T[] | undefined): T[] =>
     (rows ?? []).map((row) => ({ ...row }));
+  // Uncontrolled node rows leave the copy with `measured` seeded (see
+  // core/measuredSeed.ts); controlled rows are the user's own objects and
+  // are seeded by the node store factories instead.
+  const copyNodeRows = (rows: readonly NodeType[] | undefined): NodeType[] =>
+    (rows ?? []).map((row) => seedMeasured({ ...row }));
   const [nodesStore, setNodesStore] = createStore<NodeType[]>(
-    (props.nodes ?? (nodeDefaultsPending ? [] : copyRows(props.defaultNodes))) as NodeType[],
+    (props.nodes ?? (nodeDefaultsPending ? [] : copyNodeRows(props.defaultNodes))) as NodeType[],
   );
   const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(
     (props.edges ?? (edgeDefaultsPending ? [] : copyRows(props.defaultEdges))) as EdgeType[],
@@ -140,7 +147,9 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
       const defaultNodes = config().defaultNodes;
       // Copy in the COMPUTE: row reads must happen in a tracking scope (the
       // body is untracked, and a pending source must throw HERE to hold).
-      return defaultNodes ? { rows: copyRows(defaultNodes) as NodeType[] | undefined } : undefined;
+      return defaultNodes
+        ? { rows: copyNodeRows(defaultNodes) as NodeType[] | undefined }
+        : undefined;
     },
     (box) => {
       const rows = box?.rows;

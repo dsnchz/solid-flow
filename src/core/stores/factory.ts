@@ -18,6 +18,21 @@ import {
 export type AsyncSeed<T> = () => Promise<T[]> | AsyncIterable<T[]>;
 export type SeedInput<T> = T[] | AsyncSeed<T>;
 
+/** Applies `map` to every row a seed input produces — the array, the promised array, or each streamed array. */
+export const mapSeedInput = <T>(input: SeedInput<T>, map: (row: T) => T): SeedInput<T> => {
+  if (typeof input !== "function") return input.map(map);
+  return () => {
+    const result = input();
+    if (Symbol.asyncIterator in result) {
+      const rows = result;
+      return (async function* () {
+        for await (const batch of rows) yield batch.map(map);
+      })();
+    }
+    return result.then((batch) => batch.map(map));
+  };
+};
+
 export const createSeededStore = <T>(
   input: SeedInput<T>,
 ): readonly [Store<T[]>, StoreSetter<T[]>] => {

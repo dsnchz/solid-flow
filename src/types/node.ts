@@ -21,6 +21,18 @@ export type Node<
 > = NodeBase<NodeData, NodeType> & {
   class?: string;
   style?: JSX.CSSProperties;
+  /**
+   * The node's measured size, written by the flow once the DOM has measured
+   * it. Rows from `defaultNodes`, `createNodeStore` /
+   * `createOptimisticNodeStore` and `addNodes` carry this object from the
+   * start (empty until measured — `node.measured.width` is `undefined`
+   * before the first measurement); a row from a raw store you built yourself
+   * gets it on its first measurement. You never write it; it is optional
+   * here only because this is also the type you construct nodes with. A
+   * value you do supply (a persisted layout, SSR sizing) covers the
+   * pre-measurement window and is superseded by the DOM measurement.
+   */
+  measured?: { width?: number; height?: number };
   focusable?: boolean;
   /**
    * When `false`, the node is exempt from viewport culling on both tiers:
