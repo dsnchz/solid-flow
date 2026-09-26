@@ -18,6 +18,7 @@ export const SmoothStepEdge = (props: SmoothStepEdgeProps): JSX.Element => {
       targetPosition: props.targetPosition,
       borderRadius: props.pathOptions?.borderRadius,
       offset: props.pathOptions?.offset,
+      stepPosition: props.pathOptions?.stepPosition,
     });
 
     return { path, labelX, labelY };

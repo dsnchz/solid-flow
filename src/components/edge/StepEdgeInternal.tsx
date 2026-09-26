@@ -18,6 +18,7 @@ export const StepEdgeInternal = (props: StepEdgeProps): JSX.Element => {
       sourcePosition: props.sourcePosition,
       targetPosition: props.targetPosition,
       borderRadius: 0,
+      offset: props.pathOptions?.offset,
     });
 
     return { path, labelX, labelY };

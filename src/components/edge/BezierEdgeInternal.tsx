@@ -17,6 +17,7 @@ export const BezierEdgeInternal = (props: BezierEdgeProps): JSX.Element => {
       targetY: props.targetY,
       sourcePosition: props.sourcePosition,
       targetPosition: props.targetPosition,
+      curvature: props.pathOptions?.curvature,
     });
 
     return { path, labelX, labelY };

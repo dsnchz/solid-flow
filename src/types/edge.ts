@@ -12,7 +12,7 @@ import type { UnknownStruct } from "./custom";
 import type { Node } from "./node";
 
 /**
- * An `Edge` is the complete description with everything Svelte Flow needs to know in order to
+ * An `Edge` is the complete description with everything Solid Flow needs to know in order to
  * render it.
  * @public
  */
@@ -25,6 +25,13 @@ export type Edge<
   style?: JSX.CSSProperties;
   class?: string;
   focusable?: boolean;
+  /**
+   * Options for the built-in edge types' path helpers: `curvature` for the
+   * default (bezier) edge, `offset` for the step edge, `borderRadius`,
+   * `offset` and `stepPosition` for the smooth-step edge.
+   * Reaches your own edge component unchanged through its props.
+   */
+  pathOptions?: BezierPathOptions | StepPathOptions | SmoothStepPathOptions;
   /**
    * When `false`, the edge is exempt from viewport culling on both tiers:
    * the always-on CSS tier never hides it and `onlyRenderVisibleElements`

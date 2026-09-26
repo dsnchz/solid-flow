@@ -166,6 +166,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
             data={edge().data}
             style={edge().style}
             interactionWidth={edge().interactionWidth}
+            pathOptions={edge().pathOptions}
             selectable={selectable()}
             deletable={edge().deletable ?? true}
             type={edgeType()}
