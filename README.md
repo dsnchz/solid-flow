@@ -360,6 +360,8 @@ Reconnection lifecycle callbacks (`onReconnectStart`, `onReconnect`, `onReconnec
 
 ## Performance
 
+The design in one line: Solid Flow spends time and memory up front to remember causality, so writes do not have to rediscover their consequences. Every implementation of the xyflow engine indexes the graph eagerly; Solid Flow additionally keeps everything derived from it maintained incrementally through Solid's dependency graph, so an interactive edit costs only the rows it touches. The price is paid at mount and in memory; the return is on every gesture. Measured at 10,000 nodes on the same stress page as React Flow 12.12 and Svelte Flow 1.7, a node drag costs 31 ms of script over 60 moves against 10,634 and 495, and a whole-graph replacement rewrites 10,000 text nodes in place while the other two tear down and rebuild every edge element. The trade turns the other way for writes that replace most objects at once, which cost the recomputation the others pay plus the maintenance on top; `docs/ARCHITECTURE.md` has the full account.
+
 Two complementary culling tiers keep large graphs fast:
 
 - **CSS culling (always on):** Elements outside the (overscanned) viewport are hidden with `visibility: hidden` + `pointer-events: none`. Everything stays mounted, so component state, measurement, and accessibility semantics are untouched — this tier has no userland contract at all.
