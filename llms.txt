@@ -6,7 +6,7 @@ upstream (@xyflow/system), different state model.
 
 ```tsx
 import { SolidFlow, createNodeStore, createEdgeStore } from "@dschz/solid-flow";
-import "@dschz/solid-flow/styles"; // required, import once
+import "@dschz/solid-flow/style.css"; // required, import once (base.css: minimal skin)
 ```
 
 ## Unlearn these (React Flow priors that are WRONG here)

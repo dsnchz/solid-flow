@@ -99,7 +99,7 @@ export default defineConfig((cli) => {
         // minimal theme), as React Flow / Svelte Flow ship them.
         await mkdir("dist/styles", { recursive: true });
         for (const [entry, out] of [
-          ["src/styles/style.css", "dist/styles/index.css"],
+          ["src/styles/style.css", "dist/styles/style.css"],
           ["src/styles/base.css", "dist/styles/base.css"],
         ] as const) {
           const bundled = await inlineCss(entry);

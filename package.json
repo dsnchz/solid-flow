@@ -64,13 +64,17 @@
     }
   },
   "exports": {
+    "./package.json": "./package.json",
     ".": {
       "types": "./dist/index/index.d.ts",
       "solid": "./dist/index/index.jsx",
       "default": "./dist/index/index.js"
     },
-    "./styles": "./dist/styles/index.css",
-    "./dist/style.css": "./dist/styles/index.css"
+    "./style.css": "./dist/styles/style.css",
+    "./base.css": "./dist/styles/base.css",
+    "./dist/style.css": "./dist/styles/style.css",
+    "./dist/base.css": "./dist/styles/base.css",
+    "./styles": "./dist/styles/style.css"
   },
   "publishConfig": {
     "access": "public"

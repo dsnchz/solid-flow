@@ -60,7 +60,7 @@ import {
   Panel,
   SolidFlow,
 } from "@dschz/solid-flow";
-import "@dschz/solid-flow/styles"; // required styles, import once
+import "@dschz/solid-flow/style.css"; // required styles, import once
 
 export const Flow = () => {
   const [nodes, setNodes] = createNodeStore([
@@ -357,6 +357,14 @@ Reconnection lifecycle callbacks (`onReconnectStart`, `onReconnect`, `onReconnec
 - **MiniMap** — interactive overview with viewport indicator, custom node rendering via `nodeComponent`, and `onClick` / `onNodeClick` handlers
 - **NodeToolbar** — context-sensitive toolbars for nodes
 - **NodeResizer** — interactive node resizing with handles
+
+## Styling
+
+Import one stylesheet, once: `@dschz/solid-flow/style.css` is the full default theme, and `@dschz/solid-flow/base.css` is the structural rules with a minimal skin (a neutral node border, no fill, plain handles) for apps that bring their own. Both are the React Flow / Svelte Flow files of the same names; `@dschz/solid-flow/styles` still resolves to `style.css`.
+
+The library CSS sits in the `xyflow` cascade layer, so any rule of yours outside a layer overrides it regardless of specificity. If your own CSS is layered too, order the layers explicitly (`@layer xyflow, app;`). The theme is a set of `--xy-*` custom properties on `.solid-flow` (`--xy-node-background-color`, `--xy-edge-stroke`, `--xy-handle-background-color`, …) that you can set on the flow or any ancestor.
+
+The color scheme follows the OS by default, entirely in CSS (`color-scheme` and `light-dark()`), so server-rendered markup and the first paint already match it. `forceColorMode="light" | "dark"` on `<SolidFlow>` forces one, and a `data-theme="light" | "dark"` attribute on an ancestor such as `<html>` forces it page-wide; the prop wins over the attribute.
 
 ## Performance
 
