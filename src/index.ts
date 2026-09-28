@@ -1,4 +1,20 @@
-export * from "./components";
+// Public components only (React Flow / Svelte Flow parity): the renderers,
+// wrappers, containers and `*Internal` edges in ./components stay internal.
+export type { ConnectionLineComponentProps } from "./components/connection";
+export { Panel, ViewportPortal } from "./components/container";
+export {
+  BaseEdge,
+  BezierEdge,
+  EdgeLabel,
+  EdgeLabelRenderer,
+  EdgeReconnectAnchor,
+  SmoothStepEdge,
+  StepEdge,
+  StraightEdge,
+} from "./components/edge";
+export { Handle } from "./components/handle";
+export { SolidFlow } from "./components/SolidFlow";
+export { SolidFlowProvider } from "./components/SolidFlowProvider";
 export {
   connectionKey,
   type ConnectionsRecord,
