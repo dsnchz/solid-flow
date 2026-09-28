@@ -99,7 +99,7 @@
     "@xyflow/system": "0.0.83"
   },
   "devDependencies": {
-    "@changesets/cli": "2.31.1",
+    "@changesets/cli": "3.0.3",
     "@dagrejs/dagre": "3.1.1",
     "@playwright/test": "1.63.0",
     "@solidjs/compiler": "2.0.0-rc.10",
