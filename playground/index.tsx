@@ -12,4 +12,12 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
+// `&css=base` loads base.css (structure + the minimal theme) instead of the
+// full style.css, before the first render.
+if (new URLSearchParams(location.search).get("css") === "base") {
+  await import("@/styles/base.css");
+} else {
+  await import("@/styles/style.css");
+}
+
 render(() => <App />, root!);

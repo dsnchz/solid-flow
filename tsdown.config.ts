@@ -89,12 +89,19 @@ export default defineConfig((cli) => {
           return parts.join("\n");
         };
 
+        // style.css (structure + default theme) and base.css (structure +
+        // minimal theme), as React Flow / Svelte Flow ship them.
         await mkdir("dist/styles", { recursive: true });
-        const bundled = await inlineCss("src/styles/style.css");
-        if (bundled.includes("@import")) {
-          throw new Error("dist/styles/index.css still contains @import after inlining");
+        for (const [entry, out] of [
+          ["src/styles/style.css", "dist/styles/index.css"],
+          ["src/styles/base.css", "dist/styles/base.css"],
+        ] as const) {
+          const bundled = await inlineCss(entry);
+          if (bundled.includes("@import")) {
+            throw new Error(`${out} still contains @import after inlining`);
+          }
+          await writeFile(out, bundled);
         }
-        await writeFile("dist/styles/index.css", bundled);
       },
     },
     // Type-stripped, JSX-preserved build for the `solid` export condition,

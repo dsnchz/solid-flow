@@ -1,5 +1,3 @@
-import "@/styles/style.css";
-
 import { Errored } from "solid-js";
 import { Dynamic } from "@solidjs/web";
 
