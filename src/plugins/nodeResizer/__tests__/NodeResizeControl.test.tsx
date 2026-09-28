@@ -44,7 +44,7 @@ const renderFlow = async (nodes: Node[]) => {
   return { node };
 };
 
-describe("ResizeControl onChange", () => {
+describe("NodeResizeControl onChange", () => {
   it("keeps a repositioned child's size when its parent resizes from the top-left", async () => {
     const { node } = await renderFlow([
       {

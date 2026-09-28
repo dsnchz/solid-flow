@@ -11,7 +11,7 @@ import { For, omit, Show } from "solid-js";
 
 import { propDefaults } from "@/utils";
 
-import { ResizeControl } from "./ResizeControl";
+import { NodeResizeControl } from "./NodeResizeControl";
 
 export type NodeResizerProps = {
   /** Id of the node it is resizing
@@ -63,7 +63,7 @@ export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
     <Show when={_props.visible}>
       <For each={XY_RESIZER_LINE_POSITIONS}>
         {(position) => (
-          <ResizeControl
+          <NodeResizeControl
             variant="line"
             position={position}
             class={props.lineClass}
@@ -74,7 +74,7 @@ export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
       </For>
       <For each={XY_RESIZER_HANDLE_POSITIONS}>
         {(position) => (
-          <ResizeControl
+          <NodeResizeControl
             position={position}
             class={props.handleClass}
             style={props.handleStyle}

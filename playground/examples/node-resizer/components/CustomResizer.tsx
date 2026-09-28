@@ -1,4 +1,4 @@
-import { Handle, type NodeProps, ResizeControl } from "@/index";
+import { Handle, type NodeProps, NodeResizeControl } from "@/index";
 
 import ResizeIcon from "./ResizeIcon";
 import type { ResizerData } from "./types";
@@ -11,7 +11,7 @@ const controlStyle = {
 export const CustomResizerNode = (props: NodeProps<Partial<ResizerData>>) => {
   return (
     <>
-      <ResizeControl
+      <NodeResizeControl
         minWidth={props.data.minWidth}
         maxWidth={props.data.maxWidth}
         minHeight={props.data.minHeight}
@@ -24,7 +24,7 @@ export const CustomResizerNode = (props: NodeProps<Partial<ResizerData>>) => {
         style={controlStyle}
       >
         <ResizeIcon />
-      </ResizeControl>
+      </NodeResizeControl>
 
       <Handle type="target" position="left" />
       <div>{props.data.label}</div>

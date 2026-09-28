@@ -42,7 +42,7 @@ type ResizeControlProps = NodeResizerSubProps & {
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
 /** A single resize handle or line — the building block of `NodeResizer`. */
-export const ResizeControl = <NodeType extends Node = Node>(
+export const NodeResizeControl = <NodeType extends Node = Node>(
   props: ParentProps<ResizeControlProps>,
 ): JSX.Element => {
   const _props = propDefaults(props, {
