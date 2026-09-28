@@ -25,7 +25,7 @@ import { NodeConnectableContext } from "@/contexts/nodeConnectable";
 import { NodeIdContext } from "@/contexts/nodeId";
 import { nodeCulled } from "@/core";
 import type { Node, NodeEvents } from "@/types";
-import { cx, emitFlowError, spreadOnDemand } from "@/utils";
+import { clientOnly, cx, emitFlowError, spreadOnDemand } from "@/utils";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
@@ -331,7 +331,8 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         setNodeRef(el);
         // Ref callbacks run outside the component owner: keep the wiring
         // owned (disposal, no NO_OWNER diagnostics).
-        runWithOwner(owner, () => mountElement(el));
+        // (and outside the hydration id sequence: see clientOnly)
+        runWithOwner(owner, () => clientOnly(() => mountElement(el)));
       }}
       data-id={node().id}
       class={cx(

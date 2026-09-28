@@ -11,7 +11,7 @@ import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/node
 import { createFlowState, type MeasureRequestEntry } from "@/core";
 import type { SolidFlowProps } from "@/core/flowProps";
 import type { BuiltInEdgeTypes, BuiltInNodeTypes, Edge, Node } from "@/types";
-import { scheduleIdleCallback } from "@/utils";
+import { clientOnly, scheduleIdleCallback } from "@/utils";
 
 import { handleExpandParent, measureNodeInternals } from "./measure";
 
@@ -38,8 +38,13 @@ export const InitialEdgeTypesMap = {
 export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: SolidFlowProps<NodeType, EdgeType>,
 ) => {
+  // Client-only on the primitive's side (the server gets a constant): keep
+  // its computation out of the hydration id sequence (see clientOnly).
+  const prefersDark = clientOnly(() =>
+    createMediaQuery("(prefers-color-scheme: dark)", props.colorModeSSR === "dark"),
+  );
   const state = createFlowState<NodeType, EdgeType>(props, {
-    prefersDark: createMediaQuery("(prefers-color-scheme: dark)", props.colorModeSSR === "dark"),
+    prefersDark,
     initialNodeTypes: InitialNodeTypesMap,
     initialEdgeTypes: InitialEdgeTypesMap,
   });

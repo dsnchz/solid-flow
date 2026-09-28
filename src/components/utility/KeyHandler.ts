@@ -7,6 +7,7 @@ import { useInternalSolidFlow } from "@/contexts";
 import { allContradicted, matchesKeyArray, type ModifierFlags } from "@/core/keys";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { KeyDefinition } from "@/types";
+import { clientOnly } from "@/utils";
 
 export type KeyHandlerProps = {
   readonly selectionKey?: KeyDefinition | KeyDefinition[] | null;
@@ -174,24 +175,27 @@ export const KeyHandler = (props: KeyHandlerProps) => {
     flush();
   };
 
+  // Client-only listeners: outside the hydration id sequence (see clientOnly).
   if (!isServer) {
-    createEventListenerMap(window, {
-      keydown: handleKeyDown,
-      keyup: handleKeyUp,
-      blur: handleWindowBlur,
-      contextmenu: resetKeysAndSelection,
-    });
+    clientOnly(() => {
+      createEventListenerMap(window, {
+        keydown: handleKeyDown,
+        keyup: handleKeyUp,
+        blur: handleWindowBlur,
+        contextmenu: resetKeysAndSelection,
+      });
 
-    // Capture-phase so stuck state heals BEFORE the pane/zoom handlers (and
-    // d3's own element-level listeners) read it in the same event.
-    createEventListenerMap(
-      window,
-      {
-        pointerdown: reconcileModifiers,
-        wheel: reconcileModifiers,
-      },
-      { capture: true, passive: true },
-    );
+      // Capture-phase so stuck state heals BEFORE the pane/zoom handlers (and
+      // d3's own element-level listeners) read it in the same event.
+      createEventListenerMap(
+        window,
+        {
+          pointerdown: reconcileModifiers,
+          wheel: reconcileModifiers,
+        },
+        { capture: true, passive: true },
+      );
+    });
   }
 
   return null;

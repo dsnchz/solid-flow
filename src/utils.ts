@@ -6,7 +6,14 @@ import {
   isNodeBase,
   type XYPosition,
 } from "@xyflow/system";
-import { createEffect, getOwner, type Owner, runWithOwner } from "solid-js";
+import {
+  createEffect,
+  createRoot,
+  getOwner,
+  type Owner,
+  runWithOwner,
+  sharedConfig,
+} from "solid-js";
 
 import type { Edge, Node } from "./types";
 
@@ -151,6 +158,36 @@ export const emitFlowError = (
 export const extraKeysOf = (props: object, own: ReadonlySet<string>): readonly string[] =>
   Object.keys(props).filter((key) => !own.has(key));
 
+// `isHydrationInProgress` is public runtime state the SharedConfig type does
+// not declare yet: read through a structural view, not a cast.
+const hydration: { isHydrationInProgress?: () => boolean } = sharedConfig;
+
+/** Whether the client is hydrating server-rendered markup right now. */
+export const isHydrating = (): boolean => !!hydration.isHydrationInProgress?.();
+
+// Hydration ids are built from digits and letters under the render's root
+// prefix; "~" never appears in one, so a client-only namespace cannot collide.
+let clientOnlyRoots = 0;
+
+/**
+ * Runs client-only reactive setup — window listeners, a row's element wiring
+ * from its ref — without consuming hydration ids. Owned computations take the
+ * next id from their owner's sequence, and hydration matches server markup to
+ * the client tree by those ids: a computation the server never creates shifts
+ * the id of everything created after it, and the client then looks for keys
+ * the server never wrote (every element misses; the hydration lane).
+ *
+ * While hydrating, `fn` runs in a root seeded with its own id namespace: an
+ * explicit id takes no slot from the parent, the root is still owned by the
+ * current owner (context and disposal as before), and a computation under it
+ * finds no serialized server value for its id, so it just computes. A
+ * transparent root would NOT do: its children still draw ids from the
+ * parent's sequence. After hydration ids no longer matter and `fn` runs
+ * directly, so an ordinary client mount pays no extra owner per row.
+ */
+export const clientOnly = <T>(fn: () => T): T =>
+  isHydrating() ? createRoot(fn, { id: `~client${clientOnlyRoots++}` }) : fn();
+
 /**
  * Installs the spread of `keys` from `props` onto `el` (nothing when there
  * are none). Call from the element's ref with the component's owner: ref
@@ -170,7 +207,7 @@ export const spreadExtras = (
       enumerable: true,
     });
   }
-  runWithOwner(owner, () => spread(el, extras, true));
+  runWithOwner(owner, () => clientOnly(() => spread(el, extras, true)));
 };
 
 /**
@@ -192,7 +229,7 @@ export const spreadOnDemand = (
     (present) => {
       if (!present || installed) return;
       installed = true;
-      runWithOwner(owner, () => spread(el, () => attrs() ?? {}, true));
+      runWithOwner(owner, () => clientOnly(() => spread(el, () => attrs() ?? {}, true)));
     },
     { name: "domAttributes" },
   );

@@ -4,6 +4,7 @@ import { type Accessor, createEffect, createSignal, flush } from "solid-js";
 
 import { allContradicted, matchesKeyArray, type ModifierFlags } from "@/core/keys";
 import type { KeyDefinition } from "@/types";
+import { clientOnly } from "@/utils";
 
 /**
  * Reactive "is this key (combo) held right now?" — the Solid Flow
@@ -35,46 +36,49 @@ export function useKeyPress(
     { defer: true },
   );
 
+  // Client-only listeners: outside the hydration id sequence (see clientOnly).
   if (!isServer) {
-    const reconcile = (event: ModifierFlags) => {
-      if (pressed() && allContradicted(event, keys())) {
-        setPressed(false);
-        flush();
-      }
-    };
-
-    createEventListenerMap(window, {
-      keydown: (event: KeyboardEvent) => {
-        reconcile(event);
-        if (matchesKeyArray(event, keys())) {
-          setPressed(true);
-          flush();
-        }
-      },
-      keyup: (event: KeyboardEvent) => {
-        reconcile(event);
-        // A keyup belonging to the tracked definition releases it — including
-        // a combo's base key while its modifier stays held (#2248: the next
-        // matching keydown simply re-activates).
-        if (matchesKeyArray(event, keys())) {
+    clientOnly(() => {
+      const reconcile = (event: ModifierFlags) => {
+        if (pressed() && allContradicted(event, keys())) {
           setPressed(false);
           flush();
         }
-      },
-      blur: () => {
-        setPressed(false);
-        flush();
-      },
-    });
+      };
 
-    createEventListenerMap(
-      window,
-      {
-        pointerdown: reconcile,
-        wheel: reconcile,
-      },
-      { capture: true, passive: true },
-    );
+      createEventListenerMap(window, {
+        keydown: (event: KeyboardEvent) => {
+          reconcile(event);
+          if (matchesKeyArray(event, keys())) {
+            setPressed(true);
+            flush();
+          }
+        },
+        keyup: (event: KeyboardEvent) => {
+          reconcile(event);
+          // A keyup belonging to the tracked definition releases it — including
+          // a combo's base key while its modifier stays held (#2248: the next
+          // matching keydown simply re-activates).
+          if (matchesKeyArray(event, keys())) {
+            setPressed(false);
+            flush();
+          }
+        },
+        blur: () => {
+          setPressed(false);
+          flush();
+        },
+      });
+
+      createEventListenerMap(
+        window,
+        {
+          pointerdown: reconcile,
+          wheel: reconcile,
+        },
+        { capture: true, passive: true },
+      );
+    });
   }
 
   return pressed;

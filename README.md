@@ -372,7 +372,7 @@ The MiniMap always renders the full graph in either mode — it reads the data g
 
 ## Server-side rendering
 
-`<SolidFlow>` renders with `renderToString` and hydrates cleanly. For meaningful server-rendered layout, give nodes explicit `width` / `height` (there is no DOM to measure on the server) — the same guidance as React/Svelte Flow. What the server markup contains, and what it does not:
+`<SolidFlow>` renders with `renderToString` and hydrates cleanly (a test lane server-renders flows and hydrates them over that markup: every node and edge element is claimed, not re-created, and the flow is interactive). For meaningful server-rendered layout, give nodes explicit `width` / `height` (there is no DOM to measure on the server) — the same guidance as React/Svelte Flow. What the server markup contains, and what it does not:
 
 - **Nodes** render at their positions when they declare `width` / `height`; custom node components render like any other.
 - **Edges** render only when both endpoint nodes also declare their `handles` (position, `x`, `y`, `width`, `height` — React Flow 12's SSR contract); with no DOM to measure handles there is nothing else to lay an edge out from. Custom edge components render through the same path.

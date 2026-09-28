@@ -17,6 +17,9 @@ const TEST_EXCLUDES = [
   ".agent/**",
   // SSR tests run in their own node-environment lane (vite.config.ssr.ts)
   "**/*.ssr.test.*",
+  // The hydration lane compiles hydratable (vite.config.hydration*.ts)
+  "**/*.hydration.test.*",
+  "**/*.hydration.server.test.*",
 ];
 const COVERAGE_EXCLUDE = [...TEST_EXCLUDES, "**/*.test.{ts,tsx}"];
 

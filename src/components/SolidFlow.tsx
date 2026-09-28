@@ -9,7 +9,6 @@ import {
   omit,
   onSettled,
   type ParentProps,
-  sharedConfig,
   untrack,
   useContext,
 } from "solid-js";
@@ -23,7 +22,7 @@ import { typedSolidFlowContext } from "@/contexts/flow";
 import { getDefaultFlowStateProps } from "@/core/defaults";
 import { FLOW_PROP_KEYS, type SolidFlowProps } from "@/core/flowProps";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
-import { toPxString } from "@/utils";
+import { isHydrating, toPxString } from "@/utils";
 
 import { A11yDescriptions } from "./accessibility";
 
@@ -76,10 +75,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   // synchronously as before — children read the graph during their own
   // setup. The server has no settle and hydration must claim the
   // server-rendered rows: both render the rows immediately.
-  // `isHydrationInProgress` is public runtime state the SharedConfig type
-  // does not declare yet — read through a structural view, not a cast.
-  const hydration: { context?: unknown; isHydrationInProgress?: () => boolean } = sharedConfig;
-  const [rowsReady, setRowsReady] = createSignal(isServer || !!hydration.isHydrationInProgress?.());
+  const [rowsReady, setRowsReady] = createSignal(isServer || isHydrating());
 
   onSettled(() => {
     actions.applyInitialFitView(_props.fitView);

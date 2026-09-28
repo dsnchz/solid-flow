@@ -33,5 +33,7 @@ jobs:
         run: bun run test
       - name: Test (SSR)
         run: bun run test:ssr
+      - name: Test (hydration)
+        run: bun run test:hydration
       - name: Build
         run: bun run build
