@@ -1,3 +1,4 @@
+import { isServer } from "@solidjs/web";
 import { type Accessor, createSignal } from "solid-js";
 
 /**
@@ -26,6 +27,11 @@ export const createGeometryFeed = <R>(name = "geometry"): GeometryFeed<R> => {
       if (rect) map.set(id, rect);
       else map.delete(id);
       pending.add(id);
+      // A server render is pure: nothing re-runs, so there is no reader to
+      // wake, and the runtime deprecates a signal write there (SERVER_WRITE,
+      // slated to become an error). The map above still fills: the server's
+      // layout (the minimap's bounds) reads it.
+      if (isServer) return;
       // Every report bumps the tick: besides the draining consumer (the
       // on-screen record), readers that only SAMPLE the map on the tick (the
       // selected-nodes bounds, bench round 41) must wake on every change, and

@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 
 import { renderToString } from "@solidjs/web";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 
 import { artifactPath, artifactsDir } from "./artifacts";
 import { scenarios } from "./scenarios";
@@ -16,10 +16,20 @@ import { scenarios } from "./scenarios";
 describe("hydration lane — server render", () => {
   mkdirSync(artifactsDir, { recursive: true });
 
+  // A server render is pure (the lane runs the dev server build, so the
+  // runtime's checks are on): it must not warn — a signal written on the
+  // server (SERVER_WRITE) is deprecated and slated to become an error.
+  let warn: MockInstance<typeof console.warn>;
+  beforeEach(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => warn.mockRestore());
+
   for (const make of scenarios) {
     const scenario = make();
     it(scenario.name, () => {
       const html = renderToString(() => <scenario.App />);
+      expect(warn.mock.calls.map((args) => String(args[0]).split("\n")[0])).toEqual([]);
       // Every node and both edges are in the markup, with hydration keys.
       expect(html.match(/class="solid-flow__node /g)?.length).toBe(3);
       expect(html.match(/<g data-id="e\d"/g)?.length).toBe(2);
