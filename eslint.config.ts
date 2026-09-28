@@ -1,5 +1,7 @@
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
+import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
+import { importX } from "eslint-plugin-import-x";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import solid from "eslint-plugin-solid/configs/v2";
 import globals from "globals";
@@ -82,6 +84,25 @@ export default defineConfig(
           destructuredArrayIgnorePattern: "^_",
         },
       ],
+    },
+  },
+  {
+    // Runtime import cycles (type-only imports are exempt): in a cycle, the
+    // evaluation order decides whether a binding is initialized when a module
+    // body reads it, which left the server's built-in edge map holding
+    // `undefined` (7953f89). A value import used only in a type position
+    // still counts, so write it `import type`.
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: { "import-x": importX },
+    settings: {
+      // Without these, import-x builds export maps for .js files only and
+      // silently skips every TypeScript module (no cycle is ever found).
+      "import-x/extensions": [".ts", ".tsx"],
+      "import-x/parsers": { "@typescript-eslint/parser": [".ts", ".tsx"] },
+      "import-x/resolver-next": [createTypeScriptImportResolver({ project: "./tsconfig.json" })],
+    },
+    rules: {
+      "import-x/no-cycle": "error",
     },
   },
   {
