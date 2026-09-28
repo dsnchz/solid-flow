@@ -3,6 +3,8 @@ import { type Accessor, createMemo } from "solid-js";
 
 import type { EdgeLayouted, InternalNode, Node } from "@/types";
 
+import type { OnScreenIds } from "./projections/onScreenIds";
+
 /**
  * The reactive inputs of the culling viewport, expressed structurally so the
  * internal store satisfies it and headless tests can supply a plain object.
@@ -139,28 +141,29 @@ export const isEdgeCulled = (
 };
 
 /**
- * Row-level culling over the keyed on-screen record (bench round 26). The
- * never-cull guards live here — inactive culling, selected, `cullable:
+ * Row-level culling over the on-screen membership (bench rounds 26 and 52).
+ * The never-cull guards live here — inactive culling, selected, `cullable:
  * false`, unmeasured, handle bounds not yet populated in this instance — and
- * the rect overlap is the record's job. `id in onScreen` subscribes per key.
+ * the rect overlap is the membership's job. `onScreen.has(id)` subscribes to
+ * that row's own signal (see projections/onScreenIds.ts).
  */
 export const nodeCulled = <NodeType extends Node>(
   node: InternalNode<NodeType>,
   cullingActive: boolean,
-  onScreen: Record<string, true>,
+  onScreen: OnScreenIds,
 ): boolean => {
   if (!cullingActive || node.selected || node.cullable === false) return false;
   const { width, height } = node.measured;
   if (!width || !height) return false;
   if (!node.internals.handleBounds) return false;
-  return !(node.id in onScreen);
+  return !onScreen.has(node.id);
 };
 
 export const edgeCulled = (
   row: Pick<EdgeLayouted, "id" | "selected" | "cullable">,
   cullingActive: boolean,
-  onScreen: Record<string, true>,
+  onScreen: OnScreenIds,
 ): boolean => {
   if (!cullingActive || row.selected || row.cullable === false) return false;
-  return !(row.id in onScreen);
+  return !onScreen.has(row.id);
 };

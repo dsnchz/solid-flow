@@ -256,22 +256,24 @@ describe("rectsOverlap", () => {
   });
 });
 
-// Row-level rules over the keyed on-screen record (bench round 26): the
-// never-cull guards stay at the row; the rect overlap lives in the record.
-describe("nodeCulled / edgeCulled (keyed on-screen record)", () => {
-  const onScreen = { n: true } as Record<string, true>;
-  it("culls a measured, mounted, unselected node that is not in the on-screen record", () => {
-    expect(nodeCulled(makeInternalNode(), true, {})).toBe(true);
+// Row-level rules over the on-screen membership (bench rounds 26 and 52):
+// the never-cull guards stay at the row; the rect overlap lives in the
+// membership, which the rows ask per id.
+describe("nodeCulled / edgeCulled (on-screen membership)", () => {
+  const none: ReadonlySet<string> = new Set();
+  const onScreen: ReadonlySet<string> = new Set(["n"]);
+  it("culls a measured, mounted, unselected node that is not on screen", () => {
+    expect(nodeCulled(makeInternalNode(), true, none)).toBe(true);
     expect(nodeCulled(makeInternalNode(), true, onScreen)).toBe(false);
   });
   it("never culls while culling is inactive, or selected / cullable:false / unmeasured / unmounted nodes", () => {
-    expect(nodeCulled(makeInternalNode(), false, {})).toBe(false);
-    expect(nodeCulled(makeInternalNode({ selected: true }), true, {})).toBe(false);
-    expect(nodeCulled(makeInternalNode({ cullable: false }), true, {})).toBe(false);
-    expect(nodeCulled(makeInternalNode({ measured: false }), true, {})).toBe(false);
-    expect(nodeCulled(makeInternalNode({ mounted: false }), true, {})).toBe(false);
+    expect(nodeCulled(makeInternalNode(), false, none)).toBe(false);
+    expect(nodeCulled(makeInternalNode({ selected: true }), true, none)).toBe(false);
+    expect(nodeCulled(makeInternalNode({ cullable: false }), true, none)).toBe(false);
+    expect(nodeCulled(makeInternalNode({ measured: false }), true, none)).toBe(false);
+    expect(nodeCulled(makeInternalNode({ mounted: false }), true, none)).toBe(false);
   });
-  it("edges: culled when absent from the record, never when inactive / selected / cullable:false", () => {
+  it("edges: culled when not on screen, never when inactive / selected / cullable:false", () => {
     const row = {
       id: "e",
       sourceX: 0,
@@ -281,10 +283,10 @@ describe("nodeCulled / edgeCulled (keyed on-screen record)", () => {
       selected: false,
       cullable: undefined,
     };
-    expect(edgeCulled(row, true, {})).toBe(true);
-    expect(edgeCulled(row, true, { e: true })).toBe(false);
-    expect(edgeCulled(row, false, {})).toBe(false);
-    expect(edgeCulled({ ...row, selected: true }, true, {})).toBe(false);
-    expect(edgeCulled({ ...row, cullable: false }, true, {})).toBe(false);
+    expect(edgeCulled(row, true, none)).toBe(true);
+    expect(edgeCulled(row, true, new Set(["e"]))).toBe(false);
+    expect(edgeCulled(row, false, none)).toBe(false);
+    expect(edgeCulled({ ...row, selected: true }, true, none)).toBe(false);
+    expect(edgeCulled({ ...row, cullable: false }, true, none)).toBe(false);
   });
 });

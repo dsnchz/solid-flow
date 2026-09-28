@@ -640,8 +640,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Equality-cut flag for the row rules: rows must not subscribe to the
   // viewport itself (every quantization step would wake all 20k of them).
   const cullingActive = createMemo(() => cullingViewport() !== null, { name: "cullingActive" });
-  // Keyed on-screen presence, computed once per viewport step / geometry
-  // change from the plain geometry maps (see projections/onScreenIds.ts).
+  // On-screen membership, computed once per viewport step / geometry change
+  // from the plain geometry maps; each row reads its own boolean signal
+  // (see projections/onScreenIds.ts).
   const onScreenNodeIds = createOnScreenIds(
     {
       geometry: nodeGeometry,
