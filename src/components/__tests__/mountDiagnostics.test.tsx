@@ -6,11 +6,22 @@ import { SolidFlow } from "@/components/SolidFlow";
 import { Background, Controls, MiniMap } from "@/plugins";
 import type { Edge, Node } from "@/types";
 
-// STRICT_READ_UNTRACKED is the dev engine saying a reactive value was read
-// outside any tracking scope: the read got its value once and will never
-// update. Every such read in the library is a prop or flow setting that stops
-// following changes after mount (Handle's `clickConnect`, found this way).
-// Mounting a flow with the built-in nodes, edges and plugins must emit none.
+// Mounting a flow with the built-in nodes, edges and plugins may emit only
+// the dev diagnostics that fire by design (docs/ARCHITECTURE.md, "Reactive
+// nodes are named"); anything else the engine names is a finding. The one
+// that motivated this: STRICT_READ_UNTRACKED, a reactive value read outside
+// any tracking scope — a prop or flow setting that stops following changes
+// after mount (Handle's `clickConnect`, found this way).
+//
+// By design, with the reason:
+// - `layoutedEdges.row` (~38 sources): an edge's layout reads every key of
+//   the edge and both endpoints' geometry; any of them changing must re-lay it.
+// - NodeWrapper's element effect: the compiler folds all dynamic attributes
+//   of one element into one effect; the per-frame transform has its own.
+const BY_DESIGN: ReadonlySet<string> = new Set([
+  "WIDE_SCOPE_DEPS:layoutedEdges.row",
+  "WIDE_SCOPE_DEPS:div.data-id, div.class, div.style, div.tabindex, div.role, div.aria-describedby",
+]);
 const nodes: Node[] = [
   {
     id: "in",
@@ -36,8 +47,8 @@ const edges: Edge[] = [
 ];
 const tick = () => new Promise((resolve) => setTimeout(resolve, 30));
 
-describe("strict reads", () => {
-  it("mounting a flow with built-in nodes, edges and plugins reads nothing reactive untracked", async () => {
+describe("mount diagnostics", () => {
+  it("mounting a flow with built-in nodes, edges and plugins emits only by-design diagnostics", async () => {
     const { artifact } = await captureArtifact(
       async () => {
         render(() => (
@@ -58,9 +69,13 @@ describe("strict reads", () => {
         },
       },
     );
-    const strict = artifact.diagnostics
-      .filter((d) => d.code === "STRICT_READ_UNTRACKED")
-      .map((d) => `${d.data?.strictRead ?? ""} (${d.nodeName ?? "?"})`);
-    expect(strict).toEqual([]);
+    const unexpected = artifact.diagnostics
+      .map((d) =>
+        d.code === "STRICT_READ_UNTRACKED"
+          ? `${d.code}:${d.data?.strictRead ?? ""} (${d.nodeName ?? "?"})`
+          : `${d.code}:${d.nodeName ?? d.ownerName ?? ""}`,
+      )
+      .filter((key) => !BY_DESIGN.has(key));
+    expect([...new Set(unexpected)]).toEqual([]);
   });
 });
