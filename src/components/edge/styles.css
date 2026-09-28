@@ -1,7 +1,4 @@
 .solid-flow {
-  --xy-edge-label-background-color-default: light-dark(#ffffff, #141414);
-  --xy-edge-label-color-default: light-dark(currentColor, #f8f8f8);
-
   --xy-edge-stroke-default: light-dark(#b1b1b7, #3e3e3e);
   --xy-edge-stroke-width-default: 1;
   --xy-edge-stroke-selected-default: light-dark(#555, #727272);
@@ -26,11 +23,7 @@
 .solid-flow__edge-label {
   text-align: center;
   position: absolute;
-  padding: 2px;
-  font-size: 10px;
   cursor: pointer;
-  color: var(--xy-edge-label-color, var(--xy-edge-label-color-default));
-  background: var(--xy-edge-label-background-color, var(--xy-edge-label-background-color-default));
 }
 
 .solid-flow__edge-path {
@@ -51,12 +44,6 @@
 
 .solid-flow__edge {
   pointer-events: visibleStroke;
-
-  &.updating {
-    .solid-flow__edge-path {
-      stroke: #777;
-    }
-  }
 
   &.selectable {
     cursor: pointer;
@@ -93,7 +80,6 @@
   }
 
   &.text {
-    font-size: 10px;
     pointer-events: none;
     user-select: none;
   }
