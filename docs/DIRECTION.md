@@ -817,7 +817,7 @@ That is the architectural direction for Solid Flow `next`.
 
 # Appendix: Empirical Ground Truth (repo-specific)
 
-Everything above states the ideals. This section pins them to what has been **measured** in this repository, on solid-js `2.0.0-rc.1` through `rc.9` (current), so the ideals are not misread as license to ignore the measurements. When this appendix and the body disagree about implementation tactics, the appendix wins until upstream changes the facts. The engine findings below are dated; `docs/ARCHITECTURE.md` carries the current rules and the numbers behind them.
+Everything above states the ideals. This section pins them to what has been **measured** in this repository, on solid-js `2.0.0-rc.1` through `rc.10` (current), so the ideals are not misread as license to ignore the measurements. When this appendix and the body disagree about implementation tactics, the appendix wins until upstream changes the facts. The engine findings below are dated; `docs/ARCHITECTURE.md` carries the current rules and the numbers behind them.
 
 ## The naive projection expression is not yet the performant one (§14, §15)
 
@@ -830,9 +830,9 @@ The straightforward derivation of this exact architecture — monolithic project
 
 Full history and numbers live in the maintainer's private bench notes (four rounds of architecture bake-off, round 5 for viewport culling, then the head-to-head rounds 1 to 45 against React Flow and Svelte Flow).
 
-## Engine sharp edges every projection must respect (found on rc.1, status as of rc.9)
+## Engine sharp edges every projection must respect (found on rc.1, status as of rc.10)
 
-Discovered empirically, each pinned by a spike or test. The two rc.1 issues filed from this code are both fixed upstream: solidjs/solid **#3037** (dead computed, fixed in rc.2 — the workarounds were deleted with that bump) and **#3038** (companion walk, closed 2026-08-25 — it was the 10k drag ceiling). Runnable repros stay on branch `repro/solid-rc1-issues`. Later findings, also filed from this code and all worked around here: #3350 (an effect over a row's own ref signal makes a 10k mount quadratic), #3351 (a projection's leaf signals are never unlinked on key delete), #3352 (root-level writes cloned a projection's raw; fixed in rc.8), #3664 and #3665 (rc.9 presence node per enumerated key; the optimistic draft hole — both fixed, shipping in rc.10). The rules that remain:
+Discovered empirically, each pinned by a spike or test. The two rc.1 issues filed from this code are both fixed upstream: solidjs/solid **#3037** (dead computed, fixed in rc.2 — the workarounds were deleted with that bump) and **#3038** (companion walk, closed 2026-08-25 — it was the 10k drag ceiling). Runnable repros stay on branch `repro/solid-rc1-issues`. Later findings, also filed from this code and all worked around here: #3350 (an effect over a row's own ref signal makes a 10k mount quadratic), #3351 (a projection's leaf signals are never unlinked on key delete), #3352 (root-level writes cloned a projection's raw; fixed in rc.8), #3664 and #3665 (rc.9 presence node per enumerated key; the optimistic draft hole — both fixed in rc.10 and verified here: the expected-fail test passes and the diagnostics allowance is gone). The rules that remain:
 
 - Absent-key reads do not subscribe inside derives; structural reads (`Object.keys`, `.size`) do. Bail-out paths must take a structural read.
 - `delete draft[k]` is REQUIRED to remove a key; assigning `undefined` keeps the own key and skips the structural notify.

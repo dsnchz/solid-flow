@@ -37,8 +37,9 @@ export const createRowIndex = <T extends { readonly id: string }>(
     // flush, so a same-batch add is not indexed yet) or the id is unknown.
     // The scan is the correctness floor, never the per-frame path. `row?.`:
     // an optimistic draft read inside an open action can present a hole at a
-    // slot a previous same-action setter pushed (solid-js 2.0.0-rc.9
-    // regression, solidjs/solid#3665); a hole is a miss, not a crash.
+    // slot a previous same-action setter pushed (seen on solid-js
+    // 2.0.0-rc.9, solidjs/solid#3665, fixed in rc.10; the guard stays as the
+    // floor); a hole is a miss, not a crash.
     return rows.findIndex((row) => row?.id === id);
   };
 
