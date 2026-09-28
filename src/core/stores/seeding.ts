@@ -44,12 +44,18 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   props: GraphSeedSource<NodeType, EdgeType>,
   config: () => GraphSeedSource<NodeType, EdgeType>,
 ) => {
-  if (props.nodes !== undefined && props.defaultNodes !== undefined) {
+  // The controlled seed, read ONCE and deliberately untracked: a later
+  // change arrives through the reset effects below, which track config().
+  // Unmarked, each read of a signal-backed prop is a STRICT_READ_UNTRACKED.
+  const seedNodes = untrack(() => props.nodes);
+  const seedEdges = untrack(() => props.edges);
+
+  if (seedNodes !== undefined && props.defaultNodes !== undefined) {
     console.warn(
       "[solid-flow] Both `nodes` and `defaultNodes` were supplied; `nodes` wins and the flow is controlled. Pass one or the other.",
     );
   }
-  if (props.edges !== undefined && props.defaultEdges !== undefined) {
+  if (seedEdges !== undefined && props.defaultEdges !== undefined) {
     console.warn(
       "[solid-flow] Both `edges` and `defaultEdges` were supplied; `edges` wins and the flow is controlled. Pass one or the other.",
     );
@@ -65,9 +71,9 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   // inside isPending's accessor (absent prop -> accessor returns undefined
   // -> not pending) or behind a short-circuit that skips it while pending.
   const nodeDefaultsPending =
-    props.nodes === undefined && isPending(() => props.defaultNodes?.length);
+    seedNodes === undefined && isPending(() => props.defaultNodes?.length);
   const edgeDefaultsPending =
-    props.edges === undefined && isPending(() => props.defaultEdges?.length);
+    seedEdges === undefined && isPending(() => props.defaultEdges?.length);
 
   // Uncontrolled seeds are copied ROW by row (shallow): the flow owns its
   // draft, so flow writes must never land on the caller's objects — which
@@ -82,19 +88,19 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   const copyNodeRows = (rows: readonly NodeType[] | undefined): NodeType[] =>
     (rows ?? []).map((row) => seedNodeRow({ ...row }));
   const [nodesStore, setNodesStore] = createStore<NodeType[]>(
-    (props.nodes ?? (nodeDefaultsPending ? [] : copyNodeRows(props.defaultNodes))) as NodeType[],
+    (seedNodes ?? (nodeDefaultsPending ? [] : copyNodeRows(props.defaultNodes))) as NodeType[],
   );
   const [edgesStore, setEdgesStore] = createStore<EdgeType[]>(
-    (props.edges ?? (edgeDefaultsPending ? [] : copyRows(props.defaultEdges))) as EdgeType[],
+    (seedEdges ?? (edgeDefaultsPending ? [] : copyRows(props.defaultEdges))) as EdgeType[],
   );
 
   // Whether each axis has consumed its one-time seed (from either prop).
   // A provider-created flow (via setConfig) or a pending async default can
   // still adopt later, through the one-shot adoption effect.
   let nodeSeedAdopted =
-    props.nodes !== undefined || (!nodeDefaultsPending && props.defaultNodes !== undefined);
+    seedNodes !== undefined || (!nodeDefaultsPending && props.defaultNodes !== undefined);
   let edgeSeedAdopted =
-    props.edges !== undefined || (!edgeDefaultsPending && props.defaultEdges !== undefined);
+    seedEdges !== undefined || (!edgeDefaultsPending && props.defaultEdges !== undefined);
 
   // An undefined axis is uncontrolled (or a provider flow not yet adopted):
   // never re-seed it — defaults are initial-only by contract, and a re-seed

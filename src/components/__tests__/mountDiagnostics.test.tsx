@@ -1,5 +1,6 @@
 import { captureArtifact } from "@solidjs/diagnostics";
 import { render } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
@@ -47,35 +48,56 @@ const edges: Edge[] = [
 ];
 const tick = () => new Promise((resolve) => setTimeout(resolve, 30));
 
+const unexpectedDiagnostics = async (mount: () => void): Promise<string[]> => {
+  const { artifact } = await captureArtifact(
+    async () => {
+      mount();
+      for (let i = 0; i < 6; i++) await tick();
+    },
+    // Wall-clock budgets measure the machine, not the graph (see diagnosticsBudget.test.ts).
+    {
+      scenario: "mount",
+      attribution: {
+        log: false,
+        hotTime: { budgetMs: Number.POSITIVE_INFINITY, windowMs: 1000 },
+      },
+    },
+  );
+  const unexpected = artifact.diagnostics
+    .map((d) =>
+      d.code === "STRICT_READ_UNTRACKED"
+        ? `${d.code}:${d.data?.strictRead ?? ""} (${d.nodeName ?? "?"})`
+        : `${d.code}:${d.nodeName ?? d.ownerName ?? ""}`,
+    )
+    .filter((key) => !BY_DESIGN.has(key));
+  return [...new Set(unexpected)];
+};
+
 describe("mount diagnostics", () => {
   it("mounting a flow with built-in nodes, edges and plugins emits only by-design diagnostics", async () => {
-    const { artifact } = await captureArtifact(
-      async () => {
+    expect(
+      await unexpectedDiagnostics(() =>
         render(() => (
           <SolidFlow defaultNodes={nodes} defaultEdges={edges} width={800} height={600}>
             <Background />
             <Controls />
             <MiniMap />
           </SolidFlow>
-        ));
-        for (let i = 0; i < 6; i++) await tick();
-      },
-      // Wall-clock budgets measure the machine, not the graph (see diagnosticsBudget.test.ts).
-      {
-        scenario: "mount",
-        attribution: {
-          log: false,
-          hotTime: { budgetMs: Number.POSITIVE_INFINITY, windowMs: 1000 },
-        },
-      },
-    );
-    const unexpected = artifact.diagnostics
-      .map((d) =>
-        d.code === "STRICT_READ_UNTRACKED"
-          ? `${d.code}:${d.data?.strictRead ?? ""} (${d.nodeName ?? "?"})`
-          : `${d.code}:${d.nodeName ?? d.ownerName ?? ""}`,
-      )
-      .filter((key) => !BY_DESIGN.has(key));
-    expect([...new Set(unexpected)]).toEqual([]);
+        )),
+      ),
+    ).toEqual([]);
+  });
+
+  it("a controlled flow fed by signals emits only by-design diagnostics", async () => {
+    // The seed is read once at setup (later changes arrive through the
+    // controlled reset effects): those reads must be marked untracked, or
+    // every signal-backed `nodes`/`edges` prop warns. Found by the hydration lane.
+    const [nodeRows] = createSignal(nodes, { name: "test.nodes" });
+    const [edgeRows] = createSignal(edges, { name: "test.edges" });
+    expect(
+      await unexpectedDiagnostics(() =>
+        render(() => <SolidFlow nodes={nodeRows()} edges={edgeRows()} width={800} height={600} />),
+      ),
+    ).toEqual([]);
   });
 });
