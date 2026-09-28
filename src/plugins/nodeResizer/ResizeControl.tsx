@@ -110,7 +110,10 @@ export const ResizeControl = <NodeType extends Node = Node>(
         }),
         onChange: (change: XYResizerChange, childChanges: XYResizerChildChange[]) => {
           const changes = new Map<string, Partial<Node>>();
-          const position = change.x && change.y ? { x: change.x, y: change.y } : undefined;
+          const position =
+            change.x !== undefined && change.y !== undefined
+              ? { x: change.x, y: change.y }
+              : undefined;
           changes.set(nodeId(), { ...change, position });
 
           for (const childChange of childChanges) {

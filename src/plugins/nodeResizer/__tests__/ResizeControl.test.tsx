@@ -71,6 +71,25 @@ describe("ResizeControl onChange", () => {
     expect(node("p").height).toBe(210);
   });
 
+  it("moves a node whose new position has a zero coordinate", async () => {
+    const { node } = await renderFlow([
+      { id: "a", type: "resizable", position: { x: 50, y: 0 }, data: {}, width: 100, height: 40 },
+      { id: "b", type: "resizable", position: { x: 20, y: 60 }, data: {}, width: 100, height: 40 },
+    ]);
+
+    // Left-edge resize of a node on the y = 0 line: y stays 0.
+    resizer.onChange.get("a")!({ x: 30, y: 0, width: 120, height: 40 }, []);
+    // Top-left resize that lands exactly on the x = 0 line.
+    resizer.onChange.get("b")!({ x: 0, y: 50, width: 120, height: 50 }, []);
+    await tick();
+
+    expect(node("a").position).toEqual({ x: 30, y: 0 });
+    expect(node("a").width).toBe(120);
+    expect(node("b").position).toEqual({ x: 0, y: 50 });
+    expect(node("b").width).toBe(120);
+    expect(node("b").height).toBe(50);
+  });
+
   it("leaves nodes the change does not name untouched", async () => {
     const { node } = await renderFlow([
       { id: "a", type: "resizable", position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 },
