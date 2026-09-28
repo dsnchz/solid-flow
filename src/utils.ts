@@ -183,9 +183,10 @@ let clientOnlyRoots = 0;
  * finds no serialized server value for its id, so it just computes. A
  * transparent root would NOT do: its children still draw ids from the
  * parent's sequence. After hydration ids no longer matter and `fn` runs
- * directly, so an ordinary client mount pays no extra owner per row.
+ * directly, so an ordinary client mount pays no extra owner per row. (Unrelated
+ * to @solidjs/web's `clientOnly`, which lazy-loads a component on the client.)
  */
-export const clientOnly = <T>(fn: () => T): T =>
+export const clientOnlySetup = <T>(fn: () => T): T =>
   isHydrating() ? createRoot(fn, { id: `~client${clientOnlyRoots++}` }) : fn();
 
 /**
@@ -207,7 +208,7 @@ export const spreadExtras = (
       enumerable: true,
     });
   }
-  runWithOwner(owner, () => clientOnly(() => spread(el, extras, true)));
+  runWithOwner(owner, () => clientOnlySetup(() => spread(el, extras, true)));
 };
 
 /**
@@ -229,7 +230,7 @@ export const spreadOnDemand = (
     (present) => {
       if (!present || installed) return;
       installed = true;
-      runWithOwner(owner, () => clientOnly(() => spread(el, () => attrs() ?? {}, true)));
+      runWithOwner(owner, () => clientOnlySetup(() => spread(el, () => attrs() ?? {}, true)));
     },
     { name: "domAttributes" },
   );

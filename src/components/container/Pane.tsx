@@ -13,7 +13,7 @@ import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 import { useInternalSolidFlow } from "@/contexts";
 import { GestureSpatialLookup } from "@/core/spatial/gestureLookup";
 import type { Edge, InternalNode, IsNodeSelectable, Node, PaneEvents } from "@/types";
-import { clientOnly, isEdgeSelectable } from "@/utils";
+import { clientOnlySetup, isEdgeSelectable } from "@/utils";
 
 const isSetEqual = (a: Set<string>, b: Set<string>) => {
   if (a.size !== b.size) return false;
@@ -370,8 +370,8 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
   };
 
   // The pane's direct listeners are client-only (the primitive does nothing
-  // on the server): created outside the hydration id sequence (clientOnly).
-  clientOnly(() => {
+  // on the server): created outside the hydration id sequence (clientOnlySetup).
+  clientOnlySetup(() => {
     createEventListener(
       containerRef,
       "pointerdown",

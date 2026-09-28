@@ -4,7 +4,7 @@ import { type Accessor, createEffect, createSignal, flush } from "solid-js";
 
 import { allContradicted, matchesKeyArray, type ModifierFlags } from "@/core/keys";
 import type { KeyDefinition } from "@/types";
-import { clientOnly } from "@/utils";
+import { clientOnlySetup } from "@/utils";
 
 /**
  * Reactive "is this key (combo) held right now?" — the Solid Flow
@@ -36,9 +36,9 @@ export function useKeyPress(
     { defer: true },
   );
 
-  // Client-only listeners: outside the hydration id sequence (see clientOnly).
+  // Client-only listeners: outside the hydration id sequence (see clientOnlySetup).
   if (!isServer) {
-    clientOnly(() => {
+    clientOnlySetup(() => {
       const reconcile = (event: ModifierFlags) => {
         if (pressed() && allContradicted(event, keys())) {
           setPressed(false);

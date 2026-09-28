@@ -9,7 +9,7 @@ import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { edgeCulled } from "@/core";
 import type { Edge, EdgeEvents, Node } from "@/types";
-import { clientOnly, cx, emitFlowError, isEdgeSelectable, spreadOnDemand } from "@/utils";
+import { clientOnlySetup, cx, emitFlowError, isEdgeSelectable, spreadOnDemand } from "@/utils";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
   readonly edgeId: string;
@@ -129,8 +129,8 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
           ref={(el) => {
             edgeRef = el;
             // Ref callbacks run outside the component owner: keep the wiring
-            // owned (and outside the hydration id sequence: see clientOnly).
-            runWithOwner(owner, () => clientOnly(() => mountElement(el)));
+            // owned (and outside the hydration id sequence: see clientOnlySetup).
+            runWithOwner(owner, () => clientOnlySetup(() => mountElement(el)));
           }}
           data-id={edge().id}
           tabindex={focusable() ? 0 : undefined}

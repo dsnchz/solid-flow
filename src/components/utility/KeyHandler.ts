@@ -7,7 +7,7 @@ import { useInternalSolidFlow } from "@/contexts";
 import { allContradicted, matchesKeyArray, type ModifierFlags } from "@/core/keys";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { KeyDefinition } from "@/types";
-import { clientOnly } from "@/utils";
+import { clientOnlySetup } from "@/utils";
 
 export type KeyHandlerProps = {
   readonly selectionKey?: KeyDefinition | KeyDefinition[] | null;
@@ -175,9 +175,9 @@ export const KeyHandler = (props: KeyHandlerProps) => {
     flush();
   };
 
-  // Client-only listeners: outside the hydration id sequence (see clientOnly).
+  // Client-only listeners: outside the hydration id sequence (see clientOnlySetup).
   if (!isServer) {
-    clientOnly(() => {
+    clientOnlySetup(() => {
       createEventListenerMap(window, {
         keydown: handleKeyDown,
         keyup: handleKeyUp,
