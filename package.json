@@ -101,6 +101,7 @@
   "devDependencies": {
     "@changesets/cli": "3.0.3",
     "@dagrejs/dagre": "3.1.1",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@solidjs/compiler": "2.0.0-rc.10",
     "@solidjs/diagnostics": "2.0.0-rc.10",
@@ -113,7 +114,7 @@
     "@typescript-eslint/eslint-plugin": "8.70.1",
     "@typescript-eslint/parser": "8.70.1",
     "@vitest/coverage-istanbul": "5.0.2",
-    "eslint": "9.39.5",
+    "eslint": "10.11.0",
     "eslint-plugin-simple-import-sort": "14.0.0",
     "eslint-plugin-solid": "0.18.0",
     "globals": "17.12.0",
