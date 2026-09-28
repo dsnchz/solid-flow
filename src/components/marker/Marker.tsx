@@ -17,10 +17,12 @@ export const Marker = (props: MarkerProps): JSX.Element => {
     orient: "auto-start-reverse",
     width: 12.5,
     height: 12.5,
-    color: "none",
   });
 
-  const color = () => _props.color ?? "var(--xy-edge-stroke)";
+  // An explicit color is inline style (it must beat the CSS rule); without
+  // one (`color: null`, or `defaultMarkerColor={null}`) the marker takes the
+  // edge stroke from `.solid-flow__arrowhead polyline` in the stylesheet.
+  const color = () => _props.color ?? undefined;
 
   return (
     <marker
@@ -39,8 +41,7 @@ export const Marker = (props: MarkerProps): JSX.Element => {
         fallback={
           <polyline
             class="arrowclosed"
-            stroke={color()}
-            fill={color()}
+            style={{ stroke: color(), fill: color() }}
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width={_props.strokeWidth}
@@ -50,7 +51,7 @@ export const Marker = (props: MarkerProps): JSX.Element => {
       >
         <polyline
           class="arrow"
-          stroke={color()}
+          style={{ stroke: color() }}
           fill="none"
           stroke-linecap="round"
           stroke-linejoin="round"

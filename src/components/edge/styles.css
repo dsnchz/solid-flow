@@ -32,6 +32,16 @@
   fill: none;
 }
 
+/* Arrowhead markers take the edge stroke unless the marker sets a color
+   (inline style on the polyline). */
+.solid-flow__arrowhead polyline {
+  stroke: var(--xy-edge-stroke, var(--xy-edge-stroke-default));
+}
+
+.solid-flow__arrowhead polyline.arrowclosed {
+  fill: var(--xy-edge-stroke, var(--xy-edge-stroke-default));
+}
+
 .solid-flow__edges {
   position: absolute;
 
