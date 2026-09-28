@@ -56,13 +56,6 @@
   "main": "./dist/index/index.js",
   "module": "./dist/index/index.js",
   "types": "./dist/index/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "styles": [
-        "./dist/styles/index.d.ts"
-      ]
-    }
-  },
   "exports": {
     "./package.json": "./package.json",
     ".": {

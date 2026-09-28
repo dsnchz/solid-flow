@@ -22,6 +22,10 @@ describe("package exports", () => {
     expect(pkg.exports["./styles"]).toBe("./dist/styles/style.css");
   });
 
+  it("declares no typesVersions (the stylesheets have no types)", () => {
+    expect(pkg.typesVersions).toBeUndefined();
+  });
+
   it("exposes package.json to tools, as upstream does", () => {
     expect(pkg.exports["./package.json"]).toBe("./package.json");
   });
