@@ -15,13 +15,16 @@ export default defineConfig({
     alias: [
       {
         find: /^@solidjs\/web$/,
-        replacement: path.resolve(__dirname, "node_modules/@solidjs/web/dist/server.dev.js"),
+        replacement: path.resolve(
+          import.meta.dirname,
+          "node_modules/@solidjs/web/dist/server.dev.js",
+        ),
       },
       {
         find: /^solid-js$/,
-        replacement: path.resolve(__dirname, "node_modules/solid-js/dist/server.dev.js"),
+        replacement: path.resolve(import.meta.dirname, "node_modules/solid-js/dist/server.dev.js"),
       },
-      { find: "@", replacement: path.resolve(__dirname, "./src") },
+      { find: "@", replacement: path.resolve(import.meta.dirname, "./src") },
     ],
   },
   test: {

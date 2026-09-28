@@ -49,7 +49,7 @@ const viteConfig = defineConfig({
     // build (relative A/Bs hold; absolute numbers carried dev instrumentation).
     conditions: process.env.SOLID_PROD ? ["browser"] : ["development", "browser"],
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
 });

@@ -7,10 +7,10 @@ import { defineConfig } from "vite";
 // requests and injects the client entry that hydrates it (no hand-written
 // entries or server). The app imports the library from source.
 export default defineConfig({
-  root: __dirname,
+  root: import.meta.dirname,
   plugins: [solidPlugin({ start: { app: "./App.tsx" }, ssr: true })],
   resolve: {
-    alias: { "@": path.resolve(__dirname, "../../src") },
+    alias: { "@": path.resolve(import.meta.dirname, "../../src") },
   },
   server: { port: 3020, strictPort: true },
 });
