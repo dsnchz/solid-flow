@@ -1,7 +1,7 @@
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
-import solid from "eslint-plugin-solid/configs/typescript";
+import solid from "eslint-plugin-solid/configs/v2";
 import globals from "globals";
 import tseslint, { type CompatiblePlugin } from "typescript-eslint";
 
@@ -54,13 +54,22 @@ export default defineConfig(
       },
     },
     plugins: { solid: solidPlugin },
+    settings: solid.settings,
     rules: {
       ...solid.rules,
-      // eslint-plugin-solid targets Solid 1.x; these rules actively fight 2.0
-      // idioms (solid/imports autofixes store imports back to "solid-js/store").
-      // Revisit when the plugin ships 2.0 support.
-      "solid/imports": "off",
-      "solid/reactivity": "off",
+      // As in the plugin's `typescript` config: undefined identifiers in JSX
+      // are TypeScript's to report.
+      "solid/jsx-no-undef": ["error", { typescriptEnabled: true }],
+      "solid/reactivity": [
+        "warn",
+        {
+          // Functions whose callback / accessor arguments run in a tracked
+          // or called scope: `dynamic` (@solidjs/web) tracks its source;
+          // clientOnlySetup runs its callback synchronously; spreadOnDemand
+          // and propGetters read their accessor inside an effect / getters.
+          customReactiveFunctions: ["dynamic", "clientOnlySetup", "spreadOnDemand", "propGetters"],
+        },
+      ],
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-namespace": "off",
@@ -73,6 +82,16 @@ export default defineConfig(
           destructuredArrayIgnorePattern: "^_",
         },
       ],
+    },
+  },
+  {
+    // Tests read store state imperatively in assertions and pass
+    // never-written stores / signals as inputs that mirror what the library
+    // receives in production: both rules would flag the test's purpose.
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}"],
+    rules: {
+      "solid/reactivity": "off",
+      "solid/no-unused-signal": "off",
     },
   },
 );

@@ -79,7 +79,7 @@
     "dev": "vite",
     "format": "oxfmt --check",
     "format:fix": "oxfmt",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "pkg:changeset": "changeset",
     "pkg:version": "changeset version",

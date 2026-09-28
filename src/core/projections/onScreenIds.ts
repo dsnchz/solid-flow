@@ -53,6 +53,7 @@ export const createOnScreenIds = (source: OnScreenSource, name: string): OnScree
     signals.get(id)?.[1](on);
   };
 
+  // eslint-disable-next-line solid/reactivity -- the eager sweep memo nobody reads (see above)
   createMemo(
     () => {
       const viewport = source.cullingViewport;
@@ -80,6 +81,7 @@ export const createOnScreenIds = (source: OnScreenSource, name: string): OnScree
       if (!getObserver()) return present.has(id);
       let signal = signals.get(id);
       if (signal === undefined) {
+        // eslint-disable-next-line solid/reactivity -- the tuple is kept whole: the map stores it and `unobserved` compares its identity
         const created = createSignal(present.has(id), {
           name: `${name}.row`,
           ownedWrite: true,

@@ -256,6 +256,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     const [x = 0, y = 0] = calcAutoPan(position, containerBounds, store.autoPanSpeed);
 
+    // eslint-disable-next-line solid/reactivity -- a promise callback runs later and polls current values, like the rAF callbacks here
     void actions.panBy({ x, y }).then((panned) => {
       if (!selectionInProgress || !panned) {
         autoPanId = requestAnimationFrame(autoPan);
