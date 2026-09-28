@@ -161,7 +161,17 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
       // optimistic stores both writes revert together and the overlay holds.
       // Capturing the replacement object instead would self-confirm — it
       // keeps the written value even after the slot reverts around it.
-      if (nextNode.selected !== undefined) {
+      //
+      // Only an actual selection write routes: an object patch that carries
+      // `selected`, or an updater whose result changed it from the row it was
+      // handed. An updater that spreads the row (`n => ({ ...n, data })`,
+      // updateNodeData) passes the row's own value through; on an optimistic
+      // store that value can be a reverted `false` while the overlay holds
+      // the selection, and routing it would deselect the node.
+      if (
+        nextNode.selected !== undefined &&
+        (typeof nodeUpdate !== "function" || nextNode.selected !== node.selected)
+      ) {
         node.selected = !!nextNode.selected;
         setSelectionOverlay((draft) => {
           draft.nodes[id] = { value: !!nextNode.selected, row: node };
@@ -209,8 +219,11 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
         const edge = edges[index]!;
         const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
         // `selected` routing — see updateNode for the original-row-proxy
-        // capture rationale.
-        if (nextEdge.selected !== undefined) {
+        // capture rationale and the pass-through rule.
+        if (
+          nextEdge.selected !== undefined &&
+          (typeof edgeUpdate !== "function" || nextEdge.selected !== edge.selected)
+        ) {
           edge.selected = !!nextEdge.selected;
           setSelectionOverlay((draft) => {
             draft.edges[id] = { value: !!nextEdge.selected, row: edge };

@@ -131,4 +131,81 @@ describe("selection sidecar", () => {
     await tick();
     expect(isSelected("a")).toBe(false);
   });
+
+  describe("a pass-through `selected` is not a selection write", () => {
+    // Server rows that carry `selected: false` (the persisted toObject()
+    // shape): on an optimistic store the flow's row write reverts, so the
+    // row keeps reading false while the sidecar holds the selection.
+    const setup = async () => {
+      const api = {
+        list: async () => [
+          { ...makeNode("a", 0), selected: false },
+          { ...makeNode("b", 300), selected: false },
+        ],
+        edges: async () => [{ id: "e1", source: "a", target: "b", selected: false } as Edge],
+      };
+      const [nodes] = createOptimisticStore<Node[]>(() => api.list(), []);
+      const [edges] = createOptimisticStore<Edge[]>(() => api.edges(), []);
+      let flowApi!: ReturnType<typeof useSolidFlow>;
+      const Probe = () => ((flowApi = useSolidFlow()), null);
+      const { container } = render(() => (
+        <SolidFlow nodes={nodes} edges={edges} width={800} height={600}>
+          <Probe />
+        </SolidFlow>
+      ));
+      await tick();
+      const isSelected = (id: string) =>
+        container
+          .querySelector(`.solid-flow__node[data-id="${id}"]`)!
+          .classList.contains("selected");
+      const selectedEdges = () => flowApi.flow.selection.edges.map((e) => e.id);
+      return { api: () => flowApi, isSelected, selectedEdges };
+    };
+
+    it("updateNodeData keeps an optimistic node selected", async () => {
+      const { api, isSelected } = await setup();
+      api().updateNode("a", { selected: true });
+      await tick();
+      expect(isSelected("a")).toBe(true);
+
+      api().updateNodeData("a", { label: "renamed" });
+      await tick();
+      expect(isSelected("a")).toBe(true);
+    });
+
+    it("an updateNode updater that spreads the row keeps the selection", async () => {
+      const { api, isSelected } = await setup();
+      api().updateNode("a", { selected: true });
+      await tick();
+
+      api().updateNode("a", (node) => ({ ...node, data: { label: "moved" } }));
+      await tick();
+      expect(isSelected("a")).toBe(true);
+    });
+
+    it("an updateEdge updater that spreads the row keeps the selection", async () => {
+      const { api, selectedEdges } = await setup();
+      api().updateEdge("e1", { selected: true });
+      await tick();
+      expect(selectedEdges()).toEqual(["e1"]);
+
+      api().updateEdge("e1", (edge) => ({ ...edge, label: "renamed" }));
+      await tick();
+      expect(selectedEdges()).toEqual(["e1"]);
+    });
+
+    it("an explicit `selected` still selects and deselects", async () => {
+      const { api, isSelected, selectedEdges } = await setup();
+      api().updateNode("a", { selected: true });
+      api().updateEdge("e1", { selected: true });
+      await tick();
+      expect(isSelected("a")).toBe(true);
+
+      api().updateNode("a", { selected: false });
+      api().updateEdge("e1", { selected: false });
+      await tick();
+      expect(isSelected("a")).toBe(false);
+      expect(selectedEdges()).toEqual([]);
+    });
+  });
 });
