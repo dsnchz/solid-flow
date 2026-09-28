@@ -36,9 +36,8 @@ export const mapSeedInput = <T>(input: SeedInput<T>, map: (row: T) => T): SeedIn
 export const createSeededStore = <T>(
   input: SeedInput<T>,
 ): readonly [Store<T[]>, StoreSetter<T[]>] => {
-  const [store, setStore] =
-    typeof input === "function" ? createStore<T[]>(input, []) : createStore(input);
-  return [store, setStore] as const;
+  if (typeof input === "function") return createStore<T[]>(input, []);
+  return createStore(input);
 };
 
 export function createSeededOptimisticStore<T>(
@@ -53,9 +52,6 @@ export function createSeededOptimisticStore<T>(
 export function createSeededOptimisticStore<T>(
   input: SeedInput<T>,
 ): readonly [Store<T[]>, StoreSetter<T[]>] {
-  const [store, setStore] =
-    typeof input === "function"
-      ? createOptimisticStore<T[]>(input, [])
-      : createOptimisticStore<T[]>(input);
-  return [store, setStore] as const;
+  if (typeof input === "function") return createOptimisticStore<T[]>(input, []);
+  return createOptimisticStore<T[]>(input);
 }
