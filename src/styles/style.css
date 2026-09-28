@@ -1,3 +1,5 @@
-/* The full stylesheet: structure plus the default theme. */
-@import "./structure.css";
-@import "./theme.css";
+/* The full stylesheet: structure plus the default theme, in the `xyflow`
+   cascade layer (React Flow / Svelte Flow's next majors) so any unlayered
+   app rule overrides it regardless of specificity. */
+@import "./structure.css" layer(xyflow);
+@import "./theme.css" layer(xyflow);

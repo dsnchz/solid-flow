@@ -78,10 +78,16 @@ export default defineConfig((cli) => {
           const source = await readFile(file, "utf8");
           const parts: string[] = [];
           for (const line of source.split("\n")) {
-            const match = /^@import\s+"(.+)";\s*$/.exec(line.trim());
+            // `@import "x.css" layer(name);` inlines x.css inside `@layer name { }`.
+            const match = /^@import\s+"(.+)"(?:\s+layer\(([\w-]+)\))?;\s*$/.exec(line.trim());
             if (match) {
               const target = join(dirname(file), match[1]!);
-              parts.push(`/* ${relative(".", target)} */`, await inlineCss(target));
+              const inlined = await inlineCss(target);
+              const layer = match[2];
+              parts.push(
+                `/* ${relative(".", target)} */`,
+                layer ? `@layer ${layer} {\n${inlined}\n}` : inlined,
+              );
             } else {
               parts.push(line);
             }

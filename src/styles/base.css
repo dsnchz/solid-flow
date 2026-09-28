@@ -1,3 +1,4 @@
-/* The base stylesheet: structure plus the minimal theme. */
-@import "./structure.css";
-@import "./theme-base.css";
+/* The base stylesheet: structure plus the minimal theme, in the `xyflow`
+   cascade layer (see style.css). */
+@import "./structure.css" layer(xyflow);
+@import "./theme-base.css" layer(xyflow);
