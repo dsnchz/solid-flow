@@ -1,10 +1,18 @@
 import js from "@eslint/js";
+import { defineConfig } from "eslint/config";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import solid from "eslint-plugin-solid/configs/typescript";
 import globals from "globals";
-import tseslint from "typescript-eslint";
+import tseslint, { type CompatiblePlugin } from "typescript-eslint";
 
-export default tseslint.config(
+// eslint-plugin-solid types its rules as @typescript-eslint/utils RuleModules,
+// which declare context methods ESLint's own Plugin type no longer has
+// (getScope, getAncestors, ...), so defineConfig rejects the plugin as typed.
+// CompatiblePlugin is the type typescript-eslint gives its own plugin for the
+// same reason; this is an upcast, not a cast.
+const solidPlugin: CompatiblePlugin = solid.plugins.solid;
+
+export default defineConfig(
   {
     // config with just ignores is the replacement for `.eslintignore`
     ignores: [
@@ -45,7 +53,7 @@ export default tseslint.config(
         ...globals.es2022,
       },
     },
-    plugins: solid.plugins,
+    plugins: { solid: solidPlugin },
     rules: {
       ...solid.rules,
       // eslint-plugin-solid targets Solid 1.x; these rules actively fight 2.0
