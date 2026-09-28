@@ -1,6 +1,6 @@
 import { type Context, createContext, useContext } from "solid-js";
 
-import { createSolidFlow } from "@/browser/createSolidFlow";
+import type { createSolidFlow } from "@/browser/createSolidFlow";
 import type { Edge, Node } from "@/types";
 
 export type SolidFlowContextValue<
