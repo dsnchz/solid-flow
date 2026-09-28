@@ -66,7 +66,10 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
           // never on start: a plain click also starts a d3-zoom gesture, and a
           // cover under the mouseup would swallow the click.
           onPanZoom: (event, viewport) => {
-            if (!panning() && untrack(() => store.dragging)) setPanning(true);
+            // Untracked: d3 calls this synchronously inside the viewport-sync
+            // effect on a programmatic viewport change, where an unmarked
+            // signal read is a STRICT_READ_UNTRACKED.
+            if (untrack(() => !panning() && store.dragging)) setPanning(true);
             props.onMove?.(event, viewport);
           },
           onPanZoomEnd: (event, viewport) => {

@@ -1,9 +1,10 @@
 import { captureArtifact } from "@solidjs/diagnostics";
 import { render } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { createSignal, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
+import { useInternalSolidFlow } from "@/contexts";
 import { Background, Controls, MiniMap } from "@/plugins";
 import type { Edge, Node } from "@/types";
 
@@ -98,6 +99,31 @@ describe("mount diagnostics", () => {
       await unexpectedDiagnostics(() =>
         render(() => <SolidFlow nodes={nodeRows()} edges={edgeRows()} width={800} height={600} />),
       ),
+    ).toEqual([]);
+  });
+
+  it("a programmatic viewport change emits only by-design diagnostics", async () => {
+    // setViewport syncs d3-zoom's transform, which calls the pan/zoom
+    // callbacks synchronously inside the flow's effect: any signal they read
+    // there must be marked untracked. Found through the MiniMap test.
+    let ctx!: ReturnType<typeof useInternalSolidFlow>;
+    const Probe = () => {
+      ctx = useInternalSolidFlow();
+      return null;
+    };
+    render(() => (
+      <SolidFlow defaultNodes={nodes} defaultEdges={edges} width={800} height={600}>
+        <Probe />
+      </SolidFlow>
+    ));
+    for (let i = 0; i < 6; i++) await tick();
+    expect(
+      await unexpectedDiagnostics(() => {
+        for (let i = 1; i <= 3; i++) {
+          ctx.actions.setViewport({ x: -i * 10, y: -i * 5, zoom: 1 });
+          flush();
+        }
+      }),
     ).toEqual([]);
   });
 });
