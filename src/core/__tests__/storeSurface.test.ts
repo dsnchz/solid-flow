@@ -61,9 +61,8 @@ describe("internal store surface", () => {
   });
 
   it("keeps the derived getters authoritative over raw config", () => {
-    const { state, dispose } = setup({ colorMode: "dark" });
-    // colorMode is resolved (system -> light/dark); nodes come from the seeded store.
-    expect(state.store.colorMode).toBe("dark");
+    const { state, dispose } = setup({ minZoom: 0.25 });
+    // nodes come from the seeded store, not the raw config.
     expect(state.store.nodes.map((n) => n.id)).toEqual(["a"]);
     // width/height are the container-measurement signals, not config reads.
     state.actions.setWidth(800);

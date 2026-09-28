@@ -155,7 +155,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
         "solid-flow",
         "solid-flow__container",
         _props.class,
-        store.colorMode,
+        _props.forceColorMode,
         // Connection-gesture state as ROOT classes (perf P2): the handles'
         // possible-target affordance derives from these in CSS, so starting
         // a gesture touches this one element instead of every handle.

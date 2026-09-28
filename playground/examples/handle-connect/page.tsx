@@ -96,7 +96,7 @@ export const HandleConnect = () => {
       onConnect={onConnect}
       nodeTypes={nodeTypes}
       fitView
-      colorMode="dark"
+      forceColorMode="dark"
     >
       <Controls />
       <Background variant="dots" />

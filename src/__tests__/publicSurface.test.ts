@@ -52,7 +52,6 @@ const PUBLIC_RUNTIME_EXPORTS = [
   "getSmoothStepPath",
   "getStraightPath",
   "getViewportForBounds",
-  "useColorMode",
   "useConnection",
   "useEdge",
   "useEdgeId",

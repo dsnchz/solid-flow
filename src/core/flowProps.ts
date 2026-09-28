@@ -1,7 +1,7 @@
 import type { JSX } from "@solidjs/web";
 import type {
   AriaLabelConfig,
-  ColorMode,
+  ColorModeClass,
   CoordinateExtent,
   NodeOrigin,
   OnConnectEnd,
@@ -467,13 +467,13 @@ export type SolidFlowRenderingProps = {
    */
   readonly onlyRenderVisibleElements?: boolean;
   /**
-   * Controls color scheme used for styling the flow
-   * @default 'system'
-   * @example 'system' | 'light' | 'dark'
+   * Forces the flow's color scheme. Unset, the flow follows the OS preference
+   * through CSS (`color-scheme` and `light-dark()`), so the server markup and
+   * the first paint already match it. A `data-theme="light" | "dark"`
+   * attribute on an ancestor forces it page-wide; this prop wins over it.
+   * @example 'light' | 'dark'
    */
-  readonly colorMode?: ColorMode;
-  /** Fallback color mode for SSR if colorMode is set to 'system' */
-  readonly colorModeSSR?: Omit<ColorMode, "system">;
+  readonly forceColorMode?: ColorModeClass;
   /** Class to be applied to the flow container */
   readonly class?: string;
   /** Styles to be applied to the flow container */
@@ -678,8 +678,6 @@ export const FLOW_PROP_KEYS = [
   "autoPanSpeed",
   "class",
   "clickConnect",
-  "colorMode",
-  "colorModeSSR",
   "connectionDragThreshold",
   "connectionLineComponent",
   "connectionLineContainerStyle",
@@ -700,6 +698,7 @@ export const FLOW_PROP_KEYS = [
   "elementsSelectable",
   "elevateEdgesOnSelect",
   "elevateNodesOnSelect",
+  "forceColorMode",
   "fitView",
   "fitViewOptions",
   "height",

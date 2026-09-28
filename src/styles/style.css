@@ -41,6 +41,15 @@
   color-scheme: light dark;
 }
 
+[data-theme="light"] .solid-flow {
+  color-scheme: light;
+}
+
+[data-theme="dark"] .solid-flow {
+  color-scheme: dark;
+}
+
+/* forceColorMode: after the ancestor rules, so the prop wins over them. */
 .solid-flow.light {
   color-scheme: light;
 }

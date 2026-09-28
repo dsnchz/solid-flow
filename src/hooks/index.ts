@@ -1,4 +1,3 @@
-export * from "./useColorMode";
 export * from "./useConnection";
 export * from "./useGraph";
 export * from "./useInitialized";

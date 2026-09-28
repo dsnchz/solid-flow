@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 
-import { Background, type ColorMode, Controls, MiniMap, Panel, SolidFlow } from "@/index";
+import { Background, type ColorModeClass, Controls, MiniMap, Panel, SolidFlow } from "@/index";
 
 export function ColorMode() {
   const [nodes] = createSignal([
@@ -53,14 +53,15 @@ export function ColorMode() {
     },
   ]);
 
-  const [colorMode, setColorMode] = createSignal<ColorMode>("light");
+  // Unset follows the OS (CSS color-scheme); a value forces a scheme.
+  const [colorMode, setColorMode] = createSignal<ColorModeClass | undefined>();
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
       <SolidFlow
         nodes={nodes()}
         edges={edges()}
-        colorMode={colorMode()}
+        forceColorMode={colorMode()}
         fitView
         nodesDraggable={true}
         nodesConnectable={true}
@@ -73,13 +74,15 @@ export function ColorMode() {
           <label>
             Color mode:
             <select
-              value={colorMode()}
-              onChange={(e) => setColorMode(e.target.value as ColorMode)}
+              value={colorMode() ?? ""}
+              onChange={(e) =>
+                setColorMode((e.target.value || undefined) as ColorModeClass | undefined)
+              }
               style={{ "margin-left": "8px" }}
             >
+              <option value="">System (OS)</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
-              <option value="system">System</option>
             </select>
           </label>
         </Panel>

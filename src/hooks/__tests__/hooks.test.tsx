@@ -7,7 +7,6 @@ import { SolidFlow } from "@/components/SolidFlow";
 import { useNodeId } from "@/hooks";
 import type { Node } from "@/types";
 
-import { useColorMode } from "../useColorMode";
 import { useEdges, useNodes, useViewport } from "../useGraph";
 import { useNodesInitialized, useViewportInitialized } from "../useInitialized";
 import { useInternalNode } from "../useInternalNode";
@@ -24,18 +23,9 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
-const renderWithFlow = (
-  Probe: () => JSX.Element,
-  props: { nodes?: Node[]; colorMode?: "light" | "dark" } = {},
-) =>
+const renderWithFlow = (Probe: () => JSX.Element, props: { nodes?: Node[] } = {}) =>
   render(() => (
-    <SolidFlow
-      nodes={props.nodes ?? [makeNode({ id: "a" })]}
-      edges={[]}
-      colorMode={props.colorMode}
-      width={800}
-      height={600}
-    >
+    <SolidFlow nodes={props.nodes ?? [makeNode({ id: "a" })]} edges={[]} width={800} height={600}>
       <Probe />
     </SolidFlow>
   ));
@@ -113,22 +103,6 @@ describe("hooks", () => {
     expect(probe).toHaveBeenCalledWith(
       expect.objectContaining({ x: expect.any(Number), y: expect.any(Number), zoom: 1 }),
     );
-  });
-
-  it("useColorMode resolves the configured color mode", async () => {
-    let mode: string | undefined;
-
-    renderWithFlow(
-      () => {
-        const colorMode = useColorMode();
-        mode = colorMode();
-        return null;
-      },
-      { colorMode: "dark" },
-    );
-    await tick();
-
-    expect(mode).toBe("dark");
   });
 
   it("useNodesInitialized flips true once nodes are measured", async () => {

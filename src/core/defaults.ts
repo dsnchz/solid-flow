@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import {
-  type ColorMode,
   createDevWarn,
   infiniteExtent,
   type IsValidConnection,
@@ -25,8 +24,6 @@ export const getDefaultFlowStateProps = () =>
     nodeOrigin: [0, 0] as NodeOrigin,
     nodeExtent: infiniteExtent,
     defaultEdgeOptions: {} as DefaultEdgeOptions,
-    colorMode: "system" as ColorMode,
-    colorModeSSR: "light" as Omit<ColorMode, "system">,
     connectionMode: "strict" as ConnectionMode,
     connectionLineType: "default" as ConnectionLineType,
     connectionRadius: 20,

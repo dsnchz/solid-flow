@@ -17,7 +17,7 @@ type Forwarded = {
   minZoom?: number;
   maxZoom?: number;
   nodesDraggable?: boolean;
-  colorMode?: "light" | "dark" | "system";
+  selectionMode?: "partial" | "full";
 };
 const forwarded: Forwarded = {};
 
@@ -25,7 +25,7 @@ describe("explicitly undefined props keep the flow's defaults", () => {
   it("through <SolidFlow>", async () => {
     let internal!: ReturnType<typeof useInternalSolidFlow>;
     const Probe = () => ((internal = useInternalSolidFlow()), null);
-    const { getByTestId } = render(() => (
+    render(() => (
       <SolidFlow
         nodes={nodes}
         width={800}
@@ -33,7 +33,7 @@ describe("explicitly undefined props keep the flow's defaults", () => {
         minZoom={forwarded.minZoom}
         maxZoom={forwarded.maxZoom}
         nodesDraggable={forwarded.nodesDraggable}
-        colorMode={forwarded.colorMode}
+        selectionMode={forwarded.selectionMode}
       >
         <Probe />
       </SolidFlow>
@@ -43,9 +43,7 @@ describe("explicitly undefined props keep the flow's defaults", () => {
     expect(internal.store.minZoom).toBe(0.5);
     expect(internal.store.maxZoom).toBe(2);
     expect(internal.store.nodesDraggable).toBe(true);
-    // "system" resolves through the (stubbed, light) media query
-    expect(internal.store.colorMode).toBe("light");
-    expect(getByTestId("solid-flow__wrapper").classList.contains("light")).toBe(true);
+    expect(internal.store.selectionMode).toBe("partial");
   });
 
   it("through <SolidFlowProvider>", async () => {
@@ -57,7 +55,7 @@ describe("explicitly undefined props keep the flow's defaults", () => {
         minZoom={forwarded.minZoom}
         maxZoom={forwarded.maxZoom}
         nodesDraggable={forwarded.nodesDraggable}
-        colorMode={forwarded.colorMode}
+        selectionMode={forwarded.selectionMode}
       >
         <Probe />
       </SolidFlowProvider>
@@ -67,7 +65,7 @@ describe("explicitly undefined props keep the flow's defaults", () => {
     expect(internal.store.minZoom).toBe(0.5);
     expect(internal.store.maxZoom).toBe(2);
     expect(internal.store.nodesDraggable).toBe(true);
-    expect(internal.store.colorMode).toBe("light");
+    expect(internal.store.selectionMode).toBe("partial");
   });
 
   it("an explicit value still wins", async () => {

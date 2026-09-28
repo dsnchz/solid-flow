@@ -16,7 +16,6 @@ import {
   type Viewport,
 } from "@xyflow/system";
 import {
-  type Accessor,
   createEffect,
   createMemo,
   createProjection,
@@ -76,8 +75,6 @@ export type MeasureRequestEntry = [string, InternalNodeUpdate];
  * Everything is optional so the graph runs fully headless (tests, servers).
  */
 export type FlowStateInjections = {
-  /** Resolves the "system" color mode; the browser wiring passes a media query. */
-  prefersDark?: Accessor<boolean>;
   /** Built-in node renderers merged beneath the user's `nodeTypes`. */
   initialNodeTypes?: NodeTypes | BuiltInNodeTypes;
   /** Built-in edge renderers merged beneath the user's `edgeTypes`. */
@@ -139,10 +136,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   const initialNodeTypes = injections.initialNodeTypes ?? ({} as NodeTypes);
   const initialEdgeTypes = injections.initialEdgeTypes ?? ({} as EdgeTypes);
-
-  // "system" color-mode resolution; headless default mirrors the SSR value.
-  const ssrPrefersDark = () => _props.colorModeSSR === "dark";
-  const prefersDark = injections.prefersDark ?? ssrPrefersDark;
 
   /**********************************************************************************/
   /*                                                                                */
@@ -325,14 +318,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  const resolvedColorMode = createMemo(
-    () => {
-      const mode = config().colorMode;
-      return mode === "system" ? (prefersDark() ? "dark" : "light") : mode;
-    },
-    { name: "resolvedColorMode" },
-  );
-
   // B4 (audit): connection projection memoized — the getter spread the state
   // and ran pointToRendererPoint on every read (ConnectionLine reads it 10x
   // per render, Zoom/Pane once per gesture event).
@@ -494,9 +479,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
     get clickConnectStartHandle() {
       return clickConnectStartHandle();
-    },
-    get colorMode() {
-      return resolvedColorMode();
     },
     get connection() {
       return projectedConnection();
@@ -943,9 +925,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
     get height() {
       return store.height;
-    },
-    get colorMode() {
-      return store.colorMode;
     },
     get connection() {
       return store.connection;

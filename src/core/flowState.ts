@@ -1,5 +1,4 @@
 import type {
-  ColorModeClass,
   ConnectionState,
   FitBoundsOptions,
   Rect,
@@ -70,8 +69,6 @@ export type FlowState<NodeType extends Node = Node, EdgeType extends Edge = Edge
   readonly width: number;
   /** The flow container's measured height in px. */
   readonly height: number;
-  /** The resolved color mode ("system" resolves to the user's preference). */
-  readonly colorMode: ColorModeClass;
 
   // ── interaction ──
   /** The in-progress connection gesture state. */

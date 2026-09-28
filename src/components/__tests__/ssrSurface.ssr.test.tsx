@@ -183,17 +183,26 @@ describe("plugins on the server", () => {
 });
 
 describe("flow options on the server", () => {
-  it("puts the color mode class in the markup", () => {
+  it("puts a forced color scheme class in the markup", () => {
     const html = renderToString(() => (
       <SolidFlow
         nodes={[makeNode({ id: "a" })]}
         edges={[]}
         width={800}
         height={600}
-        colorMode="dark"
+        forceColorMode="dark"
       />
     ));
     expect(html).toMatch(/class="solid-flow [^"]*\bdark\b/);
+  });
+
+  it("renders no scheme class by default: the browser's color-scheme decides, nothing to hydrate", () => {
+    const html = renderToString(() => (
+      <SolidFlow nodes={[makeNode({ id: "a" })]} edges={[]} width={800} height={600} />
+    ));
+    const root = html.match(/class="(solid-flow [^"]*)"/)?.[1] ?? "";
+    expect(root.split(/\s+/)).not.toContain("light");
+    expect(root.split(/\s+/)).not.toContain("dark");
   });
 
   it("renders every node under onlyRenderVisibleElements (no viewport to cull against)", () => {

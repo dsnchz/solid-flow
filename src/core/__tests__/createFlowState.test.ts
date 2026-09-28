@@ -99,7 +99,6 @@ describe("FlowState struct", () => {
         expect(flow.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
         expect(flow.minZoom).toBe(0.25);
         expect(flow.maxZoom).toBe(3);
-        expect(flow.colorMode).toBe("light");
         expect(flow.dragging).toBe(false);
         expect(flow.viewportInitialized).toBe(false);
         expect(flow.nodesInitialized).toBe(false);
