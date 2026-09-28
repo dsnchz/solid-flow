@@ -254,6 +254,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
                 onNodeDragStart={_props.onNodeDragStart}
                 onNodeDragStop={_props.onNodeDragStop}
               />
+              <div class="solid-flow__container solid-flow__viewport-front" />
             </Viewport>
             <Selection
               isVisible={!!store.selectionRect && store.selectionRectMode === "user"}

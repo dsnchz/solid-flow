@@ -1,7 +1,7 @@
 // Public components only (React Flow / Svelte Flow parity): the renderers,
 // wrappers, containers and `*Internal` edges in ./components stay internal.
 export type { ConnectionLineComponentProps } from "./components/connection";
-export { Panel, ViewportPortal } from "./components/container";
+export { Panel, ViewportPortal, type ViewportPortalProps } from "./components/container";
 export {
   BaseEdge,
   BezierEdge,
