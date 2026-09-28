@@ -3,11 +3,6 @@
   --xy-connectionline-stroke-width-default: 1;
 }
 
-.solid-flow.dark {
-  --xy-connectionline-stroke-default: #b1b1b7;
-  --xy-connectionline-stroke-width-default: 1;
-}
-
 .solid-flow__connectionline {
   z-index: 1001;
   overflow: visible;

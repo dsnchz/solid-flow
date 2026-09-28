@@ -1,11 +1,10 @@
 .solid-flow {
-  --xy-selection-background-color-default: rgba(0, 89, 220, 0.08);
-  --xy-selection-border-default: 1px dotted rgba(0, 89, 220, 0.8);
-}
-
-.solid-flow.dark {
-  --xy-selection-background-color-default: rgba(200, 200, 220, 0.08);
-  --xy-selection-border-default: 1px dotted rgba(200, 200, 220, 0.8);
+  --xy-selection-background-color-default: light-dark(
+    rgba(0, 89, 220, 0.08),
+    rgba(200, 200, 220, 0.08)
+  );
+  --xy-selection-border-default: 1px dotted
+    light-dark(rgba(0, 89, 220, 0.8), rgba(200, 200, 220, 0.8));
 }
 
 .solid-flow__selection-wrapper {

@@ -1,18 +1,10 @@
 .solid-flow {
-  --xy-background-color-default: transparent;
-  --xy-background-pattern-dots-color-default: #91919a;
-  --xy-background-pattern-lines-color-default: #eee;
-  --xy-background-pattern-cross-color-default: #e2e2e2;
-
+  --xy-background-color-default: light-dark(transparent, #141414);
+  --xy-background-pattern-dots-color-default: light-dark(#91919a, #777);
+  --xy-background-pattern-lines-color-default: light-dark(#eee, #777);
+  --xy-background-pattern-cross-color-default: light-dark(#e2e2e2, #777);
   --background-color-default: #fff;
   --background-pattern-color-default: #ddd;
-}
-
-.solid-flow.dark {
-  --xy-background-color-default: #141414;
-  --xy-background-pattern-dots-color-default: #777;
-  --xy-background-pattern-lines-color-default: #777;
-  --xy-background-pattern-cross-color-default: #777;
 }
 
 .solid-flow__background {

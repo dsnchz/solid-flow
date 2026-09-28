@@ -1,9 +1,8 @@
 .solid-flow {
-  --xy-attribution-background-color-default: rgba(255, 255, 255, 0.5);
-}
-
-.solid-flow.dark {
-  --xy-attribution-background-color-default: rgba(150, 150, 150, 0.25);
+  --xy-attribution-background-color-default: light-dark(
+    rgba(255, 255, 255, 0.5),
+    rgba(150, 150, 150, 0.25)
+  );
 }
 
 .solid-flow__attribution {

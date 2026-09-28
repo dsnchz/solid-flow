@@ -34,6 +34,19 @@
   z-index: 0;
 
   background-color: var(--xy-background-color, var(--xy-background-color-default));
+
+  /* Theme: the --xy-*-default colors are light-dark(<light>, <dark>), and the
+     container's color-scheme picks the side: the OS preference unless a
+     `light` / `dark` class forces one. */
+  color-scheme: light dark;
+}
+
+.solid-flow.light {
+  color-scheme: light;
+}
+
+.solid-flow.dark {
+  color-scheme: dark;
 }
 
 @keyframes dashdraw {

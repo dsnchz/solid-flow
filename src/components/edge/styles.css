@@ -2,15 +2,9 @@
   --xy-edge-label-background-color-default: #ffffff;
   --xy-edge-label-color-default: inherit;
 
-  --xy-edge-stroke-default: #b1b1b7;
+  --xy-edge-stroke-default: light-dark(#b1b1b7, #3e3e3e);
   --xy-edge-stroke-width-default: 1;
-  --xy-edge-stroke-selected-default: #555;
-}
-
-.solid-flow.dark {
-  --xy-edge-stroke-default: #3e3e3e;
-  --xy-edge-stroke-width-default: 1;
-  --xy-edge-stroke-selected-default: #727272;
+  --xy-edge-stroke-selected-default: light-dark(#555, #727272);
 }
 
 .solid-flow__edgeupdater {
