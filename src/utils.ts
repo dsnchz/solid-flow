@@ -71,10 +71,13 @@ export function propDefaults<T extends object, D extends Partial<T>>(
   const keys = new Set([...Object.keys(defaults), ...Object.keys(props)]);
   for (const key of keys) {
     Object.defineProperty(out, key, {
-      get: () =>
-        (props as Record<string, unknown>)[key] !== undefined
-          ? (props as Record<string, unknown>)[key]
-          : (defaults as Record<string, unknown>)[key],
+      // ONE read of the prop: a JSX `children` getter instantiates the
+      // children on every read (a second read rendered a throwaway copy per
+      // mount and spent a hydration key the server had used for the real one).
+      get: () => {
+        const value = (props as Record<string, unknown>)[key];
+        return value !== undefined ? value : (defaults as Record<string, unknown>)[key];
+      },
       enumerable: true,
       configurable: true,
     });
