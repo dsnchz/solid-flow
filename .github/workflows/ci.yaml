@@ -37,3 +37,29 @@ jobs:
         run: bun run test:hydration
       - name: Build
         run: bun run build
+
+  e2e:
+    name: E2E (Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+      # Boots the playground (:3010) and the SSR smoke app (:3020) from
+      # playwright.config.ts; the opt-in perf specs stay excluded.
+      - name: E2E
+        run: bun run test:e2e
+      - name: Upload traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
