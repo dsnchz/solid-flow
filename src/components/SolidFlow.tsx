@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { isServer } from "@solidjs/web";
-import { type ColorModeClass, infiniteExtent } from "@xyflow/system";
+import { infiniteExtent } from "@xyflow/system";
 import {
   createEffect,
   createMemo,
@@ -42,7 +42,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   const _props = merge(
     {
       ...getDefaultFlowStateProps(),
-      colorMode: "light" as ColorModeClass,
       nodeClickDistance: 0,
       panOnScroll: false,
       preventScrolling: true,
