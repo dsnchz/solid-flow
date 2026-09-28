@@ -1,6 +1,6 @@
 .solid-flow {
-  --xy-edge-label-background-color-default: #ffffff;
-  --xy-edge-label-color-default: inherit;
+  --xy-edge-label-background-color-default: light-dark(#ffffff, #141414);
+  --xy-edge-label-color-default: light-dark(currentColor, #f8f8f8);
 
   --xy-edge-stroke-default: light-dark(#b1b1b7, #3e3e3e);
   --xy-edge-stroke-width-default: 1;

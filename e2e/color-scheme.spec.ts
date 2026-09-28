@@ -72,4 +72,15 @@ test.describe("color scheme", () => {
     await page.getByLabel("Color mode:").selectOption("light");
     await expect(flow).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   });
+
+  test("edge labels take the dark theme", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await gotoExample(page, "Edges");
+    const label = page.locator(".solid-flow__edge-label").first();
+    await expect(label).toHaveCSS("background-color", "rgb(20, 20, 20)");
+    await expect(label).toHaveCSS("color", "rgb(248, 248, 248)");
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(label).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  });
 });
