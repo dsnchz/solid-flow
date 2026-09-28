@@ -1,5 +1,55 @@
 # @dschz/solid-flow
 
+## 1.0.0-next.22
+
+### Minor Changes
+
+- ed4ddb5: The `ColorMode` type is now `"light" | "dark"`, the type of `forceColorMode`, matching `@xyflow/system` 1.x. It no longer includes `"system"`: leave `forceColorMode` unset to follow the OS. `ColorModeClass` is removed; use `ColorMode`.
+- fe86d29: Stylesheets are published under React Flow's and Svelte Flow's paths: `@dschz/solid-flow/style.css` (the full default theme) and the new `@dschz/solid-flow/base.css` (the structural rules with a minimal skin, for apps that bring their own), plus their `./dist/style.css` and `./dist/base.css` forms. `@dschz/solid-flow/styles` still works and resolves to `style.css`. `package.json` is exported for tools.
+- 0a9fd97: The library stylesheets now sit in the `xyflow` cascade layer, as in React Flow 13 and Svelte Flow 2. Any rule of yours outside a layer overrides them regardless of specificity, so restyling no longer needs `!important` or selectors that out-specify the library's. If your own CSS is itself layered, order the layers explicitly, for example `@layer xyflow, app;`.
+- a98599f: Color scheme is now CSS-only, as in React Flow 13 and Svelte Flow 2. The flow follows the OS preference by default through `color-scheme` and `light-dark()`, so server-rendered markup and the first paint already match it with no client-side switch.
+
+  Breaking changes:
+
+  - `colorMode` and `colorModeSSR` are replaced by `forceColorMode?: "light" | "dark"`. Leave it unset to follow the OS (the old `colorMode="system"`); set it to force a scheme (the old `colorMode="light"` / `"dark"`). `colorModeSSR` has no replacement: the server no longer has to guess.
+  - A `data-theme="light" | "dark"` attribute on an ancestor (for example `<html>`) forces the scheme page-wide; `forceColorMode` wins over it.
+  - `useColorMode` and `flow.colorMode` are removed. The flow no longer resolves the scheme in JavaScript; code that needs it can read `matchMedia("(prefers-color-scheme: dark)")` directly.
+
+- 1fb88b1: `ResizeControl` is renamed `NodeResizeControl`, the name React Flow and Svelte Flow export (and keep in their next majors). Update imports: `import { NodeResizeControl } from "@dschz/solid-flow"`. Props are unchanged.
+- ad9d781: The package no longer exports its internal components. The public components now match React Flow's and Svelte Flow's: `SolidFlow`, `SolidFlowProvider`, `Handle`, the built-in edges (`BaseEdge`, `BezierEdge`, `SmoothStepEdge`, `StepEdge`, `StraightEdge`), `EdgeLabel`, `EdgeLabelRenderer`, `EdgeReconnectAnchor`, `Panel`, `ViewportPortal` and the plugins. Removed: `NodeWrapper`, `EdgeWrapper`, `NodeRenderer`, `EdgeRenderer`, `Pane`, `Zoom`, `Viewport` (the component; the `Viewport` type is unchanged), `NodeSelection`, `Selection`, `ConnectionLine`, `Marker`, `MarkerDefinition`, the built-in node components (`DefaultNode`, `InputNode`, `OutputNode`, `GroupNode`) and the `*EdgeInternal` edges. These were renderer internals with no supported use, and exporting them would have made every change to them a breaking change after 1.0.
+- b352ade: New `useOnSelectionChange(onChange)` hook (React Flow / Svelte Flow parity): registers a selection listener from any component inside the flow. `onChange` receives `{ nodes, edges }` once on mount and then whenever the selected node or edge ids change, and the listener is removed when the component unmounts. It fires on the same rules as the `onSelectionChange` prop, which now shares its implementation.
+
+### Patch Changes
+
+- 766fe25: The dark-mode background patterns use React Flow's and Svelte Flow's colors: dots `#555`, lines and cross `#333` (they were all `#777`, noticeably brighter).
+- 3c79b0d: `<ControlButton bgColor>` sets the button's background; only `bgColorHover` used to take effect. (React Flow and Svelte Flow ship the same gap.)
+- b1b4127: The theme colors are now CSS `light-dark()` values chosen by the flow container's `color-scheme`, instead of a separate `.solid-flow.dark` override block per stylesheet. Colors are unchanged. The container now declares `color-scheme`, so browser-drawn controls inside the flow (inputs, scrollbars in custom nodes) follow the flow's theme. Overriding a theme variable (`--xy-node-background-color` and friends) works as before.
+- 6a713da: Stylesheet fixes bringing the CSS to parity with React Flow and Svelte Flow:
+
+  - Centered panels are centered: `top-center` / `bottom-center` sat 15px right of center, and `center-left` / `center-right` were centered horizontally instead of vertically.
+  - NodeResizer handles are 5px (were 4px) and stay centered on the node's corners when `autoScale` enlarges them on a zoomed-out viewport.
+  - Horizontal `<Controls>` separate their buttons with a right border instead of the vertical layout's bottom borders.
+  - The control-button styles apply to `ControlButton`s only (`.solid-flow__controls-button`), not to every `<button>` inside `<Controls>`.
+  - In the default theme a selected built-in node keeps its border and shows selection as its box shadow (it switched to a `#555` border with no dark value). The selected border and `--xy-node-border-selected` now apply with `base.css` only; restyle selection in the default theme through `--xy-node-boxshadow-selected`.
+  - The default theme hides the browser focus outline on every selectable node, custom types included, and on the multi-node selection box.
+  - The flow container is `direction: ltr`, so right-to-left pages do not mirror the Controls or panels.
+  - The pane is `touch-action: none`, so touch drags pan or box-select instead of scrolling the page.
+  - `<Background bgColor>` takes precedence over an app-wide `--xy-background-color`.
+  - The flow's layer containers are `user-select: none`, so drags across the pane and label layers no longer select page text.
+  - `<EdgeLabel transparent>` drops the label background (the prop had no effect).
+
+- 3705f54: The stylesheet import is no longer dropped by webpack. The package declared `"sideEffects": false`, which lets webpack (and Rspack) prune a side-effect-only `import "@dschz/solid-flow/styles"` from production builds, leaving the flow unstyled. It now declares `"sideEffects": ["*.css"]`, as React Flow and Svelte Flow do.
+- e640d39: `@solid-primitives/media` is no longer a dependency (the color scheme is CSS-only now), which also drops `@solid-primitives/rootless` and `@solid-primitives/static-store` from installs.
+- b846ac8: Edge labels follow the dark color scheme: they used to keep a white background in dark mode. They now use `#141414` with `#f8f8f8` text, as in React Flow and Svelte Flow.
+- 8dfe53d: Arrowhead markers without an explicit color (`color: null`, or `defaultMarkerColor={null}`) take the edge stroke again. They wrote `var(--xy-edge-stroke)` into an SVG attribute, which only resolved when the app itself set that variable; otherwise a closed arrowhead rendered as a black triangle and an open `arrow` marker was invisible. A stylesheet rule now colors them from `--xy-edge-stroke`, falling back to the theme's edge color, as in React Flow and Svelte Flow. Explicit marker colors are applied as inline style and still win.
+- c4eb810: Setting a key prop to `null` (`deleteKey`, `selectionKey`, `multiSelectionKey`, `panActivationKey`, `zoomActivationKey`) now disables that key, as documented. `null` used to fall back to the default key, so for example `deleteKey={null}` still deleted the selection on Backspace. Leaving a prop out (or passing `undefined`) still uses the default.
+- 752adc0: `updateNodeData`, and `updateNode` / `updateEdge` updaters that spread the row (`(node) => ({ ...node, data })`), no longer deselect a selected node or edge on an optimistic store whose rows carry `selected: false` (the shape `toObject()` persists). The spread passed the row's reverted `selected: false` back, and it was treated as a deselect. An object patch with `selected`, or an updater that changes it, still selects and deselects.
+- dbe4316: Resizing a parent node from its top or left edge no longer clears the `width` and `height` of its child nodes. The resizer repositions the children to keep them in place, and that position-only change used to write `undefined` over their size, so explicitly sized children collapsed to their content size.
+- 67ebae9: Resizing a node from its top or left edge now moves it when the new position has a 0 coordinate. A node on the `y: 0` line (or landing on `x: 0`) used to keep its old position while its size changed, so it grew in the wrong direction.
+- 7aa26fb: A flow whose initial edges include one with `selected: true` no longer crashes on creation (`Cannot access 'edgeLookup' before initialization`). The selection starts with the nodes and edges the rows declare as selected.
+- c557b33: A flow prop passed as an explicit `undefined` now keeps the flow's default. A wrapper that forwards its own optional props (`minZoom={props.minZoom}`) used to override the defaults whenever its caller left one out: `minZoom` became `undefined` instead of 0.5, `colorMode` resolved to nothing and dropped the theme class, and so on. This applies to `<SolidFlow>`, `<SolidFlowProvider>` and the headless flow state.
+- b5faa64: `ViewportPortal` renders into the viewport again, so its content pans and zooms with the graph. It looked for a container the flow never rendered and fell back to `document.body`. It now follows Svelte Flow's contract: content goes in front of the nodes by default, or behind the edges with `target="back"`, and other attributes (`class`, `style`, …) go on its wrapper `div`. The `ViewportPortalProps` type is exported.
+
 ## 1.0.0-next.21
 
 ### Patch Changes
