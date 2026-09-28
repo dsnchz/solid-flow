@@ -138,7 +138,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const initialEdgeTypes = injections.initialEdgeTypes ?? ({} as EdgeTypes);
 
   // "system" color-mode resolution; headless default mirrors the SSR value.
-  const prefersDark = injections.prefersDark ?? (() => _props.colorModeSSR === "dark");
+  const ssrPrefersDark = () => _props.colorModeSSR === "dark";
+  const prefersDark = injections.prefersDark ?? ssrPrefersDark;
 
   /**********************************************************************************/
   /*                                                                                */
