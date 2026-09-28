@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { isNumeric } from "@xyflow/system";
+import { isNumeric, type OnDrag } from "@xyflow/system";
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
@@ -45,14 +45,14 @@ export const NodeSelection = <NodeType extends Node = Node>(
     props.onSelectionClick?.({ nodes: selectedNodes, event });
   };
 
+  const onDrag: OnDrag = (event, _, __, nodes) => {
+    props.onNodeDrag?.({ event, targetNode: null, nodes: nodes as NodeType[] });
+  };
+
   createDraggable(ref, () => ({
     disabled: false,
     // See NodeWrapper: per-frame handler params only when a handler exists.
-    onDrag: props.onNodeDrag
-      ? (event, _, __, nodes) => {
-          props.onNodeDrag?.({ event, targetNode: null, nodes: nodes as NodeType[] });
-        }
-      : undefined,
+    onDrag: props.onNodeDrag ? onDrag : undefined,
     onDragStart: (event, _, __, nodes) => {
       props.onNodeDragStart?.({ event, targetNode: null, nodes: nodes as NodeType[] });
     },

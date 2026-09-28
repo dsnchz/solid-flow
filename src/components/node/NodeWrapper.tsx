@@ -7,6 +7,7 @@ import {
   getNodesInside,
   isInputDOMNode,
   nodeHasDimensions,
+  type OnDrag,
 } from "@xyflow/system";
 import {
   createEffect,
@@ -281,6 +282,14 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     // rows without domAttributes skip the spread machinery entirely.
     spreadOnDemand(el, () => node()?.domAttributes);
 
+    const onDrag: OnDrag = (event, _, targetNode, nodes) => {
+      props.onNodeDrag?.({
+        event,
+        targetNode: targetNode as NodeType,
+        nodes: nodes as NodeType[],
+      });
+    };
+
     createDraggable(
       () => el,
       () => ({
@@ -296,15 +305,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         // store proxy (audit finding 6; a 1000-node selection drag paid it
         // with no listener registered). Start/stop stay unconditional (the
         // drag helper needs them; once per gesture).
-        onDrag: props.onNodeDrag
-          ? (event, _, targetNode, nodes) => {
-              props.onNodeDrag?.({
-                event,
-                targetNode: targetNode as NodeType,
-                nodes: nodes as NodeType[],
-              });
-            }
-          : undefined,
+        onDrag: props.onNodeDrag ? onDrag : undefined,
         onDragStart: (event, _, targetNode, nodes) => {
           props.onNodeDragStart?.({
             event,
