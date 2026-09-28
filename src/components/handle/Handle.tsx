@@ -172,7 +172,13 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     });
   };
 
+  // Read at click time, not bound as `onClick={store.clickConnect ? onClick
+  // : undefined}`: a handler expression is evaluated once when the element is
+  // created (untracked), so toggling `clickConnect` after mount never reached
+  // the handles already rendered. `click` is delegated, so the unconditional
+  // handler adds no listener per handle.
   const onClick = (event: MouseEvent) => {
+    if (!store.clickConnect) return;
     if (!nodeId() || (!store.clickConnectStartHandle && !isConnectableStart())) {
       return;
     }
@@ -236,7 +242,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
       data-nodeid={nodeId()}
       data-handlepos={position()}
       data-id={`${store.id}-${nodeId()}-${props.id || null}-${type()}`}
-      onClick={store.clickConnect ? onClick : undefined}
+      onClick={onClick}
       onPointerDown={onPointerDown}
       style={props.style}
       class={cx(

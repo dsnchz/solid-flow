@@ -1,5 +1,6 @@
 import { render } from "@solidjs/testing-library";
 import { fireEvent } from "@solidjs/testing-library";
+import { createSignal, flush } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Handle } from "@/components/handle";
@@ -235,5 +236,78 @@ describe("<Handle /> connection gesture", () => {
     expect(onDisconnect.mock.lastCall![0]).toEqual([
       expect.objectContaining({ source: "a", target: "b" }),
     ]);
+  });
+});
+
+describe("<Handle /> click-to-connect", () => {
+  // Click-to-connect: a click on one handle arms the connection (the root
+  // gets `connecting`), a click on a compatible handle completes it.
+  const nodes = () => [makeNode({ id: "a" }), makeNode({ id: "b", position: { x: 200, y: 100 } })];
+  const handle = (container: HTMLElement, id: string, type: "source" | "target") =>
+    container.querySelector<HTMLElement>(
+      `.solid-flow__node[data-id="${id}"] .solid-flow__handle.${type}`,
+    )!;
+  const armed = (container: HTMLElement) =>
+    container.querySelector(".solid-flow")!.classList.contains("connecting");
+
+  it("connects two handles by clicking one, then the other", async () => {
+    const { container } = render(() => (
+      <SolidFlow nodes={nodes()} defaultEdges={[]} clickConnect width={800} height={600} />
+    ));
+    await tick();
+    fireEvent.click(handle(container, "a", "source"));
+    flush();
+    expect(armed(container)).toBe(true);
+    stubElementFromPoint(handle(container, "b", "target"));
+    fireEvent.click(handle(container, "b", "target"));
+    flush();
+    await tick();
+    expect(armed(container)).toBe(false);
+    expect(
+      Array.from(container.querySelectorAll(".solid-flow__edge")).map((e) =>
+        e.getAttribute("data-id"),
+      ),
+    ).toEqual(["xy-edge__a-b"]);
+  });
+
+  it("follows `clickConnect` turned on after mount", async () => {
+    const [clickConnect, setClickConnect] = createSignal(false);
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={nodes()}
+        defaultEdges={[]}
+        clickConnect={clickConnect()}
+        width={800}
+        height={600}
+      />
+    ));
+    await tick();
+    fireEvent.click(handle(container, "a", "source"));
+    flush();
+    expect(armed(container)).toBe(false);
+    setClickConnect(true);
+    flush();
+    fireEvent.click(handle(container, "a", "source"));
+    flush();
+    expect(armed(container)).toBe(true);
+  });
+
+  it("follows `clickConnect` turned off after mount", async () => {
+    const [clickConnect, setClickConnect] = createSignal(true);
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={nodes()}
+        defaultEdges={[]}
+        clickConnect={clickConnect()}
+        width={800}
+        height={600}
+      />
+    ));
+    await tick();
+    setClickConnect(false);
+    flush();
+    fireEvent.click(handle(container, "a", "source"));
+    flush();
+    expect(armed(container)).toBe(false);
   });
 });
