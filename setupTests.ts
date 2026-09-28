@@ -96,21 +96,6 @@ if (typeof HTMLElement !== "undefined") {
     return rect;
   };
 
-  /** jsdom does not implement matchMedia (needed by createMediaQuery for color mode). */
-  if (typeof window.matchMedia !== "function") {
-    window.matchMedia = (query: string): MediaQueryList =>
-      ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addEventListener: () => undefined,
-        removeEventListener: () => undefined,
-        addListener: () => undefined,
-        removeListener: () => undefined,
-        dispatchEvent: () => false,
-      }) as unknown as MediaQueryList;
-  }
-
   /** jsdom does not implement PointerEvent; extend MouseEvent with the pointer fields. */
   if (typeof window.PointerEvent === "undefined") {
     class PointerEventPolyfill extends MouseEvent {

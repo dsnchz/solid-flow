@@ -95,7 +95,6 @@
   },
   "dependencies": {
     "@solid-primitives/event-listener": "3.0.0-next.5",
-    "@solid-primitives/media": "4.0.0-next.2",
     "@xyflow/system": "0.0.83"
   },
   "devDependencies": {
