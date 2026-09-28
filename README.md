@@ -360,11 +360,85 @@ Reconnection lifecycle callbacks (`onReconnectStart`, `onReconnect`, `onReconnec
 
 ## Styling
 
-Import one stylesheet, once: `@dschz/solid-flow/style.css` is the full default theme, and `@dschz/solid-flow/base.css` is the structural rules with a minimal skin (a neutral node border, no fill, plain handles) for apps that bring their own. Both are the React Flow / Svelte Flow files of the same names; `@dschz/solid-flow/styles` still resolves to `style.css`.
+Import one stylesheet, once, anywhere in your app:
 
-The library CSS sits in the `xyflow` cascade layer, so any rule of yours outside a layer overrides it regardless of specificity. If your own CSS is layered too, order the layers explicitly (`@layer xyflow, app;`). The theme is a set of `--xy-*` custom properties on `.solid-flow` (`--xy-node-background-color`, `--xy-edge-stroke`, `--xy-handle-background-color`, …) that you can set on the flow or any ancestor.
+```ts
+import "@dschz/solid-flow/style.css";
+```
 
-The color scheme follows the OS by default, entirely in CSS (`color-scheme` and `light-dark()`), so server-rendered markup and the first paint already match it. `forceColorMode="light" | "dark"` on `<SolidFlow>` forces one, and a `data-theme="light" | "dark"` attribute on an ancestor such as `<html>` forces it page-wide; the prop wins over the attribute.
+### The two stylesheets
+
+Both are the React Flow / Svelte Flow files of the same names, and both carry the same structural rules (positioning, layering, cursors, handles, edges, the MiniMap, Background, Controls and NodeResizer layout). They differ only in the skin on top:
+
+| Import                        | Skin                                                                                                                                                                      | Use it when                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `@dschz/solid-flow/style.css` | The default theme: built-in nodes with a border, fill, radius, padding and hover / selection shadows; round handles; the selection box; the Controls buttons; edge labels | You want the standard look, restyled with theme variables           |
+| `@dschz/solid-flow/base.css`  | A minimal skin: a neutral node border (`#555` when selected), node text color, a plain square handle, the selection box. No fills, padding or button styling              | You bring your own design and want only what the flow needs to work |
+
+`@dschz/solid-flow/styles` (the 0.x path) and `@dschz/solid-flow/dist/style.css` / `dist/base.css` resolve to the same files.
+
+### Overriding styles
+
+The library CSS sits in the `xyflow` cascade layer, so any rule of yours outside a layer wins over it, whatever the specificity: no `!important`, no selectors written to out-specify the library.
+
+```css
+/* beats the library's .solid-flow__node-default rules as written */
+.solid-flow__node-default {
+  border-radius: 8px;
+}
+```
+
+If your own CSS is in layers too (Tailwind v4 puts its utilities in one), order them so yours come after: `@layer xyflow, app;`.
+
+### Theme variables
+
+The theme is a set of CSS custom properties. Set `--xy-<name>` on `.solid-flow`, on any ancestor, or in `<SolidFlow style>`; the library's own values live in `--xy-<name>-default`, which you never need to touch. Every color below follows the color scheme unless you set it.
+
+| Area                   | Variables                                                                                                                                                                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nodes (built-in types) | `--xy-node-color`, `--xy-node-background-color`, `--xy-node-border`, `--xy-node-border-radius`, `--xy-node-boxshadow-hover`, `--xy-node-boxshadow-selected`, `--xy-node-group-background-color`; `--xy-node-border-selected` (base.css only)        |
+| Edges                  | `--xy-edge-stroke`, `--xy-edge-stroke-width`, `--xy-edge-stroke-selected`, `--xy-edge-label-color`, `--xy-edge-label-background-color`                                                                                                              |
+| Connection line        | `--xy-connectionline-stroke`, `--xy-connectionline-stroke-width`                                                                                                                                                                                    |
+| Handles                | `--xy-handle-background-color`, `--xy-handle-border-color`                                                                                                                                                                                          |
+| Selection box          | `--xy-selection-background-color`, `--xy-selection-border`                                                                                                                                                                                          |
+| Controls               | `--xy-controls-button-background-color`, `--xy-controls-button-background-color-hover`, `--xy-controls-button-color`, `--xy-controls-button-color-hover`, `--xy-controls-button-border-color`, `--xy-controls-box-shadow`                           |
+| MiniMap                | `--xy-minimap-background-color`, `--xy-minimap-mask-background-color`, `--xy-minimap-mask-stroke-color`, `--xy-minimap-mask-stroke-width`, `--xy-minimap-node-background-color`, `--xy-minimap-node-stroke-color`, `--xy-minimap-node-stroke-width` |
+| Background             | `--xy-background-color`, `--xy-background-pattern-color` (all variants), or per variant `--xy-background-pattern-dots-color` / `-lines-color` / `-cross-color`                                                                                      |
+| Other                  | `--xy-attribution-background-color`, `--xy-resize-background-color` (NodeResizer)                                                                                                                                                                   |
+
+Component props win over the variables: `<Background bgColor patternColor>`, `<MiniMap bgColor maskColor maskStrokeColor maskStrokeWidth>` and `<ControlButton bgColor bgColorHover color colorHover borderColor>` set the same values for that one component. MiniMap's `nodeColor`, `nodeStrokeColor` and `nodeStrokeWidth` apply to each node shape directly and also take a function of the node. Edge arrowhead markers take the edge stroke (`--xy-edge-stroke`) unless the marker has its own `color`; `defaultMarkerColor` on `<SolidFlow>` sets that color for every marker, and `defaultMarkerColor={null}` hands all of them to the edge stroke.
+
+### Color scheme
+
+The flow follows the OS light / dark preference by default, entirely in CSS (`color-scheme` on the container and `light-dark()` in the theme variables), so server-rendered markup and the first paint already match it: there is no flash and nothing to hydrate. To force a scheme:
+
+- `forceColorMode="light"` or `"dark"` on `<SolidFlow>`, for one flow.
+- `data-theme="light"` or `"dark"` on an ancestor such as `<html>`, for the whole page. `forceColorMode` wins over it.
+
+Your own theme variables can follow the scheme the same way:
+
+```css
+.solid-flow {
+  --xy-node-background-color: light-dark(#ffffff, #1f2937);
+}
+```
+
+`light-dark()` is supported in every current browser (Chrome 123, Firefox 120, Safari 17.5 and later).
+
+### Class names
+
+For rules the variables do not cover, the flow's elements carry stable classes (the React Flow / Svelte Flow names with the `solid-flow` prefix):
+
+| Element        | Classes                                                                                                                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Flow container | `.solid-flow`, plus `.light` / `.dark` when a scheme is forced                                                                                                                               |
+| Node           | `.solid-flow__node`, `.solid-flow__node-<type>`, and state classes `.selected`, `.selectable`, `.draggable`, `.dragging`, `.parent`                                                          |
+| Edge           | `.solid-flow__edge`, `.solid-flow__edge-<type>`, `.selected`, `.animated`; the path is `.solid-flow__edge-path`, a label `.solid-flow__edge-label`                                           |
+| Handle         | `.solid-flow__handle`, `.source` / `.target`, `.solid-flow__handle-<position>`, `.connectingfrom` / `.connectingto` during a connection                                                      |
+| Selection box  | `.solid-flow__selection` (inside `.solid-flow__selection-wrapper` for a multi-node selection)                                                                                                |
+| Plugins        | `.solid-flow__controls`, `.solid-flow__controls-button`, `.solid-flow__minimap`, `.solid-flow__background`, `.solid-flow__panel`, `.solid-flow__resize-control`, `.solid-flow__node-toolbar` |
+
+Custom node types get the structural rules only (positioning, cursor, focus): the default theme's border, fill and padding apply to the built-in types, so a custom node looks exactly as its component renders it.
 
 ## Performance
 
@@ -449,6 +523,8 @@ useInternalNode(() => "a");
 **5. `onlyRenderVisibleElements` now does what it says.** In 0.2.x the prop was accepted but inert. In 1.x it opts into unmount culling (off-screen elements are not mounted at all — see [Performance](#performance)), while the CSS culling tier is always on and needs no prop.
 
 **6. Smaller signature changes.** `useNodes()` / `useEdges()` return `readonly` arrays; `useHandleEdgeSelect` is removed (it was internal plumbing — select edges through `commands`).
+
+**7. Styling and theming.** Import `@dschz/solid-flow/style.css` (the old `@dschz/solid-flow/styles` path still works), or `base.css` for the minimal skin; see [Styling](#styling). `colorMode` and `colorModeSSR` are replaced by `forceColorMode`: 0.2.x defaulted to light, 1.x follows the OS, so pass `forceColorMode="light"` to keep the old look, and drop `colorModeSSR` (the server no longer has to guess). `useColorMode` is removed. The library CSS now sits in the `xyflow` cascade layer, so overrides that needed `!important` or extra specificity can lose both. `ResizeControl` is now `NodeResizeControl`, and the renderer internals (`NodeWrapper`, `EdgeWrapper`, `Pane`, `Zoom`, the built-in node components, …) are no longer exported.
 
 ## Examples
 

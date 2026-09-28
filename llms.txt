@@ -14,6 +14,7 @@ import "@dschz/solid-flow/style.css"; // required, import once (base.css: minima
 - NO `onNodesChange` / `onEdgesChange` / `applyNodeChanges` / `applyEdgeChanges` — state is store-based; mutate your store.
 - NO `useReactFlow` — it is `useSolidFlow()`, called INSIDE `<SolidFlow>` (or under `<SolidFlowProvider>`).
 - Events are pointer-named: `onNodePointerEnter`, not `onNodeMouseEnter` (same for edges/pane).
+- NO `colorMode` / `colorModeSSR` / `useColorMode` — the flow follows the OS in CSS; `forceColorMode="light" | "dark"` forces one. Theme with `--xy-*` variables (set `--xy-node-background-color`, not the `-default` one); library CSS is in the `xyflow` cascade layer, so plain app rules override it.
 - Components run once (Solid): no re-renders, no dependency arrays; read reactive values in JSX/computations, not component-body statements.
 - `createOptimisticStore` as `nodes`/`edges` IS supported (optimistic adds render mid-action; flow state survives reverts/reconciles). Draft-then-commit remains the simpler default — see "Saving to a server".
 
