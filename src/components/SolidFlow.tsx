@@ -5,7 +5,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  merge,
   omit,
   onSettled,
   type ParentProps,
@@ -22,7 +21,7 @@ import { typedSolidFlowContext } from "@/contexts/flow";
 import { getDefaultFlowStateProps } from "@/core/defaults";
 import { FLOW_PROP_KEYS, type SolidFlowProps } from "@/core/flowProps";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
-import { isHydrating, toPxString } from "@/utils";
+import { isHydrating, propDefaults, toPxString } from "@/utils";
 
 import { A11yDescriptions } from "./accessibility";
 
@@ -39,24 +38,23 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   const [domNodeRef, setDomNodeRef] = createSignal<HTMLDivElement>();
   let domNode!: HTMLDivElement;
 
-  const _props = merge(
-    {
-      ...getDefaultFlowStateProps(),
-      nodeClickDistance: 0,
-      panOnScroll: false,
-      preventScrolling: true,
-      panOnDrag: true,
-      panOnScrollSpeed: 0.5,
-      panOnScrollMode: "free" as PanOnScrollMode,
-      paneClickDistance: 0,
-      selectionOnDrag: false,
-      translateExtent: infiniteExtent,
-      zoomOnPinch: true,
-      zoomOnDoubleClick: true,
-      zoomOnScroll: true,
-    },
-    props,
-  );
+  // Flow-level defaults skip an explicit `undefined` (see propDefaults):
+  // wrappers forwarding optional props must not clobber them.
+  const _props = propDefaults(props, {
+    ...getDefaultFlowStateProps(),
+    nodeClickDistance: 0,
+    panOnScroll: false,
+    preventScrolling: true,
+    panOnDrag: true,
+    panOnScrollSpeed: 0.5,
+    panOnScrollMode: "free" as PanOnScrollMode,
+    paneClickDistance: 0,
+    selectionOnDrag: false,
+    translateExtent: infiniteExtent,
+    zoomOnPinch: true,
+    zoomOnDoubleClick: true,
+    zoomOnScroll: true,
+  });
 
   const htmlProps = omit(_props, ...FLOW_PROP_KEYS, "children");
 

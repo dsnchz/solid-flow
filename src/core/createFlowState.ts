@@ -35,6 +35,7 @@ import type {
   Node,
   NodeTypes,
 } from "@/types";
+import { propDefaults } from "@/utils";
 
 import { createElementCommands } from "./commands/elements";
 import { createGeometryCommands } from "./commands/geometry";
@@ -132,7 +133,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   props: SolidFlowProps<NodeType, EdgeType>,
   injections: FlowStateInjections = {},
 ) => {
-  const _props = merge(getDefaultFlowStateProps(), props);
+  // Defaults skip an explicit `undefined` (see propDefaults), as the
+  // components do.
+  const _props = propDefaults(props, getDefaultFlowStateProps());
 
   const initialNodeTypes = injections.initialNodeTypes ?? ({} as NodeTypes);
   const initialEdgeTypes = injections.initialEdgeTypes ?? ({} as EdgeTypes);
