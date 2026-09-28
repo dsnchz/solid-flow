@@ -20,7 +20,7 @@ A SolidJS port of [React Flow](https://reactflow.dev/) and [Svelte Flow](https:/
 | `1.x`      | `solid-js` 2.x  | Active development (`next` tag) |
 | `0.2.x`    | `solid-js` 1.9+ | Maintenance (fixes)             |
 
-The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive graph; the stable 1.0.0 ships alongside SolidJS 2.0 stable (until then, install with the `next` tag). Keep `solid-js` and `@solidjs/web` on matching 2.0 versions — mixing them breaks at import time. Upgrading from 0.2.x? See [Migrating from 0.2.x](#migrating-from-02x).
+The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive graph; the stable 1.0.0 ships alongside SolidJS 2.0 stable (until then, install with the `next` tag). Keep `solid-js` and `@solidjs/web` on matching 2.0 versions — mixing them breaks at import time. The 1.x prereleases require `2.0.0-rc.10` or newer: they are built and tested against rc.10, and earlier release candidates lack engine fixes filed from this library. Upgrading from 0.2.x? See [Migrating from 0.2.x](#migrating-from-02x).
 
 ## Key Features
 
