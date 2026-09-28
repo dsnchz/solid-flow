@@ -230,11 +230,18 @@ export const MiniMap = <NodeType extends Node>(
     },
   );
 
-  const boundingRect = createMemo(() => {
-    const view = viewBB();
-    const bounds = graphBounds();
-    return bounds ? getBoundsOfRects(bounds, view) : view;
-  });
+  // Value-equal cut: while the viewport stays inside the graph's bounds,
+  // every pan or zoom recomputes the same union — without it each run was a
+  // fresh object and scale, viewBox and mask re-ran for nothing
+  // (UNSTABLE_MEMO_OUTPUT in the dev runtime).
+  const boundingRect = createMemo(
+    () => {
+      const view = viewBB();
+      const bounds = graphBounds();
+      return bounds ? getBoundsOfRects(bounds, view) : view;
+    },
+    { equals: rectsEqual, name: "boundingRect" },
+  );
 
   const viewScale = createMemo(() =>
     Math.max(boundingRect().width / _props.width, boundingRect().height / _props.height),
