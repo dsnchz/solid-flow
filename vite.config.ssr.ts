@@ -9,15 +9,17 @@ export default defineConfig({
   plugins: [solidPlugin({ solid: { generate: "ssr", hydratable: false } })],
   resolve: {
     // Pin the server builds explicitly for this lane so inlined modules resolve
-    // consistently (see the 1.x lane history: browser-conditioned inlining)
+    // consistently (see the 1.x lane history: browser-conditioned inlining).
+    // The DEV server builds: the runtime's server checks run (a signal written
+    // during a server render is SERVER_WRITE, slated to become an error).
     alias: [
       {
         find: /^@solidjs\/web$/,
-        replacement: path.resolve(__dirname, "node_modules/@solidjs/web/dist/server.js"),
+        replacement: path.resolve(__dirname, "node_modules/@solidjs/web/dist/server.dev.js"),
       },
       {
         find: /^solid-js$/,
-        replacement: path.resolve(__dirname, "node_modules/solid-js/dist/server.js"),
+        replacement: path.resolve(__dirname, "node_modules/solid-js/dist/server.dev.js"),
       },
       { find: "@", replacement: path.resolve(__dirname, "./src") },
     ],
