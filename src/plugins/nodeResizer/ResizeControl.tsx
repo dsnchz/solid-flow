@@ -124,8 +124,9 @@ export const ResizeControl = <NodeType extends Node = Node>(
               const nodeChange = changes.get(node.id);
               if (!nodeChange) continue;
 
-              node.width = nodeChange.width;
-              node.height = nodeChange.height;
+              // Child changes carry only a position: keep their size.
+              if (nodeChange.width !== undefined) node.width = nodeChange.width;
+              if (nodeChange.height !== undefined) node.height = nodeChange.height;
               node.position = {
                 x: nodeChange.position?.x ?? node.position.x,
                 y: nodeChange.position?.y ?? node.position.y,
