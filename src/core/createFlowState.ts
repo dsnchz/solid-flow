@@ -440,6 +440,15 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     () => edgesStore,
     () => selectionOverlay.edges,
   );
+  // Id index over the edges store (a core projection, no write side). The
+  // selected-edges view below resolves rows through it and computes on
+  // creation, so it is declared first: a seeded `selected: true` edge
+  // otherwise reads it before initialization.
+  const edgeLookup = createEdgeLookup<EdgeType>({
+    get edges() {
+      return edgesStore as EdgeType[];
+    },
+  });
   const selectedNodesView = createMemo(
     () =>
       Object.keys(selectedNodeIds)
@@ -695,13 +704,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   });
 
   // Edge-derived indexes (core projections): fully derived from the edges
-  // store — no write side, no GC, no adoption pipeline.
-  const edgeLookup = createEdgeLookup<EdgeType>({
-    get edges() {
-      return store.edges;
-    },
-  });
-
+  // store — no write side, no GC, no adoption pipeline. edgeLookup is
+  // declared above with the selection views that read it.
   const connections = createConnections<EdgeType>({
     get edges() {
       return store.edges;

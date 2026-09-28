@@ -79,6 +79,19 @@ describe("FlowState struct", () => {
     );
   });
 
+  it("starts with the selection the seeded rows declare", async () => {
+    await withFlow(
+      {
+        nodes: [makeNode({ id: "a", selected: true }), makeNode({ id: "b" })],
+        edges: [makeEdge({ id: "e1", source: "a", target: "b", selected: true })],
+      },
+      ({ flow }) => {
+        expect(flow.selection.nodes.map((n) => n.id)).toEqual(["a"]);
+        expect(flow.selection.edges.map((e) => e.id)).toEqual(["e1"]);
+      },
+    );
+  });
+
   it("reflects viewport, initialization, and config fields", async () => {
     await withFlow(
       { nodes: [makeNode({ id: "a" })], edges: [], minZoom: 0.25, maxZoom: 3 },
