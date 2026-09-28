@@ -23,21 +23,30 @@ export const KeyHandler = (props: KeyHandlerProps) => {
 
   // Read-time defaults: `merge` in 2.0 treats an explicitly passed `undefined`
   // as an override, so parents forwarding optional props would clobber these.
+  // Only `undefined` falls back: `null` is the documented "disabled".
   const _props = {
     get selectionKey() {
-      return props.selectionKey ?? "Shift";
+      return props.selectionKey === undefined ? "Shift" : props.selectionKey;
     },
     get multiSelectionKey() {
-      return props.multiSelectionKey ?? (isMacOs() ? "Meta" : "Control");
+      return props.multiSelectionKey === undefined
+        ? isMacOs()
+          ? "Meta"
+          : "Control"
+        : props.multiSelectionKey;
     },
     get deleteKey() {
-      return props.deleteKey ?? "Backspace";
+      return props.deleteKey === undefined ? "Backspace" : props.deleteKey;
     },
     get panActivationKey() {
-      return props.panActivationKey ?? " ";
+      return props.panActivationKey === undefined ? " " : props.panActivationKey;
     },
     get zoomActivationKey() {
-      return props.zoomActivationKey ?? (isMacOs() ? "Meta" : "Control");
+      return props.zoomActivationKey === undefined
+        ? isMacOs()
+          ? "Meta"
+          : "Control"
+        : props.zoomActivationKey;
     },
   };
 

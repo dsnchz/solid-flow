@@ -114,3 +114,63 @@ describe("KeyHandler focus-loss hardening", () => {
     expect(store().selectionKeyPressed).toBe(false);
   });
 });
+
+describe("KeyHandler key props", () => {
+  const renderKeyed = (keys: Record<string, null>) => {
+    let internal!: ReturnType<typeof useInternalSolidFlow>;
+    const Probe = () => {
+      internal = useInternalSolidFlow();
+      return null;
+    };
+    render(() => (
+      <SolidFlow
+        nodes={[{ id: "a", position: { x: 0, y: 0 }, data: {}, selected: true }]}
+        edges={[]}
+        width={800}
+        height={600}
+        {...keys}
+      >
+        <Probe />
+      </SolidFlow>
+    ));
+    return () => internal;
+  };
+
+  const press = (key: string, init: KeyboardEventInit = {}) =>
+    window.dispatchEvent(new KeyboardEvent("keydown", { key, ...init }));
+
+  it("a key set to null is disabled, not replaced by its default", async () => {
+    const flow = renderKeyed({
+      selectionKey: null,
+      multiSelectionKey: null,
+      deleteKey: null,
+      panActivationKey: null,
+      zoomActivationKey: null,
+    });
+    await tick();
+
+    press("Shift", { shiftKey: true });
+    press("Control", { ctrlKey: true });
+    press(" ");
+    press("Backspace");
+    await tick();
+
+    const { store } = flow();
+    expect(store.selectionKeyPressed).toBe(false);
+    expect(store.multiselectionKeyPressed).toBe(false);
+    expect(store.zoomActivationKeyPressed).toBe(false);
+    expect(store.panActivationKeyPressed).toBe(false);
+    expect(store.deleteKeyPressed).toBe(false);
+    expect(store.nodes.map((n) => n.id)).toEqual(["a"]);
+  });
+
+  it("an omitted delete key defaults to Backspace", async () => {
+    const flow = renderKeyed({});
+    await tick();
+
+    press("Backspace");
+    await tick();
+
+    expect(flow().store.nodes).toHaveLength(0);
+  });
+});
