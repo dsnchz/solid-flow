@@ -8,13 +8,10 @@ import { centerOf, drag, expect, nodeById, test } from "./helpers";
 // and measurement, d3 gestures on hydrated elements.
 const SSR = "http://localhost:3020/";
 
-// Dev diagnostics the page may print that are not about SSR: the by-design
-// wide scopes (docs/ARCHITECTURE.md), and two update-pattern findings the
-// drag below triggers — the minimap's `boundingRect` memo returning equal
-// fresh objects, and the drag's final write replacing a node row with a
-// spread copy — tracked as follow-ups. Anything else (a hydration warning, a
-// strict read, an error) fails.
-const ALLOWED_WARNING = /^\[(WIDE_SCOPE_DEPS|UNSTABLE_MEMO_OUTPUT|IMMUTABLE_UPDATE_IN_STORE)\]/;
+// The only dev diagnostics the page may print: the by-design wide scopes
+// (docs/ARCHITECTURE.md). Anything else (a hydration warning, a strict read,
+// an update-pattern finding, an error) fails.
+const ALLOWED_WARNING = /^\[WIDE_SCOPE_DEPS\]/;
 
 test.describe("server-rendered flow", () => {
   test("the server sends the whole flow as markup", async ({ request }) => {
