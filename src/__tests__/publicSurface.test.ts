@@ -65,6 +65,7 @@ const PUBLIC_RUNTIME_EXPORTS = [
   "useNodes",
   "useNodesData",
   "useNodesInitialized",
+  "useOnSelectionChange",
   "useSelectedEdges",
   "useSelectedNodes",
   "useSolidFlow",

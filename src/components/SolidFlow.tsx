@@ -3,7 +3,6 @@ import { isServer } from "@solidjs/web";
 import { infiniteExtent } from "@xyflow/system";
 import {
   createEffect,
-  createMemo,
   createSignal,
   omit,
   onSettled,
@@ -20,6 +19,7 @@ import { Attribution, KeyHandler } from "@/components/utility";
 import { typedSolidFlowContext } from "@/contexts/flow";
 import { getDefaultFlowStateProps } from "@/core/defaults";
 import { FLOW_PROP_KEYS, type SolidFlowProps } from "@/core/flowProps";
+import { createSelectionChange } from "@/core/selectionChange";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
 import { isHydrating, propDefaults, toPxString } from "@/utils";
 
@@ -105,16 +105,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   );
 
   // Fires only when the set of selected ids changes, not on unrelated node/edge updates
-  const selectedElements = createMemo(
-    () => ({ nodes: store.selectedNodes, edges: store.selectedEdges }),
-    {
-      equals: (a, b) =>
-        a.nodes.length === b.nodes.length &&
-        a.edges.length === b.edges.length &&
-        a.nodes.every((node, i) => node.id === b.nodes[i]!.id) &&
-        a.edges.every((edge, i) => edge.id === b.edges[i]!.id),
-    },
-  );
 
   // Any viewport change, programmatic included (React Flow onViewportChange
   // parity) — onMove and friends stay gesture-only.
@@ -125,11 +115,9 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     },
   );
 
-  createEffect(
-    () => selectedElements(),
-    (params) => {
-      untrack(() => _props.onSelectionChange)?.(params);
-    },
+  createSelectionChange(
+    () => ({ nodes: store.selectedNodes, edges: store.selectedEdges }),
+    (params) => untrack(() => _props.onSelectionChange)?.(params),
   );
 
   // Async-seed guard, rendered as a dynamic insert (returns null, shows

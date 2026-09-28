@@ -6,6 +6,7 @@ export * from "./useInternalNode";
 export * from "./useKeyPress";
 export * from "./useNodeConnections";
 export * from "./useNodesData";
+export * from "./useOnSelectionChange";
 export * from "./useSolidFlow";
 export * from "./useUpdateNodeInternals";
 
