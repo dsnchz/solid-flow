@@ -1,7 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import type {
   AriaLabelConfig,
-  ColorModeClass,
   CoordinateExtent,
   NodeOrigin,
   OnConnectEnd,
@@ -48,7 +47,7 @@ import type {
   PanOnScrollMode,
   SelectionMode,
 } from "@/types";
-import type { ProOptions } from "@/types/system";
+import type { ColorMode, ProOptions } from "@/types/system";
 
 /** Initial (uncontrolled) values used to seed a flow before the first measure/fit. */
 export type SolidFlowInitialProps = {
@@ -473,7 +472,7 @@ export type SolidFlowRenderingProps = {
    * attribute on an ancestor forces it page-wide; this prop wins over it.
    * @example 'light' | 'dark'
    */
-  readonly forceColorMode?: ColorModeClass;
+  readonly forceColorMode?: ColorMode;
   /** Class to be applied to the flow container */
   readonly class?: string;
   /** Styles to be applied to the flow container */

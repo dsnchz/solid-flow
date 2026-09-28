@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Node } from "@/types";
-import type { ColorModeClass } from "@/types/system";
+import type { ColorMode } from "@/types/system";
 
 const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -22,7 +22,7 @@ describe("forceColorMode", () => {
   });
 
   it("marks the forced scheme and follows changes to it", async () => {
-    const [mode, setMode] = createSignal<ColorModeClass | undefined>("dark");
+    const [mode, setMode] = createSignal<ColorMode | undefined>("dark");
     const { getByTestId } = render(() => (
       <SolidFlow nodes={nodes} width={800} height={600} forceColorMode={mode()} />
     ));
