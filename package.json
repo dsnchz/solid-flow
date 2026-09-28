@@ -50,7 +50,9 @@
     "llms.txt"
   ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css"
+  ],
   "main": "./dist/index/index.js",
   "module": "./dist/index/index.js",
   "types": "./dist/index/index.d.ts",
