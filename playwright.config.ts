@@ -33,10 +33,20 @@ export default defineConfig({
     trace: process.env.BENCH ? "off" : "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: "bun start -- --port 3010 --strictPort",
-    url: "http://localhost:3010",
-    reuseExistingServer: true,
-    stdout: "ignore",
-  },
+  webServer: [
+    {
+      command: "bun start -- --port 3010 --strictPort",
+      url: "http://localhost:3010",
+      reuseExistingServer: true,
+      stdout: "ignore",
+    },
+    {
+      // The SSR smoke app (e2e/ssr.spec.ts): @solidjs/vite-plugin start mode,
+      // `ssr: true` — server-rendered pages hydrated by the client entry.
+      command: "bunx vite --config e2e/ssr/vite.config.ts",
+      url: "http://localhost:3020/@vite/client",
+      reuseExistingServer: true,
+      stdout: "ignore",
+    },
+  ],
 });
