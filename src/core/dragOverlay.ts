@@ -18,7 +18,8 @@ import type { XYPosition } from "@xyflow/system";
  */
 export type DragOverlayEntry = {
   readonly position: XYPosition;
-  readonly dragging: boolean;
+  /** Written in place when a gesture starts or ends (no entry replacement). */
+  dragging: boolean;
   readonly rowBefore: XYPosition;
   /** Row proxy captured at write time — see SelectionOverlayEntry.row. */
   readonly row: { readonly position: XYPosition };

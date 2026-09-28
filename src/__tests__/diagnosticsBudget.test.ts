@@ -69,24 +69,7 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
   afterAll(() => dispose());
 
   it("a drag frame re-runs only the moved node's scopes", async () => {
-    const frame = (x: number) => {
-      flow.actions.updateNodePositions(
-        new Map([
-          [
-            "n5",
-            {
-              id: "n5",
-              position: { x, y: x },
-              distance: { x: 0, y: 0 },
-              internals: { positionAbsolute: { x, y: x } },
-              measured: { width: 50, height: 20 },
-            },
-          ],
-        ]),
-        true,
-      );
-      flush();
-    };
+    const frame = (x: number) => dragWrite(x, true);
     // The FIRST frame of a drag adds the `dragging` key to the user row,
     // which the row's key-set memo absorbs (one extra scope, once per drag);
     // the budget pins the steady-state frame.
@@ -98,6 +81,39 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
     expectOnlyByDesignDiagnostics(artifact);
     expectRerunBudget(artifact, 4);
   });
+
+  it("ending a drag writes the overlay entry in place", async () => {
+    // The drag's last write flips `dragging`: it must write the entry's
+    // leaves like every frame does, not replace the entry with a spread-like
+    // copy (IMMUTABLE_UPDATE_IN_STORE — every reader of the entry re-ran for
+    // the two leaves that moved; seen on the SSR smoke page).
+    dragWrite(700, true);
+    dragWrite(701, true);
+    const { artifact } = await captureArtifact(() => dragWrite(702, false), {
+      scenario: "drag-end",
+      attribution: ATTRIBUTION,
+    });
+    expectOnlyByDesignDiagnostics(artifact);
+  });
+
+  const dragWrite = (x: number, dragging: boolean) => {
+    flow.actions.updateNodePositions(
+      new Map([
+        [
+          "n5",
+          {
+            id: "n5",
+            position: { x, y: x },
+            distance: { x: 0, y: 0 },
+            internals: { positionAbsolute: { x, y: x } },
+            measured: { width: 50, height: 20 },
+          },
+        ],
+      ]),
+      dragging,
+    );
+    flush();
+  };
 
   it("selecting a node re-runs a bounded set of scopes", async () => {
     const { artifact } = await captureArtifact(

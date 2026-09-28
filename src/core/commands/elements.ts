@@ -116,18 +116,22 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
       setDragOverlay((draft) => {
         for (const { id, position, rowBefore, row } of writes) {
           const entry = draft[id];
-          if (entry !== undefined && entry.dragging === dragging) {
-            // Per-frame path: two leaf writes into the entry's own position
-            // object, not a replaced entry (the engine's
-            // IMMUTABLE_UPDATE_IN_STORE diagnostic; bench round 41).
+          if (entry !== undefined) {
+            // Leaf writes into the entry, on every frame AND on the frame
+            // that flips `dragging` (gesture start over an unreleased entry,
+            // gesture end): a replaced entry re-runs every reader for the two
+            // leaves that moved (the engine's IMMUTABLE_UPDATE_IN_STORE
+            // diagnostic; bench round 41, the drag end found on the SSR
+            // smoke page). `rowBefore` and the captured `row` carry over.
             const entryPosition = entry.position;
             entryPosition.x = position.x;
             entryPosition.y = position.y;
+            if (entry.dragging !== dragging) entry.dragging = dragging;
           } else {
             draft[id] = {
               position: { x: position.x, y: position.y },
               dragging,
-              rowBefore: entry?.rowBefore ?? rowBefore,
+              rowBefore,
               row,
             };
           }
