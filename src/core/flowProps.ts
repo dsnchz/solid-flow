@@ -356,9 +356,9 @@ export type SolidFlowInteractionProps<NodeType extends Node = Node> = {
    */
   readonly isNodeSelectable?: IsNodeSelectable<NodeType>;
   /**
-   * When set to "partial", when the user creates a selection box by click and dragging
-   * nodes that are only partially in the box are still selected.
-   * @default 'full'
+   * With "partial", a selection box also selects nodes that are only partly
+   * inside it; with "full", only nodes entirely inside it.
+   * @default 'partial'
    */
   readonly selectionMode?: SelectionMode;
   /**
