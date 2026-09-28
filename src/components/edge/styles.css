@@ -9,21 +9,15 @@
   pointer-events: all;
 }
 
-.solid-flow__edgelabel-renderer {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  user-select: none;
-  left: 0;
-  top: 0;
-  z-index: 0;
-}
-
 .solid-flow__edge-label {
   text-align: center;
   position: absolute;
   cursor: pointer;
+}
+
+/* <EdgeLabel transparent> */
+.solid-flow__edge-label.transparent {
+  background: transparent;
 }
 
 .solid-flow__edge-path {
@@ -83,14 +77,5 @@
   &.selectable:focus .solid-flow__edge-path,
   &.selectable:focus-visible .solid-flow__edge-path {
     stroke: var(--xy-edge-stroke-selected, var(--xy-edge-stroke-selected-default));
-  }
-
-  &.textwrapper {
-    pointer-events: all;
-  }
-
-  &.text {
-    pointer-events: none;
-    user-select: none;
   }
 }

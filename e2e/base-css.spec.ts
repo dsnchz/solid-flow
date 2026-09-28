@@ -41,5 +41,11 @@ test.describe("base.css", () => {
       "border-top-left-radius",
       "100%",
     );
+
+    // selection shows as the box shadow; the border stays (upstream
+    // style.css: the selected border is base.css's)
+    await node.click();
+    await expect(node).toHaveCSS("box-shadow", "rgb(26, 25, 43) 0px 0px 0px 0.5px");
+    await expect(node).toHaveCSS("border-top", "1px solid rgb(26, 25, 43)");
   });
 });

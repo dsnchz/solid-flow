@@ -3,17 +3,17 @@
   --xy-background-pattern-dots-color-default: light-dark(#91919a, #555);
   --xy-background-pattern-lines-color-default: light-dark(#eee, #333);
   --xy-background-pattern-cross-color-default: light-dark(#e2e2e2, #333);
-  --background-color-default: #fff;
-  --background-pattern-color-default: #ddd;
 }
 
 .solid-flow__background {
   pointer-events: none;
   z-index: -1;
 
+  /* A Background's own color (the bgColor prop) wins over the app-wide
+     variable. */
   background-color: var(
-    --xy-background-color,
-    var(--xy-background-color-props, var(--xy-background-color-default))
+    --xy-background-color-props,
+    var(--xy-background-color, var(--xy-background-color-default))
   );
 }
 

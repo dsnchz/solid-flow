@@ -14,6 +14,8 @@
 
 .solid-flow__pane {
   z-index: 1;
+  /* Touch drags pan and box-select the flow instead of scrolling the page. */
+  touch-action: none;
 
   &.draggable {
     cursor: grab;
@@ -57,9 +59,22 @@
     right: 0;
   }
 
-  &.center {
-    left: 50%;
-    transform: translateX(-50%);
+  /* A centered panel keeps its 15px margin on the centered axis too, so the
+     translate takes it back out. */
+  &.top,
+  &.bottom {
+    &.center {
+      left: 50%;
+      transform: translateX(-15px) translateX(-50%);
+    }
+  }
+
+  &.left,
+  &.right {
+    &.center {
+      top: 50%;
+      transform: translateY(-15px) translateY(-50%);
+    }
   }
 }
 

@@ -27,12 +27,14 @@
 }
 
 .solid-flow__resize-control.handle {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border: 1px solid #fff;
   border-radius: 1px;
   background-color: var(--xy-resize-background-color, var(--xy-resize-background-color-default));
-  transform: translate(-50%, -50%);
+  /* `translate`, not `transform`: autoScale sets `scale` inline, and the
+     scale must apply around the centered handle, not before the shift. */
+  translate: -50% -50%;
 
   &.left {
     left: 0;

@@ -15,8 +15,6 @@
   --xy-node-boxshadow-selected-default: 0 0 0 0.5px light-dark(#1a192b, #999);
   --xy-node-border-radius-default: 3px;
 
-  --xy-node-border-selected-default: 1px solid #555;
-
   --xy-handle-background-color-default: light-dark(#1a192b, #bebebe);
   --xy-handle-border-color-default: light-dark(#fff, #1e1e1e);
 
@@ -44,10 +42,6 @@
       stroke: #777;
     }
   }
-
-  &.text {
-    font-size: 10px;
-  }
 }
 
 .solid-flow__edge-label {
@@ -55,6 +49,13 @@
   font-size: 10px;
   color: var(--xy-edge-label-color, var(--xy-edge-label-color-default));
   background: var(--xy-edge-label-background-color, var(--xy-edge-label-background-color-default));
+}
+
+.solid-flow__node.selectable {
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .solid-flow__node-input,
@@ -79,8 +80,6 @@
     &:focus,
     &:focus-visible {
       box-shadow: var(--xy-node-boxshadow-selected, var(--xy-node-boxshadow-selected-default));
-      border: var(--xy-node-border-selected, var(--xy-node-border-selected-default));
-      outline: none;
     }
   }
 }
@@ -112,50 +111,63 @@
 
 .solid-flow__controls {
   box-shadow: var(--xy-controls-box-shadow, var(--xy-controls-box-shadow-default));
+}
 
-  button {
-    cursor: pointer;
-    user-select: none;
-    border: none;
+.solid-flow__controls-button {
+  cursor: pointer;
+  user-select: none;
+  border: none;
 
+  background: var(
+    --xy-controls-button-background-color,
+    var(--xy-controls-button-background-color-default)
+  );
+  border-bottom: 1px solid
+    var(
+      --xy-controls-button-border-color-props,
+      var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default))
+    );
+  color: var(
+    --xy-controls-button-color-props,
+    var(--xy-controls-button-color, var(--xy-controls-button-color-default))
+  );
+
+  &:hover {
     background: var(
-      --xy-controls-button-background-color,
-      var(--xy-controls-button-background-color-default)
-    );
-    border-bottom: 1px solid
+      --xy-controls-button-background-color-hover-props,
       var(
-        --xy-controls-button-border-color-props,
-        var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default))
-      );
-    color: var(
-      --xy-controls-button-color-props,
-      var(--xy-controls-button-color, var(--xy-controls-button-color-default))
+        --xy-controls-button-background-color-hover,
+        var(--xy-controls-button-background-color-hover-default)
+      )
     );
+    color: var(
+      --xy-controls-button-color-hover-props,
+      var(--xy-controls-button-color-hover, var(--xy-controls-button-color-hover-default))
+    );
+  }
 
-    &:hover {
-      background: var(
-        --xy-controls-button-background-color-hover-props,
-        var(
-          --xy-controls-button-background-color-hover,
-          var(--xy-controls-button-background-color-hover-default)
-        )
-      );
-      color: var(
-        --xy-controls-button-color-hover-props,
-        var(--xy-controls-button-color-hover, var(--xy-controls-button-color-hover-default))
-      );
-    }
+  &:disabled {
+    pointer-events: none;
 
-    &:disabled {
-      pointer-events: none;
-
-      svg {
-        fill-opacity: 0.4;
-      }
+    svg {
+      fill-opacity: 0.4;
     }
   }
 
-  button:last-child {
+  &:last-child {
     border-bottom: none;
+  }
+}
+
+.solid-flow__controls.horizontal .solid-flow__controls-button {
+  border-bottom: none;
+  border-right: 1px solid
+    var(
+      --xy-controls-button-border-color-props,
+      var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default))
+    );
+
+  &:last-child {
+    border-right: none;
   }
 }

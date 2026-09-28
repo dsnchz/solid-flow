@@ -4,6 +4,11 @@
   left: 0;
   z-index: 2000;
   pointer-events: all;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .solid-flow__selection {
