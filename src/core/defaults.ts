@@ -30,6 +30,7 @@ export const getDefaultFlowStateProps = () =>
     connectionMode: "strict" as ConnectionMode,
     connectionLineType: "default" as ConnectionLineType,
     connectionRadius: 20,
+    clickConnect: true,
     nodeDragThreshold: 1,
     minZoom: 0.5,
     maxZoom: 2,

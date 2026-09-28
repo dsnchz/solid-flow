@@ -270,6 +270,16 @@ describe("<Handle /> click-to-connect", () => {
     ).toEqual(["xy-edge__a-b"]);
   });
 
+  it("is on by default (React Flow `connectOnClick` / Svelte Flow `clickConnect` parity)", async () => {
+    const { container } = render(() => (
+      <SolidFlow nodes={nodes()} defaultEdges={[]} width={800} height={600} />
+    ));
+    await tick();
+    fireEvent.click(handle(container, "a", "source"));
+    flush();
+    expect(armed(container)).toBe(true);
+  });
+
   it("follows `clickConnect` turned on after mount", async () => {
     const [clickConnect, setClickConnect] = createSignal(false);
     const { container } = render(() => (

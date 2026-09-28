@@ -425,7 +425,11 @@ export type SolidFlowConnectionProps<NodeType extends Node = Node, EdgeType exte
    * @example "default" | "straight" | "step" | "smoothstep" | "simplebezier"
    */
   readonly connectionLineType?: ConnectionLineType;
-  /** Toggles ability to make connections via clicking the handles */
+  /**
+   * Toggles ability to make connections via clicking the handles: a click on
+   * one handle arms the connection, a click on a compatible handle completes it.
+   * @default true
+   */
   readonly clickConnect?: boolean;
   /**
    * You can enable this prop to automatically pan the viewport while making a new connection.
