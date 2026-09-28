@@ -75,29 +75,4 @@ export default defineConfig(
       ],
     },
   },
-  {
-    files: ["server/**/*.ts"],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        sourceType: "module",
-        project: "./tsconfig.json",
-      },
-      globals: {
-        Bun: true,
-      },
-    },
-    rules: {
-      "@typescript-eslint/no-non-null-assertion": "off",
-    },
-  },
-  {
-    files: ["__tests__/**/*.ts", "__tests__/**/*.tsx"],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-        ...globals.vitest,
-      },
-    },
-  },
 );
