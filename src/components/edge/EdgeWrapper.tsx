@@ -83,10 +83,13 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   // The runtime does not delegate pointerenter/pointerleave, and dblclick is
   // attached directly: wired only when the flow passes the callback (see
   // NodeWrapper), or they are three listeners per edge for nobody.
+  // pointermove likewise, directly and on demand: a delegated pointermove
+  // makes every move of every drag walk Solid's dispatcher (bench round 53).
   const mountElement = (el: SVGGElement) => {
     if (props.onEdgeDoubleClick) createEventListener(el, "dblclick", onDblClick);
     if (props.onEdgePointerEnter) createEventListener(el, "pointerenter", onPointerEnter);
     if (props.onEdgePointerLeave) createEventListener(el, "pointerleave", onPointerLeave);
+    if (props.onEdgePointerMove) createEventListener(el, "pointermove", onPointerMove);
     // Direct spread for user domAttributes, installed on demand — see NodeWrapper.
     spreadOnDemand(el, () => edge()?.domAttributes);
   };
@@ -147,7 +150,6 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
           onClick={onClick}
           onKeyDown={(e) => focusable() && onKeyDown(e)}
           onContextMenu={onContextMenu}
-          onPointerMove={onPointerMove}
         >
           <EdgeComponent
             id={edge().id}

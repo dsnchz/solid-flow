@@ -387,6 +387,15 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     { capture: true },
   );
 
+  // Direct, not the JSX `onPointerMove`: a delegated pointermove makes every
+  // move of every drag (node, pan, connection) walk Solid's dispatcher from
+  // the pointer to the root, ~45 us of a ~470 us drag move at 10k (bench
+  // rounds 49 and 53). Moves over nodes and edges still bubble here.
+  createEventListener(containerRef, "pointermove", (e) => {
+    props.onPanePointerMove?.({ event: e });
+    if (isSelectionEnabled()) onPointerMove(e);
+  });
+
   const onContextMenu = (event: PointerEvent) => {
     if (event.target !== container) return;
 
@@ -420,10 +429,6 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
         },
       ]}
       onClick={(e) => (isSelectionEnabled() ? undefined : onClick(e))}
-      onPointerMove={(e) => {
-        props.onPanePointerMove?.({ event: e });
-        if (isSelectionEnabled()) onPointerMove(e);
-      }}
       onPointerUp={onPointerUp}
       onPointerCancel={(e) => (isSelectionEnabled() ? onPointerCancel(e) : undefined)}
       onContextMenu={onContextMenu}

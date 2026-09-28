@@ -48,7 +48,25 @@ describe("per-node listeners", () => {
     await tick();
     expect(nodeListeners("pointerenter")).toBe(0);
     expect(nodeListeners("pointerleave")).toBe(0);
+    expect(nodeListeners("pointermove")).toBe(0);
     expect(nodeListeners("focus")).toBe(0);
+  });
+
+  it("attaches pointermove only when onNodePointerMove is passed, and it fires with the node", async () => {
+    const moves: string[] = [];
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={[makeNode("a", 0)]}
+        edges={[]}
+        width={800}
+        height={600}
+        onNodePointerMove={({ node, event }) => moves.push(`${event.type}:${node.id}`)}
+      />
+    ));
+    await tick();
+    expect(nodeListeners("pointermove")).toBe(1);
+    fireEvent.pointerMove(container.querySelector('.solid-flow__node[data-id="a"]')!);
+    expect(moves).toEqual(["pointermove:a"]);
   });
 
   it("attaches the pointer pair when onNodePointerEnter/Leave are passed, and they fire", async () => {
@@ -92,5 +110,40 @@ describe("per-node listeners", () => {
     expect(nodeListeners("dblclick")).toBe(1);
     fireEvent.dblClick(container.querySelector('.solid-flow__node[data-id="b"]')!);
     expect(events).toEqual(["dblclick:b"]);
+  });
+});
+
+/**
+ * A pointer move is the one event a drag fires per frame. Solid delegates
+ * `pointermove` to the render root once any module registers it, and the
+ * delegated dispatch then walks every ancestor of the pointer on every move
+ * (composedPath, per-ancestor handler and `_bnd` probes, three
+ * defineProperty calls): ~45 us of a ~470 us drag move at 10k (bench round
+ * 49). The library registers none: the pane listens directly (box selection,
+ * onPanePointerMove), and rows attach one only for a user callback.
+ */
+describe("pointermove", () => {
+  const spy = vi.spyOn(EventTarget.prototype, "addEventListener");
+  afterEach(() => spy.mockClear());
+
+  it("a flow without row pointer-move callbacks has exactly one pointermove listener: the pane's", async () => {
+    render(() => (
+      <SolidFlow
+        defaultNodes={[makeNode("a", 0), makeNode("b", 300)]}
+        defaultEdges={[{ id: "e1", source: "a", target: "b" }]}
+        width={800}
+        height={600}
+      />
+    ));
+    await tick();
+    const targets = spy.mock.calls
+      .map(([type], i) => (type === "pointermove" ? spy.mock.instances[i] : undefined))
+      .filter((target) => target !== undefined)
+      .map((target) =>
+        target instanceof Element
+          ? (target.getAttribute("class") ?? target.tagName)
+          : String(target),
+      );
+    expect(targets).toEqual([expect.stringContaining("solid-flow__pane")]);
   });
 });

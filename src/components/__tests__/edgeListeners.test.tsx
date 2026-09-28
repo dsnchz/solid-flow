@@ -47,6 +47,24 @@ describe("per-edge listeners", () => {
     expect(edgeListeners("pointerenter")).toBe(0);
     expect(edgeListeners("pointerleave")).toBe(0);
     expect(edgeListeners("dblclick")).toBe(0);
+    expect(edgeListeners("pointermove")).toBe(0);
+  });
+
+  it("attaches pointermove only when onEdgePointerMove is passed, and it fires with the edge", async () => {
+    const moves: string[] = [];
+    const { container } = render(() => (
+      <SolidFlow
+        defaultNodes={[makeNode("a", 0), makeNode("b", 300)]}
+        defaultEdges={[{ id: "e1", source: "a", target: "b" }]}
+        width={800}
+        height={600}
+        onEdgePointerMove={({ edge, event }) => moves.push(`${event.type}:${edge.id}`)}
+      />
+    ));
+    await tick();
+    expect(edgeListeners("pointermove")).toBe(1);
+    fireEvent.pointerMove(container.querySelector('.solid-flow__edge[data-id="e1"]')!);
+    expect(moves).toEqual(["pointermove:e1"]);
   });
 
   it("attaches them when the callbacks are passed, and they fire", async () => {

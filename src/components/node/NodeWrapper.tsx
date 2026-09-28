@@ -204,8 +204,16 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     // and the compiler attaches a listener even for an undefined handler:
     // attached here only when the flow passes the callback, so the common
     // case pays no listener per node (head-to-head round 1: 8 per node vs
-    // 5/4). pointermove, contextmenu, keydown, click and focusin are
-    // delegated by the runtime.
+    // 5/4). `pointermove` is attached here too, directly and on demand: a
+    // delegated pointermove makes every move of every drag walk Solid's
+    // dispatcher from the pointer to the root (~45 us of a ~470 us move at
+    // 10k, bench rounds 49 and 53). contextmenu, keydown, click and focusin
+    // are delegated by the runtime.
+    if (props.onNodePointerMove) {
+      createEventListener(el, "pointermove", (event) =>
+        props.onNodePointerMove?.({ node: userNode(), event }),
+      );
+    }
     if (props.onNodePointerEnter) {
       createEventListener(el, "pointerenter", (event) =>
         props.onNodePointerEnter?.({ node: userNode(), event }),
@@ -342,7 +350,6 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       )}
       style={style()}
       onClick={onSelectNodeHandler}
-      onPointerMove={(event) => props.onNodePointerMove?.({ node: userNode(), event })}
       onContextMenu={(event) => props.onNodeContextMenu?.({ node: userNode(), event })}
       onKeyDown={(e) => focusable() && onKeyDown(e)}
       // Delegated focusin (React's onFocus bubbles the same way); onFocus guards
