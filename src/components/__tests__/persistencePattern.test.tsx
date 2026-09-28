@@ -1,6 +1,5 @@
 import { render } from "@solidjs/testing-library";
-import { Loading } from "@solidjs/web";
-import { action, createStore, refresh } from "solid-js";
+import { action, createStore, Loading, refresh } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { useSolidFlow } from "@/hooks/useSolidFlow";

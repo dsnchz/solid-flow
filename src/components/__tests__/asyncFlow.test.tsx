@@ -1,5 +1,5 @@
 import { render } from "@solidjs/testing-library";
-import { Loading } from "@solidjs/web";
+import { Loading } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { createEdgeStore, createNodeStore } from "@/core";

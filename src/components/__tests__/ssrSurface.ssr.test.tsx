@@ -1,5 +1,6 @@
-import { Loading, renderToString } from "@solidjs/web";
+import { renderToString } from "@solidjs/web";
 import { Position } from "@xyflow/system";
+import { Loading } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { createNodeStore } from "@/core";

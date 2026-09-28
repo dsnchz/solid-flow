@@ -1,5 +1,5 @@
 import { render } from "@solidjs/testing-library";
-import { Loading } from "@solidjs/web";
+import { Loading } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createNodeStore } from "@/core";
