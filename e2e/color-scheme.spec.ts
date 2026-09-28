@@ -83,4 +83,32 @@ test.describe("color scheme", () => {
     await page.emulateMedia({ colorScheme: "light" });
     await expect(label).toHaveCSS("background-color", "rgb(255, 255, 255)");
   });
+
+  test("background patterns use the dark pattern colors", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await gotoExample(page, "Edges");
+    // One pattern element per variant under the (dark) flow: the rules, not
+    // the Background component, are under test.
+    const colors = await page.evaluate(() => {
+      const flow = document.querySelector(".solid-flow")!;
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      flow.append(svg);
+      const read = (variant: string, property: "fill" | "stroke") => {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        el.setAttribute("class", `solid-flow__background-pattern ${variant}`);
+        svg.append(el);
+        return getComputedStyle(el)[property];
+      };
+      return {
+        dots: read("dots", "fill"),
+        lines: read("lines", "stroke"),
+        cross: read("cross", "stroke"),
+      };
+    });
+    expect(colors).toEqual({
+      dots: "rgb(85, 85, 85)",
+      lines: "rgb(51, 51, 51)",
+      cross: "rgb(51, 51, 51)",
+    });
+  });
 });
