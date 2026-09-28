@@ -13,7 +13,7 @@ import {
   type Optional,
   XYHandle,
 } from "@xyflow/system";
-import { createEffect, getOwner, type ParentProps, snapshot } from "solid-js";
+import { createEffect, getOwner, type ParentProps, snapshot, untrack } from "solid-js";
 
 import {
   armConnectionGestureLookup,
@@ -117,7 +117,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   // costs ~5 µs per handle at mount, and the stress grid has 20,000 handles
   // with neither callback (mount profile round 30). The check is made once
   // at mount — pass the callbacks up front, as with any other listener.
-  if (props.onConnect || props.onDisconnect)
+  if (untrack(() => props.onConnect || props.onDisconnect))
     createEffect(
       () => {
         const rec = connections[connectionKey(nodeId(), type(), props.id)];

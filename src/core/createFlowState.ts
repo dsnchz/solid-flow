@@ -261,16 +261,20 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // pass through reactively, so tracked scopes subscribe as before.
   const nodeLookup = new RecordMapFacade<InternalNode<NodeType>>(internalNodes);
 
-  const initialViewport = getInitialViewport(
-    _props.fitView,
-    _props.initialViewport,
-    _props.width ?? 0,
-    _props.height ?? 0,
-    nodeLookup,
+  // Seed values, read once at setup: a controlled `viewport` changes later
+  // through the effect below.
+  const initialViewport = untrack(() =>
+    getInitialViewport(
+      _props.fitView,
+      _props.initialViewport,
+      _props.width ?? 0,
+      _props.height ?? 0,
+      nodeLookup,
+    ),
   );
 
   const [viewportStore, setViewportStore] = createStore<Viewport>(
-    _props.viewport ?? initialViewport,
+    untrack(() => _props.viewport) ?? initialViewport,
   );
 
   // A controlled viewport prop resets the store; when absent, hold the current value
