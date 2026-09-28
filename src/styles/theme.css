@@ -118,9 +118,11 @@
   user-select: none;
   border: none;
 
+  /* The ControlButton props variable first, as every other -props chain
+     (upstream reads it only for the hover state, so bgColor was ignored). */
   background: var(
-    --xy-controls-button-background-color,
-    var(--xy-controls-button-background-color-default)
+    --xy-controls-button-background-color-props,
+    var(--xy-controls-button-background-color, var(--xy-controls-button-background-color-default))
   );
   border-bottom: 1px solid
     var(

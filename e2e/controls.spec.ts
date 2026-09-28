@@ -33,3 +33,13 @@ test("only control buttons get the control-button styles", async ({ page }) => {
   expect(plain.display).not.toBe("flex");
   await expect(page.locator(".solid-flow__controls-button").first()).toHaveCSS("width", "26px");
 });
+
+test("<ControlButton bgColor> sets the button background", async ({ page }) => {
+  await gotoExample(page, "QuickStart");
+  const button = page.locator(".solid-flow__controls-button").first();
+  // what <ControlButton bgColor="…"> sets on its button
+  await button.evaluate((el) =>
+    el.style.setProperty("--xy-controls-button-background-color-props", "rgb(1, 2, 3)"),
+  );
+  await expect(button).toHaveCSS("background-color", "rgb(1, 2, 3)");
+});
