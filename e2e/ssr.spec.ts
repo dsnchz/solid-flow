@@ -8,10 +8,21 @@ import { centerOf, drag, expect, nodeById, test } from "./helpers";
 // and measurement, d3 gestures on hydrated elements.
 const SSR = "http://localhost:3020/";
 
-// The only dev diagnostics the page may print: the by-design wide scopes
-// (docs/ARCHITECTURE.md). Anything else (a hydration warning, a strict read,
-// an update-pattern finding, an error) fails.
-const ALLOWED_WARNING = /^\[WIDE_SCOPE_DEPS\]/;
+// The only dev diagnostics the page may print (docs/ARCHITECTURE.md): the
+// by-design wide scopes, and the two machine-speed findings the drag below
+// can trip on a slow runner: WASTED_RECOMPUTE on the row projections and the
+// on-screen sweep memos (computes whose work is their writes and whose value
+// is `undefined`, which the diagnostic always counts as unchanged:
+// solidjs/solid#3715), and HOT_SCOPE_TIME on the row projections (the
+// per-move row work crossing its time budget). Anything else (a hydration
+// warning, a strict read, another scope, an error) fails.
+const ALLOWED_WARNING = new RegExp(
+  [
+    String.raw`^\[WIDE_SCOPE_DEPS\]`,
+    String.raw`^\[(WASTED_RECOMPUTE|HOT_SCOPE_TIME)\] memo "(internalNodes|layoutedEdges)\.row"`,
+    String.raw`^\[WASTED_RECOMPUTE\] memo "onScreen(Node|Edge)Ids"`,
+  ].join("|"),
+);
 
 test.describe("server-rendered flow", () => {
   test("the server sends the whole flow as markup", async ({ request }) => {
