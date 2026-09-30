@@ -101,12 +101,12 @@
     "@dagrejs/dagre": "3.1.1",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
-    "@solidjs/compiler": "2.0.0-rc.11",
-    "@solidjs/diagnostics": "2.0.0-rc.11",
-    "@solidjs/signals": "2.0.0-rc.11",
+    "@solidjs/compiler": "2.0.0-rc.13",
+    "@solidjs/diagnostics": "2.0.0-rc.13",
+    "@solidjs/signals": "2.0.0-rc.13",
     "@solidjs/testing-library": "1.0.0-beta.3",
-    "@solidjs/vite-plugin": "3.0.0-next.46",
-    "@solidjs/web": "2.0.0-rc.11",
+    "@solidjs/vite-plugin": "3.0.0-next.47",
+    "@solidjs/web": "2.0.0-rc.13",
     "@testing-library/jest-dom": "7.0.1",
     "@types/bun": "1.4.2",
     "@typescript-eslint/eslint-plugin": "8.70.1",
@@ -121,7 +121,7 @@
     "jiti": "2.7.0",
     "jsdom": "30.1.1",
     "oxfmt": "0.70.0",
-    "solid-js": "2.0.0-rc.11",
+    "solid-js": "2.0.0-rc.13",
     "tsdown": "0.23.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",
@@ -129,7 +129,7 @@
     "vitest": "5.0.2"
   },
   "peerDependencies": {
-    "@solidjs/web": "^2.0.0-rc.10",
-    "solid-js": "^2.0.0-rc.10"
+    "@solidjs/web": "^2.0.0-rc.13",
+    "solid-js": "^2.0.0-rc.13"
   }
 }

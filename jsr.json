@@ -7,9 +7,9 @@
     "@/": "./src/",
     "@solid-primitives/event-listener": "npm:@solid-primitives/event-listener@3.0.0-next.5",
     "@xyflow/system": "npm:@xyflow/system@0.0.83",
-    "solid-js": "npm:solid-js@^2.0.0-rc.10",
-    "@solidjs/web": "npm:@solidjs/web@^2.0.0-rc.10",
-    "@solidjs/web/jsx-runtime": "npm:@solidjs/web@^2.0.0-rc.10/jsx-runtime"
+    "solid-js": "npm:solid-js@^2.0.0-rc.13",
+    "@solidjs/web": "npm:@solidjs/web@^2.0.0-rc.13",
+    "@solidjs/web/jsx-runtime": "npm:@solidjs/web@^2.0.0-rc.13/jsx-runtime"
   },
   "publish": {
     "include": ["LICENSE", "README.md", "CHANGELOG.md", "llms.txt", "src/**/*.tsx", "src/**/*.ts"],

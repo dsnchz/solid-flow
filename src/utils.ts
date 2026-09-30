@@ -10,9 +10,9 @@ import {
   createEffect,
   createRoot,
   getOwner,
+  isHydrating,
   type Owner,
   runWithOwner,
-  sharedConfig,
 } from "solid-js";
 
 import type { Edge, Node } from "./types";
@@ -158,13 +158,6 @@ export const emitFlowError = (
 export const extraKeysOf = (props: object, own: ReadonlySet<string>): readonly string[] =>
   Object.keys(props).filter((key) => !own.has(key));
 
-// `isHydrationInProgress` is public runtime state the SharedConfig type does
-// not declare yet: read through a structural view, not a cast.
-const hydration: { isHydrationInProgress?: () => boolean } = sharedConfig;
-
-/** Whether the client is hydrating server-rendered markup right now. */
-export const isHydrating = (): boolean => !!hydration.isHydrationInProgress?.();
-
 // Hydration ids are built from digits and letters under the render's root
 // prefix; "~" never appears in one, so a client-only namespace cannot collide.
 let clientOnlyRoots = 0;
@@ -177,7 +170,8 @@ let clientOnlyRoots = 0;
  * the id of everything created after it, and the client then looks for keys
  * the server never wrote (every element misses; the hydration lane).
  *
- * While hydrating, `fn` runs in a root seeded with its own id namespace: an
+ * While hydrating (`isHydrating()`: the root pass of `hydrate()`, or a
+ * streamed boundary while it resumes), `fn` runs in a root seeded with its own id namespace: an
  * explicit id takes no slot from the parent, the root is still owned by the
  * current owner (context and disposal as before), and a computation under it
  * finds no serialized server value for its id, so it just computes. A

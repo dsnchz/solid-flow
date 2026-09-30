@@ -4,6 +4,7 @@ import { infiniteExtent } from "@xyflow/system";
 import {
   createEffect,
   createSignal,
+  isHydrating,
   omit,
   onSettled,
   type ParentProps,
@@ -21,7 +22,7 @@ import { getDefaultFlowStateProps } from "@/core/defaults";
 import { FLOW_PROP_KEYS, type SolidFlowProps } from "@/core/flowProps";
 import { createSelectionChange } from "@/core/selectionChange";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
-import { isHydrating, propDefaults, toPxString } from "@/utils";
+import { propDefaults, toPxString } from "@/utils";
 
 import { A11yDescriptions } from "./accessibility";
 
