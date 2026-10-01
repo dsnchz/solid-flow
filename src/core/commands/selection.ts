@@ -142,8 +142,9 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     // nothing is ever selected. Deselecting only what IS selected makes the
     // empty case free and the common case O(selected).
     const requestedNodeIds = _nodes ? new Set(_nodes.map(({ id }) => id)) : null;
-    // Explicitly-empty request: skip even the view read (its first compute
-    // filters the whole graph — the drag-start caller passes `nodes: []`).
+    // Explicitly-empty request: skip even the view read (the view is lazy,
+    // so an unobserved read computes it; the drag-start caller passes
+    // `nodes: []`).
     const nodeTargets =
       requestedNodeIds?.size === 0
         ? new Set<string>()

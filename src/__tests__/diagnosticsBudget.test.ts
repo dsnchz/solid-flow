@@ -127,6 +127,24 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
     expectRerunBudget(artifact, 10);
   });
 
+  it("a selection write does not re-run the selection views nobody reads", async () => {
+    // The joined node view (`flow.selection.nodes`) and the selection-wrapper
+    // bounds are O(selected) per write; with no reader (no onSelectionChange,
+    // no useSelectedNodes, no NodeSelection) they must stay idle (a zoomed-out
+    // box selection rewrites a 6,500-node selection on every move). The edge
+    // view stays eager on purpose (createFlowState).
+    const { artifact } = await captureArtifact(
+      () => {
+        flow.actions.addSelectedNodes(["n8"]);
+        flush();
+      },
+      { scenario: "select-unobserved", attribution: ATTRIBUTION },
+    );
+    expectRerunBudget(artifact, 0, {
+      scope: /^(selectedNodesView|selectedNodesBounds)$/,
+    });
+  });
+
   it("a reconnect re-runs the edge's row and the connections merge only", async () => {
     const { artifact } = await captureArtifact(
       () => {

@@ -437,12 +437,20 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return edgesStore as EdgeType[];
     },
   });
+  // The node view and the bounds are LAZY: a memo is eager by default and
+  // would rebuild these O(selected) results on every selection write even
+  // with no reader (a zoomed-out box selection rewrites 6,500 selected nodes
+  // per move; the bounds re-ran on every drag frame of a selected node).
+  // Lazy ones compute on read and stay live while observed. The edge view
+  // stays eager: drag start reads it (unselectNodesAndEdges) inside the
+  // selection batch, and computing it there cold cost ~23 ms at 10k edges
+  // (bench round 59; not explained yet).
   const selectedNodesView = createMemo(
     () =>
       Object.keys(selectedNodeIds)
         .map((id) => nodeLookup.get(id)?.internals.userNode)
         .filter((node): node is NodeType => node !== undefined),
-    { name: "selectedNodesView" },
+    { name: "selectedNodesView", lazy: true },
   );
   const selectedEdgesView = createMemo(
     () =>
@@ -461,7 +469,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       if (Object.keys(selectedNodeIds).length > 0) nodeGeometryFeed.changes();
       return getSelectedNodesBounds(selectedNodeIds, nodeGeometry);
     },
-    { name: "selectedNodesBounds" },
+    { name: "selectedNodesBounds", lazy: true },
   );
 
   // The config-backed keys are PLAIN getters over the config signal. Passing
