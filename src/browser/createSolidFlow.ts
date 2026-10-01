@@ -1,3 +1,4 @@
+import type { InternalNodeUpdate } from "@xyflow/system";
 import { flush } from "solid-js";
 
 import {
@@ -7,12 +8,15 @@ import {
   StraightEdgeInternal,
 } from "@/components/edge";
 import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/node";
-import { createFlowState, type MeasureRequestEntry } from "@/core";
+import { createFlowState } from "@/core";
 import type { SolidFlowProps } from "@/core/flowProps";
 import type { BuiltInEdgeTypes, BuiltInNodeTypes, Edge, Node } from "@/types";
 import { scheduleIdleCallback } from "@/utils";
 
 import { handleExpandParent, measureNodeInternals } from "./measure";
+
+/** One measure request: node id plus the DOM element to measure. */
+export type MeasureRequestEntry = [string, InternalNodeUpdate];
 
 export const InitialNodeTypesMap = {
   input: InputNode,
@@ -88,8 +92,19 @@ export const createSolidFlow = <NodeType extends Node = Node, EdgeType extends E
     });
   };
 
-  // commands.updateNodeInternals routes measure requests through this ingest
-  actions.setMeasureRequester(requestUpdateNodeInternals);
+  // commands.updateNodeInternals names the nodes; their elements are found
+  // here, in the flow's DOM, and measured through this ingest (forced: the
+  // caller knows something changed, e.g. a handle added after mount).
+  actions.setMeasureRequester((ids) => {
+    const updates: MeasureRequestEntry[] = [];
+    for (const id of ids) {
+      const nodeElement = store.domNode?.querySelector<HTMLDivElement>(
+        `.solid-flow__node[data-id="${id}"]`,
+      );
+      if (nodeElement) updates.push([id, { id, nodeElement, force: true }]);
+    }
+    requestUpdateNodeInternals(updates);
+  });
 
   return {
     ...state,

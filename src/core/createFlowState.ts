@@ -5,7 +5,6 @@ import {
   type Handle,
   infiniteExtent,
   initialConnection,
-  type InternalNodeUpdate,
   mergeAriaLabelConfig,
   type NodeLookup,
   type PanZoomInstance,
@@ -66,9 +65,6 @@ import { createSelectedIds } from "./projections/selectedIds";
 import { createRowIndex } from "./rowIndex";
 import { type SelectionOverlay } from "./selectionOverlay";
 import { createSeededGraphStores } from "./stores/seeding";
-
-/** One measure request: node id plus the DOM element to measure. */
-export type MeasureRequestEntry = [string, InternalNodeUpdate];
 
 /**
  * DOM- and component-adjacent dependencies injected into the headless graph.
@@ -830,9 +826,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   };
 
   // The DOM measuring pass is registered by the wiring layer (createSolidFlow)
-  // via setMeasureRequester; headless usage leaves it a no-op.
-  let requestMeasure: (entries: MeasureRequestEntry[]) => void = () => {};
-  const setMeasureRequester = (fn: (entries: MeasureRequestEntry[]) => void) => {
+  // via setMeasureRequester: core names the nodes to re-measure, the wiring
+  // resolves their elements. Headless usage leaves it a no-op.
+  let requestMeasure: (ids: readonly string[]) => void = () => {};
+  const setMeasureRequester = (fn: (ids: readonly string[]) => void) => {
     requestMeasure = fn;
   };
 
@@ -989,21 +986,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     getIntersectingNodes: geometryCommands.getIntersectingNodes,
     isNodeIntersecting: geometryCommands.isNodeIntersecting,
     getNodesBounds: geometryCommands.getNodesBounds,
-    updateNodeInternals: (id) => {
-      const updateIds = Array.isArray(id) ? id : [id];
-      const updates: MeasureRequestEntry[] = [];
-
-      for (const updateId of updateIds) {
-        const nodeElement = store.domNode?.querySelector<HTMLDivElement>(
-          `.solid-flow__node[data-id="${updateId}"]`,
-        );
-        if (!nodeElement) continue;
-
-        updates.push([updateId, { id: updateId, nodeElement, force: true }]);
-      }
-
-      requestMeasure(updates);
-    },
+    updateNodeInternals: (id) => requestMeasure(Array.isArray(id) ? id : [id]),
     toObject: elementCommands.toObject,
   };
 

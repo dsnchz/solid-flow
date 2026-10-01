@@ -9,11 +9,7 @@
  * The FlowState/FlowCommands types (and connectionKey/ConnectionsRecord) are
  * re-exported from the package entrypoint; the rest is internal.
  */
-export {
-  createFlowState,
-  type FlowStateInjections,
-  type MeasureRequestEntry,
-} from "./createFlowState";
+export { createFlowState, type FlowStateInjections } from "./createFlowState";
 export {
   createCullingViewport,
   type CullingSource,

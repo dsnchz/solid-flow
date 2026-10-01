@@ -375,6 +375,16 @@ describe("FlowCommands", () => {
       expect(() => commands.updateNodeInternals(["a"])).not.toThrow();
     });
   });
+
+  it("updateNodeInternals names the nodes; the wiring layer resolves their elements", async () => {
+    await withFlow({ nodes: [], edges: [] }, ({ commands, actions }) => {
+      const requests: string[][] = [];
+      actions.setMeasureRequester((ids) => requests.push([...ids]));
+      commands.updateNodeInternals("a");
+      commands.updateNodeInternals(["a", "b"]);
+      expect(requests).toEqual([["a"], ["a", "b"]]);
+    });
+  });
 });
 
 describe("controlled store-props (regression: provider-adopted flows)", () => {
