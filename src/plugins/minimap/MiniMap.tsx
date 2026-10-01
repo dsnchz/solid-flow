@@ -188,6 +188,130 @@ export const MiniMap = <NodeType extends Node>(
     name: "minimap.nodeIds",
   });
 
+  // The svg, its nodes and mask, and its XYMinimap controller.
+  const MiniMapSvg = () => {
+    const [ref, setRef] = createSignal<SVGSVGElement>();
+
+    // Mount the minimap controller on the svg (external system: XYMinimap)
+    // once the flow's pan-zoom instance exists. The svg itself does not
+    // wait for it: server rendering has no pan-zoom and must still
+    // produce the node shapes and the mask.
+    const [minimap, setMinimap] = createSignal<ReturnType<typeof XYMinimap>>();
+
+    createEffect(
+      () => ({ el: ref(), panZoom: store.panZoom }),
+      ({ el, panZoom }) => {
+        if (!el || !panZoom) return;
+        const instance = XYMinimap({
+          domNode: el,
+          panZoom,
+          getTransform: () => store.transform,
+          getViewScale: viewScale,
+        });
+        setMinimap(instance);
+        return () => {
+          instance.destroy();
+        };
+      },
+    );
+
+    createEffect(
+      () => ({
+        instance: minimap(),
+        options: {
+          translateExtent: store.translateExtent,
+          width: store.width,
+          height: store.height,
+          inversePan: _props.inversePan,
+          zoomStep: _props.zoomStep,
+          pannable: _props.pannable,
+          zoomable: _props.zoomable,
+        },
+      }),
+      ({ instance, options }) => {
+        instance?.update(options);
+      },
+    );
+
+    const onSvgClick = (event: MouseEvent) => {
+      if (!_props.onClick) return;
+      const [x, y] = minimap()?.pointer(event) ?? [0, 0];
+      _props.onClick(event, { x, y });
+    };
+
+    const onSvgNodeClick = (event: MouseEvent, nodeId: string) => {
+      const node = nodeLookup.get(nodeId)?.internals.userNode;
+      if (node) _props.onNodeClick?.(event, node);
+    };
+
+    return (
+      <svg
+        ref={setRef}
+        width={_props.width}
+        height={_props.height}
+        viewBox={`${frame().x} ${frame().y} ${frame().width} ${frame().height}`}
+        class="solid-flow__minimap-svg"
+        role="img"
+        aria-labelledby={labelledBy()}
+        onClick={_props.onClick ? onSvgClick : undefined}
+        style={{
+          "--xy-minimap-mask-background-color-props": _props.maskColor,
+          "--xy-minimap-mask-stroke-color-props": _props.maskStrokeColor,
+          "--xy-minimap-mask-stroke-width-props": strokeWidth(),
+        }}
+      >
+        <title id={labelledBy()}>{store.ariaLabelConfig["minimap.ariaLabel"]}</title>
+        <For keyed={false} each={nodeIds()}>
+          {(nodeId) => {
+            // The row resolves once, through Show (as NodeRenderer's
+            // rows do): `when` returns the row itself, undefined while it
+            // is missing, unmeasured or hidden, and the callback gets
+            // Show's narrowed accessor (non-null by type, audit D).
+            const visibleNode = () => {
+              const row = nodeLookup.get(nodeId());
+              return row && nodeHasDimensions(row) && !row.hidden ? row : undefined;
+            };
+
+            return (
+              <Show when={visibleNode()}>
+                {(node) => {
+                  const dimensions = () => getNodeDimensions(node());
+                  // Attribute callbacks receive the USER node (upstream
+                  // parity), not the internal row.
+                  const userNode = () => node().internals.userNode;
+                  return (
+                    <NodeComponent
+                      id={nodeId()}
+                      x={node().internals.positionAbsolute.x}
+                      y={node().internals.positionAbsolute.y}
+                      borderRadius={_props.nodeBorderRadius}
+                      strokeWidth={_props.nodeStrokeWidth}
+                      shapeRendering={shapeRendering}
+                      width={dimensions().width}
+                      height={dimensions().height}
+                      selected={node().selected}
+                      color={nodeColorFunc()?.call(null, userNode())}
+                      strokeColor={nodeStrokeColorFunc().call(null, userNode())}
+                      class={nodeClassFunc().call(null, userNode())}
+                      style={node().style}
+                      onClick={_props.onNodeClick ? onSvgNodeClick : undefined}
+                    />
+                  );
+                }}
+              </Show>
+            );
+          }}
+        </For>
+        <path
+          class="solid-flow__minimap-mask"
+          d={minimapMaskPath(frame(), viewBB())}
+          fill-rule="evenodd"
+          pointer-events="none"
+        />
+      </svg>
+    );
+  };
+
   return (
     <Panel
       position={_props.position}
@@ -199,128 +323,7 @@ export const MiniMap = <NodeType extends Node>(
       }}
       {...paneProps}
     >
-      {(() => {
-        const [ref, setRef] = createSignal<SVGSVGElement>();
-
-        // Mount the minimap controller on the svg (external system: XYMinimap)
-        // once the flow's pan-zoom instance exists. The svg itself does not
-        // wait for it: server rendering has no pan-zoom and must still
-        // produce the node shapes and the mask.
-        const [minimap, setMinimap] = createSignal<ReturnType<typeof XYMinimap>>();
-
-        createEffect(
-          () => ({ el: ref(), panZoom: store.panZoom }),
-          ({ el, panZoom }) => {
-            if (!el || !panZoom) return;
-            const instance = XYMinimap({
-              domNode: el,
-              panZoom,
-              getTransform: () => store.transform,
-              getViewScale: viewScale,
-            });
-            setMinimap(instance);
-            return () => {
-              instance.destroy();
-            };
-          },
-        );
-
-        createEffect(
-          () => ({
-            instance: minimap(),
-            options: {
-              translateExtent: store.translateExtent,
-              width: store.width,
-              height: store.height,
-              inversePan: _props.inversePan,
-              zoomStep: _props.zoomStep,
-              pannable: _props.pannable,
-              zoomable: _props.zoomable,
-            },
-          }),
-          ({ instance, options }) => {
-            instance?.update(options);
-          },
-        );
-
-        const onSvgClick = (event: MouseEvent) => {
-          if (!_props.onClick) return;
-          const [x, y] = minimap()?.pointer(event) ?? [0, 0];
-          _props.onClick(event, { x, y });
-        };
-
-        const onSvgNodeClick = (event: MouseEvent, nodeId: string) => {
-          const node = nodeLookup.get(nodeId)?.internals.userNode;
-          if (node) _props.onNodeClick?.(event, node);
-        };
-
-        return (
-          <svg
-            ref={setRef}
-            width={_props.width}
-            height={_props.height}
-            viewBox={`${frame().x} ${frame().y} ${frame().width} ${frame().height}`}
-            class="solid-flow__minimap-svg"
-            role="img"
-            aria-labelledby={labelledBy()}
-            onClick={_props.onClick ? onSvgClick : undefined}
-            style={{
-              "--xy-minimap-mask-background-color-props": _props.maskColor,
-              "--xy-minimap-mask-stroke-color-props": _props.maskStrokeColor,
-              "--xy-minimap-mask-stroke-width-props": strokeWidth(),
-            }}
-          >
-            <title id={labelledBy()}>{store.ariaLabelConfig["minimap.ariaLabel"]}</title>
-            <For keyed={false} each={nodeIds()}>
-              {(nodeId) => {
-                // The row resolves once, through Show (as NodeRenderer's
-                // rows do): `when` returns the row itself, undefined while it
-                // is missing, unmeasured or hidden, and the callback gets
-                // Show's narrowed accessor (non-null by type, audit D).
-                const visibleNode = () => {
-                  const row = nodeLookup.get(nodeId());
-                  return row && nodeHasDimensions(row) && !row.hidden ? row : undefined;
-                };
-
-                return (
-                  <Show when={visibleNode()}>
-                    {(node) => {
-                      const dimensions = () => getNodeDimensions(node());
-                      // Attribute callbacks receive the USER node (upstream
-                      // parity), not the internal row.
-                      const userNode = () => node().internals.userNode;
-                      return (
-                        <NodeComponent
-                          id={nodeId()}
-                          x={node().internals.positionAbsolute.x}
-                          y={node().internals.positionAbsolute.y}
-                          borderRadius={_props.nodeBorderRadius}
-                          strokeWidth={_props.nodeStrokeWidth}
-                          shapeRendering={shapeRendering}
-                          width={dimensions().width}
-                          height={dimensions().height}
-                          selected={node().selected}
-                          color={nodeColorFunc()?.call(null, userNode())}
-                          strokeColor={nodeStrokeColorFunc().call(null, userNode())}
-                          class={nodeClassFunc().call(null, userNode())}
-                          style={node().style}
-                          onClick={_props.onNodeClick ? onSvgNodeClick : undefined}
-                        />
-                      );
-                    }}
-                  </Show>
-                );
-              }}
-            </For>
-            <path
-              class="solid-flow__minimap-mask"
-              d={minimapMaskPath(frame(), viewBB())}
-              fill-rule="evenodd"
-              pointer-events="none"
-            />
-          </svg>
-        );
-      })()}
+      <MiniMapSvg />
     </Panel>
   );
 };
