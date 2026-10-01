@@ -26,7 +26,7 @@ import { scenarios } from "./scenarios";
  *    hydrated flow is live, not a static shell.
  */
 const BY_DESIGN_DIAGNOSTIC =
-  /^\[WIDE_SCOPE_DEPS\] (memo "layoutedEdges\.row"|effect "div\.data-id, div\.class)/;
+  /^\[WIDE_SCOPE_DEPS\] (memo "resolvedEdges\.row"|effect "div\.data-id, div\.class)/;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

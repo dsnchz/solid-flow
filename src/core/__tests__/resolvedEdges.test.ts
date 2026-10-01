@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Edge, InternalNode, Node } from "@/types";
 
-import { createLayoutedEdges, type LayoutedEdgesSource } from "../projections/layoutedEdges";
+import { createResolvedEdges, type ResolvedEdgesSource } from "../projections/resolvedEdges";
 
 // Headless core test: the layout join runs entirely without a DOM. Internal
 // nodes are fed directly (simulating the adoption + measurement pipeline).
@@ -53,7 +53,7 @@ const makeSource = (edges: Edge[], nodes: InternalNode[]) => {
   const [edgesStore, setEdgesStore] = createStore(edges);
   const nodeLookup = new Map(nodes.map((n) => [n.id, n]));
 
-  const source: LayoutedEdgesSource<Node, Edge> = {
+  const source: ResolvedEdgesSource<Node, Edge> = {
     selectionOverlay: {},
     get edges() {
       return edgesStore;
@@ -67,7 +67,7 @@ const makeSource = (edges: Edge[], nodes: InternalNode[]) => {
   return { source, setEdgesStore, nodeLookup };
 };
 
-describe("createLayoutedEdges (core, headless)", () => {
+describe("createResolvedEdges (core, headless)", () => {
   it("joins edges with both endpoints and drops edges with missing nodes", () => {
     const { source } = makeSource(
       [
@@ -78,11 +78,11 @@ describe("createLayoutedEdges (core, headless)", () => {
     );
 
     createRoot((dispose) => {
-      const layouted = createLayoutedEdges(source);
+      const resolved = createResolvedEdges(source);
       flush();
-      expect(Object.keys(layouted)).toEqual(["e1"]);
-      expect(layouted.e1!.sourceX).toBeTypeOf("number");
-      expect(layouted.e1!.edge.id).toBe("e1");
+      expect(Object.keys(resolved)).toEqual(["e1"]);
+      expect(resolved.e1!.sourceX).toBeTypeOf("number");
+      expect(resolved.e1!.edge.id).toBe("e1");
       dispose();
     });
   });
@@ -98,20 +98,20 @@ describe("createLayoutedEdges (core, headless)", () => {
 
     // Graph construction under the root; writes from mainline (rc.9: a root
     // body is an owned scope, so a store write inside it throws in dev).
-    const { layouted, dispose } = createRoot((dispose) => ({
+    const { resolved, dispose } = createRoot((dispose) => ({
       dispose,
-      layouted: createLayoutedEdges(source),
+      resolved: createResolvedEdges(source),
     }));
     flush();
-    const row1 = layouted.e1;
+    const row1 = resolved.e1;
 
     setEdgesStore((draft) => {
       draft[1]!.selected = true;
     });
     flush();
 
-    expect(layouted.e1).toBe(row1);
-    expect(layouted.e2!.zIndex).toBeGreaterThan(0);
+    expect(resolved.e1).toBe(row1);
+    expect(resolved.e2!.zIndex).toBeGreaterThan(0);
     dispose();
   });
 
@@ -124,17 +124,17 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    const { layouted, dispose } = createRoot((dispose) => ({
+    const { resolved, dispose } = createRoot((dispose) => ({
       dispose,
-      layouted: createLayoutedEdges(source),
+      resolved: createResolvedEdges(source),
     }));
     flush();
-    expect(Object.keys(layouted)).toHaveLength(2);
+    expect(Object.keys(resolved)).toHaveLength(2);
 
     setEdgesStore(() => [{ id: "e2", source: "b", target: "a" }] as Edge[]);
     flush();
 
-    expect(Object.keys(layouted)).toEqual(["e2"]);
+    expect(Object.keys(resolved)).toEqual(["e2"]);
     dispose();
   });
 
@@ -148,12 +148,12 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    const { layouted, dispose } = createRoot((dispose) => ({
+    const { resolved, dispose } = createRoot((dispose) => ({
       dispose,
-      layouted: createLayoutedEdges(source),
+      resolved: createResolvedEdges(source),
     }));
     flush();
-    const sourceXBefore = layouted.e1!.sourceX;
+    const sourceXBefore = resolved.e1!.sourceX;
 
     // same objects, mutated in place (as reconcile does to projection rows)
     nodeLookup.get("a")!.internals.positionAbsolute.x = 500;
@@ -163,7 +163,7 @@ describe("createLayoutedEdges (core, headless)", () => {
     });
     flush();
 
-    expect(layouted.e1!.sourceX).toBe(sourceXBefore + 500);
+    expect(resolved.e1!.sourceX).toBe(sourceXBefore + 500);
     dispose();
   });
 
@@ -173,12 +173,12 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    const { layouted, dispose } = createRoot((dispose) => ({
+    const { resolved, dispose } = createRoot((dispose) => ({
       dispose,
-      layouted: createLayoutedEdges(source),
+      resolved: createResolvedEdges(source),
     }));
     flush();
-    const sourceXBefore = layouted.e1!.sourceX;
+    const sourceXBefore = resolved.e1!.sourceX;
 
     nodeLookup.get("a")!.internals.handleBounds!.source![0]!.x += 40;
     setEdgesStore((draft) => {
@@ -186,7 +186,7 @@ describe("createLayoutedEdges (core, headless)", () => {
     });
     flush();
 
-    expect(layouted.e1!.sourceX).toBe(sourceXBefore + 40);
+    expect(resolved.e1!.sourceX).toBe(sourceXBefore + 40);
     dispose();
   });
 
@@ -196,19 +196,19 @@ describe("createLayoutedEdges (core, headless)", () => {
       [internalNode("a", 0, 0), internalNode("b", 200, 100)],
     );
 
-    const { layouted, dispose } = createRoot((dispose) => ({
+    const { resolved, dispose } = createRoot((dispose) => ({
       dispose,
-      layouted: createLayoutedEdges(source),
+      resolved: createResolvedEdges(source),
     }));
     flush();
-    const zBefore = layouted.e1!.zIndex ?? 0;
+    const zBefore = resolved.e1!.zIndex ?? 0;
 
     setEdgesStore((draft) => {
       draft[0]!.selected = true;
     });
     flush();
 
-    expect(layouted.e1!.zIndex).toBe(zBefore + 1000);
+    expect(resolved.e1!.zIndex).toBe(zBefore + 1000);
     dispose();
   });
 
@@ -226,7 +226,7 @@ describe("createLayoutedEdges (core, headless)", () => {
       ["a", internalNode("a", 0, 0)],
       ["b", internalNode("b", 200, 100)],
     ]);
-    const source: LayoutedEdgesSource<Node, Edge> = {
+    const source: ResolvedEdgesSource<Node, Edge> = {
       selectionOverlay: {},
       get edges() {
         edgesReads++;
@@ -239,15 +239,15 @@ describe("createLayoutedEdges (core, headless)", () => {
       nodeLookup,
     };
 
-    const { layouted, dispose } = createRoot((dispose) => ({
+    const { resolved, dispose } = createRoot((dispose) => ({
       dispose,
-      layouted: createLayoutedEdges(source),
+      resolved: createResolvedEdges(source),
     }));
     flush();
     expect(edgesReads).toBe(1);
 
     // memoized: reading does not re-derive
-    expect(Object.keys(layouted)).toEqual(["e1"]);
+    expect(Object.keys(resolved)).toEqual(["e1"]);
     expect(edgesReads).toBe(1);
 
     // unread source change still re-derives on flush
@@ -256,7 +256,7 @@ describe("createLayoutedEdges (core, headless)", () => {
     });
     flush();
     expect(edgesReads).toBe(2);
-    expect(Object.keys(layouted)).toEqual(["e1", "e2"]);
+    expect(Object.keys(resolved)).toEqual(["e1", "e2"]);
     dispose();
   });
 });
@@ -267,56 +267,56 @@ describe("createLayoutedEdges (core, headless)", () => {
  * unchanged geometry readers are silent, a changed user key lands, the
  * `edge` reference is re-adopted, and a changed endpoint re-lays out.
  */
-describe("createLayoutedEdges — same-id replacement", () => {
+describe("createResolvedEdges — same-id replacement", () => {
   const setupWithRuns = () => {
     const { source, setEdgesStore } = makeSource(
       [{ id: "e1", source: "a", target: "b", label: "first" }] as Edge[],
       [internalNode("a", 0, 0), internalNode("b", 200, 100), internalNode("c", 400, 300)],
     );
-    let layouted!: ReturnType<typeof createLayoutedEdges<Node, Edge>>;
+    let resolved!: ReturnType<typeof createResolvedEdges<Node, Edge>>;
     let dispose!: () => void;
     const runs = { sourceX: 0, label: 0 };
     createRoot((d) => {
       dispose = d;
-      layouted = createLayoutedEdges(source);
+      resolved = createResolvedEdges(source);
       createEffect(
-        () => layouted.e1?.sourceX,
+        () => resolved.e1?.sourceX,
         () => {
           runs.sourceX++;
         },
       );
       createEffect(
-        () => layouted.e1?.label,
+        () => resolved.e1?.label,
         () => {
           runs.label++;
         },
       );
     });
     flush();
-    return { layouted: () => layouted, setEdgesStore, runs, dispose };
+    return { resolved: () => resolved, setEdgesStore, runs, dispose };
   };
 
   it("leaf-writes the changed edge keys and leaves the geometry silent", () => {
-    const { layouted, setEdgesStore, runs, dispose } = setupWithRuns();
-    const before = layouted().e1!;
+    const { resolved, setEdgesStore, runs, dispose } = setupWithRuns();
+    const before = resolved().e1!;
     expect(runs).toEqual({ sourceX: 1, label: 1 });
     setEdgesStore(() => [{ id: "e1", source: "a", target: "b", label: "second" }] as Edge[]);
     flush();
-    expect(layouted().e1).toBe(before);
-    expect(layouted().e1!.label).toBe("second");
-    expect(layouted().e1!.edge.label).toBe("second");
+    expect(resolved().e1).toBe(before);
+    expect(resolved().e1!.label).toBe("second");
+    expect(resolved().e1!.edge.label).toBe("second");
     expect(runs).toEqual({ sourceX: 1, label: 2 });
     dispose();
   });
 
   it("re-lays out an endpoint changed inside the fresh object", () => {
-    const { layouted, setEdgesStore, runs, dispose } = setupWithRuns();
-    const targetXBefore = layouted().e1!.targetX;
+    const { resolved, setEdgesStore, runs, dispose } = setupWithRuns();
+    const targetXBefore = resolved().e1!.targetX;
     setEdgesStore(() => [{ id: "e1", source: "a", target: "c", label: "first" }] as Edge[]);
     flush();
-    expect(layouted().e1!.target).toBe("c");
-    expect(layouted().e1!.targetX).not.toBe(targetXBefore);
-    expect(layouted().e1!.targetNode?.id).toBe("c");
+    expect(resolved().e1!.target).toBe("c");
+    expect(resolved().e1!.targetX).not.toBe(targetXBefore);
+    expect(resolved().e1!.targetNode?.id).toBe("c");
     expect(runs).toEqual({ sourceX: 1, label: 1 });
     dispose();
   });
@@ -329,7 +329,7 @@ describe("createLayoutedEdges — same-id replacement", () => {
  * goes through the adopting path. (Pin: the return-form reconcile was as
  * quiet; the difference is the per-edge commit cost, bench round 41.)
  */
-describe("createLayoutedEdges — re-layout of the same edge", () => {
+describe("createResolvedEdges — re-layout of the same edge", () => {
   it("moves the geometry as leaf writes and keeps untouched readers silent", () => {
     const a = internalNode("a", 0, 0);
     const [nodes, setNodes] = createStore<Record<string, InternalNode>>({
@@ -340,45 +340,45 @@ describe("createLayoutedEdges — re-layout of the same edge", () => {
       [{ id: "e1", source: "a", target: "b", label: "first", data: { weight: 1 } }] as Edge[],
       [],
     );
-    const tracked: LayoutedEdgesSource<Node, Edge> = {
+    const tracked: ResolvedEdgesSource<Node, Edge> = {
       ...source,
       nodeLookup: { get: (id) => nodes[id], size: 2 },
     };
-    let layouted!: ReturnType<typeof createLayoutedEdges<Node, Edge>>;
+    let resolved!: ReturnType<typeof createResolvedEdges<Node, Edge>>;
     let dispose!: () => void;
     const runs = { targetX: 0, label: 0, weight: 0 };
     createRoot((d) => {
       dispose = d;
-      layouted = createLayoutedEdges(tracked);
+      resolved = createResolvedEdges(tracked);
       createEffect(
-        () => layouted.e1?.targetX,
+        () => resolved.e1?.targetX,
         () => {
           runs.targetX++;
         },
       );
       createEffect(
-        () => layouted.e1?.label,
+        () => resolved.e1?.label,
         () => {
           runs.label++;
         },
       );
       createEffect(
-        () => layouted.e1?.data?.weight,
+        () => resolved.e1?.data?.weight,
         () => {
           runs.weight++;
         },
       );
     });
     flush();
-    const before = layouted.e1!;
+    const before = resolved.e1!;
     expect(runs).toEqual({ targetX: 1, label: 1, weight: 1 });
 
     setNodes((draft) => {
       draft.b!.internals.positionAbsolute.x = 400;
     });
     flush();
-    expect(layouted.e1).toBe(before);
-    expect(layouted.e1!.targetX).not.toBe(200 + 46 + 4);
+    expect(resolved.e1).toBe(before);
+    expect(resolved.e1!.targetX).not.toBe(200 + 46 + 4);
     expect(runs).toEqual({ targetX: 2, label: 1, weight: 1 });
 
     // A nested value changed on the same edge object: adopted by reference.
@@ -386,7 +386,7 @@ describe("createLayoutedEdges — re-layout of the same edge", () => {
       draft[0]!.data = { weight: 2 };
     });
     flush();
-    expect(layouted.e1!.data?.weight).toBe(2);
+    expect(resolved.e1!.data?.weight).toBe(2);
     expect(runs.weight).toBe(2);
     expect(runs.targetX).toBe(2);
     dispose();
@@ -394,37 +394,37 @@ describe("createLayoutedEdges — re-layout of the same edge", () => {
 });
 
 /** A hidden endpoint drops the edge row (upstream parity, xyflow#5977). */
-describe("createLayoutedEdges — hidden endpoints", () => {
+describe("createResolvedEdges — hidden endpoints", () => {
   it("produces no row while either endpoint is hidden, and restores it after", () => {
     const [nodes, setNodes] = createStore<Record<string, InternalNode>>({
       a: internalNode("a", 0, 0),
       b: internalNode("b", 200, 100),
     });
     const { source } = makeSource([{ id: "e1", source: "a", target: "b" }] as Edge[], []);
-    const tracked: LayoutedEdgesSource<Node, Edge> = {
+    const tracked: ResolvedEdgesSource<Node, Edge> = {
       ...source,
       nodeLookup: { get: (id) => nodes[id], size: 2 },
     };
-    let layouted!: ReturnType<typeof createLayoutedEdges<Node, Edge>>;
+    let resolved!: ReturnType<typeof createResolvedEdges<Node, Edge>>;
     let dispose!: () => void;
     createRoot((d) => {
       dispose = d;
-      layouted = createLayoutedEdges(tracked);
+      resolved = createResolvedEdges(tracked);
     });
     flush();
-    expect(layouted.e1).toBeDefined();
+    expect(resolved.e1).toBeDefined();
 
     setNodes((draft) => {
       draft.b!.hidden = true;
     });
     flush();
-    expect(layouted.e1).toBeUndefined();
+    expect(resolved.e1).toBeUndefined();
 
     setNodes((draft) => {
       draft.b!.hidden = false;
     });
     flush();
-    expect(layouted.e1).toBeDefined();
+    expect(resolved.e1).toBeDefined();
     dispose();
   });
 });

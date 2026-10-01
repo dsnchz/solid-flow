@@ -57,10 +57,10 @@ import {
   type NodeGeometry,
   type NodeMeasurements,
 } from "./projections/internalNodes";
-import { createLayoutedEdges } from "./projections/layoutedEdges";
 import { createOnScreenIds } from "./projections/onScreenIds";
 import { createParentIds } from "./projections/parentIds";
 import { createPresenceIds } from "./projections/presenceIds";
+import { createResolvedEdges } from "./projections/resolvedEdges";
 import { getSelectedNodesBounds } from "./projections/selectedBounds";
 import { createSelectedIds } from "./projections/selectedIds";
 import { createRowIndex } from "./rowIndex";
@@ -707,7 +707,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   // Edge layout join (core projection): id-keyed record, row identity stable
   // across derive re-runs. Replaces the mapArray layout effect + ReactiveMap.
-  const layoutedEdges = createLayoutedEdges<NodeType, EdgeType>({
+  const resolvedEdges = createResolvedEdges<NodeType, EdgeType>({
     onGeometryChange: edgeGeometryFeed.report,
     get selectionOverlay() {
       return selectionOverlay.edges;
@@ -733,19 +733,19 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     nodeLookup,
   });
 
-  // Same membership-vs-layout split as visibleNodeIds; unlayouted edges are
-  // filtered by the renderer's per-row guard (their layouted row is null).
+  // Same membership-vs-layout split as visibleNodeIds; unresolved edges are
+  // filtered by the renderer's per-row guard (their resolved row is null).
   const visibleEdgeIds = createMemo(() => edgesStore.map((edge) => edge.id), {
     name: "visibleEdgeIds",
   });
   const edgeIndex = createRowIndex<EdgeType>(visibleEdgeIds);
 
-  // Named for what it returns: the LAYOUTED row (geometry joined in).
+  // Named for what it returns: the RESOLVED row (endpoints and geometry joined in).
   // Raw user edges live in `edgeLookup` — near-identical names once made
   // this a shape trap (audit D2).
   // `in` guard: subscribe even while the key is absent, so a caller waiting
   // on an edge's layout (the renderer's mount guard) re-runs when it lands.
-  const getLayoutedEdge = (id: string) => (id in layoutedEdges ? layoutedEdges[id] : undefined);
+  const getResolvedEdge = (id: string) => (id in resolvedEdges ? resolvedEdges[id] : undefined);
 
   /**********************************************************************************/
   /*                                                                                */
@@ -1056,7 +1056,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     flow,
     commands,
     internalNodes,
-    layoutedEdges,
+    resolvedEdges,
     nodeLookup,
     edgeLookup,
     parentIds,
@@ -1070,7 +1070,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     onScreenNodeIds,
     onScreenEdgeIds,
     actions: {
-      getLayoutedEdge,
+      getResolvedEdge,
       applyInitialFitView,
       applyMeasurementWrites,
       applyNodeChanges,

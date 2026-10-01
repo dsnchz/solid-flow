@@ -8,7 +8,7 @@ type Source = { id: string; x: number; live: boolean };
 type Row = { id: string; x: number };
 
 // A keyed record over per-row projection stores (the internalNodes /
-// layoutedEdges shape): the record must hand out each row store's OWN proxy.
+// resolvedEdges shape): the record must hand out each row store's OWN proxy.
 // Re-wrapping the row under the record's projection family would attach every
 // nested leaf signal a consumer reads to the long-lived record instead of the
 // row, so deleted rows would stay reachable for the record's lifetime

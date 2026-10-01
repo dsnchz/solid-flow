@@ -236,7 +236,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
     () => source.nodes,
     (userNodeAccessor, index) => {
       const id = userNodeAccessor().id;
-      // The row rides in a `{ row }` wrapper (matching layoutedEdges): the
+      // The row rides in a `{ row }` wrapper (matching resolvedEdges): the
       // wrapper is what keeps TS happy across the Store<T>=Readonly<T>
       // mapped type with an unresolved NodeType generic, and the inner
       // `.row` proxy is what the public record holds.

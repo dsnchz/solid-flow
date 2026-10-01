@@ -143,7 +143,7 @@ export type EdgeTypes = {
 /** Defaults applied to every new edge added to the flow. */
 export type DefaultEdgeOptions = DefaultEdgeOptionsBase<Edge>;
 
-export type EdgeLayouted<EdgeType extends Edge = Edge> = EdgeType &
+export type ResolvedEdge<EdgeType extends Edge = Edge> = EdgeType &
   EdgePosition & {
     sourceNode?: Node;
     targetNode?: Node;

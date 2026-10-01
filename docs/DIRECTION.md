@@ -94,7 +94,7 @@ Flow
 │   ├── parentLookup
 │   ├── connections
 │   ├── edgeLookup
-│   ├── layoutedEdges
+│   ├── resolvedEdges
 │   └── visibleElements
 │
 └── Commands
@@ -241,12 +241,12 @@ connections
 
 The relationship graph should be derived from edge state rather than incrementally repaired after every write, unless profiling proves otherwise.
 
-## Layouted Edges
+## Resolved Edges
 
 ```text
 edges + internalNodes + config
              ↓
-       layoutedEdges
+       resolvedEdges
 ```
 
 Geometry and rendering metadata should be computed downstream of authoritative graph state.
@@ -254,7 +254,7 @@ Geometry and rendering metadata should be computed downstream of authoritative g
 ## Visibility
 
 ```text
-internalNodes + layoutedEdges + viewport
+internalNodes + resolvedEdges + viewport
                  ↓
           visibleElements
 ```
@@ -823,7 +823,7 @@ Everything above states the ideals. This section pins them to what has been **me
 
 The straightforward derivation of this exact architecture — monolithic projections over the roots — benchmarked at **19.4 ms per drag move at 625 nodes**, 34× worse than the 0.2.x mutable-store line. The first shipped implementation reached **0.5–0.7 ms** with identical DOM output granularity by _refining the projection implementation_, not abandoning the model; after the rounds recorded in `docs/ARCHITECTURE.md` it is **0.09 ms per move at 10,000 nodes** (31 ms of script over a 60-move drag, against 10,634 ms for React Flow 12.12 and 495 ms for Svelte Flow 1.7 on the same private bench, 2026-09-26). The refinements:
 
-- **Per-row sub-stores**: each internal node / layouted edge is its own keyed `createProjection` in a `{ row }` wrapper, created inside an id-keyed `mapArray` (item-accessor form, so controlled array resets reuse row scopes). Leaf signals hang off their row's computed, which keeps invalidation O(changed). Every other per-row map (presence records, connections, markers, the edge lookup) is keyed by id the same way, so a whole-graph replacement with fresh objects re-derives rows instead of recreating them.
+- **Per-row sub-stores**: each internal node / resolved edge is its own keyed `createProjection` in a `{ row }` wrapper, created inside an id-keyed `mapArray` (item-accessor form, so controlled array resets reuse row scopes). Leaf signals hang off their row's computed, which keeps invalidation O(changed). Every other per-row map (presence records, connections, markers, the edge lookup) is keyed by id the same way, so a whole-graph replacement with fresh objects re-derives rows instead of recreating them.
 - **Shallow record-of-holders**: the public records are shallow draft-form projections holding one frozen holder per row store (a row proxy assigned directly would be re-wrapped under the record's family and its leaves retained after deletion), with explicit `delete` for removed ids. The `assigned` identity maps inside them are §14's "cache as implementation detail" — they carry no semantic authority.
 - **Input roots are plain writable stores, not projections of props**: deriving the node/edge arrays from a store-proxy source rewraps every element on structural writes and churns the whole pipeline (verified empirically).
 - **Flow-owned state joins the rows at read time** (the sidecar composition): selection and drag positions live in keyed overlays and the row derive joins them, so an optimistic user store never has to accept a flow write for rendering to be right.

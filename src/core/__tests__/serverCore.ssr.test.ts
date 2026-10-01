@@ -42,7 +42,7 @@ const node = (id: string, x: number, handle: "source" | "target"): SeedNode => (
 });
 
 describe("headless core on the server build", () => {
-  it("derives internal nodes and layouted edges from declared geometry", () => {
+  it("derives internal nodes and resolved edges from declared geometry", () => {
     createRoot((dispose) => {
       const flow = createFlowState({
         nodes: [node("a", 0, "source"), node("b", 300, "target")],
@@ -50,8 +50,8 @@ describe("headless core on the server build", () => {
       });
       flush();
       expect(flow.nodeLookup.get("b")?.internals.positionAbsolute).toEqual({ x: 300, y: 0 });
-      const layouted = flow.actions.getLayoutedEdge("e1");
-      expect(layouted).toMatchObject({ sourceX: 106, sourceY: 23, targetX: 300, targetY: 23 });
+      const resolved = flow.actions.getResolvedEdge("e1");
+      expect(resolved).toMatchObject({ sourceX: 106, sourceY: 23, targetX: 300, targetY: 23 });
       dispose();
     });
   });

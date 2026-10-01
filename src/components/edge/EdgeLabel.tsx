@@ -50,7 +50,7 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
 
   const id = useEdgeId();
 
-  const zIndex = () => actions.getLayoutedEdge(id())?.zIndex;
+  const zIndex = () => actions.getResolvedEdge(id())?.zIndex;
 
   const createLabel = (): HTMLDivElement | undefined => {
     let label: HTMLDivElement | undefined;

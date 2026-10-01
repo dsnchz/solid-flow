@@ -16,12 +16,12 @@ import type { Edge, Node } from "@/types";
 // after mount (Handle's `clickConnect`, found this way).
 //
 // By design, with the reason:
-// - `layoutedEdges.row` (~38 sources): an edge's layout reads every key of
+// - `resolvedEdges.row` (~38 sources): an edge's layout reads every key of
 //   the edge and both endpoints' geometry; any of them changing must re-lay it.
 // - NodeWrapper's element effect: the compiler folds all dynamic attributes
 //   of one element into one effect; the per-frame transform has its own.
 const BY_DESIGN: ReadonlySet<string> = new Set([
-  "WIDE_SCOPE_DEPS:layoutedEdges.row",
+  "WIDE_SCOPE_DEPS:resolvedEdges.row",
   "WIDE_SCOPE_DEPS:div.data-id, div.class, div.style, div.tabindex, div.role, div.aria-describedby",
 ]);
 const nodes: Node[] = [

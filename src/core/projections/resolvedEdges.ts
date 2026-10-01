@@ -8,7 +8,7 @@ import {
 } from "@xyflow/system";
 import { createMemo, createProjection, mapArray, onCleanup } from "solid-js";
 
-import type { DefaultEdgeOptions, Edge, EdgeLayouted, InternalNode, Node } from "@/types";
+import type { DefaultEdgeOptions, Edge, InternalNode, Node, ResolvedEdge } from "@/types";
 
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import { createRowRecordProjection } from "./rowRecord";
@@ -18,7 +18,7 @@ import { createRowRecordProjection } from "./rowRecord";
  * internal store satisfies it and headless tests can supply a plain object.
  * Every property read is a live subscription.
  */
-export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
+export type ResolvedEdgesSource<NodeType extends Node = Node, EdgeType extends Edge = Edge> = {
   readonly edges: readonly EdgeType[];
   /** Flow-driven selection sidecar, joined with `edge.selected` per row. */
   readonly selectionOverlay: SelectionOverlay;
@@ -35,7 +35,7 @@ export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends E
 /**
  * Edge layout join: user edges × internal nodes → screen-space edge geometry,
  * decomposed into SUB-STORES (spike 13): each edge is its own keyed
- * projection holding `{ row }` — the layouted row, or null while the edge
+ * projection holding `{ row }` — the resolved row, or null while the edge
  * produces none (missing/unready endpoints, culled) — and the public record
  * is a SHALLOW projection holding the PRESENT rows' proxies by reference.
  *
@@ -56,9 +56,9 @@ export type LayoutedEdgesSource<NodeType extends Node = Node, EdgeType extends E
  * Rows whose endpoints are missing or unmeasured simply drop out of the
  * record — the same "no entry" contract the ReactiveMap pipeline had.
  */
-export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
-  source: LayoutedEdgesSource<NodeType, EdgeType>,
-): Record<string, EdgeLayouted<EdgeType>> => {
+export const createResolvedEdges = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
+  source: ResolvedEdgesSource<NodeType, EdgeType>,
+): Record<string, ResolvedEdge<EdgeType>> => {
   // The flow settings every edge reads, as ONE memo (value-equal): one read
   // per row run instead of five through the config getters, and a config
   // change that leaves them equal re-runs no edge (bench round 41).
@@ -77,7 +77,7 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
         a.elevateEdgesOnSelect === b.elevateEdgesOnSelect &&
         a.zIndexMode === b.zIndexMode &&
         a.onError === b.onError,
-      name: "layoutedEdges.settings",
+      name: "resolvedEdges.settings",
     },
   );
   const rowStores = mapArray(
@@ -85,8 +85,8 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
     (edgeAccessor) => {
       const id = edgeAccessor().id;
       let geometry = "";
-      const store: { row: EdgeLayouted<EdgeType> | null } = createProjection<{
-        row: EdgeLayouted<EdgeType> | null;
+      const store: { row: ResolvedEdge<EdgeType> | null } = createProjection<{
+        row: ResolvedEdge<EdgeType> | null;
       }>(
         // the accessor tracks the item slot: a controlled array reset swaps
         // the edge object while THIS row store (keyed by id) survives, so
@@ -107,7 +107,7 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
           return { row };
         },
         { row: null },
-        { key: "id", name: "layoutedEdges.row" },
+        { key: "id", name: "resolvedEdges.row" },
       );
       onCleanup(() => {
         if (geometry !== "") source.onGeometryChange?.(id, null);
@@ -118,11 +118,11 @@ export const createLayoutedEdges = <NodeType extends Node = Node, EdgeType exten
   );
 
   // Shared keyed-record tail — see createRowRecordProjection.
-  return createRowRecordProjection(rowStores, "layoutedEdges");
+  return createRowRecordProjection(rowStores, "resolvedEdges");
 };
 
 const segmentBox = (
-  row: Pick<EdgeLayouted, "sourceX" | "sourceY" | "targetX" | "targetY">,
+  row: Pick<ResolvedEdge, "sourceX" | "sourceY" | "targetX" | "targetY">,
 ): Rect => ({
   x: Math.min(row.sourceX, row.targetX),
   y: Math.min(row.sourceY, row.targetY),
@@ -131,15 +131,15 @@ const segmentBox = (
 });
 
 type EdgeSettings = Pick<
-  LayoutedEdgesSource,
+  ResolvedEdgesSource,
   "connectionMode" | "defaultEdgeOptions" | "elevateEdgesOnSelect" | "zIndexMode" | "onError"
 >;
 
 const buildRow = <NodeType extends Node, EdgeType extends Edge>(
-  source: Pick<LayoutedEdgesSource<NodeType, EdgeType>, "nodeLookup" | "selectionOverlay">,
+  source: Pick<ResolvedEdgesSource<NodeType, EdgeType>, "nodeLookup" | "selectionOverlay">,
   settings: EdgeSettings,
   edge: EdgeType,
-): EdgeLayouted<EdgeType> | null => {
+): ResolvedEdge<EdgeType> | null => {
   const sourceNode = source.nodeLookup.get(edge.source);
   const targetNode = source.nodeLookup.get(edge.target);
 

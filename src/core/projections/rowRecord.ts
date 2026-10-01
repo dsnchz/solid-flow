@@ -51,7 +51,7 @@ export const createRecordFacade = <Row extends object>(
 
 /**
  * The shared tail of the keyed-row projections (audit C2a — this exact
- * ~25-line block lived verbatim in internalNodes AND layoutedEdges and had
+ * ~25-line block lived verbatim in internalNodes AND resolvedEdges and had
  * already diverged once): a SHALLOW keyed projection holding one frozen
  * RowHolder per present row, exposed through createRecordFacade so consumers
  * read `record[id]` as the row store's own proxy. Row-content reads chain

@@ -1,7 +1,7 @@
 import type { Rect, Transform } from "@xyflow/system";
 import { type Accessor, createMemo } from "solid-js";
 
-import type { EdgeLayouted, InternalNode, Node } from "@/types";
+import type { InternalNode, Node, ResolvedEdge } from "@/types";
 
 import type { OnScreenIds } from "./projections/onScreenIds";
 
@@ -113,7 +113,7 @@ export const isNodeCulled = <NodeType extends Node>(
 };
 
 /**
- * Whether an edge is outside the culling viewport: the AABB of its layouted
+ * Whether an edge is outside the culling viewport: the AABB of its resolved
  * endpoints (the drawn segment's box) against the culling viewport. The CSS
  * tier hides culled edges; the opt-in `onlyRenderVisibleElements` tier
  * unmounts them. Selected edges are never culled; `cullable: false` edges
@@ -121,7 +121,7 @@ export const isNodeCulled = <NodeType extends Node>(
  * absorbs curvature overshoot beyond the endpoint box.
  */
 export const isEdgeCulled = (
-  row: Pick<EdgeLayouted, "sourceX" | "sourceY" | "targetX" | "targetY" | "selected" | "cullable">,
+  row: Pick<ResolvedEdge, "sourceX" | "sourceY" | "targetX" | "targetY" | "selected" | "cullable">,
   cullingViewport: Rect | null,
 ): boolean => {
   if (!cullingViewport || row.selected || row.cullable === false) return false;
@@ -160,7 +160,7 @@ export const nodeCulled = <NodeType extends Node>(
 };
 
 export const edgeCulled = (
-  row: Pick<EdgeLayouted, "id" | "selected" | "cullable">,
+  row: Pick<ResolvedEdge, "id" | "selected" | "cullable">,
   cullingActive: boolean,
   onScreen: OnScreenIds,
 ): boolean => {

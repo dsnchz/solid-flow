@@ -38,17 +38,17 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
           // NodeRenderer (see the comment there and bench round 6).
           const unmounted = createMemo(() => {
             if (!store.onlyRenderVisibleElements || focusedEdgeId() === edgeId) return false;
-            const edge = actions.getLayoutedEdge(edgeId);
+            const edge = actions.getResolvedEdge(edgeId);
             return !!edge && edgeCulled(edge, store.cullingActive, onScreenEdgeIds);
           });
 
           // Membership comes from the user-facing edges store; an edge whose
-          // endpoints are not layouted yet has a null row — do not mount it.
+          // endpoints are not resolved yet has a null row — do not mount it.
           // `hidden` is decided here too — one Show per row, and `when`
           // returns the row for the wrapper (see NodeRenderer, audit C9).
           const visibleRow = () => {
             if (unmounted()) return undefined;
-            const edge = actions.getLayoutedEdge(edgeId);
+            const edge = actions.getResolvedEdge(edgeId);
             return edge != null && !edge.hidden ? edge : undefined;
           };
           return (

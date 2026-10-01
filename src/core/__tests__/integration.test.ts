@@ -7,7 +7,7 @@ import type { Edge, Node } from "@/types";
 
 import { RecordMapFacade } from "../facades";
 import { createInternalNodes, type NodeMeasurements } from "../projections/internalNodes";
-import { createLayoutedEdges } from "../projections/layoutedEdges";
+import { createResolvedEdges } from "../projections/resolvedEdges";
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -43,7 +43,7 @@ const hb = (nodeId: string) => ({
   ],
 });
 
-describe("integration: layoutedEdges over chained internalNodes sub-stores", () => {
+describe("integration: resolvedEdges over chained internalNodes sub-stores", () => {
   // Regression (sub-store conversion): SolidFlow's mount-time setConfig fires
   // BOTH defer-reset effects in one flush. With reference-keyed mapArray rows
   // this recreated every row store; the recreated edge stores read the node
@@ -89,7 +89,7 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
       // app shape: initialViewport reads the record BEFORE any flush
       void nodeLookup.get("a")?.internals.positionAbsolute.x;
 
-      const layouted = createLayoutedEdges({
+      const resolved = createResolvedEdges({
         selectionOverlay: {},
         get edges() {
           return edges;
@@ -102,7 +102,7 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
       });
 
       // app shape: For subscribes to visibleEdgeIds from the start
-      const visibleEdgeIds = createMemo(() => Object.keys(layouted));
+      const visibleEdgeIds = createMemo(() => Object.keys(resolved));
       const seenIds: string[][] = [];
       createEffect(
         () => visibleEdgeIds(),
@@ -113,7 +113,7 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
       // and EdgeWrapper-ish per-leaf subscriber once present
       const sourceXSeen: { value: number | undefined } = { value: undefined };
       createEffect(
-        () => layouted.e1?.sourceX,
+        () => resolved.e1?.sourceX,
         (x) => {
           sourceXSeen.value = x;
         },
@@ -125,12 +125,12 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
         setMeasurements,
         internalNodes,
         nodeLookup,
-        layouted,
+        resolved,
         seenIds,
         sourceXSeen,
       };
     });
-    const { dispose, setNodes, setEdges, setMeasurements, internalNodes, nodeLookup, layouted } = g;
+    const { dispose, setNodes, setEdges, setMeasurements, internalNodes, nodeLookup, resolved } = g;
     const { seenIds, sourceXSeen } = g;
     {
       flush();
@@ -188,7 +188,7 @@ describe("integration: layoutedEdges over chained internalNodes sub-stores", () 
       });
       flush();
 
-      expect(Object.keys(layouted).sort()).toEqual(["e1", "e2", "e3"]);
+      expect(Object.keys(resolved).sort()).toEqual(["e1", "e2", "e3"]);
       expect([...(seenIds.at(-1) ?? [])].sort()).toEqual(["e1", "e2", "e3"]);
       expect(sourceXSeen.value).toBeTypeOf("number");
       dispose();

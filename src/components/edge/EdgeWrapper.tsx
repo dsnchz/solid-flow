@@ -8,14 +8,14 @@ import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { edgeCulled } from "@/core";
-import type { Edge, EdgeEvents, EdgeLayouted, Node } from "@/types";
+import type { Edge, EdgeEvents, Node, ResolvedEdge } from "@/types";
 import { clientOnlySetup, cx, isEdgeSelectable, spreadOnDemand } from "@/utils";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = {
   /** The flow's edge event handlers as ONE reference (see NodeWrapper, audit C10). */
   readonly events: EdgeEvents<EdgeType>;
-  /** The layouted row, as EdgeRenderer's Show narrows it (one resolution per row). */
-  readonly edge: Accessor<EdgeLayouted<EdgeType>>;
+  /** The resolved row, as EdgeRenderer's Show narrows it (one resolution per row). */
+  readonly edge: Accessor<ResolvedEdge<EdgeType>>;
 };
 
 /** Internal per-edge wrapper: interaction, a11y, viewport culling, and the dynamic edge component. */
@@ -29,7 +29,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const owner = getOwner();
 
   // ONE row resolution per row (see NodeWrapper): EdgeRenderer's Show
-  // narrows getLayoutedEdge (which probes `in` first, so the row survives
+  // narrows getResolvedEdge (which probes `in` first, so the row survives
   // while its endpoints are unmeasured) and hands the accessor down. Read
   // once: the accessor is stable.
   const edge = untrack(() => props.edge);

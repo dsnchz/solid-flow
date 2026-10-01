@@ -19,7 +19,7 @@ const SSR = "http://localhost:3020/";
 const ALLOWED_WARNING = new RegExp(
   [
     String.raw`^\[WIDE_SCOPE_DEPS\]`,
-    String.raw`^\[(WASTED_RECOMPUTE|HOT_SCOPE_TIME)\] memo "(internalNodes|layoutedEdges)\.row"`,
+    String.raw`^\[(WASTED_RECOMPUTE|HOT_SCOPE_TIME)\] memo "(internalNodes|resolvedEdges)\.row"`,
     String.raw`^\[WASTED_RECOMPUTE\] memo "onScreen(Node|Edge)Ids"`,
   ].join("|"),
 );

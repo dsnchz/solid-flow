@@ -43,8 +43,8 @@ export {
   type NodeMeasurements,
   type NodeMeasurementWrite,
 } from "./projections/internalNodes";
-export { createLayoutedEdges, type LayoutedEdgesSource } from "./projections/layoutedEdges";
 export { createParentIds, type ParentIdsSource } from "./projections/parentIds";
+export { createResolvedEdges, type ResolvedEdgesSource } from "./projections/resolvedEdges";
 export { getSelectedNodesBounds } from "./projections/selectedBounds";
 export {
   createEdgeStore,
