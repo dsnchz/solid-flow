@@ -30,6 +30,17 @@ src/plugins/ src/hooks/ Background, MiniMap, Controls, …  +  the hook surface
 
 The public read surface is the reactive `flow` struct (stable identity, reactivity inside the property getters); the write surface is the `commands` struct. Hooks are aliases over these — implementations live in core.
 
+### Why the two row records are named differently
+
+The flow derives one row per user node and one per user edge, and the two records are not named in parallel on purpose: each name follows what its rows are, and the asymmetry is upstream's.
+
+| Record          | Row type                                             | Public                                       | Holds                                                                                                                                    |
+| --------------- | ---------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `internalNodes` | `InternalNode` (@xyflow/system's `InternalNodeBase`) | yes: `flow.internalNodes`, `useInternalNode` | the user node, its DOM-`measured` size, and its `internals` (`positionAbsolute`, `z`, `handleBounds`)                                    |
+| `resolvedEdges` | `ResolvedEdge`                                       | no: the edge renderer's own record           | the user edge with `defaultEdgeOptions` applied, its endpoints resolved to nodes and handles, its screen-space coordinates and its own z |
+
+An internal node is xyflow's public node model: React Flow and Svelte Flow both expose it (`useInternalNode`), so the record keeps that name and the xyflow docs apply as written. Renaming it for symmetry (`computedNodes`) would break the pairing between a record and its row type (`internalNodes[id]` is an `InternalNode`) and drift from the vocabulary users read upstream; part of what it holds is measured, not computed. xyflow has no internal-edge model: each library computes an edge's geometry for its own renderer (React Flow inside its EdgeWrapper, Svelte Flow in internal `EdgeLayouted` rows), so here too the record is internal, and it is named for what it holds: a user edge references its endpoints by id, and its row is that reference resolved to nodes, handles and coordinates (null while it does not resolve: an endpoint missing or hidden, or a handle not found).
+
 ## Ownership and seeding (`stores/seeding.ts`)
 
 Controlled vs uncontrolled is decided **per axis** by which prop you pass (`nodes` vs `defaultNodes`), observable internally as `config().nodes !== undefined`:
