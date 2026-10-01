@@ -11,7 +11,7 @@ import type {
 } from "@xyflow/system";
 import type { StoreSetter } from "solid-js";
 
-import type { Edge, EdgeLayouted, FitViewOptions, InternalNode, Node } from "@/types";
+import type { Edge, FitViewOptions, InternalNode, Node } from "@/types";
 
 import type { ConnectionsRecord } from "./projections/connections";
 
@@ -48,8 +48,6 @@ export type FlowState<NodeType extends Node = Node, EdgeType extends Edge = Edge
   // ── derived graph (projections) ──
   /** Adopted nodes keyed by id: absolute positions, z order, measured dimensions, handle bounds. */
   readonly internalNodes: Record<string, InternalNode<NodeType>>;
-  /** Screen-space edge geometry keyed by edge id; edges with missing/unmeasured endpoints have no entry. */
-  readonly layoutedEdges: Record<string, EdgeLayouted<EdgeType>>;
   /**
    * The connection index. Keys are built with {@link connectionKey}:
    * `nodeId`, `nodeId-type`, and `nodeId-type-handleId`; each value maps a

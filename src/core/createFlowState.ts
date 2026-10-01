@@ -912,9 +912,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     get internalNodes() {
       return internalNodes;
     },
-    get layoutedEdges() {
-      return layoutedEdges;
-    },
     get connections() {
       return connections;
     },

@@ -190,7 +190,7 @@ describe("FlowCommands", () => {
         onNodesDelete,
         onEdgesDelete,
       },
-      async ({ flow, commands }) => {
+      async ({ flow, commands, layoutedEdges }) => {
         const { deletedNodes, deletedEdges } = await commands.deleteElements({
           nodes: [{ id: "a" }],
         });
@@ -203,7 +203,7 @@ describe("FlowCommands", () => {
         expect(onNodesDelete).toHaveBeenCalledTimes(1);
         expect(onEdgesDelete).toHaveBeenCalledTimes(1);
         expect(flow.internalNodes.a).toBeUndefined();
-        expect(flow.layoutedEdges.e1).toBeUndefined();
+        expect(layoutedEdges.e1).toBeUndefined();
       },
     );
   });

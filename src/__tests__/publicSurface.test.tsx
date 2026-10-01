@@ -1,3 +1,4 @@
+import { render } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 
 import * as api from "@/index";
@@ -73,8 +74,43 @@ const PUBLIC_RUNTIME_EXPORTS = [
   "useViewportInitialized",
 ];
 
+// The reactive struct `useSolidFlow().flow` exposes, pinned the same way.
+// Row records the flow derives for its own renderers stay internal (as in
+// React Flow and Svelte Flow); `internalNodes` is public (useInternalNode).
+const PUBLIC_FLOW_KEYS = [
+  "nodes",
+  "edges",
+  "internalNodes",
+  "connections",
+  "selection",
+  "nodesInitialized",
+  "viewportInitialized",
+  "viewport",
+  "width",
+  "height",
+  "connection",
+  "dragging",
+  "minZoom",
+  "maxZoom",
+  "nodesDraggable",
+  "nodesConnectable",
+  "elementsSelectable",
+  "snapGrid",
+];
+
 describe("public surface", () => {
   it("exports exactly the public runtime API", () => {
     expect(Object.keys(api).sort()).toEqual([...PUBLIC_RUNTIME_EXPORTS].sort());
+  });
+
+  it("useSolidFlow().flow exposes exactly the public flow struct", () => {
+    let keys: string[] = [];
+    const Probe = () => ((keys = Object.keys(api.useSolidFlow().flow)), null);
+    render(() => (
+      <api.SolidFlow nodes={[]} edges={[]} width={100} height={100}>
+        <Probe />
+      </api.SolidFlow>
+    ));
+    expect(keys.sort()).toEqual([...PUBLIC_FLOW_KEYS].sort());
   });
 });
