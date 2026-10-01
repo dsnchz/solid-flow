@@ -359,12 +359,14 @@ export const MiniMap = <NodeType extends Node>(
             <title id={labelledBy()}>{store.ariaLabelConfig["minimap.ariaLabel"]}</title>
             <For keyed={false} each={nodeIds()}>
               {(nodeId) => {
-                // Narrow once through Show: inside the callback the row is
-                // non-null by type, not by assertion (audit D).
-                const visibleNode = createMemo(() => {
+                // The row resolves once, through Show (as NodeRenderer's
+                // rows do): `when` returns the row itself, undefined while it
+                // is missing, unmeasured or hidden, and the callback gets
+                // Show's narrowed accessor (non-null by type, audit D).
+                const visibleNode = () => {
                   const row = nodeLookup.get(nodeId());
-                  return row && nodeHasDimensions(row) && !row.hidden ? row : null;
-                });
+                  return row && nodeHasDimensions(row) && !row.hidden ? row : undefined;
+                };
 
                 return (
                   <Show when={visibleNode()}>
