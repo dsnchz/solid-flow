@@ -3,10 +3,10 @@ import { Portal } from "@solidjs/web";
 import { type Align, getNodeToolbarTransform, Position as SystemPosition } from "@xyflow/system";
 import { getOwner, type ParentComponent, Show, useContext } from "solid-js";
 
+import { cx, extraKeysOf, spreadExtras } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
 import { NodeIdContext } from "@/contexts/nodeId";
 import type { InternalNode, Position } from "@/types";
-import { cx, extraKeysOf, spreadExtras } from "@/utils";
 
 /** Props for the `NodeToolbar` plugin. */
 export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {

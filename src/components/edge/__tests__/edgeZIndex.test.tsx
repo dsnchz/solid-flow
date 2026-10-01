@@ -2,14 +2,14 @@ import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { cx } from "@/components/internal/dom";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
-import { cx } from "@/utils";
 
 // cx passes through, counted: how often an edge's class is rebuilt.
-vi.mock("@/utils", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/utils")>();
+vi.mock("@/components/internal/dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/internal/dom")>();
   return { ...actual, cx: vi.fn(actual.cx) };
 });
 const edgeClassBuilds = () =>

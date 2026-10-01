@@ -2,9 +2,9 @@ import { createEventListenerMap } from "@solid-primitives/event-listener";
 import { isServer } from "@solidjs/web";
 import { type Accessor, createEffect, createSignal, flush } from "solid-js";
 
+import { clientOnlySetup } from "@/components/internal/dom";
 import { allContradicted, matchesKeyArray, type ModifierFlags } from "@/core/keys";
 import type { KeyDefinition } from "@/types";
-import { clientOnlySetup } from "@/utils";
 
 /**
  * Reactive "is this key (combo) held right now?" — the Solid Flow

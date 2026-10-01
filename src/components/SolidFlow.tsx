@@ -15,6 +15,7 @@ import {
 import { createSolidFlow } from "@/browser/createSolidFlow";
 import { ConnectionLine } from "@/components/connection";
 import { EdgeRenderer, NodeRenderer, Pane, Viewport, Zoom } from "@/components/container";
+import { toPxString } from "@/components/internal/dom";
 import { NodeSelection, Selection } from "@/components/selection";
 import { Attribution, KeyHandler } from "@/components/utility";
 import { typedSolidFlowContext } from "@/contexts/flow";
@@ -23,7 +24,6 @@ import { FLOW_PROP_KEYS, type SolidFlowProps } from "@/core/flowProps";
 import { propDefaults } from "@/core/propDefaults";
 import { createSelectionChange } from "@/core/selectionChange";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
-import { toPxString } from "@/utils";
 
 import { A11yDescriptions } from "./accessibility";
 

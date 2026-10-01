@@ -1,9 +1,15 @@
 import { isServer, type JSX } from "@solidjs/web";
 import { createRenderEffect, createRoot, getOwner, type ParentProps, runWithOwner } from "solid-js";
 
+import {
+  clientOnlySetup,
+  cx,
+  extraKeysOf,
+  spreadExtras,
+  toPxString,
+} from "@/components/internal/dom";
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
 import { edgeEndpointZ } from "@/core/projections/resolvedEdges";
-import { clientOnlySetup, cx, extraKeysOf, spreadExtras, toPxString } from "@/utils";
 
 import { labelLayerOf } from "./EdgeLabelRenderer";
 

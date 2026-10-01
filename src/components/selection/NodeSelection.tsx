@@ -3,9 +3,9 @@ import { isNumeric, type OnDrag } from "@xyflow/system";
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
+import { ARROW_KEY_DIFFS, toPxString } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
 import type { Node, NodeEvents, NodeSelectionEvents } from "@/types";
-import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
 import { Selection } from "./Selection";
 

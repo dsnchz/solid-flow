@@ -6,9 +6,9 @@ import {
   armConnectionGestureLookup,
   buildConnectionGestureParams,
 } from "@/components/handle/connectionGestureLookup";
+import { cx, extraKeysOf } from "@/components/internal/dom";
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
 import type { Edge } from "@/types";
-import { cx, extraKeysOf } from "@/utils";
 
 import { renderEdgeLabel } from "./EdgeLabel";
 

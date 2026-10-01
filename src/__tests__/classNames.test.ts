@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cx } from "@/utils";
+import { cx } from "@/components/internal/dom";
 
 // Per-row elements set their class as ONE string: @solidjs/web's array/object
 // class form flattens and diffs a key map on every assignment (~200ms of a

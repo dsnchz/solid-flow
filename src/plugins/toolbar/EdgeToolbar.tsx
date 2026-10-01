@@ -3,8 +3,8 @@ import { type EdgeToolbarBaseProps, getEdgeToolbarTransform } from "@xyflow/syst
 import { getOwner, type ParentProps, Show } from "solid-js";
 
 import { EdgeLabel } from "@/components/edge";
+import { cx, extraKeysOf, spreadExtras } from "@/components/internal/dom";
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
-import { cx, extraKeysOf, spreadExtras } from "@/utils";
 
 /** Props for the `EdgeToolbar` plugin. */
 export type EdgeToolbarProps = EdgeToolbarBaseProps & {

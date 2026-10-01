@@ -7,9 +7,9 @@ import {
 } from "@xyflow/system";
 import { createEffect, createSignal, getOwner, type ParentProps, untrack } from "solid-js";
 
+import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/components/internal/dom";
 import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import type { Node, ResizeControlVariant } from "@/types";
-import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/utils";
 
 import type { NodeResizerProps } from "./NodeResizer";
 

@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 
-import { cx } from "@/utils";
+import { cx } from "@/components/internal/dom";
 
 /**
  * Props passed to a minimap node renderer — the default `MiniMapNode` or a

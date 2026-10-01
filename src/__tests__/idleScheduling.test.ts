@@ -15,7 +15,7 @@ describe("scheduleIdleCallback", () => {
   it("passes a bounded timeout to requestIdleCallback", async () => {
     const ric = vi.fn();
     (globalThis as { requestIdleCallback?: unknown }).requestIdleCallback = ric;
-    const { scheduleIdleCallback } = await import("../utils");
+    const { scheduleIdleCallback } = await import("@/browser/idle");
     const cb = () => {};
     scheduleIdleCallback(cb);
     expect(ric).toHaveBeenCalledTimes(1);
@@ -25,7 +25,7 @@ describe("scheduleIdleCallback", () => {
   });
 
   it("falls back to a macrotask where requestIdleCallback is missing", async () => {
-    const { scheduleIdleCallback } = await import("../utils");
+    const { scheduleIdleCallback } = await import("@/browser/idle");
     await new Promise<void>((resolve) => scheduleIdleCallback(resolve));
   });
 });

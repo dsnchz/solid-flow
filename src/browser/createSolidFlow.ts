@@ -11,8 +11,8 @@ import { DefaultNode, GroupNode, InputNode, OutputNode } from "@/components/node
 import { createFlowState } from "@/core";
 import type { SolidFlowProps } from "@/core/flowProps";
 import type { BuiltInEdgeTypes, BuiltInNodeTypes, Edge, Node } from "@/types";
-import { scheduleIdleCallback } from "@/utils";
 
+import { scheduleIdleCallback } from "./idle";
 import { handleExpandParent, measureNodeInternals } from "./measure";
 
 /** One measure request: node id plus the DOM element to measure. */

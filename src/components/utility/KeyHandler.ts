@@ -3,11 +3,11 @@ import { isServer } from "@solidjs/web";
 import { isInputDOMNode, isMacOs } from "@xyflow/system";
 import { flush } from "solid-js";
 
+import { clientOnlySetup } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
 import { allContradicted, matchesKeyArray, type ModifierFlags } from "@/core/keys";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { KeyDefinition } from "@/types";
-import { clientOnlySetup } from "@/utils";
 
 export type KeyHandlerProps = {
   readonly selectionKey?: KeyDefinition | KeyDefinition[] | null;

@@ -1,8 +1,8 @@
 import { isServer, type JSX } from "@solidjs/web";
 import { getOwner, type ParentProps, Show } from "solid-js";
 
+import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/components/internal/dom";
 import type { BaseEdgeProps } from "@/types";
-import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/utils";
 
 import { EdgeLabel } from "./EdgeLabel";
 

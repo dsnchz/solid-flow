@@ -9,7 +9,7 @@ import {
 } from "@xyflow/system";
 import { Show } from "solid-js";
 
-import { extraKeysOf } from "@/utils";
+import { extraKeysOf } from "@/components/internal/dom";
 
 import { renderResizeControl } from "./NodeResizeControl";
 
