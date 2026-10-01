@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { type HandleType, XYHandle, type XYPosition } from "@xyflow/system";
-import { createSignal, omit, type ParentProps, Show } from "solid-js";
+import { createSignal, type ParentProps } from "solid-js";
 
 import {
   armConnectionGestureLookup,
@@ -8,9 +8,9 @@ import {
 } from "@/components/handle/connectionGestureLookup";
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
 import type { Edge } from "@/types";
-import { propDefaults, toPxString } from "@/utils";
+import { cx, extraKeysOf } from "@/utils";
 
-import { EdgeLabel } from "./EdgeLabel";
+import { renderEdgeLabel } from "./EdgeLabel";
 
 export type EdgeReconnectAnchorProps = {
   readonly type: HandleType;
@@ -26,26 +26,32 @@ export type EdgeReconnectAnchorProps = {
   readonly onReconnectingChange?: (reconnecting: boolean) => void;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
-/** Grab area that lets an edge end be dragged off its handle and reconnected. */
+/**
+ * The props the anchor consumes itself plus the attributes its label element
+ * sets (an extra prop never overrides them); every other key is an attribute
+ * of the element.
+ */
+const OWN_KEYS: ReadonlySet<string> = new Set([
+  "type",
+  "class",
+  "style",
+  "position",
+  "size",
+  "reconnecting",
+  "onReconnectingChange",
+  "children",
+  "role",
+  "tabindex",
+  "onClick",
+  "onPointerDown",
+]);
+
+/**
+ * Grab area that lets an edge end be dragged off its handle and reconnected.
+ * As in Svelte Flow it is one element, the edge label itself, carrying the
+ * updater classes and size: one per anchor, typically two per custom edge.
+ */
 export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>): JSX.Element => {
-  const _props = propDefaults(props, {
-    size: 25,
-    reconnecting: false,
-    style: {} as JSX.CSSProperties,
-  });
-
-  const rest = omit(
-    _props,
-    "type",
-    "class",
-    "style",
-    "position",
-    "size",
-    "reconnecting",
-    "onReconnectingChange",
-    "children",
-  );
-
   const { store, nodeLookup, edgeLookup, actions, commands, nodeGeometry } = useInternalSolidFlow();
 
   const edgeId = useEdgeId();
@@ -56,11 +62,11 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
   }
 
   const edge = () => edgeLookup[edgeId()]!;
-  const isReconnecting = () => _props.reconnecting || reconnecting();
+  const isReconnecting = () => !!props.reconnecting || reconnecting();
 
   const setReconnectingState = (next: boolean) => {
     setReconnecting(next);
-    _props.onReconnectingChange?.(next);
+    props.onReconnectingChange?.(next);
   };
 
   const onPointerDown = (event: PointerEvent) => {
@@ -74,10 +80,10 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     const oldEdge = edge();
 
     setReconnectingState(true);
-    store.onReconnectStart?.(event, oldEdge, _props.type);
+    store.onReconnectStart?.(event, oldEdge, props.type);
 
     const opposite =
-      _props.type === "target"
+      props.type === "target"
         ? {
             nodeId: oldEdge.source,
             handleId: oldEdge.sourceHandle ?? null,
@@ -123,27 +129,25 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     });
   };
 
-  return (
-    <EdgeLabel x={_props.position?.x} y={_props.position?.y} style={_props.style} {...rest}>
-      <div
-        onPointerDown={onPointerDown}
-        class={[
-          "solid-flow__edgeupdater",
-          `solid-flow__edgeupdater-${_props.type}`,
-          store.noPanClass,
-          _props.class,
-        ]}
-        style={{
-          width: toPxString(_props.size),
-          height: toPxString(_props.size),
-          background: "transparent",
-          border: "none",
-          cursor: "move",
-          ..._props.style,
-        }}
-      >
-        <Show when={!isReconnecting()}>{_props.children}</Show>
-      </div>
-    </EdgeLabel>
-  );
+  const size = () => props.size ?? 25;
+
+  return renderEdgeLabel(props, extraKeysOf(props, OWN_KEYS), {
+    x: () => props.position?.x ?? 0,
+    y: () => props.position?.y ?? 0,
+    width: size,
+    height: size,
+    class: () =>
+      cx(
+        "solid-flow__edge-label",
+        "transparent",
+        "solid-flow__edgeupdater",
+        `solid-flow__edgeupdater-${props.type}`,
+        store.noPanClass,
+        props.class,
+      ),
+    style: () => props.style,
+    selectEdgeOnClick: () => false,
+    children: () => (isReconnecting() ? undefined : props.children),
+    onPointerDown,
+  });
 };

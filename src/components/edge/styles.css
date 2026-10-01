@@ -4,11 +4,6 @@
   --xy-edge-stroke-selected-default: light-dark(#555, #727272);
 }
 
-.solid-flow__edgeupdater {
-  cursor: move;
-  pointer-events: all;
-}
-
 .solid-flow__edge-label {
   text-align: center;
   position: absolute;
@@ -18,6 +13,13 @@
 /* <EdgeLabel transparent> */
 .solid-flow__edge-label.transparent {
   background: transparent;
+}
+
+/* EdgeReconnectAnchor is an edge label carrying this class (as in Svelte
+   Flow): after the label rule, so its move cursor wins. */
+.solid-flow__edgeupdater {
+  cursor: move;
+  pointer-events: all;
 }
 
 .solid-flow__edge-path {

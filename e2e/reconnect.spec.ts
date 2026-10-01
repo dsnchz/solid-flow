@@ -15,6 +15,10 @@ test.describe("edge reconnect", () => {
     );
     await page.mouse.click(midpoint.x, midpoint.y);
     await expect(page.locator(".solid-flow__edgeupdater")).toHaveCount(2);
+    // One element per anchor, the edge label itself (as Svelte Flow), and the
+    // updater's move cursor wins over the label's.
+    await expect(page.locator(".solid-flow__edge-label.solid-flow__edgeupdater")).toHaveCount(2);
+    await expect(page.locator(".solid-flow__edgeupdater-target")).toHaveCSS("cursor", "move");
 
     // Drag the target-end anchor from Target A onto Target B's handle.
     const anchor = await centerOf(page.locator(".solid-flow__edgeupdater-target"));

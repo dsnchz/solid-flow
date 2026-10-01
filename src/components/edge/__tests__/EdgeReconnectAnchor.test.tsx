@@ -1,5 +1,6 @@
 import { fireEvent, render } from "@solidjs/testing-library";
 import type { Connection, XYHandle } from "@xyflow/system";
+import { createSignal, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
@@ -113,5 +114,99 @@ describe("EdgeReconnectAnchor", () => {
     expect(api.flow.edges.map((e) => e.id)).toEqual(["e1-c", "e2"]);
     expect(api.flow.edges[0]).toMatchObject({ source: "a", target: "c" });
     expect(api.flow.edges[1]).toMatchObject({ id: "e2", source: "b", target: "c" });
+  });
+});
+
+// The anchor's own contract (as Svelte Flow's EdgeReconnectAnchor: one
+// element, the edge label itself, carrying the updater classes and size).
+const renderAnchor = async (anchor: () => ReturnType<typeof EdgeReconnectAnchor>) => {
+  gesture.params = undefined;
+  const AnchorEdge = () => anchor();
+  const { container } = render(() => (
+    <SolidFlow
+      nodes={nodes}
+      edges={[{ id: "e1", source: "a", target: "b", type: "anchor" }]}
+      edgeTypes={{ anchor: AnchorEdge }}
+      width={800}
+      height={600}
+    />
+  ));
+  await tick();
+  const element = () => container.querySelector<HTMLDivElement>(".solid-flow__edgeupdater")!;
+  return { container, element };
+};
+
+describe("EdgeReconnectAnchor props", () => {
+  it("is one element in the label layer: the edge label with the updater classes", async () => {
+    const { container, element } = await renderAnchor(() => (
+      <EdgeReconnectAnchor type="target" class="mine" />
+    ));
+
+    expect(container.querySelectorAll(".solid-flow__edgeupdater")).toHaveLength(1);
+    expect(element().getAttribute("class")).toBe(
+      "solid-flow__edge-label transparent solid-flow__edgeupdater solid-flow__edgeupdater-target nopan mine",
+    );
+    expect(element().parentElement!.classList.contains("solid-flow__edge-labels")).toBe(true);
+  });
+
+  it("takes size as its width and height, 25 by default, at its position", async () => {
+    const { element } = await renderAnchor(() => (
+      <EdgeReconnectAnchor type="source" position={{ x: 10, y: 20 }} />
+    ));
+    expect(element().style.width).toBe("25px");
+    expect(element().style.height).toBe("25px");
+    expect(element().style.transform).toContain("translate(10px,20px)");
+
+    const sized = await renderAnchor(() => <EdgeReconnectAnchor type="source" size={40} />);
+    expect(sized.element().style.width).toBe("40px");
+  });
+
+  it("puts the user's style and extra attributes on the element", async () => {
+    const { element } = await renderAnchor(() => (
+      <EdgeReconnectAnchor type="target" style={{ opacity: "0.5" }} data-testid="anchor" />
+    ));
+    expect(element().style.opacity).toBe("0.5");
+    expect(element().getAttribute("data-testid")).toBe("anchor");
+  });
+
+  it("hides its children while reconnecting and reports the state", async () => {
+    const onReconnectingChange = vi.fn();
+    const { element } = await renderAnchor(() => (
+      <EdgeReconnectAnchor type="target" onReconnectingChange={onReconnectingChange}>
+        <span class="grip" />
+      </EdgeReconnectAnchor>
+    ));
+    expect(element().querySelector(".grip")).not.toBeNull();
+
+    fireEvent.pointerDown(element(), { button: 0, clientX: 300, clientY: 20 });
+    flush();
+    expect(onReconnectingChange).toHaveBeenLastCalledWith(true);
+    expect(element().querySelector(".grip")).toBeNull();
+
+    gesture.params!.onReconnectEnd!(new MouseEvent("mouseup"), { isValid: false } as never);
+    flush();
+    expect(onReconnectingChange).toHaveBeenLastCalledWith(false);
+    expect(element().querySelector(".grip")).not.toBeNull();
+  });
+
+  it("hides its children while the reconnecting prop is set", async () => {
+    const [reconnecting, setReconnecting] = createSignal(false);
+    const { element } = await renderAnchor(() => (
+      <EdgeReconnectAnchor type="target" reconnecting={reconnecting()}>
+        <span class="grip" />
+      </EdgeReconnectAnchor>
+    ));
+    expect(element().querySelector(".grip")).not.toBeNull();
+    setReconnecting(true);
+    flush();
+    expect(element().querySelector(".grip")).toBeNull();
+  });
+
+  it("starts a gesture on a primary-button pointerdown only", async () => {
+    const { element } = await renderAnchor(() => <EdgeReconnectAnchor type="target" />);
+    fireEvent.pointerDown(element(), { button: 2 });
+    expect(gesture.params).toBeUndefined();
+    fireEvent.pointerDown(element(), { button: 0, clientX: 300, clientY: 20 });
+    expect(gesture.params).toBeDefined();
   });
 });

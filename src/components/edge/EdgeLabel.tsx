@@ -3,7 +3,7 @@ import { createRenderEffect, createRoot, getOwner, type ParentProps, runWithOwne
 
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
 import { edgeEndpointZ } from "@/core/projections/resolvedEdges";
-import { clientOnlySetup, extraKeysOf, spreadExtras, toPxString } from "@/utils";
+import { clientOnlySetup, cx, extraKeysOf, spreadExtras, toPxString } from "@/utils";
 
 import { labelLayerOf } from "./EdgeLabelRenderer";
 
@@ -37,14 +37,34 @@ const OWN_KEYS: ReadonlySet<string> = new Set([
   "onClick",
 ]);
 
-/** Renders an edge label positioned in graph coordinates. */
-export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
-  // One label per labelled edge: the per-row rules (see Handle) instead of
-  // propDefaults + omit + a JSX spread, which routed every attribute of the
-  // element through one spread effect.
-  const x = () => props.x ?? 0;
-  const y = () => props.y ?? 0;
-  const extraKeys = extraKeysOf(props, OWN_KEYS);
+/** What a label element shows; each part is read where the element binds it. */
+export type EdgeLabelParts = {
+  readonly x: () => number;
+  readonly y: () => number;
+  readonly width: () => number | undefined;
+  readonly height: () => number | undefined;
+  /** The whole class string, `solid-flow__edge-label` included. */
+  readonly class: () => string;
+  readonly style: () => JSX.CSSProperties | undefined;
+  readonly selectEdgeOnClick: () => boolean;
+  readonly children: () => JSX.Element;
+  /** Bound once on the element (EdgeReconnectAnchor's gesture start). */
+  readonly onPointerDown?: (event: PointerEvent) => void;
+};
+
+/**
+ * One edge label element, moved into the flow's label layer. `props` is the
+ * caller's props object and `extraKeys` its keys that become attributes of
+ * the element: EdgeLabel's own, or EdgeReconnectAnchor's, which renders as
+ * the label itself (as in Svelte Flow) instead of a label around a second
+ * element. Call from a component body (it creates the label under the
+ * caller's owner); it renders nothing in place.
+ */
+export const renderEdgeLabel = (
+  props: object,
+  extraKeys: readonly string[],
+  parts: EdgeLabelParts,
+): JSX.Element => {
   const owner = getOwner();
 
   const { store, actions, nodeLookup } = useInternalSolidFlow();
@@ -71,21 +91,22 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
         }}
         role="button"
         tabindex={-1}
-        class={["solid-flow__edge-label", { transparent: props.transparent }, props.class]}
+        class={parts.class()}
         style={{
           "pointer-events": "all",
-          width: toPxString(props.width),
-          height: toPxString(props.height),
-          transform: `translate(-50%, -50%) translate(${x()}px,${y()}px)`,
-          cursor: props.selectEdgeOnClick ? "pointer" : undefined,
+          width: toPxString(parts.width()),
+          height: toPxString(parts.height()),
+          transform: `translate(-50%, -50%) translate(${parts.x()}px,${parts.y()}px)`,
+          cursor: parts.selectEdgeOnClick() ? "pointer" : undefined,
           "z-index": zIndex(),
-          ...props.style,
+          ...parts.style(),
         }}
         onClick={() => {
-          if (props.selectEdgeOnClick) actions.handleEdgeSelection(id());
+          if (parts.selectEdgeOnClick()) actions.handleEdgeSelection(id());
         }}
+        onPointerDown={parts.onPointerDown}
       >
-        {props.children}
+        {parts.children()}
       </div>
     );
     return label;
@@ -124,3 +145,19 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
 
   return null;
 };
+
+/** Renders an edge label positioned in graph coordinates. */
+export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element =>
+  // One label per labelled edge: the per-row rules (see Handle) instead of
+  // propDefaults + omit + a JSX spread, which routed every attribute of the
+  // element through one spread effect.
+  renderEdgeLabel(props, extraKeysOf(props, OWN_KEYS), {
+    x: () => props.x ?? 0,
+    y: () => props.y ?? 0,
+    width: () => props.width,
+    height: () => props.height,
+    class: () => cx("solid-flow__edge-label", props.transparent && "transparent", props.class),
+    style: () => props.style,
+    selectEdgeOnClick: () => !!props.selectEdgeOnClick,
+    children: () => props.children,
+  });
