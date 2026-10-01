@@ -50,15 +50,36 @@ export const KeyHandler = (props: KeyHandlerProps) => {
     },
   };
 
-  const resetKeysAndSelection = () => {
+  // The keys held to change a gesture, one row each: the definition, its
+  // pressed flag and the flag's setter. The delete key is not one of them: it
+  // acts on keydown (and is not a modifier, so the flags cannot heal it).
+  const heldKeys = [
     {
-      actions.setSelectionRect(undefined);
-      actions.setSelectionKeyPressed(false);
-      actions.setMultiselectionKeyPressed(false);
-      actions.setDeleteKeyPressed(false);
-      actions.setPanActivationKeyPressed(false);
-      actions.setZoomActivationKeyPressed(false);
-    }
+      definition: () => _props.selectionKey,
+      pressed: () => store.selectionKeyPressed,
+      set: actions.setSelectionKeyPressed,
+    },
+    {
+      definition: () => _props.multiSelectionKey,
+      pressed: () => store.multiselectionKeyPressed,
+      set: actions.setMultiselectionKeyPressed,
+    },
+    {
+      definition: () => _props.panActivationKey,
+      pressed: () => store.panActivationKeyPressed,
+      set: actions.setPanActivationKeyPressed,
+    },
+    {
+      definition: () => _props.zoomActivationKey,
+      pressed: () => store.zoomActivationKeyPressed,
+      set: actions.setZoomActivationKeyPressed,
+    },
+  ];
+
+  const resetKeysAndSelection = () => {
+    actions.setSelectionRect(undefined);
+    for (const held of heldKeys) held.set(false);
+    actions.setDeleteKeyPressed(false);
   };
 
   /**
@@ -71,21 +92,11 @@ export const KeyHandler = (props: KeyHandlerProps) => {
    */
   const reconcileModifiers = (event: ModifierFlags) => {
     let changed = false;
-    if (store.selectionKeyPressed && allContradicted(event, _props.selectionKey)) {
-      actions.setSelectionKeyPressed(false);
-      changed = true;
-    }
-    if (store.multiselectionKeyPressed && allContradicted(event, _props.multiSelectionKey)) {
-      actions.setMultiselectionKeyPressed(false);
-      changed = true;
-    }
-    if (store.panActivationKeyPressed && allContradicted(event, _props.panActivationKey)) {
-      actions.setPanActivationKeyPressed(false);
-      changed = true;
-    }
-    if (store.zoomActivationKeyPressed && allContradicted(event, _props.zoomActivationKey)) {
-      actions.setZoomActivationKeyPressed(false);
-      changed = true;
+    for (const held of heldKeys) {
+      if (held.pressed() && allContradicted(event, held.definition())) {
+        held.set(false);
+        changed = true;
+      }
     }
     // Key state gates pointer handlers in the same task — commit now
     if (changed) flush();
@@ -135,26 +146,15 @@ export const KeyHandler = (props: KeyHandlerProps) => {
 
   const handleKeyDown = (event: KeyboardEvent) => {
     reconcileModifiers(event);
-    {
-      if (matchesKeyArray(event, _props.selectionKey)) {
-        actions.setSelectionKeyPressed(true);
-      }
-      if (matchesKeyArray(event, _props.multiSelectionKey)) {
-        actions.setMultiselectionKeyPressed(true);
-      }
-      if (matchesKeyArray(event, _props.deleteKey) && !isInputDOMNode(event)) {
-        // Add safety check for modifier keys to prevent accidental deletions
-        const isModifierKey = event.ctrlKey || event.metaKey || event.shiftKey;
-        if (!isModifierKey) {
-          actions.setDeleteKeyPressed(true);
-          void handleDelete();
-        }
-      }
-      if (matchesKeyArray(event, _props.panActivationKey)) {
-        actions.setPanActivationKeyPressed(true);
-      }
-      if (matchesKeyArray(event, _props.zoomActivationKey)) {
-        actions.setZoomActivationKeyPressed(true);
+    for (const held of heldKeys) {
+      if (matchesKeyArray(event, held.definition())) held.set(true);
+    }
+    if (matchesKeyArray(event, _props.deleteKey) && !isInputDOMNode(event)) {
+      // Add safety check for modifier keys to prevent accidental deletions
+      const isModifierKey = event.ctrlKey || event.metaKey || event.shiftKey;
+      if (!isModifierKey) {
+        actions.setDeleteKeyPressed(true);
+        void handleDelete();
       }
     }
     // Key state gates pointer handlers in the same task — commit now
@@ -163,23 +163,10 @@ export const KeyHandler = (props: KeyHandlerProps) => {
 
   const handleKeyUp = (event: KeyboardEvent) => {
     reconcileModifiers(event);
-    {
-      if (matchesKeyArray(event, _props.selectionKey)) {
-        actions.setSelectionKeyPressed(false);
-      }
-      if (matchesKeyArray(event, _props.multiSelectionKey)) {
-        actions.setMultiselectionKeyPressed(false);
-      }
-      if (matchesKeyArray(event, _props.deleteKey)) {
-        actions.setDeleteKeyPressed(false);
-      }
-      if (matchesKeyArray(event, _props.panActivationKey)) {
-        actions.setPanActivationKeyPressed(false);
-      }
-      if (matchesKeyArray(event, _props.zoomActivationKey)) {
-        actions.setZoomActivationKeyPressed(false);
-      }
+    for (const held of heldKeys) {
+      if (matchesKeyArray(event, held.definition())) held.set(false);
     }
+    if (matchesKeyArray(event, _props.deleteKey)) actions.setDeleteKeyPressed(false);
     // Key state gates pointer handlers in the same task — commit now
     flush();
   };
