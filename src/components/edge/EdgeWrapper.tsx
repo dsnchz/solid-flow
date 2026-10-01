@@ -1,15 +1,15 @@
 import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
 import { dynamic } from "@solidjs/web";
-import { elementSelectionKeys, errorMessages, getMarkerId } from "@xyflow/system";
-import { type Accessor, createEffect, createMemo, getOwner, runWithOwner, untrack } from "solid-js";
+import { elementSelectionKeys, getMarkerId } from "@xyflow/system";
+import { type Accessor, createMemo, getOwner, runWithOwner, untrack } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { edgeCulled } from "@/core";
 import type { Edge, EdgeEvents, EdgeLayouted, Node } from "@/types";
-import { clientOnlySetup, cx, emitFlowError, isEdgeSelectable, spreadOnDemand } from "@/utils";
+import { clientOnlySetup, cx, isEdgeSelectable, spreadOnDemand } from "@/utils";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = {
   /** The flow's edge event handlers as ONE reference (see NodeWrapper, audit C10). */
@@ -40,21 +40,12 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   const focusable = () => edge().focusable ?? store.edgesFocusable;
 
   const edgeTypeValid = () => edgeType() in store.edgeTypes;
-  // Upstream parity (error011): unknown types render the default component
-  // instead of nothing, and report through the error channel (mirrors
-  // NodeWrapper's error003 effect).
+  // Unknown types render the default component, silently (Svelte Flow
+  // parity, 1.x and 2.0; nodes report error003). A per-edge effect only for
+  // the report cost ~45 ms of a 10k mount and ~2 MB (audit C8).
   const edgeComponent = () => store.edgeTypes[edgeTypeValid() ? edgeType() : "default"];
   // `dynamic()` directly (see NodeWrapper): no per-row prop re-copy.
   const EdgeComponent = dynamic(edgeComponent);
-
-  createEffect(
-    () => ({ valid: edgeTypeValid(), edgeType: edgeType() }),
-    ({ valid, edgeType }) => {
-      if (!valid) {
-        emitFlowError(store.onError, "011", errorMessages["error011"](edgeType));
-      }
-    },
-  );
 
   const markerStartUrl = () =>
     edge().markerStart ? `url('#${getMarkerId(edge().markerStart, store.id)}')` : undefined;

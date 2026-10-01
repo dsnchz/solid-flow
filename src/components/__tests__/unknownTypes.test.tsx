@@ -37,7 +37,9 @@ describe("unknown element types", () => {
     expect(onFlowError).toHaveBeenCalledWith("003", expect.stringContaining("nope"));
   });
 
-  it("renders unknown-type edges with the default renderer and reports 011", async () => {
+  it("renders unknown-type edges with the default renderer and reports no 011", async () => {
+    // Svelte Flow parity (1.x and 2.0): an unknown edge type falls back to
+    // the default edge silently; nodes still report 003.
     const onFlowError = vi.fn();
     const { container } = render(() => (
       <SolidFlow
@@ -53,6 +55,6 @@ describe("unknown element types", () => {
     const edge = container.querySelector('.solid-flow__edge[data-id="e1"]');
     expect(edge).not.toBeNull();
     expect(edge!.querySelector(".solid-flow__edge-path")).not.toBeNull();
-    expect(onFlowError).toHaveBeenCalledWith("011", expect.stringContaining("bogus"));
+    expect(onFlowError).not.toHaveBeenCalledWith("011", expect.anything());
   });
 });
