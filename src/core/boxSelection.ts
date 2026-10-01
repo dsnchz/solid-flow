@@ -69,6 +69,10 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
         before = { nodes: new Set(), edges: new Set() };
         deps.unselectNodesAndEdges();
       }
+      // Compare the first move against the selection as it is now, not
+      // against what the previous gesture ended with.
+      nodeIds = before.nodes;
+      edgeIds = before.edges;
     },
 
     /** One move: select what the screen-space rect holds, writing only on change. */

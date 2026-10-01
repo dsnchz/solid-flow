@@ -148,4 +148,20 @@ describe("createBoxSelection", () => {
       { isNodeSelectable: (node) => node.id !== "b" },
     );
   });
+
+  it("a second gesture that boxes what the first ended with still selects it", async () => {
+    await withBox(({ box, selected }) => {
+      box.arm();
+      box.begin({ keepPrevious: false });
+      box.update(AB);
+      flush();
+      // Second gesture: begin deselects; its first box equals the first
+      // gesture's final one and must be written, not skipped as unchanged.
+      box.arm();
+      box.begin({ keepPrevious: false });
+      box.update(AB);
+      flush();
+      expect(selected()).toEqual({ nodes: ["a", "b"], edges: ["e-ab", "e-bc"] });
+    });
+  });
 });
