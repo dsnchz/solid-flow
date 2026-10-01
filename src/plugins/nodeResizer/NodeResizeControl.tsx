@@ -1,15 +1,15 @@
-import type { JSX } from "@solidjs/web";
+import { isServer, type JSX } from "@solidjs/web";
 import {
   type ControlPosition,
   XYResizer,
   type XYResizerChange,
   type XYResizerChildChange,
 } from "@xyflow/system";
-import { createEffect, createSignal, omit, type ParentProps, untrack } from "solid-js";
+import { createEffect, createSignal, getOwner, type ParentProps, untrack } from "solid-js";
 
 import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import type { Node, ResizeControlVariant } from "@/types";
-import { propDefaults } from "@/utils";
+import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/utils";
 
 import type { NodeResizerProps } from "./NodeResizer";
 
@@ -41,53 +41,56 @@ type ResizeControlProps = NodeResizerSubProps & {
   readonly style?: JSX.CSSProperties;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
+/**
+ * The props a control consumes itself plus the attributes it sets on its
+ * element (an extra prop never overrides them); every other key is an
+ * attribute of the element.
+ */
+const OWN_KEYS: ReadonlySet<string> = new Set([
+  "nodeId",
+  "variant",
+  "position",
+  "minWidth",
+  "minHeight",
+  "maxWidth",
+  "maxHeight",
+  "keepAspectRatio",
+  "autoScale",
+  "onResizeStart",
+  "onResize",
+  "onResizeEnd",
+  "shouldResize",
+  "class",
+  "children",
+  "color",
+  "style",
+]);
+
 /** A single resize handle or line — the building block of `NodeResizer`. */
 export const NodeResizeControl = <NodeType extends Node = Node>(
   props: ParentProps<ResizeControlProps>,
 ): JSX.Element => {
-  const _props = propDefaults(props, {
-    variant: "handle" as ResizeControlVariant,
-    minWidth: 10,
-    minHeight: 10,
-    maxWidth: Number.MAX_VALUE,
-    maxHeight: Number.MAX_VALUE,
-    keepAspectRatio: false,
-    autoScale: true,
-    style: {} as JSX.CSSProperties,
-  });
-
-  const rest = omit(
-    _props,
-    "nodeId",
-    "variant",
-    "position",
-    "minWidth",
-    "minHeight",
-    "maxWidth",
-    "maxHeight",
-    "keepAspectRatio",
-    "autoScale",
-    "onResizeStart",
-    "onResize",
-    "onResizeEnd",
-    "shouldResize",
-    "class",
-    "children",
-    "color",
-    "style",
-  );
+  // Eight controls per NodeResizer: the per-row rules (see Handle) instead of
+  // propDefaults + omit + a JSX spread, which routed every attribute of the
+  // element through one spread effect.
+  const variant = () => props.variant ?? "handle";
+  const minWidth = () => props.minWidth ?? 10;
+  const minHeight = () => props.minHeight ?? 10;
+  const maxWidth = () => props.maxWidth ?? Number.MAX_VALUE;
+  const maxHeight = () => props.maxHeight ?? Number.MAX_VALUE;
+  const autoScale = () => props.autoScale ?? true;
+  const extraKeys = extraKeysOf(props, OWN_KEYS);
+  const owner = getOwner();
 
   const [resizeControlRef, setResizeControlRef] = createSignal<HTMLDivElement>();
   const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
 
   const ctxNodeId = useNodeId();
-  const nodeId = () => _props.nodeId ?? ctxNodeId();
-  const isLineVariant = () => _props.variant === "line";
+  const nodeId = () => props.nodeId ?? ctxNodeId();
+  const isLineVariant = () => variant() === "line";
 
   const controlPosition = () =>
-    _props.position ?? ((isLineVariant() ? "right" : "bottom-right") as ControlPosition);
-
-  const positionClassNames = () => controlPosition().split("-");
+    props.position ?? ((isLineVariant() ? "right" : "bottom-right") as ControlPosition);
 
   // Mount the resize controller on the control element (external system: XYResizer)
   const [resizer, setResizer] = createSignal<ReturnType<typeof XYResizer>>();
@@ -155,16 +158,16 @@ export const NodeResizeControl = <NodeType extends Node = Node>(
       options: {
         controlPosition: controlPosition(),
         boundaries: {
-          minWidth: _props.minWidth,
-          minHeight: _props.minHeight,
-          maxWidth: _props.maxWidth,
-          maxHeight: _props.maxHeight,
+          minWidth: minWidth(),
+          minHeight: minHeight(),
+          maxWidth: maxWidth(),
+          maxHeight: maxHeight(),
         },
-        keepAspectRatio: !!_props.keepAspectRatio,
-        onResizeStart: _props.onResizeStart,
-        onResize: _props.onResize,
-        onResizeEnd: _props.onResizeEnd,
-        shouldResize: _props.shouldResize,
+        keepAspectRatio: !!props.keepAspectRatio,
+        onResizeStart: props.onResizeStart,
+        onResize: props.onResize,
+        onResizeEnd: props.onResizeEnd,
+        shouldResize: props.shouldResize,
       },
     }),
     ({ instance, options }) => {
@@ -172,26 +175,42 @@ export const NodeResizeControl = <NodeType extends Node = Node>(
     },
   );
 
+  const controlClass = () =>
+    cx(
+      "solid-flow__resize-control",
+      variant(),
+      store.noDragClass,
+      controlPosition().replace("-", " "),
+      props.class,
+    );
+  const controlStyle = (): JSX.CSSProperties => ({
+    "border-color": isLineVariant() ? props.color : undefined,
+    "background-color": isLineVariant() ? undefined : props.color,
+    scale: isLineVariant() || !autoScale() ? undefined : Math.max(1 / store.viewport.zoom, 1),
+    ...props.style,
+  });
+
+  // The server's copy of the element: a ref never runs in a server render,
+  // so the extras are spread here (extrasOf). Same attributes as the client
+  // element below, which the hydration lane checks.
   return (
-    <div
-      ref={setResizeControlRef}
-      class={[
-        "solid-flow__resize-control",
-        _props.variant,
-        store.noDragClass,
-        ...positionClassNames(),
-        _props.class,
-      ]}
-      style={{
-        "border-color": isLineVariant() ? _props.color : undefined,
-        "background-color": isLineVariant() ? undefined : _props.color,
-        scale:
-          isLineVariant() || !_props.autoScale ? undefined : Math.max(1 / store.viewport.zoom, 1),
-        ..._props.style,
-      }}
-      {...rest}
-    >
-      {_props.children}
-    </div>
+    <>
+      {isServer ? (
+        <div {...extrasOf(props, extraKeys)} class={controlClass()} style={controlStyle()}>
+          {props.children}
+        </div>
+      ) : (
+        <div
+          ref={(el) => {
+            setResizeControlRef(el);
+            spreadExtras(el, props, extraKeys, owner);
+          }}
+          class={controlClass()}
+          style={controlStyle()}
+        >
+          {props.children}
+        </div>
+      )}
+    </>
   );
 };
