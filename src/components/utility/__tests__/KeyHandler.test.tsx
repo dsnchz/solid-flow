@@ -1,4 +1,5 @@
 import { render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
@@ -172,5 +173,72 @@ describe("KeyHandler key props", () => {
     await tick();
 
     expect(flow().store.nodes).toHaveLength(0);
+  });
+});
+
+describe("KeyHandler key state", () => {
+  const renderStore = () => {
+    let internal!: ReturnType<typeof useInternalSolidFlow>;
+    const Probe = () => {
+      internal = useInternalSolidFlow();
+      return null;
+    };
+    render(() => (
+      <SolidFlow
+        nodes={[{ id: "a", position: { x: 0, y: 0 }, data: {}, selected: true }]}
+        edges={[]}
+        width={800}
+        height={600}
+        multiSelectionKey="Control"
+        zoomActivationKey="Alt"
+      >
+        <Probe />
+      </SolidFlow>
+    ));
+    return () => internal.store;
+  };
+  const key = (type: "keydown" | "keyup", init: KeyboardEventInit) =>
+    window.dispatchEvent(new KeyboardEvent(type, init));
+
+  it.each([
+    ["selectionKeyPressed", { key: "Shift", shiftKey: true }, { key: "Shift" }],
+    ["multiselectionKeyPressed", { key: "Control", ctrlKey: true }, { key: "Control" }],
+    ["panActivationKeyPressed", { key: " " }, { key: " " }],
+    ["zoomActivationKeyPressed", { key: "Alt", altKey: true }, { key: "Alt" }],
+  ] as const)("%s follows its key down and up", async (flag, down, up) => {
+    const store = renderStore();
+    await tick();
+    key("keydown", down);
+    expect(store()[flag]).toBe(true);
+    key("keyup", up);
+    expect(store()[flag]).toBe(false);
+  });
+
+  it("the delete key deletes the selection, unless a modifier is held", async () => {
+    const store = renderStore();
+    await tick();
+    key("keydown", { key: "Backspace", shiftKey: true });
+    await tick();
+    expect(store().deleteKeyPressed).toBe(false);
+    expect(store().nodes).toHaveLength(1);
+
+    key("keydown", { key: "Backspace" });
+    expect(store().deleteKeyPressed).toBe(true);
+    await tick();
+    expect(store().nodes).toHaveLength(0);
+    key("keyup", { key: "Backspace" });
+    expect(store().deleteKeyPressed).toBe(false);
+  });
+
+  it("a context menu resets every key", async () => {
+    const store = renderStore();
+    await tick();
+    key("keydown", { key: "Shift", shiftKey: true });
+    key("keydown", { key: " " });
+    window.dispatchEvent(new MouseEvent("contextmenu"));
+    // like the blur reset, it has no same-task readers and does not flush
+    flush();
+    expect(store().selectionKeyPressed).toBe(false);
+    expect(store().panActivationKeyPressed).toBe(false);
   });
 });
