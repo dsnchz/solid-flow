@@ -8,6 +8,7 @@ import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { edgeCulled } from "@/core";
+import { edgeEndpointZ } from "@/core/projections/resolvedEdges";
 import type { Edge, EdgeEvents, Node, ResolvedEdge } from "@/types";
 import { clientOnlySetup, cx, isEdgeSelectable, spreadOnDemand } from "@/utils";
 
@@ -23,7 +24,10 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   props: EdgeWrapperProps<EdgeType>,
 ): JSX.Element => {
   let edgeRef!: SVGGElement;
-  const { store, actions, onScreenEdgeIds } = useInternalSolidFlow<NodeType, EdgeType>();
+  const { store, actions, nodeLookup, onScreenEdgeIds } = useInternalSolidFlow<
+    NodeType,
+    EdgeType
+  >();
   // The ref callback runs outside the component owner; the domAttributes
   // spread effects must be owned (disposal + no NO_OWNER diagnostics).
   const owner = getOwner();
@@ -118,7 +122,9 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
       <svg
         class="solid-flow__edge-wrapper"
         style={{
-          "z-index": edge().zIndex,
+          "z-index":
+            (edge().zIndex ?? 0) +
+            edgeEndpointZ(edge(), nodeLookup, store.elevateEdgesOnSelect, store.zIndexMode),
           visibility: culled() ? "hidden" : undefined,
           "pointer-events": culled() ? "none" : undefined,
         }}

@@ -5,7 +5,11 @@ import { describe, expect, it } from "vitest";
 
 import type { Edge, InternalNode, Node } from "@/types";
 
-import { createResolvedEdges, type ResolvedEdgesSource } from "../projections/resolvedEdges";
+import {
+  createResolvedEdges,
+  edgeEndpointZ,
+  type ResolvedEdgesSource,
+} from "../projections/resolvedEdges";
 
 // Headless core test: the layout join runs entirely without a DOM. Internal
 // nodes are fed directly (simulating the adoption + measurement pipeline).
@@ -425,6 +429,51 @@ describe("createResolvedEdges — hidden endpoints", () => {
     });
     flush();
     expect(resolved.e1).toBeDefined();
+    dispose();
+  });
+});
+
+/**
+ * Edge elevation on node selection (elevateEdgesOnSelect, the default): the
+ * endpoint part of the edge's z is added where the z is drawn, so a node
+ * selection does not re-run the edge's row, geometry included (bench round
+ * 65: a node select-all re-ran every edge row through its z).
+ */
+describe("createResolvedEdges — endpoint z", () => {
+  it("a node selection re-runs no edge row; the drawn z still rises", () => {
+    const [nodes, setNodes] = createStore<Record<string, InternalNode>>({
+      a: internalNode("a", 0, 0),
+      b: internalNode("b", 200, 100),
+    });
+    let gets = 0;
+    const nodeLookup = {
+      get: (id: string) => {
+        gets++;
+        return nodes[id];
+      },
+      size: 2,
+    };
+    const { source } = makeSource([{ id: "e1", source: "a", target: "b" }] as Edge[], []);
+    const { resolved, dispose } = createRoot((dispose) => ({
+      dispose,
+      resolved: createResolvedEdges({ ...source, nodeLookup }),
+    }));
+    flush();
+    expect(resolved.e1).toBeDefined();
+    const runs = gets;
+
+    // what the node row writes on selection: the flag and the elevated z
+    setNodes((draft) => {
+      draft.a!.selected = true;
+      draft.a!.internals.z = 1000;
+    });
+    flush();
+
+    expect(gets).toBe(runs);
+    expect(resolved.e1!.zIndex).toBe(0);
+    expect(edgeEndpointZ(resolved.e1!, nodeLookup, true, "auto")).toBe(1000);
+    expect(edgeEndpointZ(resolved.e1!, nodeLookup, false, "auto")).toBe(0);
+    expect(edgeEndpointZ(resolved.e1!, nodeLookup, true, "manual")).toBe(0);
     dispose();
   });
 });

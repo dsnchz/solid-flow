@@ -2,6 +2,7 @@ import { isServer, type JSX } from "@solidjs/web";
 import { createRenderEffect, createRoot, getOwner, type ParentProps, runWithOwner } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
+import { edgeEndpointZ } from "@/core/projections/resolvedEdges";
 import { clientOnlySetup, extraKeysOf, spreadExtras, toPxString } from "@/utils";
 
 import { labelLayerOf } from "./EdgeLabelRenderer";
@@ -46,11 +47,19 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
   const extraKeys = extraKeysOf(props, OWN_KEYS);
   const owner = getOwner();
 
-  const { store, actions } = useInternalSolidFlow();
+  const { store, actions, nodeLookup } = useInternalSolidFlow();
 
   const id = useEdgeId();
 
-  const zIndex = () => actions.getResolvedEdge(id())?.zIndex;
+  // The drawn z: the edge row's own z plus its endpoints' (see edgeEndpointZ).
+  const zIndex = () => {
+    const edge = actions.getResolvedEdge(id());
+    return (
+      edge &&
+      (edge.zIndex ?? 0) +
+        edgeEndpointZ(edge, nodeLookup, store.elevateEdgesOnSelect, store.zIndexMode)
+    );
+  };
 
   const createLabel = (): HTMLDivElement | undefined => {
     let label: HTMLDivElement | undefined;
