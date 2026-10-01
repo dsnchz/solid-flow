@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { isEdgeSelectable } from "@/utils";
+import { isEdgeSelectable } from "../rules";
 
 const store = (elementsSelectable: boolean, defaultSelectable?: boolean) => ({
   elementsSelectable,

@@ -21,7 +21,6 @@ import type {
   Node,
   NodeTypes,
 } from "@/types";
-import { propDefaults } from "@/utils";
 
 import { createElementCommands } from "./commands/elements";
 import { createGeometryCommands } from "./commands/geometry";
@@ -53,6 +52,7 @@ import { createPresenceIds } from "./projections/presenceIds";
 import { createResolvedEdges } from "./projections/resolvedEdges";
 import { getSelectedNodesBounds } from "./projections/selectedBounds";
 import { createSelectedIds } from "./projections/selectedIds";
+import { propDefaults } from "./propDefaults";
 import { createRowIndex } from "./rowIndex";
 import { type SelectionOverlay } from "./selectionOverlay";
 import { createSeededGraphStores } from "./stores/seeding";

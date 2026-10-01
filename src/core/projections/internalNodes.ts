@@ -2,9 +2,9 @@ import type { CoordinateExtent, NodeHandleBounds, NodeOrigin, ZIndexMode } from 
 import { type Accessor, createMemo, createProjection, mapArray, onCleanup } from "solid-js";
 
 import type { InternalNode, Node } from "@/types";
-import { emitFlowError } from "@/utils";
 
 import { dragEntry, type DragOverlay, joinDragging, joinPosition } from "../dragOverlay";
+import { emitFlowError } from "../rules";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import {
   buildRow,

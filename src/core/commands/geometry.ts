@@ -11,11 +11,11 @@ import {
 import { untrack } from "solid-js";
 
 import type { Edge, InternalNode, Node } from "@/types";
-import { isNode } from "@/utils";
 
 import type { FlowCommands } from "../flowState";
 import type { NodeGeometry } from "../projections/internalNodes";
 import type { RowIndex } from "../rowIndex";
+import { isNode } from "../rules";
 import { SpatialGrid } from "../spatial/grid";
 
 /** The slice of the internal store the geometry queries read. */

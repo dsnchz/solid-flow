@@ -1,4 +1,4 @@
-import { propDefaults } from "@/utils";
+import { propDefaults } from "@/core/propDefaults";
 
 type DotPatternProps = {
   readonly class?: string;

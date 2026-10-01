@@ -13,9 +13,9 @@ import {
 import { flush, snapshot, type StoreSetter } from "solid-js";
 
 import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
-import { emitFlowError, isEdgeSelectable } from "@/utils";
 
 import type { RowIndex } from "../rowIndex";
+import { emitFlowError, isEdgeSelectable } from "../rules";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 
 /** Ids to select and to deselect, for {@link applySelectionDelta}. */

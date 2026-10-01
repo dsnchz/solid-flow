@@ -9,8 +9,9 @@ import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { edgeCulled } from "@/core";
 import { edgeEndpointZ } from "@/core/projections/resolvedEdges";
+import { isEdgeSelectable } from "@/core/rules";
 import type { Edge, EdgeEvents, Node, ResolvedEdge } from "@/types";
-import { clientOnlySetup, cx, isEdgeSelectable, spreadOnDemand } from "@/utils";
+import { clientOnlySetup, cx, spreadOnDemand } from "@/utils";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = {
   /** The flow's edge event handlers as ONE reference (see NodeWrapper, audit C10). */

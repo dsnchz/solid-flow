@@ -23,8 +23,8 @@ import {
 import { Panel } from "@/components/container";
 import { useInternalSolidFlow } from "@/contexts";
 import { createGraphBoundsSampler } from "@/core/graphBounds";
+import { propDefaults } from "@/core/propDefaults";
 import type { Node } from "@/types";
-import { propDefaults } from "@/utils";
 
 import { MiniMapNode, type MiniMapNodeProps } from "./MiniMapNode";
 

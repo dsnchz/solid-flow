@@ -20,9 +20,10 @@ import { Attribution, KeyHandler } from "@/components/utility";
 import { typedSolidFlowContext } from "@/contexts/flow";
 import { getDefaultFlowStateProps } from "@/core/defaults";
 import { FLOW_PROP_KEYS, type SolidFlowProps } from "@/core/flowProps";
+import { propDefaults } from "@/core/propDefaults";
 import { createSelectionChange } from "@/core/selectionChange";
 import type { Edge, Node, PanOnScrollMode } from "@/types";
-import { propDefaults, toPxString } from "@/utils";
+import { toPxString } from "@/utils";
 
 import { A11yDescriptions } from "./accessibility";
 

@@ -27,8 +27,9 @@ import { useInternalSolidFlow } from "@/contexts";
 import { NodeConnectableContext } from "@/contexts/nodeConnectable";
 import { NodeIdContext } from "@/contexts/nodeId";
 import { nodeCulled } from "@/core";
+import { emitFlowError } from "@/core/rules";
 import type { InternalNode, Node, NodeEvents } from "@/types";
-import { clientOnlySetup, cx, emitFlowError, spreadOnDemand } from "@/utils";
+import { clientOnlySetup, cx, spreadOnDemand } from "@/utils";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = {

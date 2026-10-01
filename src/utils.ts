@@ -1,11 +1,5 @@
 import { type JSX, spread } from "@solidjs/web";
-import {
-  type Connection,
-  type EdgeBase,
-  isEdgeBase,
-  isNodeBase,
-  type XYPosition,
-} from "@xyflow/system";
+import type { XYPosition } from "@xyflow/system";
 import {
   createEffect,
   createRoot,
@@ -14,28 +8,6 @@ import {
   type Owner,
   runWithOwner,
 } from "solid-js";
-
-import type { Edge, Node } from "./types";
-
-/**
- * Test whether an object is usable as a Node
- * @public
- * @remarks In TypeScript this is a type guard that will narrow the type of whatever you pass in to Node if it returns true
- * @param element - The element to test
- * @returns A boolean indicating whether the element is an Node
- */
-export const isNode = <NodeType extends Node = Node>(element: unknown): element is NodeType =>
-  isNodeBase<NodeType>(element);
-
-/**
- * Test whether an object is usable as an Edge
- * @public
- * @remarks In TypeScript this is a type guard that will narrow the type of whatever you pass in to Edge if it returns true
- * @param element - The element to test
- * @returns A boolean indicating whether the element is an Edge
- */
-export const isEdge = <EdgeType extends Edge = Edge>(element: unknown): element is EdgeType =>
-  isEdgeBase<EdgeType>(element);
 
 export const toPxString = (value: number | undefined): string | undefined =>
   value === undefined ? undefined : `${value}px`;
@@ -63,35 +35,6 @@ export const scheduleIdleCallback: (callback: () => void) => void =
     ? (callback) => requestIdleCallback(callback, { timeout: IDLE_TIMEOUT_MS })
     : (callback) => setTimeout(callback, 0);
 
-/**
- * Reactive prop defaulting with skip-undefined semantics: a prop counts as
- * "absent" when it reads `undefined`, so parents forwarding optional props
- * (e.g. `<Handle position={props.targetPosition} />`) do not clobber defaults.
- * This is deliberate policy on top of Solid 2.0's `merge`, where `undefined`
- * is a real value that overrides.
- */
-export function propDefaults<T extends object, D extends Partial<T>>(
-  props: T,
-  defaults: D,
-): T & Required<Pick<T, keyof D & keyof T>> {
-  const out = {} as T & Required<Pick<T, keyof D & keyof T>>;
-  const keys = new Set([...Object.keys(defaults), ...Object.keys(props)]);
-  for (const key of keys) {
-    Object.defineProperty(out, key, {
-      // ONE read of the prop: a JSX `children` getter instantiates the
-      // children on every read (a second read rendered a throwaway copy per
-      // mount and spent a hydration key the server had used for the real one).
-      get: () => {
-        const value = (props as Record<string, unknown>)[key];
-        return value !== undefined ? value : (defaults as Record<string, unknown>)[key];
-      },
-      enumerable: true,
-      configurable: true,
-    });
-  }
-  return out;
-}
-
 /** What `cx` takes: any class value a user's `class` prop can hold, plus records with any values. */
 type ClassPart = JSX.ClassValue | Record<string, unknown>;
 
@@ -115,41 +58,6 @@ export const cx = (...parts: ClassPart[]): string => {
   };
   for (const part of parts) add(part);
   return out;
-};
-
-export const getEdgeId = (connection: Connection | EdgeBase): string => {
-  const { source, sourceHandle, target, targetHandle } = connection;
-  return `xy-edge__${source}${sourceHandle || ""}-${target}${targetHandle || ""}`;
-};
-
-/**
- * The one edge-selectability rule, used by click selection, box selection,
- * and connected-edge selection alike: the edge's own flag wins, then the
- * flow's defaultEdgeOptions, then the global elementsSelectable switch.
- * (These three paths once disagreed — box selection ignored
- * elementsSelectable entirely; audit 2026-08-24 A7.)
- */
-export const isEdgeSelectable = (
-  edge: Pick<Edge, "selectable">,
-  store: {
-    readonly elementsSelectable: boolean;
-    readonly defaultEdgeOptions: { readonly selectable?: boolean };
-  },
-): boolean => edge.selectable ?? store.defaultEdgeOptions.selectable ?? store.elementsSelectable;
-
-/**
- * The single runtime error channel: user-supplied `onFlowError` when
- * present, an identifiable console warning otherwise. (Setup-time config
- * warnings in seeding stay on console by design — they fire during
- * construction, before a flow error handler is meaningfully attachable.)
- */
-export const emitFlowError = (
-  onError: ((id: string, message: string) => void) | undefined,
-  id: string,
-  message: string,
-): void => {
-  if (onError) onError(id, message);
-  else console.warn(`[solid-flow] ${id}: ${message}`);
 };
 
 /**

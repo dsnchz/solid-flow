@@ -10,12 +10,12 @@ import {
 import { snapshot, type StoreSetter } from "solid-js";
 
 import type { Edge, InternalNode, Node, OnBeforeDelete, OnDelete } from "@/types";
-import { isEdge, isNode } from "@/utils";
 
 import { type DragOverlay } from "../dragOverlay";
 import type { FlowCommands } from "../flowState";
 import { seedNodeRow } from "../nodeSeed";
 import type { RowIndex } from "../rowIndex";
+import { isEdge, isNode } from "../rules";
 import { type SelectionOverlay } from "../selectionOverlay";
 
 /** The slice of the internal store the element commands read. */

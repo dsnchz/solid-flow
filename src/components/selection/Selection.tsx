@@ -1,7 +1,8 @@
 import type { JSX } from "@solidjs/web";
 import { Show } from "solid-js";
 
-import { propDefaults, toPxString } from "@/utils";
+import { propDefaults } from "@/core/propDefaults";
+import { toPxString } from "@/utils";
 
 type SelectionProps = {
   readonly x?: number;

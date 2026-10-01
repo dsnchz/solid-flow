@@ -22,8 +22,9 @@ import {
 import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import { useNodeConnectable } from "@/contexts/nodeConnectable";
 import { connectionKey } from "@/core";
+import { getEdgeId } from "@/core/rules";
 import type { Edge, Node, Position } from "@/types";
-import { cx, extraKeysOf, extrasOf, getEdgeId, spreadExtras } from "@/utils";
+import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/utils";
 
 type HandleProps = Omit<SystemHandleProps, "position"> & {
   readonly position: Position;

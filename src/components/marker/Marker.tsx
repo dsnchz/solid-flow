@@ -2,7 +2,7 @@ import type { JSX } from "@solidjs/web";
 import type { MarkerProps as SystemMarkerProps } from "@xyflow/system";
 import { Show } from "solid-js";
 
-import { propDefaults } from "@/utils";
+import { propDefaults } from "@/core/propDefaults";
 
 export type MarkerProps = SystemMarkerProps & {
   readonly markerUnits?: "strokeWidth" | "userSpaceOnUse";

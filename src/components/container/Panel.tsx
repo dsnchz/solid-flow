@@ -3,7 +3,7 @@ import type { PanelPosition } from "@xyflow/system";
 import { omit, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
-import { propDefaults } from "@/utils";
+import { propDefaults } from "@/core/propDefaults";
 
 export type PanelProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
   /** Set position of the panel

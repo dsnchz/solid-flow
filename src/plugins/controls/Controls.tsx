@@ -4,8 +4,8 @@ import { omit, type ParentProps, Show } from "solid-js";
 
 import { Panel } from "@/components/container";
 import { useInternalSolidFlow } from "@/contexts";
+import { propDefaults } from "@/core/propDefaults";
 import type { FitViewOptions } from "@/types";
-import { propDefaults } from "@/utils";
 
 import { ControlButton } from "./ControlButton";
 import { Fit, Lock, Minus, Plus, Unlock } from "./icons";

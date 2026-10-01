@@ -2,7 +2,7 @@ import type { JSX } from "@solidjs/web";
 import { Show } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
-import { propDefaults } from "@/utils";
+import { propDefaults } from "@/core/propDefaults";
 
 import { DotPattern } from "./DotPattern";
 import { LinePattern } from "./LinePattern";

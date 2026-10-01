@@ -5,8 +5,8 @@ import { createSolidFlow } from "@/browser/createSolidFlow";
 import { typedSolidFlowContext } from "@/contexts/flow";
 import { getDefaultFlowStateProps } from "@/core/defaults";
 import type { SolidFlowProps } from "@/core/flowProps";
+import { propDefaults } from "@/core/propDefaults";
 import type { Edge, Node } from "@/types";
-import { propDefaults } from "@/utils";
 
 /** Hoists flow state above `SolidFlow` so hooks work outside the component (multi-panel UIs). */
 export const SolidFlowProvider = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(

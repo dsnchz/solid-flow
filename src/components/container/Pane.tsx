@@ -11,8 +11,9 @@ import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 import { createBoxSelection } from "@/core/boxSelection";
+import { isEdgeSelectable } from "@/core/rules";
 import type { Edge, IsNodeSelectable, Node, PaneEvents } from "@/types";
-import { clientOnlySetup, isEdgeSelectable } from "@/utils";
+import { clientOnlySetup } from "@/utils";
 
 export type PaneProps<NodeType extends Node = Node> = PaneEvents & {
   readonly panOnDrag?: boolean | number[];

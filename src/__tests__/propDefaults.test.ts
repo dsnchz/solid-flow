@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { propDefaults } from "../utils";
+import { propDefaults } from "@/core/propDefaults";
 
 describe("propDefaults", () => {
   it("serves the prop when defined and the default otherwise", () => {
