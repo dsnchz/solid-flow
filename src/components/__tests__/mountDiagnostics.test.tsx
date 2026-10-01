@@ -3,6 +3,7 @@ import { render } from "@solidjs/testing-library";
 import { createSignal, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { EdgeReconnectAnchor } from "@/components/edge";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
 import { Background, Controls, MiniMap, NodeResizer } from "@/plugins";
@@ -99,6 +100,29 @@ describe("mount diagnostics", () => {
             defaultNodes={resizable}
             defaultEdges={edges}
             nodeTypes={{ resizable: ResizableNode }}
+            width={800}
+            height={600}
+          />
+        )),
+      ),
+    ).toEqual([]);
+  });
+
+  it("custom edges carrying EdgeReconnectAnchors emit only by-design diagnostics", async () => {
+    const AnchoredEdge = () => (
+      <>
+        <EdgeReconnectAnchor type="source" position={{ x: 0, y: 0 }} />
+        <EdgeReconnectAnchor type="target" position={{ x: 0, y: 100 }} />
+      </>
+    );
+    const anchored = edges.map((edge) => ({ ...edge, type: "anchored" }));
+    expect(
+      await unexpectedDiagnostics(() =>
+        render(() => (
+          <SolidFlow
+            defaultNodes={nodes}
+            defaultEdges={anchored}
+            edgeTypes={{ anchored: AnchoredEdge }}
             width={800}
             height={600}
           />

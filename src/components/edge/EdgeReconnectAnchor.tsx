@@ -54,12 +54,10 @@ const OWN_KEYS: ReadonlySet<string> = new Set([
 export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>): JSX.Element => {
   const { store, nodeLookup, edgeLookup, actions, commands, nodeGeometry } = useInternalSolidFlow();
 
+  // Throws outside an edge component (as Svelte Flow's getEdgeIdContext);
+  // the id itself is read where it is used, not here in the body.
   const edgeId = useEdgeId();
   const [reconnecting, setReconnecting] = createSignal(false);
-
-  if (!edgeId()) {
-    throw new Error("[solid-flow]: EdgeReconnectAnchor must be used within an Edge component");
-  }
 
   const edge = () => edgeLookup[edgeId()]!;
   const isReconnecting = () => !!props.reconnecting || reconnecting();
