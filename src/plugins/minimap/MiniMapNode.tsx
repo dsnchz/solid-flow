@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 
-import { propDefaults } from "@/utils";
+import { cx } from "@/utils";
 
 /**
  * Props passed to a minimap node renderer — the default `MiniMapNode` or a
@@ -29,43 +29,36 @@ export type MiniMapNodeProps = {
 
 /** The default minimap node: a rounded rect. Custom `nodeComponent`s can wrap it. */
 export const MiniMapNode = (props: MiniMapNodeProps): JSX.Element => {
-  const _props = propDefaults(props, {
-    borderRadius: 5,
-    width: 0,
-    height: 0,
-  });
+  // One per node while a MiniMap is shown: the per-row rules (see Handle).
+  // `??` accessors for the defaults instead of a propDefaults getter object,
+  // a class string, and the style built in place.
+  const radius = () => props.borderRadius ?? 5;
 
-  // Upstream parity: an explicit nodeColor wins, then the node's own
-  // background shines through onto the minimap.
-  const fill = () => _props.color ?? _props.style?.background ?? _props.style?.["background-color"];
-
-  const style = () =>
-    Object.entries({
-      fill: fill(),
-      stroke: _props.strokeColor,
-      "stroke-width": _props.strokeWidth,
-    })
-      .filter(([_, value]) => value !== undefined)
-      .reduce<Record<string, string | number>>((acc, [key, value]) => {
-        acc[key] = value!;
-        return acc;
-      }, {});
+  const style = () => {
+    const out: Record<string, string | number> = {};
+    // Upstream parity: an explicit nodeColor wins, then the node's own
+    // background shines through onto the minimap.
+    const fill = props.color ?? props.style?.background ?? props.style?.["background-color"];
+    if (fill !== undefined) out.fill = fill;
+    if (props.strokeColor !== undefined) out.stroke = props.strokeColor;
+    if (props.strokeWidth !== undefined) out["stroke-width"] = props.strokeWidth;
+    return out;
+  };
 
   return (
     <rect
-      class={["solid-flow__minimap-node", { selected: !!_props.selected }, _props.class]}
-      x={_props.x}
-      y={_props.y}
-      rx={_props.borderRadius}
-      ry={_props.borderRadius}
-      width={_props.width}
-      height={_props.height}
-      shape-rendering={_props.shapeRendering}
+      class={cx("solid-flow__minimap-node", props.selected && "selected", props.class)}
+      x={props.x}
+      y={props.y}
+      rx={radius()}
+      ry={radius()}
+      width={props.width ?? 0}
+      height={props.height ?? 0}
+      shape-rendering={props.shapeRendering}
       style={style()}
-      // Read at click time: a handler bound only when present at creation
-      // missed one set after mount. Click is delegated, so this is a
-      // property per node, not a listener.
-      onClick={(event) => _props.onClick?.(event, _props.id)}
+      // Read at click time (a handler set after mount must reach it); click
+      // is delegated, so this is a property per node, not a listener.
+      onClick={(event) => props.onClick?.(event, props.id)}
     />
   );
 };
