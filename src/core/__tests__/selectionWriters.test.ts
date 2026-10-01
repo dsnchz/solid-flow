@@ -130,6 +130,17 @@ describe("selection writers (delta over the presence record)", () => {
     });
   });
 
+  it("handleNodeSelection reports whether it deselected (the caller blurs)", async () => {
+    await withControlledFlow(["a", "b"], ({ flow, selectedIds }) => {
+      expect(flow.actions.handleNodeSelection("a")).toBe(false);
+      expect(selectedIds()).toEqual(["a"]);
+      // selected, no unselect request, no multiselection key: stays selected
+      expect(flow.actions.handleNodeSelection("a")).toBe(false);
+      expect(flow.actions.handleNodeSelection("a", true)).toBe(true);
+      expect(selectedIds()).toEqual([]);
+    });
+  });
+
   it("unselectNodesAndEdges with a subset clears only that subset", async () => {
     await withControlledFlow(["a", "b", "c"], ({ flow, selectedIds }) => {
       flow.actions.applySelectionDelta({ nodes: { select: ["a", "b", "c"], deselect: [] } });

@@ -214,12 +214,17 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     flush();
   };
 
-  const handleNodeSelection = (id: string, unselect?: boolean, nodeRef?: HTMLDivElement | null) => {
+  /**
+   * A node click or selection key: selects it, or deselects a selected one
+   * when asked to (Escape) or with the multiselection key. Returns whether
+   * it deselected, so the keyboard caller can blur the node element.
+   */
+  const handleNodeSelection = (id: string, unselect?: boolean): boolean => {
     const node = nodeLookup.get(id)?.internals.userNode;
 
     if (!node) {
       emitFlowError(store.onError, "012", errorMessages["error012"](id));
-      return;
+      return false;
     }
 
     setSelectionRect(undefined);
@@ -227,11 +232,13 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
 
     if (!nodeSelected(node)) {
       addSelectedNodes([id]);
-    } else if (unselect || (nodeSelected(node) && store.multiselectionKeyPressed)) {
-      unselectNodesAndEdges({ nodes: [node], edges: [] });
-
-      requestAnimationFrame(() => nodeRef?.blur());
+      return false;
     }
+    if (unselect || store.multiselectionKeyPressed) {
+      unselectNodesAndEdges({ nodes: [node], edges: [] });
+      return true;
+    }
+    return false;
   };
 
   const handleEdgeSelection = (id: string) => {

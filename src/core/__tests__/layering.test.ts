@@ -50,6 +50,20 @@ const violations = () =>
     });
   });
 
+/** Runtime DOM access: frame/idle scheduling, the globals, layout reads. DOM TYPES are fine. */
+const DOM_CALLS =
+  /\b(requestAnimationFrame|cancelAnimationFrame|requestIdleCallback|getComputedStyle)\s*\(|\b(document|window)\s*\./g;
+
+const withoutComments = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+
+const domCalls = () =>
+  sourceFiles(CORE).flatMap((file) =>
+    [...withoutComments(readFileSync(file, "utf8")).matchAll(DOM_CALLS)].map(
+      (match) => `${relative(CORE, file)}: ${match[0]}`,
+    ),
+  );
+
 describe("core layering", () => {
   it("finds the core sources", () => {
     expect(sourceFiles(CORE).map((file) => relative(CORE, file))).toContain("createFlowState.ts");
@@ -57,5 +71,9 @@ describe("core layering", () => {
 
   it("imports nothing from the layers above it", () => {
     expect(violations()).toEqual([]);
+  });
+
+  it("makes no DOM calls (the browser and render layers own the DOM)", () => {
+    expect(domCalls()).toEqual([]);
   });
 });

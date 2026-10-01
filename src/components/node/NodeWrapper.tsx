@@ -141,7 +141,10 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     }
 
     if (elementSelectionKeys.includes(event.key) && selectable()) {
-      actions.handleNodeSelection(node().id, event.key === "Escape", nodeRef());
+      if (actions.handleNodeSelection(node().id, event.key === "Escape")) {
+        const el = nodeRef();
+        requestAnimationFrame(() => el?.blur());
+      }
       return;
     }
 
