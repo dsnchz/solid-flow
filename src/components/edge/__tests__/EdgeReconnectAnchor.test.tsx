@@ -119,7 +119,10 @@ describe("EdgeReconnectAnchor", () => {
 
 // The anchor's own contract (as Svelte Flow's EdgeReconnectAnchor: one
 // element, the edge label itself, carrying the updater classes and size).
-const renderAnchor = async (anchor: () => ReturnType<typeof EdgeReconnectAnchor>) => {
+const renderAnchor = async (
+  anchor: () => ReturnType<typeof EdgeReconnectAnchor>,
+  connectionDragThreshold?: number,
+) => {
   gesture.params = undefined;
   const AnchorEdge = () => anchor();
   const { container } = render(() => (
@@ -127,6 +130,7 @@ const renderAnchor = async (anchor: () => ReturnType<typeof EdgeReconnectAnchor>
       nodes={nodes}
       edges={[{ id: "e1", source: "a", target: "b", type: "anchor" }]}
       edgeTypes={{ anchor: AnchorEdge }}
+      connectionDragThreshold={connectionDragThreshold}
       width={800}
       height={600}
     />
@@ -208,5 +212,16 @@ describe("EdgeReconnectAnchor props", () => {
     expect(gesture.params).toBeUndefined();
     fireEvent.pointerDown(element(), { button: 0, clientX: 300, clientY: 20 });
     expect(gesture.params).toBeDefined();
+  });
+
+  it("hands XYHandle its dragThreshold, or the flow's connectionDragThreshold", async () => {
+    const own = await renderAnchor(() => <EdgeReconnectAnchor type="target" dragThreshold={7} />);
+    fireEvent.pointerDown(own.element(), { button: 0, clientX: 300, clientY: 20 });
+    expect(gesture.params!.dragThreshold).toBe(7);
+    own.container.remove();
+
+    const fallback = await renderAnchor(() => <EdgeReconnectAnchor type="target" />, 4);
+    fireEvent.pointerDown(fallback.element(), { button: 0, clientX: 300, clientY: 20 });
+    expect(gesture.params!.dragThreshold).toBe(4);
   });
 });

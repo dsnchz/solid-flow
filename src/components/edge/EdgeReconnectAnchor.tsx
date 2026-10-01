@@ -18,6 +18,11 @@ export type EdgeReconnectAnchorProps = {
   readonly style?: JSX.CSSProperties;
   readonly position?: XYPosition;
   readonly size?: number;
+  /**
+   * Pointer travel (px) before the reconnect gesture starts; defaults to the
+   * flow's `connectionDragThreshold` (Svelte Flow's anchor prop).
+   */
+  readonly dragThreshold?: number;
   /** Externally mark the anchor as reconnecting (hides its children), in
    * addition to the gesture-driven internal state. */
   readonly reconnecting?: boolean;
@@ -37,6 +42,7 @@ const OWN_KEYS: ReadonlySet<string> = new Set([
   "style",
   "position",
   "size",
+  "dragThreshold",
   "reconnecting",
   "onReconnectingChange",
   "children",
@@ -104,6 +110,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     });
     XYHandle.onPointerDown(event, {
       ...buildConnectionGestureParams({ event, store, actions, gestureLookup }),
+      dragThreshold: props.dragThreshold ?? store.connectionDragThreshold,
       nodeId: opposite.nodeId,
       handleId: opposite.handleId,
       isTarget: opposite.type === "target",
