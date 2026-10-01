@@ -47,6 +47,7 @@ import type { SolidFlowProps } from "./flowProps";
 import { FLOW_PROP_KEYS } from "./flowProps";
 import { type FlowCommands, type FlowSelection, type FlowState } from "./flowState";
 import { createGeometryFeed } from "./geometryFeed";
+import { createInitialFitView } from "./initialFitView";
 import { createMeasurementIngest } from "./measurementIngest";
 import { createOverlayRelease } from "./overlayRelease";
 import { connectionKey, createConnections } from "./projections/connections";
@@ -792,24 +793,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   });
   const { addEdge, updateNodePositions } = elementCommands;
 
-  let initialFitViewApplied = false;
-  let initialNodesMeasured = false;
-
-  const applyInitialFitView = (initialFitView: boolean) => {
-    initialFitViewApplied = !initialFitView;
-  };
-
-  // The initial fitView needs both the measured nodes (reported through
-  // requestUpdateNodeInternals) and the container dimensions (reported through the
-  // resize observer). Their order is not guaranteed, so whichever arrives last fires it.
-  const tryInitialFitView = () => {
-    if (initialFitViewApplied || !initialNodesMeasured) return;
-    if (!untrack(() => store.panZoom && store.width && store.height)) return;
-
-    initialFitViewApplied = true;
-    void untrack(() => fitView());
-  };
-
   // ── measurement ingest (core/measurementIngest.ts): DOM-pass writes into
   // the data graph + the measurements GC effect ──
   const { applyMeasurementWrites, applyNodeChanges } = createMeasurementIngest<NodeType>({
@@ -818,12 +801,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     nodeIds: visibleNodeIds,
     nodeIndex,
   });
-
-  /** Marks the first measuring pass complete (may trigger the initial fitView). */
-  const markInitialNodesMeasured = () => {
-    initialNodesMeasured = true;
-    tryInitialFitView();
-  };
 
   // The DOM measuring pass is registered by the wiring layer (createSolidFlow)
   // via setMeasureRequester: core names the nodes to re-measure, the wiring
@@ -996,15 +973,12 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  // The initial fitView also needs the measured nodes, which arrive through
-  // requestUpdateNodeInternals (imperative); this effect covers the case where
-  // the container/panZoom side is what arrives last.
-  createEffect(
-    () => Boolean(width() && height() && panZoom()),
-    (ready) => {
-      if (ready) tryInitialFitView();
-    },
-  );
+  // The `fitView` prop's initial fit (core/initialFitView.ts): once the
+  // first measuring pass and the container are both in, whichever is last.
+  const initialFitView = createInitialFitView({
+    ready: () => Boolean(width() && height() && panZoom()),
+    fitView: () => fitView(),
+  });
 
   // External system: keep the d3 zoom transform in sync with the viewport
   // store. The leaves are read in the compute so deep writes retrigger.
@@ -1054,10 +1028,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     onScreenEdgeIds,
     actions: {
       getResolvedEdge,
-      applyInitialFitView,
+      armInitialFitView: initialFitView.arm,
       applyMeasurementWrites,
       applyNodeChanges,
-      markInitialNodesMeasured,
+      markInitialNodesMeasured: initialFitView.markNodesMeasured,
       setMeasureRequester,
       setAriaLiveMessage,
       setClickConnectStartHandle,

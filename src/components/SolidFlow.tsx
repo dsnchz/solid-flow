@@ -76,7 +76,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   const [rowsReady, setRowsReady] = createSignal(isServer || isHydrating());
 
   onSettled(() => {
-    actions.applyInitialFitView(_props.fitView);
+    actions.armInitialFitView(_props.fitView);
     actions.setConfig(_props);
     actions.setDomNode(domNode);
     // Last: the culling viewport is live (domNode set) when the rows' culled
