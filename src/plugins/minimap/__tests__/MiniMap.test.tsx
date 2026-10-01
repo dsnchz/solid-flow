@@ -113,6 +113,25 @@ describe("MiniMap", () => {
     expect(onNodeClick.mock.calls[0]![1]).toMatchObject({ id: "b" });
   });
 
+  it("an onNodeClick set after mount reaches the nodes", async () => {
+    const onNodeClick = vi.fn();
+    const [handler, setHandler] = createSignal<typeof onNodeClick | undefined>(undefined);
+
+    const { container } = render(() => (
+      <SolidFlow nodes={nodes} edges={[]} width={800} height={600}>
+        <MiniMap onNodeClick={handler()} />
+      </SolidFlow>
+    ));
+    await tick();
+
+    setHandler(() => onNodeClick);
+    flush();
+    fireEvent.click(container.querySelectorAll(".solid-flow__minimap-node")[0]!);
+
+    expect(onNodeClick).toHaveBeenCalledTimes(1);
+    expect(onNodeClick.mock.calls[0]![1]).toMatchObject({ id: "a" });
+  });
+
   it("onClick fires with a flow-space position", async () => {
     const onClick = vi.fn();
 
@@ -131,7 +150,7 @@ describe("MiniMap", () => {
     expect(typeof position.y).toBe("number");
   });
 
-  it("attaches no node click handlers when onNodeClick is absent", async () => {
+  it("a node click without onNodeClick does nothing", async () => {
     const { container } = render(() => (
       <SolidFlow nodes={nodes} edges={[]} width={800} height={600}>
         <MiniMap />

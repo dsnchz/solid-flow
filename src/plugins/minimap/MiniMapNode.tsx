@@ -62,7 +62,10 @@ export const MiniMapNode = (props: MiniMapNodeProps): JSX.Element => {
       height={_props.height}
       shape-rendering={_props.shapeRendering}
       style={style()}
-      onClick={_props.onClick ? (event) => _props.onClick!(event, _props.id) : undefined}
+      // Read at click time: a handler bound only when present at creation
+      // missed one set after mount. Click is delegated, so this is a
+      // property per node, not a listener.
+      onClick={(event) => _props.onClick?.(event, _props.id)}
     />
   );
 };
