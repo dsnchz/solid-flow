@@ -3,7 +3,6 @@ import type { JSX } from "@solidjs/web";
 import {
   calcAutoPan,
   getEventPosition,
-  getNodesInside,
   pointToRendererPoint,
   rendererPointToPoint,
   type XYPosition,
@@ -11,21 +10,9 @@ import {
 import { createSignal, flush, onCleanup, type ParentProps } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
-import { GestureSpatialLookup } from "@/core/spatial/gestureLookup";
-import type { Edge, InternalNode, IsNodeSelectable, Node, PaneEvents } from "@/types";
+import { createBoxSelection } from "@/core/boxSelection";
+import type { Edge, IsNodeSelectable, Node, PaneEvents } from "@/types";
 import { clientOnlySetup, isEdgeSelectable } from "@/utils";
-
-const isSetEqual = (a: Set<string>, b: Set<string>) => {
-  if (a.size !== b.size) return false;
-
-  for (const item of a) {
-    if (!b.has(item)) {
-      return false;
-    }
-  }
-
-  return true;
-};
 
 export type PaneProps<NodeType extends Node = Node> = PaneEvents & {
   readonly panOnDrag?: boolean | number[];
@@ -54,12 +41,20 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     selectedNodeIds: selectedNodeIdsRecord,
     selectedEdgeIds: selectedEdgeIdsRecord,
   } = useInternalSolidFlow<NodeType, EdgeType>();
-  // The selection present when a box gesture starts, kept while
-  // `deselectOnSelection` is false (upstream parity, xyflow#5960).
-  let selectedBeforeBox: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } = {
-    nodes: new Set(),
-    edges: new Set(),
-  };
+  const box = createBoxSelection<NodeType, EdgeType>({
+    nodeLookup,
+    nodeGeometry,
+    connections,
+    edgeLookup,
+    selectedNodeIds: selectedNodeIdsRecord,
+    selectedEdgeIds: selectedEdgeIdsRecord,
+    transform: () => store.transform,
+    partial: () => store.selectionMode === "partial",
+    isNodeSelectable: () => props.isNodeSelectable,
+    isEdgeSelectable: (edge) => isEdgeSelectable(edge, store),
+    applySelectionSets: actions.applySelectionSets,
+    unselectNodesAndEdges: actions.unselectNodesAndEdges,
+  });
 
   const [containerRef, setContainerRef] = createSignal<HTMLDivElement>();
   let container: HTMLDivElement | undefined;
@@ -68,9 +63,6 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
   // Used to prevent click events when the user lets go of the selectionKey during a selection
   let selectionInProgress = false;
-  const selectionSpatialLookup = new GestureSpatialLookup<InternalNode<NodeType>>(nodeLookup, 400);
-  let selectedNodeIds: Set<string> = new Set();
-  let selectedEdgeIds: Set<string> = new Set();
 
   // Used for auto pan when approaching the edges of the container during selection
   let autoPanId = 0;
@@ -141,10 +133,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     (event.target as Partial<Element> | null)?.setPointerCapture?.(event.pointerId);
 
-    // RFC-4239 win #3: node geometry is frozen during a selection gesture —
-    // snapshot it so the per-move getNodesInside sweep only sees candidates
-    // near the selection rect instead of every node.
-    selectionSpatialLookup.armFrom(nodeGeometry);
+    box.arm();
 
     selectionInProgress = false;
     autoPanStarted = false;
@@ -192,57 +181,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       height: Math.abs(mouseY - screenStart.y),
     };
 
-    const prevSelectedNodeIds = selectedNodeIds;
-    const prevSelectedEdgeIds = selectedEdgeIds;
-
-    {
-      const [tx, ty, zoom] = store.transform;
-      selectionSpatialLookup.setQueryRect({
-        x: (nextUserSelectRect.x - tx) / zoom,
-        y: (nextUserSelectRect.y - ty) / zoom,
-        width: nextUserSelectRect.width / zoom,
-        height: nextUserSelectRect.height / zoom,
-      });
-    }
-    const inside = getNodesInside(
-      selectionSpatialLookup,
-      nextUserSelectRect,
-      store.transform,
-      store.selectionMode === "partial",
-      true,
-    );
-    // `isNodeSelectable` filters the candidates the rect found, never the
-    // whole graph (upstream parity, xyflow#6004).
-    const isNodeSelectable = props.isNodeSelectable;
-    const boxed = isNodeSelectable
-      ? inside.filter((n) => isNodeSelectable(n.internals.userNode))
-      : inside;
-    selectedNodeIds = new Set([...selectedBeforeBox.nodes, ...boxed.map((n) => n.id)]);
-
-    selectedEdgeIds = new Set(selectedBeforeBox.edges);
-
-    // We look for all edges connected to the selected nodes
-    for (const nodeId of selectedNodeIds) {
-      const nodeConnections = connections[nodeId];
-      if (!nodeConnections) continue;
-
-      for (const { edgeId } of Object.values(nodeConnections)) {
-        const edge = edgeLookup[edgeId];
-        if (edge && isEdgeSelectable(edge, store)) {
-          selectedEdgeIds.add(edgeId);
-        }
-      }
-    }
-
-    // this prevents unnecessary updates while updating the selection rectangle
-    if (
-      !isSetEqual(prevSelectedNodeIds, selectedNodeIds) ||
-      !isSetEqual(prevSelectedEdgeIds, selectedEdgeIds)
-    ) {
-      // Overlay-aware selection write (solid#3085 sidecar) — direct row
-      // writes here would fight stale overlay entries.
-      actions.applySelectionSets(selectedNodeIds, selectedEdgeIds);
-    }
+    box.update(nextUserSelectRect);
 
     actions.setSelectionRectMode("user");
     actions.setSelectionRect(nextUserSelectRect);
@@ -256,7 +195,6 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
 
     const [x = 0, y = 0] = calcAutoPan(position, containerBounds, store.autoPanSpeed);
 
-    // eslint-disable-next-line solid/reactivity -- a promise callback runs later and polls current values, like the rAF callbacks here
     void actions.panBy({ x, y }).then((panned) => {
       if (!selectionInProgress || !panned) {
         autoPanId = requestAnimationFrame(autoPan);
@@ -304,15 +242,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
         return;
       }
 
-      if (props.deselectOnSelection ?? true) {
-        selectedBeforeBox = { nodes: new Set(), edges: new Set() };
-        actions.unselectNodesAndEdges();
-      } else {
-        selectedBeforeBox = {
-          nodes: new Set(Object.keys(selectedNodeIdsRecord)),
-          edges: new Set(Object.keys(selectedEdgeIdsRecord)),
-        };
-      }
+      box.begin({ keepPrevious: !(props.deselectOnSelection ?? true) });
       props.onSelectionStart?.(event);
     }
 
@@ -347,7 +277,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     actions.setSelectionRect(undefined);
 
     if (selectionInProgress) {
-      actions.setSelectionRectMode(selectedNodeIds.size > 0 ? "nodes" : undefined);
+      actions.setSelectionRectMode(box.selectedNodeCount > 0 ? "nodes" : undefined);
     }
     flush();
 
