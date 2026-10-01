@@ -1,10 +1,19 @@
 import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
+import { cx } from "@/utils";
+
+// cx passes through, counted: how often an edge's class is rebuilt.
+vi.mock("@/utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/utils")>();
+  return { ...actual, cx: vi.fn(actual.cx) };
+});
+const edgeClassBuilds = () =>
+  vi.mocked(cx).mock.calls.filter((args) => args[0] === "solid-flow__edge").length;
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -54,6 +63,17 @@ describe("edge z-index", () => {
     flush();
     await tick();
     expect(wrapperZ()).toBe("2");
+  });
+
+  it("redraws only the z: the edge's attributes are not rebuilt", async () => {
+    const { api, wrapperZ } = await renderFlow();
+    const builds = edgeClassBuilds();
+
+    api().commands.updateNode("a", { selected: true });
+    flush();
+    await tick();
+    expect(Number(wrapperZ())).toBeGreaterThanOrEqual(1002);
+    expect(edgeClassBuilds()).toBe(builds);
   });
 
   it("stays at the edge's own z without elevateEdgesOnSelect", async () => {

@@ -117,6 +117,67 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   // viewport. CSS-only — the edge row and its subscriptions stay live.
   const culled = createMemo(() => edgeCulled(edge(), store.cullingActive, onScreenEdgeIds));
 
+  // The <g> is its own template, so its attributes are their own effect:
+  // the wrapper's z-index follows the endpoints' selection and its culling
+  // style the viewport, and neither re-runs the class and aria attributes
+  // (a node select-all re-ran them on every edge, bench round 69).
+  const EdgeBody = () => (
+    <g
+      ref={(el) => {
+        edgeRef = el;
+        // Ref callbacks run outside the component owner: keep the wiring
+        // owned (and outside the hydration id sequence: see clientOnlySetup).
+        runWithOwner(owner, () => clientOnlySetup(() => mountElement(el)));
+      }}
+      data-id={edge().id}
+      tabindex={focusable() ? 0 : undefined}
+      role={edge().ariaRole ?? (focusable() ? "group" : "img")}
+      aria-label={ariaLabel()}
+      aria-roledescription="edge"
+      aria-describedby={focusable() ? `${ARIA_EDGE_DESC_KEY}-${store.id}` : undefined}
+      class={cx(
+        "solid-flow__edge",
+        `solid-flow__edge-${edgeType()}`,
+        {
+          animated: !!edge().animated,
+          selected: !!edge().selected,
+          selectable: !!selectable(),
+        },
+        edge().class,
+      )}
+      onClick={onClick}
+      onKeyDown={(e) => focusable() && onKeyDown(e)}
+      onContextMenu={onContextMenu}
+    >
+      <EdgeComponent
+        id={edge().id}
+        source={edge().source}
+        target={edge().target}
+        sourceX={edge().sourceX}
+        sourceY={edge().sourceY}
+        targetX={edge().targetX}
+        targetY={edge().targetY}
+        sourcePosition={edge().sourcePosition}
+        targetPosition={edge().targetPosition}
+        animated={edge().animated}
+        selected={edge().selected}
+        label={edge().label}
+        labelStyle={edge().labelStyle}
+        data={edge().data}
+        style={edge().style}
+        interactionWidth={edge().interactionWidth}
+        pathOptions={edge().pathOptions}
+        selectable={selectable()}
+        deletable={edge().deletable ?? true}
+        type={edgeType()}
+        sourceHandleId={edge().sourceHandle}
+        targetHandleId={edge().targetHandle}
+        markerStart={markerStartUrl()}
+        markerEnd={markerEndUrl()}
+      />
+    </g>
+  );
+
   return (
     <EdgeIdContext value={edgeId}>
       <svg
@@ -129,60 +190,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
           "pointer-events": culled() ? "none" : undefined,
         }}
       >
-        <g
-          ref={(el) => {
-            edgeRef = el;
-            // Ref callbacks run outside the component owner: keep the wiring
-            // owned (and outside the hydration id sequence: see clientOnlySetup).
-            runWithOwner(owner, () => clientOnlySetup(() => mountElement(el)));
-          }}
-          data-id={edge().id}
-          tabindex={focusable() ? 0 : undefined}
-          role={edge().ariaRole ?? (focusable() ? "group" : "img")}
-          aria-label={ariaLabel()}
-          aria-roledescription="edge"
-          aria-describedby={focusable() ? `${ARIA_EDGE_DESC_KEY}-${store.id}` : undefined}
-          class={cx(
-            "solid-flow__edge",
-            `solid-flow__edge-${edgeType()}`,
-            {
-              animated: !!edge().animated,
-              selected: !!edge().selected,
-              selectable: !!selectable(),
-            },
-            edge().class,
-          )}
-          onClick={onClick}
-          onKeyDown={(e) => focusable() && onKeyDown(e)}
-          onContextMenu={onContextMenu}
-        >
-          <EdgeComponent
-            id={edge().id}
-            source={edge().source}
-            target={edge().target}
-            sourceX={edge().sourceX}
-            sourceY={edge().sourceY}
-            targetX={edge().targetX}
-            targetY={edge().targetY}
-            sourcePosition={edge().sourcePosition}
-            targetPosition={edge().targetPosition}
-            animated={edge().animated}
-            selected={edge().selected}
-            label={edge().label}
-            labelStyle={edge().labelStyle}
-            data={edge().data}
-            style={edge().style}
-            interactionWidth={edge().interactionWidth}
-            pathOptions={edge().pathOptions}
-            selectable={selectable()}
-            deletable={edge().deletable ?? true}
-            type={edgeType()}
-            sourceHandleId={edge().sourceHandle}
-            targetHandleId={edge().targetHandle}
-            markerStart={markerStartUrl()}
-            markerEnd={markerEndUrl()}
-          />
-        </g>
+        <EdgeBody />
       </svg>
     </EdgeIdContext>
   );

@@ -32,7 +32,7 @@ describe("hydration lane — server render", () => {
       expect(warn.mock.calls.map((args) => String(args[0]).split("\n")[0])).toEqual([]);
       // Every node and both edges are in the markup, with hydration keys.
       expect(html.match(/class="solid-flow__node /g)?.length).toBe(3);
-      expect(html.match(/<g data-id="e\d"/g)?.length).toBe(2);
+      expect(html.match(/<g (?:_hk=\S+ )?data-id="e\d"/g)?.length).toBe(2);
       expect(html).toContain("_hk=");
       writeFileSync(artifactPath(scenario.name), html);
     });

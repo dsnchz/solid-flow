@@ -29,7 +29,7 @@ test.describe("server-rendered flow", () => {
     const html = await (await request.get(SSR, { headers: { accept: "text/html" } })).text();
     expect(html).toContain("_$HY");
     expect(html.match(/class="solid-flow__node /g)?.length).toBe(3);
-    expect(html.match(/<g data-id="e\d"/g)?.length).toBe(2);
+    expect(html.match(/<g (?:_hk=\S+ )?data-id="e\d"/g)?.length).toBe(2);
   });
 
   test("hydrates onto the server markup and stays interactive", async ({ page }) => {
