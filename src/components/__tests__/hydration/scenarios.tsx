@@ -1,11 +1,12 @@
 import type { JSX } from "@solidjs/web";
-import { Position } from "@xyflow/system";
+import { getStraightPath, Position } from "@xyflow/system";
 import { createSignal } from "solid-js";
 
+import { BaseEdge } from "@/components/edge";
 import { Handle } from "@/components/handle";
 import { SolidFlow } from "@/components/SolidFlow";
-import { Background, Controls, MiniMap } from "@/plugins";
-import type { Edge, Node, NodeProps } from "@/types";
+import { Background, Controls, MiniMap, NodeResizer } from "@/plugins";
+import type { Edge, EdgeProps, Node, NodeProps } from "@/types";
 
 /**
  * Flows rendered on the server (render.hydration.server.test.tsx, `generate: "ssr",
@@ -23,6 +24,12 @@ export type Scenario = {
   readonly updatedText: string;
   /** A node the client clicks after hydration to prove the flow is live. */
   readonly clickNodeId: string;
+  /**
+   * Elements given extra attributes (props a library component does not
+   * consume): each must carry them in the server markup, and the hydrated
+   * element must end with exactly the attributes the server rendered.
+   */
+  readonly extras?: readonly string[];
 };
 
 // Declared handle geometry: with no DOM the server cannot measure handles,
@@ -118,4 +125,56 @@ const customNode = (): Scenario => {
   };
 };
 
-export const scenarios: readonly (() => Scenario)[] = [builtIn, withPlugins, customNode];
+// Extra attributes on the per-row library elements: the client adds them from
+// the element's ref (no spread on the element), so the server renders them
+// itself.
+const ExtrasNode = (props: NodeProps<{ label: string }, "extras">): JSX.Element => (
+  <div class="extras-card">
+    <Handle type="target" position="top" data-extra="handle" aria-describedby="handle-help" />
+    <strong>{props.data.label}</strong>
+    <Handle type="source" position="bottom" />
+    <NodeResizer data-extra="resizer" />
+  </div>
+);
+
+const ExtrasEdge = (props: EdgeProps): JSX.Element => {
+  const path = () =>
+    getStraightPath({
+      sourceX: props.sourceX,
+      sourceY: props.sourceY,
+      targetX: props.targetX,
+      targetY: props.targetY,
+    })[0];
+  return <BaseEdge path={path()} data-extra="edge" aria-describedby="edge-help" />;
+};
+
+const extraAttributes = (): Scenario => {
+  const { nodes: base, edges: baseEdges } = graph();
+  const initial = base.map((n) => (n.id === "mid" ? { ...n, type: "extras" } : n));
+  const edges = baseEdges.map((e) => (e.id === "e1" ? { ...e, type: "extras" } : e));
+  const [nodes, setNodes] = createSignal<Node[]>(initial);
+  return {
+    name: "extra attributes on library elements",
+    App: () => (
+      <SolidFlow
+        nodes={nodes()}
+        edges={edges}
+        nodeTypes={{ extras: ExtrasNode }}
+        edgeTypes={{ extras: ExtrasEdge }}
+        width={800}
+        height={600}
+      />
+    ),
+    update: () => setNodes((current) => relabel(current, "mid", "extras updated")),
+    updatedText: "extras updated",
+    clickNodeId: "in",
+    extras: ['[data-extra="handle"]', '[data-extra="resizer"]', '[data-extra="edge"]'],
+  };
+};
+
+export const scenarios: readonly (() => Scenario)[] = [
+  builtIn,
+  withPlugins,
+  customNode,
+  extraAttributes,
+];

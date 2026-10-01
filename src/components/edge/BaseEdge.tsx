@@ -1,8 +1,8 @@
-import type { JSX } from "@solidjs/web";
+import { isServer, type JSX } from "@solidjs/web";
 import { getOwner, type ParentProps, Show } from "solid-js";
 
 import type { BaseEdgeProps } from "@/types";
-import { cx, extraKeysOf, spreadExtras } from "@/utils";
+import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/utils";
 
 import { EdgeLabel } from "./EdgeLabel";
 
@@ -41,18 +41,36 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
   const owner = getOwner();
   const mountPath = (el: SVGPathElement) => spreadExtras(el, props, extraKeys, owner);
 
+  const pathClass = () => cx("solid-flow__edge-path", props.class);
+
   return (
     <>
-      <path
-        ref={mountPath}
-        id={props.id}
-        d={props.path}
-        class={cx("solid-flow__edge-path", props.class)}
-        marker-start={props.markerStart}
-        marker-end={props.markerEnd}
-        fill="none"
-        style={props.style}
-      />
+      {isServer ? (
+        // The server's copy of the path: a ref never runs in a server
+        // render, so the extras are spread here (extrasOf). Same attributes
+        // as the client path below, which the hydration lane checks.
+        <path
+          {...extrasOf(props, extraKeys)}
+          id={props.id}
+          d={props.path}
+          class={pathClass()}
+          marker-start={props.markerStart}
+          marker-end={props.markerEnd}
+          fill="none"
+          style={props.style}
+        />
+      ) : (
+        <path
+          ref={mountPath}
+          id={props.id}
+          d={props.path}
+          class={pathClass()}
+          marker-start={props.markerStart}
+          marker-end={props.markerEnd}
+          fill="none"
+          style={props.style}
+        />
+      )}
 
       <Show when={interactionWidth() > 0}>
         <path

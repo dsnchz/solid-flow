@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 
 import { fireEvent } from "@solidjs/testing-library";
-import { hydrate } from "@solidjs/web";
+import { hydrate, render } from "@solidjs/web";
 import { flush } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -24,6 +24,12 @@ import { scenarios } from "./scenarios";
  *    creates no DOM of its own (empty text nodes excepted, see below).
  * 3. The update lands in those elements, and a click selects a node: the
  *    hydrated flow is live, not a static shell.
+ * 4. Extra attributes given to library elements (Handle, BaseEdge, the
+ *    resize controls) are in the server markup, the hydrated element keeps
+ *    exactly the attributes the server rendered, and a fresh client render
+ *    gives the same ones: the client adds the extras from a ref and the
+ *    server from its own copy of the element, so this is what keeps the two
+ *    copies in step.
  */
 const BY_DESIGN_DIAGNOSTIC =
   /^\[WIDE_SCOPE_DEPS\] (memo "resolvedEdges\.row"|effect "div\.data-id, div\.class)/;
@@ -52,6 +58,36 @@ const allNodes = (root: Node): Node[] => {
   return out;
 };
 
+// Every attribute of an element except the hydration key. What the client
+// legitimately changes after hydration is normalized: a path's `d` follows
+// measured geometry (only its presence is compared), d3-drag (XYResizer)
+// sets `touch-action` on its element, and the server and the DOM serialize
+// `style` differently (compared per declaration).
+const normalizeStyle = (style: string) =>
+  style
+    .split(";")
+    .map((declaration) => declaration.split(":").map((part) => part.trim()))
+    .filter(([property]) => property && property !== "touch-action")
+    .map(([property, value]) => `${property}:${value}`)
+    .sort()
+    .join(";");
+
+const attributesOf = (el: Element) =>
+  Object.fromEntries(
+    Array.from(el.attributes)
+      .filter((a) => a.name !== "_hk")
+      .map((a) => [
+        a.name,
+        a.name === "d" ? "<path>" : a.name === "style" ? normalizeStyle(a.value) : a.value,
+      ]),
+  );
+
+const extrasSnapshot = (container: HTMLElement, selectors: readonly string[]) =>
+  selectors.map((selector) => ({
+    selector,
+    elements: Array.from(container.querySelectorAll(selector)).map(attributesOf),
+  }));
+
 const rows = (container: HTMLElement) => [
   ...container.querySelectorAll(".solid-flow__node, .solid-flow__edge"),
 ];
@@ -79,6 +115,11 @@ describe("hydration lane — client hydrate", () => {
       const serverNodes = new Set(allNodes(current));
       const serverRows = rows(current);
       expect(serverRows).toHaveLength(5);
+      // (4) extra attributes: rendered by the server, kept as is by the client
+      const serverExtras = extrasSnapshot(current, scenario.extras ?? []);
+      for (const { selector, elements } of serverExtras) {
+        expect(elements.length, `server markup has ${selector}`).toBeGreaterThan(0);
+      }
 
       const warn = vi.spyOn(console, "warn");
       const error = vi.spyOn(console, "error");
@@ -119,6 +160,7 @@ describe("hydration lane — client hydrate", () => {
         flush();
         expect(current.textContent).toContain(scenario.updatedText);
         expect(rows(current)).toEqual(serverRows);
+        expect(extrasSnapshot(current, scenario.extras ?? [])).toEqual(serverExtras);
 
         // ...and the flow is interactive
         const clicked = current.querySelector<HTMLElement>(
@@ -139,5 +181,26 @@ describe("hydration lane — client hydrate", () => {
         error.mockRestore();
       }
     });
+
+    // (4) continued: hydration does not re-apply a template's static
+    // attributes, so the hydrated element cannot show an attribute the
+    // server's copy left out. A fresh client render of the same scenario can:
+    // it is the client copy, compared with the server's markup.
+    if (scenario.extras) {
+      it(`${scenario.name}: a client render gives the server's attributes`, async () => {
+        const selectors = scenario.extras ?? [];
+        const server = document.createElement("div");
+        server.innerHTML = loadArtifact(scenario.name);
+        const fresh = document.createElement("div");
+        container = fresh;
+        document.body.appendChild(fresh);
+        const { App } = make();
+        dispose = render(() => <App />, fresh);
+        flush();
+        await sleep(100);
+        flush();
+        expect(extrasSnapshot(fresh, selectors)).toEqual(extrasSnapshot(server, selectors));
+      });
+    }
   }
 });

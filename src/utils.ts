@@ -206,6 +206,19 @@ export const spreadExtras = (
 };
 
 /**
+ * The extra props as one object, for the SERVER's copy of an element that
+ * takes them through `spreadExtras` on the client: a ref never runs in a
+ * server render, so the server spreads them itself (there is no per-row
+ * reactivity cost on the server). The hydration lane checks that both copies
+ * end with the same attributes.
+ */
+export const extrasOf = (props: object, keys: readonly string[]): Record<string, unknown> => {
+  const extras: Record<string, unknown> = {};
+  for (const key of keys) extras[key] = Reflect.get(props, key);
+  return extras;
+};
+
+/**
  * Installs a `spread` of `attrs()` on `el` the first time it is defined
  * (user `domAttributes` on a node/edge wrapper). Rows without domAttributes —
  * the common case — pay one boolean effect instead of the spread machinery

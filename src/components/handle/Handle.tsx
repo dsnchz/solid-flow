@@ -1,4 +1,4 @@
-import type { JSX } from "@solidjs/web";
+import { isServer, type JSX } from "@solidjs/web";
 import {
   areConnectionMapsEqual,
   type Connection,
@@ -23,7 +23,7 @@ import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import { useNodeConnectable } from "@/contexts/nodeConnectable";
 import { connectionKey } from "@/core";
 import type { Edge, Node, Position } from "@/types";
-import { cx, extraKeysOf, getEdgeId, spreadExtras } from "@/utils";
+import { cx, extraKeysOf, extrasOf, getEdgeId, spreadExtras } from "@/utils";
 
 type HandleProps = Omit<SystemHandleProps, "position"> & {
   readonly position: Position;
@@ -232,40 +232,66 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     actions.setClickConnectStartHandle(undefined);
   };
 
+  const handleClass = () =>
+    cx(
+      "solid-flow__handle",
+      `solid-flow__handle-${position()}`,
+      store.noDragClass,
+      store.noPanClass,
+      props.class,
+      {
+        valid: valid(),
+        connectingto: !!connectingTo(),
+        connectingfrom: !!connectingFrom(),
+        source: !isTarget(),
+        target: isTarget(),
+        connectablestart: isConnectableStart(),
+        connectableend: isConnectableEnd(),
+        connectable: !!connectable(),
+        // Loose-mode target exclusion: the origin node's same-id handles.
+        excluded: !!originState(),
+      },
+    );
+  const dataId = () => `${store.id}-${nodeId()}-${props.id || null}-${type()}`;
+
+  // The server's copy of the element: a ref never runs in a server render,
+  // so the extras are spread here (extrasOf). Same attributes as the client
+  // element below, which the hydration lane checks.
   return (
-    <div
-      ref={mountElement}
-      role="button"
-      aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
-      tabindex={-1}
-      data-handleid={handleId()}
-      data-nodeid={nodeId()}
-      data-handlepos={position()}
-      data-id={`${store.id}-${nodeId()}-${props.id || null}-${type()}`}
-      onClick={onClick}
-      onPointerDown={onPointerDown}
-      style={props.style}
-      class={cx(
-        "solid-flow__handle",
-        `solid-flow__handle-${position()}`,
-        store.noDragClass,
-        store.noPanClass,
-        props.class,
-        {
-          valid: valid(),
-          connectingto: !!connectingTo(),
-          connectingfrom: !!connectingFrom(),
-          source: !isTarget(),
-          target: isTarget(),
-          connectablestart: isConnectableStart(),
-          connectableend: isConnectableEnd(),
-          connectable: !!connectable(),
-          // Loose-mode target exclusion: the origin node's same-id handles.
-          excluded: !!originState(),
-        },
+    <>
+      {isServer ? (
+        <div
+          {...extrasOf(props, extraKeys)}
+          role="button"
+          aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
+          tabindex={-1}
+          data-handleid={handleId()}
+          data-nodeid={nodeId()}
+          data-handlepos={position()}
+          data-id={dataId()}
+          style={props.style}
+          class={handleClass()}
+        >
+          {props.children}
+        </div>
+      ) : (
+        <div
+          ref={mountElement}
+          role="button"
+          aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
+          tabindex={-1}
+          data-handleid={handleId()}
+          data-nodeid={nodeId()}
+          data-handlepos={position()}
+          data-id={dataId()}
+          onClick={onClick}
+          onPointerDown={onPointerDown}
+          style={props.style}
+          class={handleClass()}
+        >
+          {props.children}
+        </div>
       )}
-    >
-      {props.children}
-    </div>
+    </>
   );
 };
