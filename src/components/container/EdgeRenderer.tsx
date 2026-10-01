@@ -20,7 +20,7 @@ const NO_ROWS: readonly string[] = [];
 export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: EdgeRendererProps<EdgeType>,
 ): JSX.Element => {
-  const { store, actions, onScreenEdgeIds } = useInternalSolidFlow();
+  const { store, actions, onScreenEdgeIds } = useInternalSolidFlow<NodeType, EdgeType>();
 
   // The unmount tier's focus guard for keyboard-focused edges (the focusable
   // `g` carries data-id and focusin bubbles here). Edge-LABEL content lives
@@ -44,22 +44,26 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
 
           // Membership comes from the user-facing edges store; an edge whose
           // endpoints are not layouted yet has a null row — do not mount it.
-          // `hidden` is decided here too — one Show per row (see NodeRenderer).
-          const present = () => {
+          // `hidden` is decided here too — one Show per row, and `when`
+          // returns the row for the wrapper (see NodeRenderer, audit C9).
+          const visibleRow = () => {
+            if (unmounted()) return undefined;
             const edge = actions.getLayoutedEdge(edgeId);
-            return edge != null && !edge.hidden;
+            return edge != null && !edge.hidden ? edge : undefined;
           };
           return (
-            <Show when={!unmounted() && present()}>
-              <EdgeWrapper<NodeType, EdgeType>
-                edgeId={edgeId}
-                onEdgeClick={props.onEdgeClick}
-                onEdgeDoubleClick={props.onEdgeDoubleClick}
-                onEdgePointerMove={props.onEdgePointerMove}
-                onEdgeContextMenu={props.onEdgeContextMenu}
-                onEdgePointerEnter={props.onEdgePointerEnter}
-                onEdgePointerLeave={props.onEdgePointerLeave}
-              />
+            <Show when={visibleRow()}>
+              {(edge) => (
+                <EdgeWrapper<NodeType, EdgeType>
+                  edge={edge}
+                  onEdgeClick={props.onEdgeClick}
+                  onEdgeDoubleClick={props.onEdgeDoubleClick}
+                  onEdgePointerMove={props.onEdgePointerMove}
+                  onEdgeContextMenu={props.onEdgeContextMenu}
+                  onEdgePointerEnter={props.onEdgePointerEnter}
+                  onEdgePointerLeave={props.onEdgePointerLeave}
+                />
+              )}
             </Show>
           );
         }}

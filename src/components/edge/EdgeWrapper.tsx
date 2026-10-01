@@ -2,17 +2,18 @@ import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
 import { dynamic } from "@solidjs/web";
 import { elementSelectionKeys, errorMessages, getMarkerId } from "@xyflow/system";
-import { createEffect, createMemo, getOwner, runWithOwner } from "solid-js";
+import { type Accessor, createEffect, createMemo, getOwner, runWithOwner, untrack } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { edgeCulled } from "@/core";
-import type { Edge, EdgeEvents, Node } from "@/types";
+import type { Edge, EdgeEvents, EdgeLayouted, Node } from "@/types";
 import { clientOnlySetup, cx, emitFlowError, isEdgeSelectable, spreadOnDemand } from "@/utils";
 
 export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
-  readonly edgeId: string;
+  /** The layouted row, as EdgeRenderer's Show narrows it (one resolution per row). */
+  readonly edge: Accessor<EdgeLayouted<EdgeType>>;
 };
 
 /** Internal per-edge wrapper: interaction, a11y, viewport culling, and the dynamic edge component. */
@@ -25,11 +26,12 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   // spread effects must be owned (disposal + no NO_OWNER diagnostics).
   const owner = getOwner();
 
-  const edgeId = () => props.edgeId;
-  // ONE row resolution per wrapper (see NodeWrapper): getLayoutedEdge probes
-  // `in` first (record-wide subscription) so the wrapper survives while its
-  // endpoints are unmeasured — done ~46x per render before, once now.
-  const edge = createMemo(() => actions.getLayoutedEdge(edgeId())!);
+  // ONE row resolution per row (see NodeWrapper): EdgeRenderer's Show
+  // narrows getLayoutedEdge (which probes `in` first, so the row survives
+  // while its endpoints are unmeasured) and hands the accessor down. Read
+  // once: the accessor is stable.
+  const edge = untrack(() => props.edge);
+  const edgeId = () => edge().id;
 
   const edgeType = () => edge().type ?? "default";
   const selectable = () => isEdgeSelectable(edge(), store);
