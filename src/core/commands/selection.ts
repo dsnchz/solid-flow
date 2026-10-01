@@ -28,9 +28,6 @@ export type SelectionDelta = {
 type SelectionStoreReads<NodeType extends Node, EdgeType extends Edge> = {
   readonly nodes: readonly NodeType[];
   readonly edges: readonly EdgeType[];
-  /** Memoized JOINED selection views (overlay + rows) — see createFlowState. */
-  readonly selectedNodes: readonly NodeType[];
-  readonly selectedEdges: readonly EdgeType[];
   readonly multiselectionKeyPressed: boolean;
   readonly snapGrid?: SnapGrid;
   readonly nodesDraggable: boolean;
@@ -142,24 +139,20 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     nodes: _nodes,
     edges,
   }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
-    // Targets come from the MEMOIZED joined selection views, not a walk of
+    // Targets come from the keyed selected-presence records, not a walk of
     // the whole graph: the drag-start profile @10k attributed ~515ms to this
     // function writing (then merely reading) every element — when almost
     // nothing is ever selected. Deselecting only what IS selected makes the
-    // empty case free and the common case O(selected).
+    // empty case free and the common case O(selected). Not the joined views
+    // (`store.selectedNodes`): the node view is lazy, and reading it here
+    // computed it — at drag start, and in reset() while the flow unmounts,
+    // where the read left it queued for a sweep that never came and pinned
+    // the whole unmounted flow (bench: retained after unmount 19 -> 276 MB).
     const requestedNodeIds = _nodes ? new Set(_nodes.map(({ id }) => id)) : null;
-    // Explicitly-empty request: skip even the view read (the view is lazy,
-    // so an unobserved read computes it; the drag-start caller passes
-    // `nodes: []`).
-    const nodeTargets =
-      requestedNodeIds?.size === 0
-        ? new Set<string>()
-        : new Set(
-            store.selectedNodes
-              .filter((node) => !requestedNodeIds || requestedNodeIds.has(node.id))
-              .map(({ id }) => id),
-          );
-    if (nodeTargets.size) {
+    const nodeTargets = Object.keys(selectedNodeIds).filter(
+      (id) => !requestedNodeIds || requestedNodeIds.has(id),
+    );
+    if (nodeTargets.length) {
       setNodesStore((nodes) => {
         for (const id of nodeTargets) {
           const node = nodeIndex.get(nodes, id);
@@ -172,15 +165,10 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     }
 
     const requestedEdgeIds = edges ? new Set(edges.map(({ id }) => id)) : null;
-    const edgeTargets =
-      requestedEdgeIds?.size === 0
-        ? new Set<string>()
-        : new Set(
-            store.selectedEdges
-              .filter((edge) => !requestedEdgeIds || requestedEdgeIds.has(edge.id))
-              .map(({ id }) => id),
-          );
-    if (edgeTargets.size) {
+    const edgeTargets = Object.keys(selectedEdgeIds).filter(
+      (id) => !requestedEdgeIds || requestedEdgeIds.has(id),
+    );
+    if (edgeTargets.length) {
       setEdgesStore((edges) => {
         for (const id of edgeTargets) {
           const edge = edgeIndex.get(edges, id);
