@@ -34,7 +34,8 @@ import { type DragOverlay } from "./dragOverlay";
 import { RecordMapFacade } from "./facades";
 import type { SolidFlowProps } from "./flowProps";
 import { FLOW_PROP_KEYS } from "./flowProps";
-import { type FlowCommands, type FlowSelection, type FlowState } from "./flowState";
+import { createFlowReadSurface } from "./flowReadSurface";
+import { type FlowCommands } from "./flowState";
 import { createGeometryFeed } from "./geometryFeed";
 import { createInitialFitView } from "./initialFitView";
 import { createMeasurementIngest } from "./measurementIngest";
@@ -769,72 +770,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  // The public read surface: the whole data graph as ONE reactive struct.
-  // `flow` and `selection` are stable identities — reactivity lives inside
-  // the property reads — so consumers can destructure them safely.
-  const selection: FlowSelection<NodeType, EdgeType> = {
-    get nodes(): readonly NodeType[] {
-      return store.selectedNodes;
-    },
-    get edges(): readonly EdgeType[] {
-      return store.selectedEdges;
-    },
-  };
-
-  const flow: FlowState<NodeType, EdgeType> = {
-    get nodes(): readonly NodeType[] {
-      return store.nodes;
-    },
-    get edges(): readonly EdgeType[] {
-      return store.edges;
-    },
-    get internalNodes() {
-      return internalNodes;
-    },
-    get connections() {
-      return connections;
-    },
-    selection,
-    get nodesInitialized() {
-      return store.nodesInitialized;
-    },
-    get viewportInitialized() {
-      return store.viewportInitialized;
-    },
-    get viewport() {
-      return store.viewport;
-    },
-    get width() {
-      return store.width;
-    },
-    get height() {
-      return store.height;
-    },
-    get connection() {
-      return store.connection;
-    },
-    get dragging() {
-      return store.dragging;
-    },
-    get minZoom() {
-      return store.minZoom;
-    },
-    get maxZoom() {
-      return store.maxZoom;
-    },
-    get nodesDraggable() {
-      return store.nodesDraggable;
-    },
-    get nodesConnectable() {
-      return store.nodesConnectable;
-    },
-    get elementsSelectable() {
-      return store.elementsSelectable;
-    },
-    get snapGrid() {
-      return store.snapGrid;
-    },
-  };
+  // The public read surface (core/flowReadSurface.ts): stable `flow` and
+  // `flow.selection` identities forwarding to the store.
+  const flow = createFlowReadSurface<NodeType, EdgeType>(store, internalNodes, connections);
 
   // The public write surface. Implementations live in the command groups
   // (core/commands/*); this struct is the canonical capability surface and
