@@ -1,9 +1,8 @@
 import type { JSX } from "@solidjs/web";
-import type { ParentProps } from "solid-js";
-import { omit } from "solid-js";
+import { getOwner, type ParentProps } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
-import { propDefaults, toPxString } from "@/utils";
+import { extraKeysOf, spreadExtras, toPxString } from "@/utils";
 
 import { EdgeLabelRenderer } from "./EdgeLabelRenderer";
 
@@ -17,28 +16,35 @@ type EdgeLabelProps = {
   readonly style?: JSX.CSSProperties;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "style">;
 
+/**
+ * The props EdgeLabel consumes itself plus the attributes it sets on its
+ * element (an extra prop never overrides them); every other key is an
+ * attribute of the element.
+ */
+const OWN_KEYS: ReadonlySet<string> = new Set([
+  "x",
+  "y",
+  "width",
+  "height",
+  "selectEdgeOnClick",
+  "transparent",
+  "children",
+  "class",
+  "style",
+  "role",
+  "tabindex",
+  "onClick",
+]);
+
 /** Renders an edge label positioned in graph coordinates. */
 export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
-  const _props = propDefaults(props, {
-    x: 0,
-    y: 0,
-    selectEdgeOnClick: false,
-    transparent: false,
-    style: {} as JSX.CSSProperties,
-  });
-
-  const rest = omit(
-    _props,
-    "x",
-    "y",
-    "width",
-    "height",
-    "selectEdgeOnClick",
-    "transparent",
-    "children",
-    "class",
-    "style",
-  );
+  // One label per labelled edge: the per-row rules (see Handle) instead of
+  // propDefaults + omit + a JSX spread, which routed every attribute of the
+  // element through one spread effect.
+  const x = () => props.x ?? 0;
+  const y = () => props.y ?? 0;
+  const extraKeys = extraKeysOf(props, OWN_KEYS);
+  const owner = getOwner();
 
   const { actions } = useInternalSolidFlow();
 
@@ -49,26 +55,26 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
   return (
     <EdgeLabelRenderer>
       <div
+        ref={(el) => spreadExtras(el, props, extraKeys, owner)}
         role="button"
         tabindex={-1}
-        class={["solid-flow__edge-label", { transparent: _props.transparent }, _props.class]}
+        class={["solid-flow__edge-label", { transparent: props.transparent }, props.class]}
         style={{
           // No hideOnSSR needed (unlike Svelte Flow): EdgeLabelRenderer
           // portals into domNode, which only exists in the browser.
           "pointer-events": "all",
-          width: toPxString(_props.width),
-          height: toPxString(_props.height),
-          transform: `translate(-50%, -50%) translate(${_props.x}px,${_props.y}px)`,
-          cursor: _props.selectEdgeOnClick ? "pointer" : undefined,
+          width: toPxString(props.width),
+          height: toPxString(props.height),
+          transform: `translate(-50%, -50%) translate(${x()}px,${y()}px)`,
+          cursor: props.selectEdgeOnClick ? "pointer" : undefined,
           "z-index": zIndex(),
-          ..._props.style,
+          ...props.style,
         }}
         onClick={() => {
-          if (_props.selectEdgeOnClick) actions.handleEdgeSelection(id());
+          if (props.selectEdgeOnClick) actions.handleEdgeSelection(id());
         }}
-        {...rest}
       >
-        {_props.children}
+        {props.children}
       </div>
     </EdgeLabelRenderer>
   );
