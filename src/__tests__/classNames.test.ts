@@ -12,6 +12,11 @@ describe("cx", () => {
     expect(cx("a", { selected: true, dragging: false, nopan: 1 })).toBe("a selected nopan");
   });
 
+  it("takes any ClassValue a user class prop can hold: nested arrays, booleans", () => {
+    expect(cx("a", ["b", ["c", { d: true, e: false }], null], true, "f")).toBe("a b c d f");
+    expect(cx(["a", false, undefined], 0, "b")).toBe("a 0 b");
+  });
+
   it("returns an empty string for no parts", () => {
     expect(cx()).toBe("");
     expect(cx(undefined, { x: false })).toBe("");

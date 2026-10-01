@@ -1,4 +1,4 @@
-import { spread } from "@solidjs/web";
+import { type JSX, spread } from "@solidjs/web";
 import {
   type Connection,
   type EdgeBase,
@@ -92,22 +92,28 @@ export function propDefaults<T extends object, D extends Partial<T>>(
   return out;
 }
 
+/** What `cx` takes: any class value a user's `class` prop can hold, plus records with any values. */
+type ClassPart = JSX.ClassValue | Record<string, unknown>;
+
 /**
- * Class string from string/object parts (falsy parts and false keys dropped).
+ * Class string from class parts: strings and numbers as is, records by their
+ * truthy keys, arrays flattened, booleans and nullish parts dropped (the
+ * ClassValue rules, so a user `class` prop of any form can be passed in).
  * Per-row elements assign their class as ONE string: @solidjs/web's
  * array/object class form flattens and diffs a key map on every assignment
  * (~200ms of a 10k mount, bench round 21); a string is one attribute write.
  */
-export const cx = (
-  ...parts: (string | number | false | null | undefined | Record<string, unknown>)[]
-): string => {
+export const cx = (...parts: ClassPart[]): string => {
   let out = "";
-  for (const part of parts) {
-    if (!part && part !== 0) continue;
-    if (typeof part === "object") {
+  const add = (part: ClassPart): void => {
+    if (part === null || part === undefined || typeof part === "boolean" || part === "") return;
+    if (Array.isArray(part)) {
+      for (const item of part) add(item);
+    } else if (typeof part === "object") {
       for (const key in part) if (part[key]) out += (out ? " " : "") + key;
     } else out += (out ? " " : "") + part;
-  }
+  };
+  for (const part of parts) add(part);
   return out;
 };
 
