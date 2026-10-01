@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
-import { Background, Controls, MiniMap } from "@/plugins";
+import { Background, Controls, MiniMap, NodeResizer } from "@/plugins";
 import type { Edge, Node } from "@/types";
 
 // Mounting a flow with the built-in nodes, edges and plugins may emit only
@@ -84,6 +84,24 @@ describe("mount diagnostics", () => {
             <Controls />
             <MiniMap />
           </SolidFlow>
+        )),
+      ),
+    ).toEqual([]);
+  });
+
+  it("nodes carrying a NodeResizer emit only by-design diagnostics", async () => {
+    const ResizableNode = () => <NodeResizer />;
+    const resizable = nodes.map((node) => ({ ...node, type: "resizable" }));
+    expect(
+      await unexpectedDiagnostics(() =>
+        render(() => (
+          <SolidFlow
+            defaultNodes={resizable}
+            defaultEdges={edges}
+            nodeTypes={{ resizable: ResizableNode }}
+            width={800}
+            height={600}
+          />
         )),
       ),
     ).toEqual([]);

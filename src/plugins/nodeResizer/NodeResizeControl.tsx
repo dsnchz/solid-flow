@@ -5,7 +5,7 @@ import {
   type XYResizerChange,
   type XYResizerChildChange,
 } from "@xyflow/system";
-import { createEffect, createSignal, omit, type ParentProps } from "solid-js";
+import { createEffect, createSignal, omit, type ParentProps, untrack } from "solid-js";
 
 import { useInternalSolidFlow, useNodeId } from "@/contexts";
 import type { Node, ResizeControlVariant } from "@/types";
@@ -99,7 +99,9 @@ export const NodeResizeControl = <NodeType extends Node = Node>(
 
       const instance = XYResizer({
         domNode: el,
-        nodeId: nodeId(),
+        // Read once, as Svelte Flow creates its XYResizer in onMount: a
+        // deliberate setup read, untracked (STRICT_READ_UNTRACKED otherwise).
+        nodeId: untrack(nodeId),
         getStoreItems: () => ({
           nodeLookup,
           transform: store.transform,
