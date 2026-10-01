@@ -112,6 +112,15 @@ describe("NodeResizer", () => {
     expect(controls()).toHaveLength(8);
   });
 
+  it("takes color, as upstream: a line's border and a handle's background", async () => {
+    const { control } = await renderResizer(() => <NodeResizer color="rgb(1, 2, 3)" />);
+
+    expect(control("top").style.borderColor).toBe("rgb(1, 2, 3)");
+    expect(control("top").style.backgroundColor).toBe("");
+    expect(control("top-left").style.backgroundColor).toBe("rgb(1, 2, 3)");
+    expect(control("top-left").style.borderColor).toBe("");
+  });
+
   it("scales handles against the zoom unless autoScale is off; lines never scale", async () => {
     const zoomedOut = await renderResizer(() => <NodeResizer />, 0.5);
     expect(zoomedOut.control("top-left").style.getPropertyValue("scale")).toBe("2");

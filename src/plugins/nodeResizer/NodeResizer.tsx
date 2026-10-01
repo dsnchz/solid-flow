@@ -18,6 +18,8 @@ export type NodeResizerProps = {
    * @remarks optional if used inside custom node
    */
   readonly nodeId?: string;
+  /** Color of the resize handle */
+  readonly color?: string;
   /** Class applied to handle */
   readonly handleClass?: string;
   /** Style applied to handle */
