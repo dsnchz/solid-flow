@@ -116,8 +116,14 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     },
   );
 
+  // Subscribed only while a handler is set: building the selected arrays is
+  // O(selected) per selection write (a zoomed-out box selection rewrites a
+  // 6,500-node selection on every move), wasted when nobody listens.
   createSelectionChange(
-    () => ({ nodes: store.selectedNodes, edges: store.selectedEdges }),
+    () =>
+      _props.onSelectionChange
+        ? { nodes: store.selectedNodes, edges: store.selectedEdges }
+        : undefined,
     (params) => untrack(() => _props.onSelectionChange)?.(params),
   );
 

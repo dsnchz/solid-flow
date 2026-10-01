@@ -1,5 +1,6 @@
 import { render } from "@solidjs/testing-library";
 import { fireEvent } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
 import { useSolidFlow } from "@/hooks/useSolidFlow";
@@ -111,6 +112,30 @@ describe("<SolidFlow />", () => {
     await tick();
 
     expect(node.classList.contains("selected")).toBe(false);
+  });
+
+  it("calls an onSelectionChange set after mount with the current selection", async () => {
+    // No handler, no subscription (React Flow mounts its selection listener
+    // only with a handler); one that arrives later starts with the selection
+    // as it is, as a freshly mounted listener does.
+    const [handler, setHandler] = createSignal<OnSelectionChange | undefined>();
+    render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "a", selected: true }), makeNode({ id: "b" })]}
+        edges={[]}
+        onSelectionChange={handler()}
+        width={800}
+        height={600}
+      />
+    ));
+    await tick();
+
+    const onSelectionChange = vi.fn<OnSelectionChange>();
+    setHandler(() => onSelectionChange);
+    await tick();
+
+    expect(onSelectionChange).toHaveBeenCalledTimes(1);
+    expect(onSelectionChange.mock.calls[0]![0].nodes.map((n) => n.id)).toEqual(["a"]);
   });
 
   it("fires onSelectionChange when the selected set changes", async () => {
