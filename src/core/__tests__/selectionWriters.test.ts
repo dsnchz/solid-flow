@@ -51,20 +51,24 @@ const withControlledFlow = async <T>(
  * untouched rows never acquire overlay entries.
  */
 describe("selection writers (delta over the presence record)", () => {
-  it("applySelectionSets flips exactly the delta and leaves other rows untouched", async () => {
+  it("addSelectedNodes flips exactly the delta and leaves other rows untouched", async () => {
     await withControlledFlow(["a", "b", "c", "d"], ({ flow, selectedIds }) => {
-      flow.actions.applySelectionSets(new Set(["a", "b"]), new Set());
+      flow.actions.setMultiselectionKeyPressed(true);
+      flush();
+      flow.actions.addSelectedNodes(["a", "b"]);
       flush();
       expect(selectedIds()).toEqual(["a", "b"]);
 
-      flow.actions.applySelectionSets(new Set(["b", "c"]), new Set());
+      flow.actions.setMultiselectionKeyPressed(false);
+      flush();
+      flow.actions.addSelectedNodes(["b", "c"]);
       flush();
       expect(selectedIds()).toEqual(["b", "c"]);
       expect(flow.internalNodes.d!.selected).toBeFalsy();
     });
   });
 
-  it("applySelectionSets deselects a row the USER selected by a direct row write", async () => {
+  it("addSelectedNodes deselects a row the USER selected by a direct row write", async () => {
     await withControlledFlow(["a", "b"], ({ flow, setNodes, selectedIds }) => {
       setNodes((draft) => {
         draft[1]!.selected = true;
@@ -72,9 +76,9 @@ describe("selection writers (delta over the presence record)", () => {
       flush();
       expect(selectedIds()).toEqual(["b"]);
 
-      flow.actions.applySelectionSets(new Set(), new Set());
+      flow.actions.addSelectedNodes(["a"]);
       flush();
-      expect(selectedIds()).toEqual([]);
+      expect(selectedIds()).toEqual(["a"]);
     });
   });
 
@@ -128,7 +132,7 @@ describe("selection writers (delta over the presence record)", () => {
 
   it("unselectNodesAndEdges with a subset clears only that subset", async () => {
     await withControlledFlow(["a", "b", "c"], ({ flow, selectedIds }) => {
-      flow.actions.applySelectionSets(new Set(["a", "b", "c"]), new Set());
+      flow.actions.applySelectionDelta({ nodes: { select: ["a", "b", "c"], deselect: [] } });
       flush();
       flow.actions.unselectNodesAndEdges({ nodes: [makeNode("b")], edges: [] });
       flush();

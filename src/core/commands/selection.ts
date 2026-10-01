@@ -317,18 +317,10 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
   // Same overlay-aware write shape as the other commands — a direct row
   // write here would fight stale overlay entries from the gesture's
   // initial unselect.
-  const applySelectionSets = (
-    nodeTargets: ReadonlySet<string>,
-    edgeTargets: ReadonlySet<string>,
-  ) => {
-    setSelection("nodes", setNodesStore, nodeIndex, Object.keys(selectedNodeIds), nodeTargets);
-    setSelection("edges", setEdgesStore, edgeIndex, Object.keys(selectedEdgeIds), edgeTargets);
-  };
-
   /**
-   * Set only the given ids: O(changed), where applySelectionSets is
-   * O(selected) (it unions the presence record with the target and snapshots
-   * the overlay). For a writer that tracks its own delta (the box selection,
+   * Set only the given ids: O(changed), where setSelection is O(selected)
+   * (it unions the presence record with the target and snapshots the
+   * overlay). For a writer that tracks its own delta (the box selection,
    * whose box gains or loses a few nodes per move while thousands stay
    * selected). Writes are unconditional: an "already in that state" check
    * would read the committed overlay, which does not see an earlier write of
@@ -374,7 +366,6 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     handleNodeSelection,
     handleEdgeSelection,
     moveSelectedNodes,
-    applySelectionSets,
     applySelectionDelta,
   } as const;
 };

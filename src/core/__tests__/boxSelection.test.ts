@@ -47,7 +47,12 @@ const withBox = async (
   let state!: ReturnType<typeof createFlowState<Node, Edge>>;
   createRoot((d) => {
     dispose = d;
-    state = createFlowState<Node, Edge>({ nodes, edges });
+    // Fresh rows per test: an uncontrolled store writes `selected` onto the
+    // objects it was given.
+    state = createFlowState<Node, Edge>({
+      nodes: structuredClone(nodes),
+      edges: structuredClone(edges),
+    });
   });
   flush();
   const writes = vi.fn((delta: Parameters<typeof state.actions.applySelectionDelta>[0]) =>
@@ -72,7 +77,10 @@ const withBox = async (
     edges: state.flow.selection.edges.map((e) => e.id).sort(),
   });
   const select = (nodeIds: string[], edgeIds: string[] = []) => {
-    state.actions.applySelectionSets(new Set(nodeIds), new Set(edgeIds));
+    state.actions.applySelectionDelta({
+      nodes: { select: nodeIds, deselect: [] },
+      edges: { select: edgeIds, deselect: [] },
+    });
     flush();
   };
   try {
