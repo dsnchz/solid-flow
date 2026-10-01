@@ -27,6 +27,7 @@ import { createGraphBoundsSampler } from "@/core/graphBounds";
 import { propDefaults } from "@/core/propDefaults";
 import type { Node } from "@/types";
 
+import { minimapFrame, minimapMaskPath } from "./minimapLayout";
 import { MiniMapNode, type MiniMapNodeProps } from "./MiniMapNode";
 
 /** Derives a per-node minimap attribute (color, stroke, class) from the node. */
@@ -250,26 +251,19 @@ export const MiniMap = <NodeType extends Node>(
     { equals: rectsEqual, name: "boundingRect" },
   );
 
-  const viewScale = createMemo(() =>
-    Math.max(boundingRect().width / _props.width, boundingRect().height / _props.height),
+  // The viewBox follows the bounding rect only (a pan inside the graph's
+  // bounds changes neither); the mask also follows the viewport.
+  const frame = createMemo(
+    () =>
+      minimapFrame({
+        bounds: boundingRect(),
+        width: _props.width,
+        height: _props.height,
+        offsetScale: _props.offsetScale,
+      }),
+    { name: "minimap.frame" },
   );
-
-  const getViewWidth = () => viewScale() * _props.width;
-  const getViewHeight = () => viewScale() * _props.height;
-  const getOffset = () => _props.offsetScale * viewScale();
-
-  const getX = () => {
-    const rect = boundingRect();
-    return rect.x - (getViewWidth() - rect.width) / 2 - getOffset();
-  };
-
-  const getY = () => {
-    const rect = boundingRect();
-    return rect.y - (getViewHeight() - rect.height) / 2 - getOffset();
-  };
-
-  const getViewboxWidth = () => getViewWidth() + getOffset() * 2;
-  const getViewboxHeight = () => getViewHeight() + getOffset() * 2;
+  const viewScale = () => frame().viewScale;
 
   const strokeWidth = () =>
     _props.maskStrokeWidth ? _props.maskStrokeWidth * viewScale() : undefined;
@@ -352,7 +346,7 @@ export const MiniMap = <NodeType extends Node>(
             ref={setRef}
             width={_props.width}
             height={_props.height}
-            viewBox={`${getX()} ${getY()} ${getViewboxWidth()} ${getViewboxHeight()}`}
+            viewBox={`${frame().x} ${frame().y} ${frame().width} ${frame().height}`}
             class="solid-flow__minimap-svg"
             role="img"
             aria-labelledby={labelledBy()}
@@ -407,10 +401,7 @@ export const MiniMap = <NodeType extends Node>(
             </For>
             <path
               class="solid-flow__minimap-mask"
-              d={`M${getX() - getOffset()},${getY() - getOffset()}h${getViewboxWidth() + getOffset() * 2}v${
-                getViewboxHeight() + getOffset() * 2
-              }h${-getViewboxWidth() - getOffset() * 2}z
-            M${viewBB().x},${viewBB().y}h${viewBB().width}v${viewBB().height}h${-viewBB().width}z`}
+              d={minimapMaskPath(frame(), viewBB())}
               fill-rule="evenodd"
               pointer-events="none"
             />
