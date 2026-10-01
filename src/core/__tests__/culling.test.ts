@@ -5,14 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { InternalNode, Node } from "@/types";
 
-import {
-  createCullingViewport,
-  edgeCulled,
-  isEdgeCulled,
-  isNodeCulled,
-  nodeCulled,
-  rectsOverlap,
-} from "../culling";
+import { createCullingViewport, edgeCulled, nodeCulled, rectsOverlap } from "../culling";
 
 const makeInternalNode = (
   overrides: {
@@ -172,78 +165,6 @@ describe("createCullingViewport (core, headless)", () => {
     expect(dependent()).not.toBe(initial);
     expect(runs.count).toBe(2);
     dispose();
-  });
-});
-
-describe("isNodeCulled", () => {
-  const rect: Rect = { x: -400, y: -300, width: 1600, height: 1200 };
-
-  it("keeps nodes intersecting the culling rect", () => {
-    expect(isNodeCulled(makeInternalNode({ x: 0, y: 0 }), rect)).toBe(false);
-    // Straddling the boundary still intersects.
-    expect(isNodeCulled(makeInternalNode({ x: -450, y: 0 }), rect)).toBe(false);
-  });
-
-  it("culls nodes fully outside the rect", () => {
-    expect(isNodeCulled(makeInternalNode({ x: 2000, y: 0 }), rect)).toBe(true);
-    expect(isNodeCulled(makeInternalNode({ x: 0, y: -1000 }), rect)).toBe(true);
-  });
-
-  it("never culls selected nodes", () => {
-    expect(isNodeCulled(makeInternalNode({ x: 2000, selected: true }), rect)).toBe(false);
-  });
-
-  it("never culls unmeasured nodes (measurement pipeline must not starve)", () => {
-    expect(isNodeCulled(makeInternalNode({ x: 2000, measured: false }), rect)).toBe(false);
-  });
-
-  it("never culls nodes whose handle bounds have not populated in this instance", () => {
-    // Pre-measured node (persisted layout / remounted flow): must still get
-    // its one mount so edges touching it can lay out.
-    expect(isNodeCulled(makeInternalNode({ x: 2000, mounted: false }), rect)).toBe(false);
-  });
-
-  it("never culls cullable: false nodes", () => {
-    expect(isNodeCulled(makeInternalNode({ x: 2000, cullable: false }), rect)).toBe(false);
-  });
-
-  it("culls nothing while the culling viewport is null (container unmeasured)", () => {
-    expect(isNodeCulled(makeInternalNode({ x: 2000 }), null)).toBe(false);
-  });
-});
-
-describe("isEdgeCulled", () => {
-  const rect: Rect = { x: -400, y: -300, width: 1600, height: 1200 };
-  const edge = (sx: number, sy: number, tx: number, ty: number, selected = false) => ({
-    sourceX: sx,
-    sourceY: sy,
-    targetX: tx,
-    targetY: ty,
-    selected,
-  });
-
-  it("keeps edges whose segment box intersects the rect", () => {
-    expect(isEdgeCulled(edge(0, 0, 100, 100), rect)).toBe(false);
-    // Both endpoints outside, segment box crossing the rect (long edge).
-    expect(isEdgeCulled(edge(-1000, 0, 3000, 0), rect)).toBe(false);
-  });
-
-  it("culls edges fully outside the rect (degenerate boxes included)", () => {
-    expect(isEdgeCulled(edge(2000, 0, 3000, 0), rect)).toBe(true);
-    // Zero-height horizontal segment below the rect.
-    expect(isEdgeCulled(edge(0, 2000, 500, 2000), rect)).toBe(true);
-  });
-
-  it("never culls selected edges", () => {
-    expect(isEdgeCulled(edge(2000, 0, 3000, 0, true), rect)).toBe(false);
-  });
-
-  it("never culls cullable: false edges", () => {
-    expect(isEdgeCulled({ ...edge(2000, 0, 3000, 0), cullable: false }, rect)).toBe(false);
-  });
-
-  it("culls nothing while the culling viewport is null", () => {
-    expect(isEdgeCulled(edge(2000, 0, 3000, 0), null)).toBe(false);
   });
 });
 
