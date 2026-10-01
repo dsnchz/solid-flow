@@ -24,6 +24,18 @@ export type SelectionDelta = {
   readonly deselect: Iterable<string>;
 };
 
+/** What a selection write needs of a row. */
+type SelectableRow = { id: string; selected?: boolean };
+
+/** One axis of the selection: its rows, their index and its presence record. */
+type SelectionAxis<T extends SelectableRow> = {
+  readonly kind: "nodes" | "edges";
+  readonly setStore: StoreSetter<T[]>;
+  readonly index: RowIndex<T>;
+  /** The keyed selected-presence record (core/projections/selectedIds.ts). */
+  readonly selectedIds: Record<string, unknown>;
+};
+
 /** The slice of the internal store the selection commands read. */
 type SelectionStoreReads<NodeType extends Node, EdgeType extends Edge> = {
   readonly nodes: readonly NodeType[];
@@ -82,6 +94,19 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
   nodeIndex,
   edgeIndex,
 }: SelectionCommandDeps<NodeType, EdgeType>) => {
+  const nodesAxis: SelectionAxis<NodeType> = {
+    kind: "nodes",
+    setStore: setNodesStore,
+    index: nodeIndex,
+    selectedIds: selectedNodeIds,
+  };
+  const edgesAxis: SelectionAxis<EdgeType> = {
+    kind: "edges",
+    setStore: setEdgesStore,
+    index: edgeIndex,
+    selectedIds: selectedEdgeIds,
+  };
+
   // The flow's view of an element's selection: overlay joined with the row.
   const nodeSelected = (node: { id: string; selected?: boolean }) =>
     joinSelected(node.selected, overlayEntry(selectionOverlay.nodes, node.id));
@@ -91,11 +116,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
   // Sidecar write + best-effort row write-through happen together; the
   // release effect in createFlowState deletes the entry once the row
   // confirms the value (see core/selectionOverlay.ts).
-  const writeOverlay = (
-    kind: "nodes" | "edges",
-    row: { id: string; selected?: boolean },
-    value: boolean,
-  ) => {
+  const writeOverlay = (kind: "nodes" | "edges", row: SelectableRow, value: boolean) => {
     setSelectionOverlay((draft) => {
       draft[kind][row.id] = { value, row };
     });
@@ -107,10 +128,8 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
    * selection) was the round-14 audit's finding 2. Each candidate resolves by
    * index and is written only when its joined state actually differs.
    */
-  const setSelection = <T extends { id: string; selected?: boolean }>(
-    kind: "nodes" | "edges",
-    setStore: StoreSetter<T[]>,
-    index: RowIndex<T>,
+  const setSelection = <T extends SelectableRow>(
+    { kind, setStore, index }: SelectionAxis<T>,
     currentIds: readonly string[],
     target: ReadonlySet<string>,
   ) => {
@@ -135,65 +154,55 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     });
   };
 
-  const unselectNodesAndEdges = ({
-    nodes: _nodes,
-    edges,
-  }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
-    // Targets come from the keyed selected-presence records, not a walk of
-    // the whole graph: the drag-start profile @10k attributed ~515ms to this
-    // function writing (then merely reading) every element — when almost
-    // nothing is ever selected. Deselecting only what IS selected makes the
-    // empty case free and the common case O(selected). Not the joined views
-    // (`store.selectedNodes`): the node view is lazy, and reading it here
-    // computed it — at drag start, and in reset() while the flow unmounts,
-    // where the read left it queued for a sweep that never came and pinned
-    // the whole unmounted flow (bench: retained after unmount 19 -> 276 MB).
-    const requestedNodeIds = _nodes ? new Set(_nodes.map(({ id }) => id)) : null;
-    const nodeTargets = Object.keys(selectedNodeIds).filter(
-      (id) => !requestedNodeIds || requestedNodeIds.has(id),
-    );
-    if (nodeTargets.length) {
-      setNodesStore((nodes) => {
-        for (const id of nodeTargets) {
-          const node = nodeIndex.get(nodes, id);
-          if (!node) continue;
-          writeOverlay("nodes", node, false);
-          node.selected = false;
-        }
-        return undefined;
-      });
-    }
+  /**
+   * Deselects what IS selected on one axis — all of it, or only the
+   * requested rows. Targets come from the presence record, not a walk of the
+   * graph: the drag-start profile @10k attributed ~515ms to writing (then
+   * merely reading) every element when almost nothing is ever selected; this
+   * makes the empty case free and the common case O(selected). Not the joined
+   * views (`store.selectedNodes`): the node view is lazy, and reading it here
+   * computed it — at drag start, and in reset() while the flow unmounts,
+   * where the read left it queued for a sweep that never came and pinned the
+   * whole unmounted flow (bench: retained after unmount 19 -> 276 MB).
+   */
+  const deselect = <T extends SelectableRow>(
+    { kind, setStore, index, selectedIds }: SelectionAxis<T>,
+    requested: readonly { id: string }[] | undefined,
+  ) => {
+    const requestedIds = requested ? new Set(requested.map(({ id }) => id)) : null;
+    const targets = Object.keys(selectedIds).filter((id) => !requestedIds || requestedIds.has(id));
+    if (targets.length === 0) return;
+    setStore((rows) => {
+      for (const id of targets) {
+        const row = index.get(rows, id);
+        if (!row) continue;
+        writeOverlay(kind, row, false);
+        row.selected = false;
+      }
+      return undefined;
+    });
+  };
 
-    const requestedEdgeIds = edges ? new Set(edges.map(({ id }) => id)) : null;
-    const edgeTargets = Object.keys(selectedEdgeIds).filter(
-      (id) => !requestedEdgeIds || requestedEdgeIds.has(id),
-    );
-    if (edgeTargets.length) {
-      setEdgesStore((edges) => {
-        for (const id of edgeTargets) {
-          const edge = edgeIndex.get(edges, id);
-          if (!edge) continue;
-          writeOverlay("edges", edge, false);
-          edge.selected = false;
-        }
-        return undefined;
-      });
-    }
-
+  const unselectNodesAndEdges = ({ nodes, edges }: Partial<NodeGraph<NodeType, EdgeType>> = {}) => {
+    deselect(nodesAxis, nodes);
+    deselect(edgesAxis, edges);
     // Gesture boundary: XYDrag reads selection through nodeLookup right after
     // calling this, so the internalNodes projection must re-derive now.
     flush();
   };
 
-  const addSelectedNodes = (ids: string[]) => {
+  /**
+   * Selects `ids` on one axis. Multi-selection keeps what is selected;
+   * otherwise the ids replace it and the other axis is cleared.
+   */
+  const addSelected = <T extends SelectableRow>(axis: SelectionAxis<T>, ids: readonly string[]) => {
     const isMultiSelection = store.multiselectionKeyPressed;
-    const currentIds = Object.keys(selectedNodeIds);
-    // Multi-selection keeps what is selected; otherwise the ids replace it.
+    const currentIds = Object.keys(axis.selectedIds);
     const target = new Set(isMultiSelection ? [...currentIds, ...ids] : ids);
-    setSelection("nodes", setNodesStore, nodeIndex, currentIds, target);
+    setSelection(axis, currentIds, target);
 
     if (!isMultiSelection) {
-      unselectNodesAndEdges({ nodes: [] });
+      unselectNodesAndEdges(axis.kind === "nodes" ? { nodes: [] } : { edges: [] });
     }
 
     // Gesture boundary: the drag handler reads the selected state through
@@ -201,18 +210,8 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     flush();
   };
 
-  const addSelectedEdges = (ids: string[]) => {
-    const isMultiSelection = store.multiselectionKeyPressed;
-    const currentIds = Object.keys(selectedEdgeIds);
-    const target = new Set(isMultiSelection ? [...currentIds, ...ids] : ids);
-    setSelection("edges", setEdgesStore, edgeIndex, currentIds, target);
-
-    if (!isMultiSelection) {
-      unselectNodesAndEdges({ edges: [] });
-    }
-
-    flush();
-  };
+  const addSelectedNodes = (ids: string[]) => addSelected(nodesAxis, ids);
+  const addSelectedEdges = (ids: string[]) => addSelected(edgesAxis, ids);
 
   /**
    * A node click or selection key: selects it, or deselects a selected one
@@ -308,12 +307,9 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     updateNodePositions(nodeUpdates);
   };
 
-  // Box-selection application (Pane): wholesale set the selected id sets.
-  // Same overlay-aware write shape as the other commands — a direct row
-  // write here would fight stale overlay entries from the gesture's
-  // initial unselect.
   /**
-   * Set only the given ids: O(changed), where setSelection is O(selected)
+   * Box-selection application (Pane): sets only the given ids, O(changed),
+   * where setSelection is O(selected)
    * (it unions the presence record with the target and snapshots the
    * overlay). For a writer that tracks its own delta (the box selection,
    * whose box gains or loses a few nodes per move while thousands stay
@@ -323,10 +319,8 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
    * before a flush). A row already in the state gets a same-value write and
    * an overlay entry the release effect clears. Unknown ids are skipped.
    */
-  const setSelectionDelta = <T extends { id: string; selected?: boolean }>(
-    kind: "nodes" | "edges",
-    setStore: StoreSetter<T[]>,
-    index: RowIndex<T>,
+  const setSelectionDelta = <T extends SelectableRow>(
+    { kind, setStore, index }: SelectionAxis<T>,
     delta: SelectionDelta | undefined,
   ) => {
     if (!delta) return;
@@ -350,8 +344,8 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     nodes?: SelectionDelta;
     edges?: SelectionDelta;
   }) => {
-    setSelectionDelta("nodes", setNodesStore, nodeIndex, nodes);
-    setSelectionDelta("edges", setEdgesStore, edgeIndex, edges);
+    setSelectionDelta(nodesAxis, nodes);
+    setSelectionDelta(edgesAxis, edges);
   };
 
   return {
