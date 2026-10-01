@@ -78,6 +78,36 @@ describe("selection writers (delta over the presence record)", () => {
     });
   });
 
+  it("applySelectionDelta flips only the ids it is given", async () => {
+    await withControlledFlow(["a", "b", "c", "d"], ({ flow, selectedIds }) => {
+      flow.actions.applySelectionDelta({ nodes: { select: ["a", "b", "c"], deselect: [] } });
+      flush();
+      expect(selectedIds()).toEqual(["a", "b", "c"]);
+
+      // Ids already in the requested state keep it; unknown ids are skipped.
+      flow.actions.applySelectionDelta({
+        nodes: { select: ["c", "d", "ghost"], deselect: ["a", "ghost"] },
+      });
+      flush();
+      expect(selectedIds()).toEqual(["b", "c", "d"]);
+      expect(flow.internalNodes.a!.selected).toBeFalsy();
+    });
+  });
+
+  it("applySelectionDelta deselects a row the USER selected by a direct row write", async () => {
+    await withControlledFlow(["a", "b"], ({ flow, setNodes, selectedIds }) => {
+      setNodes((draft) => {
+        draft[1]!.selected = true;
+      });
+      flush();
+      expect(selectedIds()).toEqual(["b"]);
+
+      flow.actions.applySelectionDelta({ nodes: { select: [], deselect: ["b"] } });
+      flush();
+      expect(selectedIds()).toEqual([]);
+    });
+  });
+
   it("addSelectedNodes replaces without the multiselection key and adds with it", async () => {
     await withControlledFlow(["a", "b", "c"], ({ flow, selectedIds }) => {
       flow.actions.addSelectedNodes(["a"]);

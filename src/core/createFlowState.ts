@@ -847,6 +847,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     handleEdgeSelection,
     moveSelectedNodes,
     applySelectionSets,
+    applySelectionDelta,
   } = createSelectionCommands<NodeType, EdgeType>({
     store,
     setNodesStore,
@@ -1112,6 +1113,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       unselectNodesAndEdges,
       addSelectedNodes,
       applySelectionSets,
+      applySelectionDelta,
       addSelectedEdges,
       handleNodeSelection,
       handleEdgeSelection,

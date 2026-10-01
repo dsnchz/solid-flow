@@ -18,6 +18,12 @@ import { emitFlowError, isEdgeSelectable } from "@/utils";
 import type { RowIndex } from "../rowIndex";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 
+/** Ids to select and to deselect, for {@link applySelectionDelta}. */
+export type SelectionDelta = {
+  readonly select: Iterable<string>;
+  readonly deselect: Iterable<string>;
+};
+
 /** The slice of the internal store the selection commands read. */
 type SelectionStoreReads<NodeType extends Node, EdgeType extends Edge> = {
   readonly nodes: readonly NodeType[];
@@ -319,6 +325,48 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     setSelection("edges", setEdgesStore, edgeIndex, Object.keys(selectedEdgeIds), edgeTargets);
   };
 
+  /**
+   * Set only the given ids: O(changed), where applySelectionSets is
+   * O(selected) (it unions the presence record with the target and snapshots
+   * the overlay). For a writer that tracks its own delta (the box selection,
+   * whose box gains or loses a few nodes per move while thousands stay
+   * selected). Writes are unconditional: an "already in that state" check
+   * would read the committed overlay, which does not see an earlier write of
+   * the same batch, and skip the second of two moves (select then deselect
+   * before a flush). A row already in the state gets a same-value write and
+   * an overlay entry the release effect clears. Unknown ids are skipped.
+   */
+  const setSelectionDelta = <T extends { id: string; selected?: boolean }>(
+    kind: "nodes" | "edges",
+    setStore: StoreSetter<T[]>,
+    index: RowIndex<T>,
+    delta: SelectionDelta | undefined,
+  ) => {
+    if (!delta) return;
+    setStore((rows) => {
+      const apply = (id: string, selected: boolean) => {
+        const row = index.get(rows, id);
+        if (!row) return;
+        writeOverlay(kind, row, selected);
+        row.selected = selected;
+      };
+      for (const id of delta.select) apply(id, true);
+      for (const id of delta.deselect) apply(id, false);
+      return undefined;
+    });
+  };
+
+  const applySelectionDelta = ({
+    nodes,
+    edges,
+  }: {
+    nodes?: SelectionDelta;
+    edges?: SelectionDelta;
+  }) => {
+    setSelectionDelta("nodes", setNodesStore, nodeIndex, nodes);
+    setSelectionDelta("edges", setEdgesStore, edgeIndex, edges);
+  };
+
   return {
     unselectNodesAndEdges,
     addSelectedNodes,
@@ -327,5 +375,6 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     handleEdgeSelection,
     moveSelectedNodes,
     applySelectionSets,
+    applySelectionDelta,
   } as const;
 };
