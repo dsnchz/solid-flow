@@ -6,7 +6,7 @@ import { omit, type ParentComponent, Show, useContext } from "solid-js";
 import { useInternalSolidFlow } from "@/contexts";
 import { NodeIdContext } from "@/contexts/nodeId";
 import type { InternalNode, Position } from "@/types";
-import { propDefaults } from "@/utils";
+import { cx, propDefaults } from "@/utils";
 
 /** Props for the `NodeToolbar` plugin. */
 export type NodeToolbarProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> & {
@@ -50,6 +50,7 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
     "isVisible",
     "style",
     "children",
+    "class",
   );
 
   const ctxNodeId = () => {
@@ -102,7 +103,9 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
     <Show when={showPortal()}>
       <Portal mount={store.domNode!}>
         <div
-          class="solid-flow__node-toolbar"
+          // The user's class joins the toolbar's (React Flow's cc([...])); a
+          // spread `class` replaced it.
+          class={cx("solid-flow__node-toolbar", _props.class)}
           data-id={toolbarNodes()
             .reduce((acc, node) => `${acc}${node.id} `, "")
             .trim()}

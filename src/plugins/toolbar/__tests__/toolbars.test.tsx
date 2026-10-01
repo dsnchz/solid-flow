@@ -124,6 +124,15 @@ describe("NodeToolbar", () => {
     );
   });
 
+  it("keeps its own class next to the user's", async () => {
+    const { container } = await renderNodes(
+      (props) => <NodeToolbar nodeId={props.id} isVisible class="mine" />,
+      [node("a", 0)],
+    );
+    const el = container.querySelector(".mine")!;
+    expect(el.getAttribute("class")).toBe("solid-flow__node-toolbar mine");
+  });
+
   it("takes the user's style and extra attributes", async () => {
     const { toolbars } = await renderNodes(
       (props) => (
