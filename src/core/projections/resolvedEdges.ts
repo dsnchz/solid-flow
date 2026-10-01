@@ -35,7 +35,8 @@ export type ResolvedEdgesSource<NodeType extends Node = Node, EdgeType extends E
  * Edge layout join: user edges × internal nodes → screen-space edge geometry,
  * decomposed into SUB-STORES (spike 13): each edge is its own keyed
  * projection holding `{ row }` — the resolved row, or null while the edge
- * produces none (missing/unready endpoints, culled) — and the public record
+ * does not resolve (an endpoint missing or hidden, or a handle not found;
+ * culling never nulls a row, see below) — and the public record
  * is a SHALLOW projection holding the PRESENT rows' proxies by reference.
  *
  * Reads chain: `record[id].sourceX` goes through the shallow slot into the
