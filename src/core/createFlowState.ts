@@ -1,28 +1,16 @@
 import {
-  type ConnectionState,
   getInternalNodesBounds,
   getViewportForBounds,
-  type Handle,
   infiniteExtent,
-  initialConnection,
   mergeAriaLabelConfig,
   type NodeLookup,
   type PanZoomInstance,
-  pointToRendererPoint,
   type Rect,
   type SelectionRect,
   type Transform,
   type Viewport,
 } from "@xyflow/system";
-import {
-  createEffect,
-  createMemo,
-  createProjection,
-  createSignal,
-  createStore,
-  merge,
-  untrack,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, createStore, merge, untrack } from "solid-js";
 
 import type {
   BuiltInEdgeTypes,
@@ -39,6 +27,7 @@ import { createElementCommands } from "./commands/elements";
 import { createGeometryCommands } from "./commands/geometry";
 import { createSelectionCommands } from "./commands/selection";
 import { createViewportCommands } from "./commands/viewport";
+import { createConnectionState } from "./connectionState";
 import { createCullingViewport } from "./culling";
 import { getDefaultFlowStateProps } from "./defaults";
 import { type DragOverlay } from "./dragOverlay";
@@ -50,7 +39,7 @@ import { createGeometryFeed } from "./geometryFeed";
 import { createInitialFitView } from "./initialFitView";
 import { createMeasurementIngest } from "./measurementIngest";
 import { createOverlayRelease } from "./overlayRelease";
-import { connectionKey, createConnections } from "./projections/connections";
+import { createConnections } from "./projections/connections";
 import { createEdgeLookup } from "./projections/edgeLookup";
 import {
   createInternalNodes,
@@ -147,11 +136,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     name: "ariaLabelConfig",
   });
   const [ariaLiveMessage, setAriaLiveMessage] = createSignal(() => config().ariaLiveMessage);
-  const [clickConnectStartHandle, setClickConnectStartHandle] = createSignal<
-    Pick<Handle, "id" | "nodeId" | "type"> | undefined
-  >(undefined);
-  const [connection, setConnection] =
-    createSignal<ConnectionState<InternalNode<NodeType>>>(initialConnection);
   const [domNode, setDomNode] = createSignal<HTMLDivElement | null>(null);
   const [dragging, setDragging] = createSignal(false);
   const [elementsSelectable, setElementsSelectable] = createSignal(
@@ -315,93 +299,18 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /*                                                                                */
   /**********************************************************************************/
 
-  // B4 (audit): connection projection memoized — the getter spread the state
-  // and ran pointToRendererPoint on every read (ConnectionLine reads it 10x
-  // per render, Zoom/Pane once per gesture event).
-  const projectedConnection = createMemo(
-    () => {
-      const state = connection();
-      if (!state.inProgress) return state;
-      return {
-        ...state,
-        to: pointToRendererPoint(state.to, transform()),
-      } as ConnectionState<InternalNode<NodeType>>;
-    },
-    { name: "projectedConnection" },
-  );
-  // Per-handle connection reads, equality-cut: `connection` (below) yields a
-  // FRESH object every pointermove, so any handle reading through it re-runs
-  // per move — at 10k nodes that is ~20k indicator computations per
-  // mousemove (measured: the bulk of a 422ms/move connection gesture,
-  // spatial-index bench). Handles subscribe to these instead: they change
-  // once per gesture (fromHandle), on hover-target changes (toHandle,
-  // isValid), never per move.
-  const handleIdentityEquals = (
-    a: { nodeId: string; type: string; id?: string | null } | null,
-    b: { nodeId: string; type: string; id?: string | null } | null,
-  ) => a === b || (!!a && !!b && a.nodeId === b.nodeId && a.type === b.type && a.id === b.id);
-  const connectionFromHandle = createMemo(() => connection().fromHandle ?? null, {
-    equals: handleIdentityEquals,
-    // Every handle subscribes (rc.7 HUGE_FAN_OUT) BY DESIGN: it changes once
-    // per gesture and each subscriber does O(1) work — see docs/ARCHITECTURE.md.
-    name: "connectionFromHandle",
-  });
-  // The hover-target as a KEYED record: a toHandle/isValid flip re-runs only
-  // the subscribers of the two affected keys (the handle left and the handle
-  // entered) instead of every handle in the graph — the difference between a
-  // ~400ms hitch and O(2) work when snapping onto a handle at 10k nodes.
-  const connectionTargetByHandle = createProjection<Record<string, "valid" | "invalid">>(
-    (draft) => {
-      const state = connection();
-      const toHandle = state.inProgress ? state.toHandle : null;
-      const key = toHandle
-        ? connectionKey(toHandle.nodeId, toHandle.type, toHandle.id ?? null)
-        : null;
-      for (const existing of Object.keys(draft)) {
-        if (existing !== key) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
-          delete draft[existing];
-        }
-      }
-      if (key) draft[key] = state.isValid ? "valid" : "invalid";
-    },
-    {},
-    { key: null, name: "connectionTargetByHandle" },
-  );
-
-  // The connection ORIGIN as a keyed record (perf P2): starting a gesture
-  // once flipped every handle's possible-target indicator computation
-  // (~490ms at 10k). The indicator is now derived from ROOT-level classes in
-  // CSS; the only per-handle state left is "am I the origin" (connectingfrom
-  // styling) and "am I excluded as a target" (loose mode excludes the origin
-  // node's same-id handles) — both keyed, so a gesture start touches the
-  // origin's keys instead of every handle. Sources: an in-flight drag
-  // connection, else a click-connect origin.
-  const connectionOriginByHandle = createProjection<Record<string, "from" | "excluded">>(
-    (draft) => {
-      const fromHandle = connection().fromHandle ?? clickConnectStartHandle();
-      const fromKey = fromHandle
-        ? connectionKey(fromHandle.nodeId, fromHandle.type, fromHandle.id ?? null)
-        : null;
-      const siblingKey = fromHandle
-        ? connectionKey(
-            fromHandle.nodeId,
-            fromHandle.type === "source" ? "target" : "source",
-            fromHandle.id ?? null,
-          )
-        : null;
-      for (const existing of Object.keys(draft)) {
-        if (existing !== fromKey && existing !== siblingKey) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
-          delete draft[existing];
-        }
-      }
-      if (fromKey) draft[fromKey] = "from";
-      if (siblingKey) draft[siblingKey] = "excluded";
-    },
-    {},
-    { key: null, name: "connectionOriginByHandle" },
-  );
+  // The connection gesture's state and the per-handle views of it
+  // (core/connectionState.ts, headless-tested).
+  const {
+    setConnection,
+    clickConnectStartHandle,
+    setClickConnectStartHandle,
+    projected: projectedConnection,
+    fromHandle: connectionFromHandle,
+    targetByHandle: connectionTargetByHandle,
+    originByHandle: connectionOriginByHandle,
+    cancel: cancelConnection,
+  } = createConnectionState<NodeType>({ transform });
 
   // B3 (audit): merged renderer maps memoized — the getters below allocated
   // a fresh object PER READ, and every wrapper reads them twice per row.
@@ -769,7 +678,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     setDeleteKeyPressed(false);
     setPanActivationKeyPressed(false);
     setZoomActivationKeyPressed(false);
-    setConnection({ ...initialConnection });
+    cancelConnection();
     setClickConnectStartHandle(undefined);
     setViewportStore(() => config().initialViewport ?? { x: 0, y: 0, zoom: 1 });
     setAriaLiveMessage("");
@@ -848,10 +757,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     nodeLookup,
     hasEdge: (id) => id in edgeLookup,
   });
-
-  const cancelConnection = () => {
-    setConnection({ ...initialConnection });
-  };
 
   const reset = () => {
     resetStoreValues();
