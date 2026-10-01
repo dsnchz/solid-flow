@@ -102,6 +102,27 @@ describe("NodeResizer", () => {
     }
   });
 
+  it("lets a class given to the NodeResizer win over lineClass and handleClass", async () => {
+    const { controls } = await renderResizer(() => (
+      <NodeResizer class="all" lineClass="l" handleClass="h" />
+    ));
+
+    for (const el of controls()) {
+      expect(el.classList.contains("all")).toBe(true);
+      expect(el.classList.contains("l") || el.classList.contains("h")).toBe(false);
+    }
+  });
+
+  it("renders its children in every control", async () => {
+    const { controls } = await renderResizer(() => (
+      <NodeResizer>
+        <span class="grip" />
+      </NodeResizer>
+    ));
+
+    for (const el of controls()) expect(el.querySelector(".grip")).not.toBeNull();
+  });
+
   it("renders nothing while not visible, and follows visible", async () => {
     const [visible, setVisible] = createSignal(false);
     const { controls } = await renderResizer(() => <NodeResizer visible={visible()} />);
