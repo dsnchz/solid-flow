@@ -80,27 +80,33 @@ export const NodeRenderer = <NodeType extends Node = Node>(
           // row materializes in the same flush, but guard the window (and
           // any future null-row semantics) rather than crash NodeWrapper.
           // `hidden` is decided here too — one Show per row instead of a
-          // second one inside the wrapper (mount profile round 30).
-          const present = () => {
+          // second one inside the wrapper (mount profile round 30). `when`
+          // returns the row itself and the wrapper reads Show's narrowed
+          // accessor: one row resolution per row, not a second memo in the
+          // wrapper (audit C9).
+          const visibleRow = () => {
+            if (unmounted()) return undefined;
             const node = nodeLookup.get(nodeId);
-            return node !== undefined && !node.hidden;
+            return node !== undefined && !node.hidden ? node : undefined;
           };
           return (
-            <Show when={!unmounted() && present()}>
-              <NodeWrapper
-                nodeId={nodeId}
-                resizeObserver={resizeObserver}
-                nodeClickDistance={props.nodeClickDistance}
-                onNodeClick={props.onNodeClick}
-                onNodeDoubleClick={props.onNodeDoubleClick}
-                onNodePointerEnter={props.onNodePointerEnter}
-                onNodePointerMove={props.onNodePointerMove}
-                onNodePointerLeave={props.onNodePointerLeave}
-                onNodeDrag={props.onNodeDrag}
-                onNodeDragStart={props.onNodeDragStart}
-                onNodeDragStop={props.onNodeDragStop}
-                onNodeContextMenu={props.onNodeContextMenu}
-              />
+            <Show when={visibleRow()}>
+              {(node) => (
+                <NodeWrapper
+                  node={node}
+                  resizeObserver={resizeObserver}
+                  nodeClickDistance={props.nodeClickDistance}
+                  onNodeClick={props.onNodeClick}
+                  onNodeDoubleClick={props.onNodeDoubleClick}
+                  onNodePointerEnter={props.onNodePointerEnter}
+                  onNodePointerMove={props.onNodePointerMove}
+                  onNodePointerLeave={props.onNodePointerLeave}
+                  onNodeDrag={props.onNodeDrag}
+                  onNodeDragStart={props.onNodeDragStart}
+                  onNodeDragStop={props.onNodeDragStop}
+                  onNodeContextMenu={props.onNodeContextMenu}
+                />
+              )}
             </Show>
           );
         }}

@@ -10,6 +10,7 @@ import {
   type OnDrag,
 } from "@xyflow/system";
 import {
+  type Accessor,
   createEffect,
   createMemo,
   createRenderEffect,
@@ -17,6 +18,7 @@ import {
   getOwner,
   onCleanup,
   runWithOwner,
+  untrack,
 } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
@@ -25,12 +27,13 @@ import { useInternalSolidFlow } from "@/contexts";
 import { NodeConnectableContext } from "@/contexts/nodeConnectable";
 import { NodeIdContext } from "@/contexts/nodeId";
 import { nodeCulled } from "@/core";
-import type { Node, NodeEvents } from "@/types";
+import type { InternalNode, Node, NodeEvents } from "@/types";
 import { clientOnlySetup, cx, emitFlowError, spreadOnDemand } from "@/utils";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
-  readonly nodeId: string;
+  /** The row, as NodeRenderer's Show narrows it (one resolution per row). */
+  readonly node: Accessor<InternalNode<NodeType>>;
   readonly resizeObserver: ResizeObserver | undefined;
   readonly nodeClickDistance: number;
 };
@@ -39,18 +42,17 @@ export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType
 export const NodeWrapper = <NodeType extends Node = Node>(
   props: NodeWrapperProps<NodeType>,
 ): JSX.Element => {
-  const { store, nodeLookup, parentIds, actions, onScreenNodeIds } =
-    useInternalSolidFlow<NodeType>();
+  const { store, parentIds, actions, onScreenNodeIds } = useInternalSolidFlow<NodeType>();
   // Captured for `mountElement` (ref callbacks run outside the component owner).
   const owner = getOwner();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
-  // ONE row resolution per wrapper: every binding below reads `node()`, and
-  // each resolution through the facade is two store-slot reads (holder slot,
-  // then the row store's `row` slot). The memo re-runs only when the row
-  // identity changes (same-id reset), so ~55 reads collapse to one.
-  const node = createMemo(() => nodeLookup.get(props.nodeId)!);
+  // ONE row resolution per row: every binding below reads `node()`, Show's
+  // narrowed accessor in NodeRenderer (each facade resolution is two
+  // store-slot reads; ~55 reads collapse to one). It changes only when the
+  // row identity does (same-id reset). Read once: the accessor is stable.
+  const node = untrack(() => props.node);
 
   // The shared observer outlives this wrapper — without unobserve on dispose
   // it pins the detached element in the observer's target list.
