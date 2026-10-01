@@ -59,7 +59,9 @@ export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
     visible: true,
   });
 
-  const rest = omit(props, "handleClass", "handleStyle", "lineClass", "lineStyle");
+  // NodeResizer's own props stay off the controls (Svelte Flow omits
+  // isVisible too): `visible` landed on every control as an attribute.
+  const rest = omit(props, "visible", "handleClass", "handleStyle", "lineClass", "lineStyle");
 
   return (
     <Show when={_props.visible}>

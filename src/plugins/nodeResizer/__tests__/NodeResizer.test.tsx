@@ -112,6 +112,18 @@ describe("NodeResizer", () => {
     expect(controls()).toHaveLength(8);
   });
 
+  it("keeps its own props off the controls' elements", async () => {
+    const { controls } = await renderResizer(() => (
+      <NodeResizer visible lineClass="l" handleClass="h" />
+    ));
+
+    for (const el of controls()) {
+      for (const own of ["visible", "lineclass", "handleclass", "lineClass", "handleClass"]) {
+        expect(el.hasAttribute(own)).toBe(false);
+      }
+    }
+  });
+
   it("takes color, as upstream: a line's border and a handle's background", async () => {
     const { control } = await renderResizer(() => <NodeResizer color="rgb(1, 2, 3)" />);
 
