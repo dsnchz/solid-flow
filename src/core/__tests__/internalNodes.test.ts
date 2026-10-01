@@ -6,12 +6,8 @@ import { describe, expect, it } from "vitest";
 import type { Node } from "@/types";
 
 import type { DragOverlay } from "../dragOverlay";
-import {
-  calculateZ,
-  createInternalNodes,
-  isManualZIndexMode,
-  type NodeMeasurements,
-} from "../projections/internalNodes";
+import { calculateZ, isManualZIndexMode } from "../projections/internalNodeRow";
+import { createInternalNodes, type NodeMeasurements } from "../projections/internalNodes";
 
 // Headless core tests for the adoption projection: user nodes + the
 // measurements root derive into internal nodes without any DOM.

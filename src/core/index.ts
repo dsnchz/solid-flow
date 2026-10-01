@@ -32,11 +32,10 @@ export {
   createConnections,
 } from "./projections/connections";
 export { createEdgeLookup, type EdgeLookupSource } from "./projections/edgeLookup";
+export { calculateZ, isManualZIndexMode } from "./projections/internalNodeRow";
 export {
-  calculateZ,
   createInternalNodes,
   type InternalNodesSource,
-  isManualZIndexMode,
   type NodeMeasurement,
   type NodeMeasurements,
   type NodeMeasurementWrite,
