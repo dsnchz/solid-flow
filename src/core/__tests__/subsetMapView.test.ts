@@ -26,6 +26,13 @@ describe("SubsetMapView", () => {
     expect(view.size).toBe(2);
   });
 
+  it("without candidates, iterates the whole map and reports its size", () => {
+    const view = new SubsetMapView(full);
+    expect([...view.keys()]).toEqual(["a", "b", "c", "p"]);
+    expect([...view.values()].map((n) => n.id)).toEqual(["a", "b", "c", "p"]);
+    expect(view.size).toBe(4);
+  });
+
   it("resolves ANY key through the full map", () => {
     const view = new SubsetMapView(full, () => ["a"]);
     expect(view.get("p")).toBe(full.get("p"));

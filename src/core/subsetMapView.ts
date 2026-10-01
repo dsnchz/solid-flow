@@ -5,15 +5,21 @@
  * selected nodes and the dragged node (bench round 22: ~19ms first drag
  * frame @10k through the record facade), while its keyed reads (parents,
  * deleted-while-dragging checks) must still see every node. Candidates are
- * re-read on every iteration; missing ids are skipped.
+ * re-read on every iteration; missing ids are skipped. Without candidates
+ * (or while a subclass's `candidates()` answers null) it is the full map.
  */
 export class SubsetMapView<V> implements Map<string, V> {
   readonly #full: Map<string, V>;
-  readonly #candidates: () => Iterable<string>;
+  readonly #select: (() => Iterable<string>) | undefined;
 
-  constructor(full: Map<string, V>, candidates: () => Iterable<string>) {
+  constructor(full: Map<string, V>, candidates?: () => Iterable<string>) {
     this.#full = full;
-    this.#candidates = candidates;
+    this.#select = candidates;
+  }
+
+  /** The ids to iterate, or null for the whole map. */
+  protected candidates(): Iterable<string> | null {
+    return this.#select ? this.#select() : null;
   }
 
   get(key: string): V | undefined {
@@ -25,21 +31,43 @@ export class SubsetMapView<V> implements Map<string, V> {
   }
 
   get size(): number {
+    if (this.candidates() === null) return this.#full.size;
     let n = 0;
     for (const _ of this.keys()) n++;
     return n;
   }
 
   *keys(): MapIterator<string> {
-    for (const id of this.#candidates()) if (this.#full.has(id)) yield id;
+    const candidates = this.candidates();
+    if (candidates === null) {
+      yield* this.#full.keys();
+      return;
+    }
+    for (const id of candidates) if (this.#full.has(id)) yield id;
   }
 
   *values(): MapIterator<V> {
-    for (const id of this.keys()) yield this.#full.get(id)!;
+    const candidates = this.candidates();
+    if (candidates === null) {
+      yield* this.#full.values();
+      return;
+    }
+    for (const id of candidates) {
+      const value = this.#full.get(id);
+      if (value !== undefined) yield value;
+    }
   }
 
   *entries(): MapIterator<[string, V]> {
-    for (const id of this.keys()) yield [id, this.#full.get(id)!];
+    const candidates = this.candidates();
+    if (candidates === null) {
+      yield* this.#full.entries();
+      return;
+    }
+    for (const id of candidates) {
+      const value = this.#full.get(id);
+      if (value !== undefined) yield [id, value];
+    }
   }
 
   [Symbol.iterator](): MapIterator<[string, V]> {
@@ -50,25 +78,29 @@ export class SubsetMapView<V> implements Map<string, V> {
     for (const [key, value] of this.entries()) callback.call(thisArg, value, key, this);
   }
 
-  readonly [Symbol.toStringTag] = "SubsetMapView";
+  readonly [Symbol.toStringTag]: string = "SubsetMapView";
+
+  #readOnly(): never {
+    throw new Error(`${this[Symbol.toStringTag]} is read-only`);
+  }
 
   set(): never {
-    throw new Error("SubsetMapView is read-only");
+    return this.#readOnly();
   }
 
   getOrInsert(): never {
-    throw new Error("SubsetMapView is read-only");
+    return this.#readOnly();
   }
 
   getOrInsertComputed(): never {
-    throw new Error("SubsetMapView is read-only");
+    return this.#readOnly();
   }
 
   delete(): never {
-    throw new Error("SubsetMapView is read-only");
+    return this.#readOnly();
   }
 
   clear(): never {
-    throw new Error("SubsetMapView is read-only");
+    return this.#readOnly();
   }
 }

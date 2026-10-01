@@ -1,5 +1,6 @@
 import type { Rect, XYPosition } from "@xyflow/system";
 
+import { SubsetMapView } from "../subsetMapView";
 import { SpatialGrid } from "./grid";
 
 /**
@@ -19,13 +20,14 @@ import { SpatialGrid } from "./grid";
  * validation paths see every node. Unarmed (or before the first move), it
  * behaves exactly like the real lookup.
  */
-export class GestureSpatialLookup<V> implements Map<string, V> {
+export class GestureSpatialLookup<V> extends SubsetMapView<V> {
   readonly #real: Map<string, V>;
   readonly #cellSize: number;
   #grid: SpatialGrid | null = null;
   #queryRect: Rect | null = null;
 
   constructor(real: Map<string, V>, cellSize: number) {
+    super(real);
     this.#real = real;
     this.#cellSize = cellSize;
   }
@@ -71,83 +73,16 @@ export class GestureSpatialLookup<V> implements Map<string, V> {
     this.#queryRect = null;
   }
 
-  #candidateIds(): string[] | null {
+  /** The grid cells around the query rect; the whole lookup until armed and focused. */
+  protected override candidates(): Iterable<string> | null {
     if (!this.#grid || !this.#queryRect) return null;
     return this.#grid.queryRect(this.#queryRect);
   }
 
-  get(key: string): V | undefined {
-    return this.#real.get(key);
-  }
-
-  has(key: string): boolean {
-    return this.#real.has(key);
-  }
-
-  get size(): number {
+  /** The REAL lookup's size, armed or not (as upstream's own lookup reports it). */
+  override get size(): number {
     return this.#real.size;
   }
 
-  *keys(): MapIterator<string> {
-    const candidates = this.#candidateIds();
-    if (!candidates) {
-      yield* this.#real.keys();
-      return;
-    }
-    for (const id of candidates) if (this.#real.has(id)) yield id;
-  }
-
-  *values(): MapIterator<V> {
-    const candidates = this.#candidateIds();
-    if (!candidates) {
-      yield* this.#real.values();
-      return;
-    }
-    for (const id of candidates) {
-      const value = this.#real.get(id);
-      if (value !== undefined) yield value;
-    }
-  }
-
-  *entries(): MapIterator<[string, V]> {
-    const candidates = this.#candidateIds();
-    if (!candidates) {
-      yield* this.#real.entries();
-      return;
-    }
-    for (const id of candidates) {
-      const value = this.#real.get(id);
-      if (value !== undefined) yield [id, value];
-    }
-  }
-
-  [Symbol.iterator](): MapIterator<[string, V]> {
-    return this.entries();
-  }
-
-  forEach(callback: (value: V, key: string, map: Map<string, V>) => void, thisArg?: unknown): void {
-    for (const [key, value] of this.entries()) callback.call(thisArg, value, key, this);
-  }
-
-  readonly [Symbol.toStringTag] = "GestureSpatialLookup";
-
-  set(): never {
-    throw new Error("GestureSpatialLookup is read-only");
-  }
-
-  getOrInsert(): never {
-    throw new Error("GestureSpatialLookup is read-only");
-  }
-
-  getOrInsertComputed(): never {
-    throw new Error("GestureSpatialLookup is read-only");
-  }
-
-  delete(): never {
-    throw new Error("GestureSpatialLookup is read-only");
-  }
-
-  clear(): never {
-    throw new Error("GestureSpatialLookup is read-only");
-  }
+  override readonly [Symbol.toStringTag]: string = "GestureSpatialLookup";
 }
