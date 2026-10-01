@@ -54,6 +54,19 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
   let edgeRefs = new Map<string, number>();
   // Edges of kept nodes that were not selected yet: the first move adds them.
   let pendingEdges: string[] = [];
+  // Plain copies of the nodes the rect has reached this gesture. Geometry
+  // and flags are frozen during a box gesture (see `arm`), so xyflow's
+  // containment test reads each node through the store once per gesture,
+  // not once per move (a zoomed-out box re-tests thousands every move).
+  let frozen = new Map<string, InternalNode<NodeType>>();
+  const freeze = (node: InternalNode<NodeType>): InternalNode<NodeType> => ({
+    ...node,
+    measured: { ...node.measured },
+    internals: {
+      ...node.internals,
+      positionAbsolute: { ...node.internals.positionAbsolute },
+    },
+  });
 
   /** Counts `nodeId`'s selectable edges up or down; pushes the edges that flip. */
   const countEdges = (nodeId: string, step: 1 | -1, flipped: string[]) => {
@@ -76,7 +89,10 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
      * (RFC-4239 win #3): snapshot it so the per-move sweep only sees
      * candidates near the rect instead of every node.
      */
-    arm: (): void => spatial.armFrom(deps.nodeGeometry),
+    arm: (): void => {
+      spatial.armFrom(deps.nodeGeometry);
+      frozen = new Map();
+    },
 
     /** The pointer passed the click distance: the box takes over the selection. */
     begin: ({ keepPrevious }: { keepPrevious: boolean }): void => {
@@ -107,7 +123,18 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
         width: rect.width / zoom,
         height: rect.height / zoom,
       });
-      const inside = getNodesInside(spatial, rect, transform, deps.partial(), true);
+      const near = new Map<string, InternalNode<NodeType>>();
+      for (const id of spatial.keys()) {
+        let node = frozen.get(id);
+        if (node === undefined) {
+          const live = deps.nodeLookup.get(id);
+          if (live === undefined) continue;
+          node = freeze(live);
+          frozen.set(id, node);
+        }
+        near.set(id, node);
+      }
+      const inside = getNodesInside(near, rect, transform, deps.partial(), true);
       // `isNodeSelectable` filters the candidates the rect found, never the
       // whole graph (upstream parity, xyflow#6004).
       const isNodeSelectable = deps.isNodeSelectable();
