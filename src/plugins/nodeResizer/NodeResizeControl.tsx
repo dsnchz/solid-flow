@@ -66,20 +66,38 @@ const OWN_KEYS: ReadonlySet<string> = new Set([
   "style",
 ]);
 
-/** A single resize handle or line — the building block of `NodeResizer`. */
-export const NodeResizeControl = <NodeType extends Node = Node>(
-  props: ParentProps<ResizeControlProps>,
+/** The parts of a control that differ per control of one NodeResizer. */
+export type ResizeControlParts = {
+  readonly variant: () => ResizeControlVariant;
+  readonly position: () => ControlPosition | undefined;
+  readonly class: () => JSX.ClassValue;
+  readonly style: () => JSX.CSSProperties | undefined;
+  readonly children: () => JSX.Element;
+};
+
+/**
+ * One resize control. The resize options (nodeId, boundaries, callbacks,
+ * color, autoScale) are read from `props`, a props object: a
+ * NodeResizeControl's own props, or the NodeResizer's for each of its eight
+ * controls, which then share that one object instead of a merged props
+ * object each. `extraKeys` are its keys that become attributes of
+ * the element. Called from a component body (it creates the control's
+ * effects under the caller's owner).
+ */
+export const renderResizeControl = <NodeType extends Node = Node>(
+  props: NodeResizerSubProps & { readonly color?: string },
+  extraKeys: readonly string[],
+  parts: ResizeControlParts,
 ): JSX.Element => {
   // Eight controls per NodeResizer: the per-row rules (see Handle) instead of
   // propDefaults + omit + a JSX spread, which routed every attribute of the
   // element through one spread effect.
-  const variant = () => props.variant ?? "handle";
+  const variant = parts.variant;
   const minWidth = () => props.minWidth ?? 10;
   const minHeight = () => props.minHeight ?? 10;
   const maxWidth = () => props.maxWidth ?? Number.MAX_VALUE;
   const maxHeight = () => props.maxHeight ?? Number.MAX_VALUE;
   const autoScale = () => props.autoScale ?? true;
-  const extraKeys = extraKeysOf(props, OWN_KEYS);
   const owner = getOwner();
 
   const [resizeControlRef, setResizeControlRef] = createSignal<HTMLDivElement>();
@@ -90,7 +108,7 @@ export const NodeResizeControl = <NodeType extends Node = Node>(
   const isLineVariant = () => variant() === "line";
 
   const controlPosition = () =>
-    props.position ?? ((isLineVariant() ? "right" : "bottom-right") as ControlPosition);
+    parts.position() ?? ((isLineVariant() ? "right" : "bottom-right") as ControlPosition);
 
   // Mount the resize controller on the control element (external system: XYResizer)
   const [resizer, setResizer] = createSignal<ReturnType<typeof XYResizer>>();
@@ -181,13 +199,13 @@ export const NodeResizeControl = <NodeType extends Node = Node>(
       variant(),
       store.noDragClass,
       controlPosition().replace("-", " "),
-      props.class,
+      parts.class(),
     );
   const controlStyle = (): JSX.CSSProperties => ({
     "border-color": isLineVariant() ? props.color : undefined,
     "background-color": isLineVariant() ? undefined : props.color,
     scale: isLineVariant() || !autoScale() ? undefined : Math.max(1 / store.viewport.zoom, 1),
-    ...props.style,
+    ...parts.style(),
   });
 
   // The server's copy of the element: a ref never runs in a server render,
@@ -197,7 +215,7 @@ export const NodeResizeControl = <NodeType extends Node = Node>(
     <>
       {isServer ? (
         <div {...extrasOf(props, extraKeys)} class={controlClass()} style={controlStyle()}>
-          {props.children}
+          {parts.children()}
         </div>
       ) : (
         <div
@@ -208,9 +226,21 @@ export const NodeResizeControl = <NodeType extends Node = Node>(
           class={controlClass()}
           style={controlStyle()}
         >
-          {props.children}
+          {parts.children()}
         </div>
       )}
     </>
   );
 };
+
+/** A single resize handle or line — the building block of `NodeResizer`. */
+export const NodeResizeControl = <NodeType extends Node = Node>(
+  props: ParentProps<ResizeControlProps>,
+): JSX.Element =>
+  renderResizeControl<NodeType>(props, extraKeysOf(props, OWN_KEYS), {
+    variant: () => props.variant ?? "handle",
+    position: () => props.position,
+    class: () => props.class,
+    style: () => props.style,
+    children: () => props.children,
+  });

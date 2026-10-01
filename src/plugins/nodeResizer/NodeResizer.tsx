@@ -7,11 +7,11 @@ import {
   XY_RESIZER_HANDLE_POSITIONS,
   XY_RESIZER_LINE_POSITIONS,
 } from "@xyflow/system";
-import { For, omit, Show } from "solid-js";
+import { Show } from "solid-js";
 
-import { propDefaults } from "@/utils";
+import { extraKeysOf } from "@/utils";
 
-import { NodeResizeControl } from "./NodeResizeControl";
+import { renderResizeControl } from "./NodeResizeControl";
 
 export type NodeResizerProps = {
   /** Id of the node it is resizing
@@ -52,40 +52,68 @@ export type NodeResizerProps = {
   readonly onResizeEnd?: OnResizeEnd;
 } & Omit<JSX.HTMLAttributes<HTMLDivElement>, "onResize" | "style">;
 
+/**
+ * NodeResizer's own props plus the resize options its controls read from it
+ * and the control props it decides per control; every other key is an
+ * attribute of each control element.
+ */
+const OWN_KEYS: ReadonlySet<string> = new Set([
+  "nodeId",
+  "color",
+  "handleClass",
+  "handleStyle",
+  "lineClass",
+  "lineStyle",
+  "visible",
+  "minWidth",
+  "minHeight",
+  "maxWidth",
+  "maxHeight",
+  "keepAspectRatio",
+  "autoScale",
+  "shouldResize",
+  "onResizeStart",
+  "onResize",
+  "onResizeEnd",
+  "class",
+  "style",
+  "children",
+]);
+
 /** Resize handles and lines around a node; place inside a custom node to make it resizable. */
 export const NodeResizer = (props: Partial<NodeResizerProps>): JSX.Element => {
-  const _props = propDefaults(props, {
-    autoScale: true,
-    visible: true,
-  });
+  // Eight controls per resizable node read the resize options from THIS props
+  // object (one reference, no merged props object per control) and take
+  // their extra attributes from the keys found once here.
+  const extraKeys = extraKeysOf(props, OWN_KEYS);
+  // A `class` given to the NodeResizer wins over lineClass/handleClass, as the
+  // forwarded props did (Svelte Flow spreads them after the same way).
+  const lineClass = () => ("class" in props ? props.class : props.lineClass);
+  const handleClass = () => ("class" in props ? props.class : props.handleClass);
+  const children = () => props.children;
 
-  // NodeResizer's own props stay off the controls (Svelte Flow omits
-  // isVisible too): `visible` landed on every control as an attribute.
-  const rest = omit(props, "visible", "handleClass", "handleStyle", "lineClass", "lineStyle");
+  // The four lines and four handles, created while visible (inside Show);
+  // the position lists are constants, so nothing here is ever re-mapped.
+  const controls = () => [
+    ...XY_RESIZER_LINE_POSITIONS.map((position) =>
+      renderResizeControl(props, extraKeys, {
+        variant: () => "line",
+        position: () => position,
+        class: lineClass,
+        style: () => props.lineStyle,
+        children,
+      }),
+    ),
+    ...XY_RESIZER_HANDLE_POSITIONS.map((position) =>
+      renderResizeControl(props, extraKeys, {
+        variant: () => "handle",
+        position: () => position,
+        class: handleClass,
+        style: () => props.handleStyle,
+        children,
+      }),
+    ),
+  ];
 
-  return (
-    <Show when={_props.visible}>
-      <For each={XY_RESIZER_LINE_POSITIONS}>
-        {(position) => (
-          <NodeResizeControl
-            variant="line"
-            position={position}
-            class={props.lineClass}
-            style={props.lineStyle}
-            {...rest}
-          />
-        )}
-      </For>
-      <For each={XY_RESIZER_HANDLE_POSITIONS}>
-        {(position) => (
-          <NodeResizeControl
-            position={position}
-            class={props.handleClass}
-            style={props.handleStyle}
-            {...rest}
-          />
-        )}
-      </For>
-    </Show>
-  );
+  return <Show when={props.visible ?? true}>{controls()}</Show>;
 };
