@@ -1,6 +1,6 @@
 import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
@@ -19,8 +19,8 @@ const nodes: Node[] = [
 /**
  * Graph bounds feeding the minimap are SAMPLED (never a tracked O(n) memo):
  * per frame during drags through the incremental sampler, and otherwise only
- * when a row's geometry actually changed (the core geometry version) — no
- * periodic full scans of an idle graph.
+ * when a row's geometry actually changed (the geometry feed's tick), at most
+ * every 250 ms — no periodic timer or scan while the graph is idle.
  */
 describe("MiniMap bounds sampling", () => {
   const renderProbed = () => {
@@ -86,15 +86,28 @@ describe("MiniMap bounds sampling", () => {
     expect(viewBox()).toContain("-8");
   });
 
-  it("does not run a full graph scan on the idle safety poll when nothing changed", async () => {
-    const { internal, viewBox } = renderProbed();
-    await tick(20);
-    const before = viewBox();
-    expect(internal().geometryVersion()).toBeGreaterThan(0);
-    const version = internal().geometryVersion();
-    await tick(400);
-    // Nothing moved: the geometry version is stable, the viewBox is stable.
-    expect(internal().geometryVersion()).toBe(version);
-    expect(viewBox()).toBe(before);
+  it("keeps no timer armed while the graph is idle", async () => {
+    // Pending timers once the flow has settled, with and without a minimap:
+    // the minimap re-samples on geometry changes, not on a periodic poll.
+    const settledTimers = async (withMiniMap: boolean) => {
+      vi.useFakeTimers();
+      try {
+        const { unmount } = render(() => (
+          <SolidFlow defaultNodes={nodes} width={800} height={600}>
+            {withMiniMap ? <MiniMap /> : null}
+          </SolidFlow>
+        ));
+        for (let i = 0; i < 20; i++) {
+          await vi.advanceTimersByTimeAsync(50);
+          flush();
+        }
+        const count = vi.getTimerCount();
+        unmount();
+        return count;
+      } finally {
+        vi.useRealTimers();
+      }
+    };
+    expect(await settledTimers(true)).toBe(await settledTimers(false));
   });
 });

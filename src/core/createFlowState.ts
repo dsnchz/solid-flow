@@ -192,10 +192,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // The adoption pass as a projection: user nodes joined with measurements
   // into internal nodes (absolute positions, z ordering, handle bounds).
   // Replaces the ReactiveMap + mapArray adoption pipeline — no write side.
-  // Plain (non-reactive) count of row geometry changes — see
-  // InternalNodesSource.onGeometryChange. Samplers poll it.
-  let geometryTick = 0;
-  const geometryVersion = () => geometryTick;
   // Plain map of every row's absolute rect, maintained by the row derive:
   // gesture starts (connection arm, box selection, minimap partition) read it
   // instead of walking the rows through the store proxies.
@@ -215,10 +211,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     get dragOverlay() {
       return dragOverlay;
     },
-    onGeometryChange: (id, rect) => {
-      nodeGeometryFeed.report(id, rect);
-      geometryTick++;
-    },
+    onGeometryChange: nodeGeometryFeed.report,
     get nodeOrigin() {
       return config().nodeOrigin;
     },
@@ -865,8 +858,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     selectedNodeIds,
     selectedEdgeIds,
     dragOverlay,
-    geometryVersion,
     nodeGeometry,
+    /** Ticks on every row geometry report (the minimap re-samples on it). */
+    nodeGeometryChanges: nodeGeometryFeed.changes,
     onScreenNodeIds,
     onScreenEdgeIds,
     actions: {

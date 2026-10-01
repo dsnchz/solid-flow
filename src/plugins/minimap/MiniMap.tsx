@@ -15,6 +15,7 @@ import {
   createSignal,
   For,
   omit,
+  onCleanup,
   type ParentProps,
   Show,
   untrack,
@@ -89,6 +90,9 @@ export type MiniMapProps<NodeType extends Node> = Omit<
   readonly offsetScale?: number;
 };
 
+/** The longest an idle-time geometry change waits to reach the minimap's bounds. */
+const RESAMPLE_MS = 250;
+
 const getAttrFunction = <NodeType extends Node>(
   value: string | GetMiniMapNodeAttribute<NodeType>,
 ): GetMiniMapNodeAttribute<NodeType> => (value instanceof Function ? value : () => value);
@@ -97,7 +101,7 @@ const getAttrFunction = <NodeType extends Node>(
 export const MiniMap = <NodeType extends Node>(
   props: ParentProps<Partial<MiniMapProps<NodeType>>>,
 ): JSX.Element => {
-  const { store, nodeLookup, dragOverlay, geometryVersion, nodeGeometry } =
+  const { store, nodeLookup, dragOverlay, nodeGeometry, nodeGeometryChanges } =
     useInternalSolidFlow<NodeType>();
 
   const _props = propDefaults(props, {
@@ -176,8 +180,9 @@ export const MiniMap = <NodeType extends Node>(
   // dragged set and unions only the MOVING rows per animation frame (a full
   // pass reads ~7 proxy leaves per row — ~38ms @10k headless — and used to
   // run every frame AND every 500ms forever). Idle re-samples are driven by
-  // the core geometry version (bumped when any row's derive lands a new
-  // position/size), polled cheaply — no periodic full scans of a still graph.
+  // the geometry feed's tick (bumped when any row's derive lands a new
+  // position/size), at most every RESAMPLE_MS — no timer and no scan while
+  // the graph is still.
   const rectsEqual = (a: Rect | null, b: Rect | null) =>
     a === b ||
     (!!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height);
@@ -189,14 +194,19 @@ export const MiniMap = <NodeType extends Node>(
   const [graphBounds, setGraphBounds] = createSignal<Rect | null>(sample(false), {
     equals: rectsEqual,
   });
-  let sampledVersion = untrack(geometryVersion);
+  let resample: ReturnType<typeof setTimeout> | undefined;
+  const cancelResample = () => {
+    clearTimeout(resample);
+    resample = undefined;
+  };
+  onCleanup(cancelResample);
 
   createEffect(
     () => store.dragging,
     (dragging) => {
       if (!dragging) {
+        cancelResample();
         setGraphBounds(sample(false));
-        sampledVersion = geometryVersion();
         return;
       }
       let raf = requestAnimationFrame(function tick() {
@@ -209,24 +219,21 @@ export const MiniMap = <NodeType extends Node>(
   createEffect(
     () => ({ count: store.nodes.length, initialized: store.nodesInitialized }),
     () => {
+      cancelResample();
       setGraphBounds(sample(false));
-      sampledVersion = geometryVersion();
     },
   );
-  // Idle change detection: O(1) per tick; the full pass runs only when some
-  // row's geometry actually changed outside a drag (programmatic moves, user
-  // draft writes, resizes).
+  // Geometry changes outside a drag (programmatic moves, user draft writes,
+  // resizes): one trailing full pass per RESAMPLE_MS window, armed by the
+  // first change in it. A drag samples per frame above instead.
   createEffect(
-    () => null,
+    () => nodeGeometryChanges(),
     () => {
-      const interval = setInterval(() => {
-        if (untrack(() => store.dragging)) return;
-        const version = geometryVersion();
-        if (version === sampledVersion) return;
-        sampledVersion = version;
+      if (resample !== undefined || untrack(() => store.dragging)) return;
+      resample = setTimeout(() => {
+        resample = undefined;
         setGraphBounds(sample(false));
-      }, 250);
-      return () => clearInterval(interval);
+      }, RESAMPLE_MS);
     },
   );
 
