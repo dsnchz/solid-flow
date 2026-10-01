@@ -46,7 +46,7 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
     "children",
   );
 
-  const { store, nodeLookup, edgeLookup, actions, nodeGeometry } = useInternalSolidFlow();
+  const { store, nodeLookup, edgeLookup, actions, commands, nodeGeometry } = useInternalSolidFlow();
 
   const edgeId = useEdgeId();
   const [reconnecting, setReconnecting] = createSignal(false);
@@ -68,19 +68,24 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
       return;
     }
 
+    // The edge as the gesture found it: every callback of this gesture gets
+    // the OLD edge (Svelte Flow captures it the same way), even after the
+    // reconnect write has committed.
+    const oldEdge = edge();
+
     setReconnectingState(true);
-    store.onReconnectStart?.(event, edge(), _props.type);
+    store.onReconnectStart?.(event, oldEdge, _props.type);
 
     const opposite =
       _props.type === "target"
         ? {
-            nodeId: edge().source,
-            handleId: edge().sourceHandle ?? null,
+            nodeId: oldEdge.source,
+            handleId: oldEdge.sourceHandle ?? null,
             type: "source" as HandleType,
           }
         : {
-            nodeId: edge().target,
-            handleId: edge().targetHandle ?? null,
+            nodeId: oldEdge.target,
+            handleId: oldEdge.targetHandle ?? null,
             type: "target" as HandleType,
           };
 
@@ -100,18 +105,20 @@ export const EdgeReconnectAnchor = (props: ParentProps<EdgeReconnectAnchorProps>
       isTarget: opposite.type === "target",
       edgeUpdaterType: opposite.type,
       onConnect: (connection) => {
-        let newEdge = { ...edge(), ...connection } as Edge;
-        newEdge = store.onBeforeReconnect?.(newEdge, edge()) ?? newEdge;
+        const reconnected: Edge = { ...oldEdge, ...connection };
+        // `undefined` from onBeforeReconnect cancels: no write, no onReconnect.
+        const newEdge = store.onBeforeReconnect
+          ? store.onBeforeReconnect(reconnected, oldEdge)
+          : reconnected;
+        if (!newEdge) return;
 
-        if (newEdge) {
-          actions.setEdges((edges) => edges.map((e) => (e.id === edge().id ? newEdge : e)));
-        }
-
-        store.onReconnect?.(edge(), connection);
+        // One indexed row write, not a map over every edge.
+        commands.updateEdge(oldEdge.id, () => newEdge, { replace: true });
+        store.onReconnect?.(oldEdge, connection);
       },
       onReconnectEnd: (event, connectionState) => {
         setReconnectingState(false);
-        store.onReconnectEnd?.(event, edge(), opposite.type, connectionState);
+        store.onReconnectEnd?.(event, oldEdge, opposite.type, connectionState);
       },
     });
   };
