@@ -31,7 +31,13 @@ import type { InternalNode, Node, NodeEvents } from "@/types";
 import { clientOnlySetup, cx, emitFlowError, spreadOnDemand } from "@/utils";
 import { ARROW_KEY_DIFFS, toPxString } from "@/utils";
 
-export type NodeWrapperProps<NodeType extends Node = Node> = NodeEvents<NodeType> & {
+export type NodeWrapperProps<NodeType extends Node = Node> = {
+  /**
+   * The flow's node event handlers as ONE reference (the renderer's props):
+   * a per-row props object with a getter per event cost ~10 getters per row
+   * (audit C10). Read lazily, so a handler set later is still seen.
+   */
+  readonly events: NodeEvents<NodeType>;
   /** The row, as NodeRenderer's Show narrows it (one resolution per row). */
   readonly node: Accessor<InternalNode<NodeType>>;
   readonly resizeObserver: ResizeObserver | undefined;
@@ -125,7 +131,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       actions.handleNodeSelection(node().id);
     }
 
-    props.onNodeClick?.({ node: userNode(), event });
+    props.events.onNodeClick?.({ node: userNode(), event });
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -212,27 +218,27 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     // dispatcher from the pointer to the root (~45 us of a ~470 us move at
     // 10k, bench rounds 49 and 53). contextmenu, keydown, click and focusin
     // are delegated by the runtime.
-    if (props.onNodePointerMove) {
+    if (props.events.onNodePointerMove) {
       createEventListener(el, "pointermove", (event) =>
-        props.onNodePointerMove?.({ node: userNode(), event }),
+        props.events.onNodePointerMove?.({ node: userNode(), event }),
       );
     }
-    if (props.onNodePointerEnter) {
+    if (props.events.onNodePointerEnter) {
       createEventListener(el, "pointerenter", (event) =>
-        props.onNodePointerEnter?.({ node: userNode(), event }),
+        props.events.onNodePointerEnter?.({ node: userNode(), event }),
       );
     }
-    if (props.onNodePointerLeave) {
+    if (props.events.onNodePointerLeave) {
       createEventListener(el, "pointerleave", (event) =>
-        props.onNodePointerLeave?.({ node: userNode(), event }),
+        props.events.onNodePointerLeave?.({ node: userNode(), event }),
       );
     }
     // The native compiler's delegated `dblclick` never fires and `on:`
     // namespaces are not planned for it — direct attachment is the permanent
     // form here, not a workaround; like the pointer pair, only with a callback.
-    if (props.onNodeDoubleClick) {
+    if (props.events.onNodeDoubleClick) {
       createEventListener(el, "dblclick", (event) =>
-        props.onNodeDoubleClick?.({ node: userNode(), event }),
+        props.events.onNodeDoubleClick?.({ node: userNode(), event }),
       );
     }
 
@@ -285,7 +291,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     spreadOnDemand(el, () => node()?.domAttributes);
 
     const onDrag: OnDrag = (event, _, targetNode, nodes) => {
-      props.onNodeDrag?.({
+      props.events.onNodeDrag?.({
         event,
         targetNode: targetNode as NodeType,
         nodes: nodes as NodeType[],
@@ -307,16 +313,16 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         // store proxy (audit finding 6; a 1000-node selection drag paid it
         // with no listener registered). Start/stop stay unconditional (the
         // drag helper needs them; once per gesture).
-        onDrag: props.onNodeDrag ? onDrag : undefined,
+        onDrag: props.events.onNodeDrag ? onDrag : undefined,
         onDragStart: (event, _, targetNode, nodes) => {
-          props.onNodeDragStart?.({
+          props.events.onNodeDragStart?.({
             event,
             targetNode: targetNode as NodeType,
             nodes: nodes as NodeType[],
           });
         },
         onDragStop: (event, _, targetNode, nodes) => {
-          props.onNodeDragStop?.({
+          props.events.onNodeDragStop?.({
             event,
             targetNode: targetNode as NodeType,
             nodes: nodes as NodeType[],
@@ -354,7 +360,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       )}
       style={style()}
       onClick={onSelectNodeHandler}
-      onContextMenu={(event) => props.onNodeContextMenu?.({ node: userNode(), event })}
+      onContextMenu={(event) => props.events.onNodeContextMenu?.({ node: userNode(), event })}
       onKeyDown={(e) => focusable() && onKeyDown(e)}
       // Delegated focusin (React's onFocus bubbles the same way); onFocus guards
       // on THIS element matching :focus-visible, so a descendant's focus returns.

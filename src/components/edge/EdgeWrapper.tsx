@@ -11,7 +11,9 @@ import { edgeCulled } from "@/core";
 import type { Edge, EdgeEvents, EdgeLayouted, Node } from "@/types";
 import { clientOnlySetup, cx, emitFlowError, isEdgeSelectable, spreadOnDemand } from "@/utils";
 
-export type EdgeWrapperProps<EdgeType extends Edge = Edge> = EdgeEvents<EdgeType> & {
+export type EdgeWrapperProps<EdgeType extends Edge = Edge> = {
+  /** The flow's edge event handlers as ONE reference (see NodeWrapper, audit C10). */
+  readonly events: EdgeEvents<EdgeType>;
   /** The layouted row, as EdgeRenderer's Show narrows it (one resolution per row). */
   readonly edge: Accessor<EdgeLayouted<EdgeType>>;
 };
@@ -64,34 +66,37 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
     if (selectable()) {
       actions.handleEdgeSelection(edgeId());
     }
-    props.onEdgeClick?.({ edge: edge(), event });
+    props.events.onEdgeClick?.({ edge: edge(), event });
   };
 
   // B8 (audit): direct handlers, matching NodeWrapper — the previous shape
   // rebuilt a handler map on every pointer event.
-  const onContextMenu = (event: PointerEvent) => props.onEdgeContextMenu?.({ edge: edge(), event });
+  const onContextMenu = (event: PointerEvent) =>
+    props.events.onEdgeContextMenu?.({ edge: edge(), event });
   const onPointerEnter = (event: PointerEvent) =>
-    props.onEdgePointerEnter?.({ edge: edge(), event });
+    props.events.onEdgePointerEnter?.({ edge: edge(), event });
   const onPointerLeave = (event: PointerEvent) =>
-    props.onEdgePointerLeave?.({ edge: edge(), event });
-  const onPointerMove = (event: PointerEvent) => props.onEdgePointerMove?.({ edge: edge(), event });
+    props.events.onEdgePointerLeave?.({ edge: edge(), event });
+  const onPointerMove = (event: PointerEvent) =>
+    props.events.onEdgePointerMove?.({ edge: edge(), event });
   // The native compiler's delegated `dblclick` never fires and `on:`
   // namespaces are not planned for it — direct attachment is the permanent
   // form here, not a workaround. Attached from the ref callback (see
   // mountElement below): an effect over a ref SIGNAL is dirty for the whole
   // synchronous mount and sits in the pure heap, and every later row's memo
   // pull re-marks that heap (bench round 17/18 — the O(N^2) mount).
-  const onDblClick = (event: MouseEvent) => props.onEdgeDoubleClick?.({ edge: edge(), event });
+  const onDblClick = (event: MouseEvent) =>
+    props.events.onEdgeDoubleClick?.({ edge: edge(), event });
   // The runtime does not delegate pointerenter/pointerleave, and dblclick is
   // attached directly: wired only when the flow passes the callback (see
   // NodeWrapper), or they are three listeners per edge for nobody.
   // pointermove likewise, directly and on demand: a delegated pointermove
   // makes every move of every drag walk Solid's dispatcher (bench round 53).
   const mountElement = (el: SVGGElement) => {
-    if (props.onEdgeDoubleClick) createEventListener(el, "dblclick", onDblClick);
-    if (props.onEdgePointerEnter) createEventListener(el, "pointerenter", onPointerEnter);
-    if (props.onEdgePointerLeave) createEventListener(el, "pointerleave", onPointerLeave);
-    if (props.onEdgePointerMove) createEventListener(el, "pointermove", onPointerMove);
+    if (props.events.onEdgeDoubleClick) createEventListener(el, "dblclick", onDblClick);
+    if (props.events.onEdgePointerEnter) createEventListener(el, "pointerenter", onPointerEnter);
+    if (props.events.onEdgePointerLeave) createEventListener(el, "pointerleave", onPointerLeave);
+    if (props.events.onEdgePointerMove) createEventListener(el, "pointermove", onPointerMove);
     // Direct spread for user domAttributes, installed on demand — see NodeWrapper.
     spreadOnDemand(el, () => edge()?.domAttributes);
   };

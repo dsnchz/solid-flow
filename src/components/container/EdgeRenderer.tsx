@@ -53,17 +53,7 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
           };
           return (
             <Show when={visibleRow()}>
-              {(edge) => (
-                <EdgeWrapper<NodeType, EdgeType>
-                  edge={edge}
-                  onEdgeClick={props.onEdgeClick}
-                  onEdgeDoubleClick={props.onEdgeDoubleClick}
-                  onEdgePointerMove={props.onEdgePointerMove}
-                  onEdgeContextMenu={props.onEdgeContextMenu}
-                  onEdgePointerEnter={props.onEdgePointerEnter}
-                  onEdgePointerLeave={props.onEdgePointerLeave}
-                />
-              )}
+              {(edge) => <EdgeWrapper<NodeType, EdgeType> edge={edge} events={props} />}
             </Show>
           );
         }}

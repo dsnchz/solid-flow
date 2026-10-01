@@ -96,15 +96,7 @@ export const NodeRenderer = <NodeType extends Node = Node>(
                   node={node}
                   resizeObserver={resizeObserver}
                   nodeClickDistance={props.nodeClickDistance}
-                  onNodeClick={props.onNodeClick}
-                  onNodeDoubleClick={props.onNodeDoubleClick}
-                  onNodePointerEnter={props.onNodePointerEnter}
-                  onNodePointerMove={props.onNodePointerMove}
-                  onNodePointerLeave={props.onNodePointerLeave}
-                  onNodeDrag={props.onNodeDrag}
-                  onNodeDragStart={props.onNodeDragStart}
-                  onNodeDragStop={props.onNodeDragStop}
-                  onNodeContextMenu={props.onNodeContextMenu}
+                  events={props}
                 />
               )}
             </Show>
