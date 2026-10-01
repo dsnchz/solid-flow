@@ -2,6 +2,7 @@ import { getNodesInside, type NodeLookup, type Rect, type Transform } from "@xyf
 
 import type { Edge, InternalNode, IsNodeSelectable, Node } from "@/types";
 
+import type { SelectionDelta } from "./commands/selection";
 import type { ConnectionsRecord } from "./projections/connections";
 import { GestureSpatialLookup } from "./spatial/gestureLookup";
 
@@ -19,15 +20,9 @@ export type BoxSelectionDeps<NodeType extends Node, EdgeType extends Edge> = {
   readonly partial: () => boolean;
   readonly isNodeSelectable: () => IsNodeSelectable<NodeType> | undefined;
   readonly isEdgeSelectable: (edge: EdgeType) => boolean;
-  /** Overlay-aware selection write (the selection sidecar, solid#3085). */
-  readonly applySelectionSets: (nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => void;
+  /** Overlay-aware write of the ids that flip (the selection sidecar, solid#3085). */
+  readonly applySelectionDelta: (delta: { nodes?: SelectionDelta; edges?: SelectionDelta }) => void;
   readonly unselectNodesAndEdges: () => void;
-};
-
-const isSetEqual = (a: ReadonlySet<string>, b: ReadonlySet<string>) => {
-  if (a.size !== b.size) return false;
-  for (const item of a) if (!b.has(item)) return false;
-  return true;
 };
 
 /**
@@ -35,6 +30,12 @@ const isSetEqual = (a: ReadonlySet<string>, b: ReadonlySet<string>) => {
  * once the pointer passes the click distance, `update` with the screen rect
  * on every move or auto-pan step. Pane keeps the listeners, the rect and the
  * auto-pan loop.
+ *
+ * A move costs the containment query over the nodes near the rect plus
+ * O(changed) for the rest: the boxed set is diffed against the previous
+ * move's, every edge counts its selected endpoints, and only the ids that
+ * flip are written. A zoomed-out box holds thousands of nodes and gains a
+ * few per move.
  */
 export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>(
   deps: BoxSelectionDeps<NodeType, EdgeType>,
@@ -46,9 +47,28 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
     nodes: new Set(),
     edges: new Set(),
   };
-  // What the gesture has written so far, to skip unchanged moves.
-  let nodeIds: ReadonlySet<string> = new Set();
-  let edgeIds: ReadonlySet<string> = new Set();
+  // The nodes the rect held at the previous move, kept ones excluded.
+  let boxed = new Set<string>();
+  // Selected endpoints per edge (kept and boxed nodes): an edge is selected
+  // while its count is positive or it was kept from before.
+  let edgeRefs = new Map<string, number>();
+  // Edges of kept nodes that were not selected yet: the first move adds them.
+  let pendingEdges: string[] = [];
+
+  /** Counts `nodeId`'s selectable edges up or down; pushes the edges that flip. */
+  const countEdges = (nodeId: string, step: 1 | -1, flipped: string[]) => {
+    const nodeConnections = deps.connections[nodeId];
+    if (!nodeConnections) return;
+    for (const { edgeId } of Object.values(nodeConnections)) {
+      const edge = deps.edgeLookup[edgeId];
+      if (!edge || !deps.isEdgeSelectable(edge)) continue;
+      const count = (edgeRefs.get(edgeId) ?? 0) + step;
+      if (count === 0) edgeRefs.delete(edgeId);
+      else edgeRefs.set(edgeId, count);
+      const flips = step === 1 ? count === 1 : count === 0;
+      if (flips && !before.edges.has(edgeId)) flipped.push(edgeId);
+    }
+  };
 
   return {
     /**
@@ -69,13 +89,15 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
         before = { nodes: new Set(), edges: new Set() };
         deps.unselectNodesAndEdges();
       }
-      // Compare the first move against the selection as it is now, not
-      // against what the previous gesture ended with.
-      nodeIds = before.nodes;
-      edgeIds = before.edges;
+      // Start from the selection as it is now, not from what the previous
+      // gesture ended with.
+      boxed = new Set();
+      edgeRefs = new Map();
+      pendingEdges = [];
+      for (const nodeId of before.nodes) countEdges(nodeId, 1, pendingEdges);
     },
 
-    /** One move: select what the screen-space rect holds, writing only on change. */
+    /** One move: select what the screen-space rect holds, writing only what flips. */
     update: (rect: Rect): void => {
       const transform = deps.transform();
       const [tx, ty, zoom] = transform;
@@ -89,31 +111,40 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
       // `isNodeSelectable` filters the candidates the rect found, never the
       // whole graph (upstream parity, xyflow#6004).
       const isNodeSelectable = deps.isNodeSelectable();
-      const boxed = isNodeSelectable
-        ? inside.filter((n) => isNodeSelectable(n.internals.userNode))
-        : inside;
-      const nextNodeIds = new Set([...before.nodes, ...boxed.map((n) => n.id)]);
-
-      // Every selectable edge connected to a selected node.
-      const nextEdgeIds = new Set(before.edges);
-      for (const nodeId of nextNodeIds) {
-        const nodeConnections = deps.connections[nodeId];
-        if (!nodeConnections) continue;
-        for (const { edgeId } of Object.values(nodeConnections)) {
-          const edge = deps.edgeLookup[edgeId];
-          if (edge && deps.isEdgeSelectable(edge)) nextEdgeIds.add(edgeId);
-        }
+      const next = new Set<string>();
+      for (const node of inside) {
+        if (before.nodes.has(node.id)) continue;
+        if (isNodeSelectable && !isNodeSelectable(node.internals.userNode)) continue;
+        next.add(node.id);
       }
 
-      if (isSetEqual(nodeIds, nextNodeIds) && isSetEqual(edgeIds, nextEdgeIds)) return;
-      nodeIds = nextNodeIds;
-      edgeIds = nextEdgeIds;
-      deps.applySelectionSets(nodeIds, edgeIds);
+      const nodesOn: string[] = [];
+      const nodesOff: string[] = [];
+      const edgesOn = pendingEdges;
+      const edgesOff: string[] = [];
+      pendingEdges = [];
+      for (const id of next) {
+        if (boxed.has(id)) continue;
+        nodesOn.push(id);
+        countEdges(id, 1, edgesOn);
+      }
+      for (const id of boxed) {
+        if (next.has(id)) continue;
+        nodesOff.push(id);
+        countEdges(id, -1, edgesOff);
+      }
+      boxed = next;
+
+      if (nodesOn.length + nodesOff.length + edgesOn.length + edgesOff.length === 0) return;
+      deps.applySelectionDelta({
+        nodes: { select: nodesOn, deselect: nodesOff },
+        edges: { select: edgesOn, deselect: edgesOff },
+      });
     },
 
     /** Nodes the box holds (with the kept selection), for the end-of-gesture rect mode. */
     get selectedNodeCount(): number {
-      return nodeIds.size;
+      return before.nodes.size + boxed.size;
     },
   };
 };

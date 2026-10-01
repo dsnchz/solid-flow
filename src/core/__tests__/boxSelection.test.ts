@@ -50,8 +50,8 @@ const withBox = async (
     state = createFlowState<Node, Edge>({ nodes, edges });
   });
   flush();
-  const writes = vi.fn((n: ReadonlySet<string>, e: ReadonlySet<string>) =>
-    state.actions.applySelectionSets(n, e),
+  const writes = vi.fn((delta: Parameters<typeof state.actions.applySelectionDelta>[0]) =>
+    state.actions.applySelectionDelta(delta),
   );
   const box = createBoxSelection<Node, Edge>({
     nodeLookup: state.nodeLookup,
@@ -64,7 +64,7 @@ const withBox = async (
     partial: () => false,
     isNodeSelectable: () => options.isNodeSelectable,
     isEdgeSelectable: (edge) => edge.selectable ?? true,
-    applySelectionSets: writes,
+    applySelectionDelta: writes,
     unselectNodesAndEdges: state.actions.unselectNodesAndEdges,
   });
   const selected = () => ({
@@ -109,6 +109,50 @@ describe("createBoxSelection", () => {
       expect(writes).toHaveBeenCalledTimes(1);
       box.update(ABC);
       expect(writes).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("writes only the nodes and edges that changed on a move", async () => {
+    await withBox(({ box, writes }) => {
+      box.arm();
+      box.begin({ keepPrevious: false });
+      box.update(AB);
+      box.update(ABC);
+      const last = writes.mock.calls.at(-1)![0];
+      expect([...last.nodes!.select]).toEqual(["c"]);
+      expect([...last.nodes!.deselect]).toEqual([]);
+      // e-bc was already selected through b; c brings no new edge.
+      expect([...last.edges!.select]).toEqual([]);
+    });
+  });
+
+  it("shrinking the box deselects what left it, keeping edges still held by a selected node", async () => {
+    await withBox(({ box, selected }) => {
+      box.arm();
+      box.begin({ keepPrevious: false });
+      box.update(ABC);
+      flush();
+      expect(selected()).toEqual({ nodes: ["a", "b", "c"], edges: ["e-ab", "e-bc"] });
+
+      box.update(AB);
+      flush();
+      expect(selected()).toEqual({ nodes: ["a", "b"], edges: ["e-ab", "e-bc"] });
+
+      box.update({ x: -10, y: -10, width: 120, height: 60 });
+      flush();
+      expect(selected()).toEqual({ nodes: ["a"], edges: ["e-ab"] });
+    });
+  });
+
+  it("shrinking never drops the selection kept from before the box", async () => {
+    await withBox(({ box, selected, select }) => {
+      select(["c"], ["e-bc"]);
+      box.arm();
+      box.begin({ keepPrevious: true });
+      box.update(AB);
+      box.update({ x: 3000, y: 3000, width: 1, height: 1 });
+      flush();
+      expect(selected()).toEqual({ nodes: ["c"], edges: ["e-bc"] });
     });
   });
 

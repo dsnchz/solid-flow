@@ -52,7 +52,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     partial: () => store.selectionMode === "partial",
     isNodeSelectable: () => props.isNodeSelectable,
     isEdgeSelectable: (edge) => isEdgeSelectable(edge, store),
-    applySelectionSets: actions.applySelectionSets,
+    applySelectionDelta: actions.applySelectionDelta,
     unselectNodesAndEdges: actions.unselectNodesAndEdges,
   });
 
