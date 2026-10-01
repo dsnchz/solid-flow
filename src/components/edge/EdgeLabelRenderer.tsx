@@ -8,7 +8,7 @@ import { useInternalSolidFlow } from "@/contexts";
 // label (every labelled edge mounts one): a miss is not cached, so a layer
 // that renders later is still found.
 const labelLayers = new WeakMap<Element, Element>();
-const labelLayerOf = (domNode: Element): Element | undefined => {
+export const labelLayerOf = (domNode: Element): Element | undefined => {
   let layer = labelLayers.get(domNode);
   if (layer === undefined || !layer.isConnected) {
     layer = domNode.querySelector(".solid-flow__edge-labels") ?? undefined;

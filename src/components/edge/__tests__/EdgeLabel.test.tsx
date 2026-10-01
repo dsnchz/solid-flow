@@ -94,15 +94,18 @@ describe("EdgeLabel", () => {
     expect(label().getAttribute("title")).toBe("two");
   });
 
-  it("selectEdgeOnClick shows the pointer and selects the edge on click", async () => {
-    // Without it a click still selects the edge: the portal bubbles delegated
-    // events through the logical tree to EdgeWrapper's click (React Flow's
-    // portals do the same; Svelte Flow's DOM portal does not).
+  it("selects its edge on click only with selectEdgeOnClick", async () => {
+    // Svelte Flow parity (1.x and 2.0): the label is moved into the label
+    // layer, so a click bubbles through the DOM there and never reaches the
+    // edge; `selectEdgeOnClick` is what selects.
     const [selectOnClick, setSelectOnClick] = createSignal(false);
     const { api, label } = await renderLabel(() => (
       <EdgeLabel selectEdgeOnClick={selectOnClick()}>text</EdgeLabel>
     ));
     expect(label().style.cursor).toBe("");
+    fireEvent.click(label());
+    await tick();
+    expect(api().flow.selection.edges).toHaveLength(0);
 
     setSelectOnClick(true);
     await tick();
@@ -110,5 +113,14 @@ describe("EdgeLabel", () => {
     fireEvent.click(label());
     await tick();
     expect(api().flow.selection.edges.map((e) => e.id)).toEqual(["e1"]);
+  });
+
+  it("lives in the flow's label layer and leaves it when the label unmounts", async () => {
+    const [show, setShow] = createSignal(true);
+    const { label } = await renderLabel(() => <>{show() ? <EdgeLabel>text</EdgeLabel> : null}</>);
+    expect(label().parentElement?.classList.contains("solid-flow__edge-labels")).toBe(true);
+    setShow(false);
+    await tick();
+    expect(label()).toBeNull();
   });
 });

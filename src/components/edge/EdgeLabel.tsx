@@ -1,10 +1,10 @@
-import type { JSX } from "@solidjs/web";
-import { getOwner, type ParentProps } from "solid-js";
+import { isServer, type JSX } from "@solidjs/web";
+import { createRenderEffect, createRoot, getOwner, type ParentProps, runWithOwner } from "solid-js";
 
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
-import { extraKeysOf, spreadExtras, toPxString } from "@/utils";
+import { clientOnlySetup, extraKeysOf, spreadExtras, toPxString } from "@/utils";
 
-import { EdgeLabelRenderer } from "./EdgeLabelRenderer";
+import { labelLayerOf } from "./EdgeLabelRenderer";
 
 type EdgeLabelProps = {
   readonly x?: number;
@@ -46,22 +46,24 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
   const extraKeys = extraKeysOf(props, OWN_KEYS);
   const owner = getOwner();
 
-  const { actions } = useInternalSolidFlow();
+  const { store, actions } = useInternalSolidFlow();
 
   const id = useEdgeId();
 
   const zIndex = () => actions.getLayoutedEdge(id())?.zIndex;
 
-  return (
-    <EdgeLabelRenderer>
+  const createLabel = (): HTMLDivElement | undefined => {
+    let label: HTMLDivElement | undefined;
+    void (
       <div
-        ref={(el) => spreadExtras(el, props, extraKeys, owner)}
+        ref={(el) => {
+          label = el;
+          spreadExtras(el, props, extraKeys, owner);
+        }}
         role="button"
         tabindex={-1}
         class={["solid-flow__edge-label", { transparent: props.transparent }, props.class]}
         style={{
-          // No hideOnSSR needed (unlike Svelte Flow): EdgeLabelRenderer
-          // portals into domNode, which only exists in the browser.
           "pointer-events": "all",
           width: toPxString(props.width),
           height: toPxString(props.height),
@@ -76,6 +78,40 @@ export const EdgeLabel = (props: ParentProps<EdgeLabelProps>): JSX.Element => {
       >
         {props.children}
       </div>
-    </EdgeLabelRenderer>
-  );
+    );
+    return label;
+  };
+
+  // Moved into the flow's label layer, as Svelte Flow's `use:portal` action
+  // does (1.x and 2.0), instead of a Portal per label: a click bubbles
+  // through the DOM there and does not reach the edge (`selectEdgeOnClick`
+  // selects), and the label costs one effect and one root instead of the
+  // Portal's owner, memo, render effect, root, insert, mount effect and
+  // three text markers (bench round 64). Browser only (the layer is under
+  // domNode); the effect stays outside the hydration id sequence.
+  if (!isServer) {
+    clientOnlySetup(() =>
+      createRenderEffect(
+        () => {
+          const domNode = store.domNode;
+          return domNode ? labelLayerOf(domNode) : undefined;
+        },
+        (layer) => {
+          if (!layer) return;
+          return runWithOwner(owner, () =>
+            createRoot((dispose) => {
+              const label = createLabel();
+              if (label) layer.appendChild(label);
+              return () => {
+                dispose();
+                label?.remove();
+              };
+            }),
+          );
+        },
+      ),
+    );
+  }
+
+  return null;
 };
