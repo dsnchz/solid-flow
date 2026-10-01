@@ -341,10 +341,12 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // would rebuild these O(selected) results on every selection write even
   // with no reader (a zoomed-out box selection rewrites 6,500 selected nodes
   // per move; the bounds re-ran on every drag frame of a selected node).
-  // Lazy ones compute on read and stay live while observed. The edge view
-  // stays eager: drag start reads it (unselectNodesAndEdges) inside the
-  // selection batch, and computing it there cold cost ~23 ms at 10k edges
-  // (bench round 59; not explained yet).
+  // Lazy ones compute on read and stay live while observed. The edge view is
+  // still eager: drag start read it (unselectNodesAndEdges) and a cold
+  // compute there cost ~23 ms at 10k edges (bench round 59). Since 4de3d19
+  // the selection commands read the presence records instead, so it could
+  // go lazy too — unmeasured. A lazy view must not be read while the flow
+  // is disposed (see unselectNodesAndEdges).
   const selectedNodesView = createMemo(
     () =>
       Object.keys(selectedNodeIds)
