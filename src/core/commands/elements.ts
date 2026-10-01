@@ -236,12 +236,29 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
       });
     },
     deleteElements: async ({ nodes: nodesToRemove = [], edges: edgesToRemove = [] }) => {
+      // xyflow's getElementsToRemove checks every passed edge against the
+      // node cascade with `find`: O(passed x cascaded) reads through store
+      // proxies (select all + Delete at 10k + 10k: 5.9 s). An edge with an
+      // endpoint among the deletable nodes being removed is in that cascade
+      // whenever it is deletable at all, so it leaves the explicit list here:
+      // same result and order, without the lookups.
+      const removing = new Set(nodesToRemove.map(({ id }) => id));
+      const cascades = (nodeId: string) =>
+        removing.has(nodeId) && nodeIndex.get(store.nodes, nodeId)?.deletable !== false;
+      const explicitEdges =
+        removing.size === 0
+          ? edgesToRemove
+          : edgesToRemove.filter(({ id }) => {
+              const edge = edgeIndex.get(store.edges, id);
+              return !edge || !(cascades(edge.source) || cascades(edge.target));
+            });
+
       const { nodes: matchingNodes, edges: matchingEdges } = await getElementsToRemove<
         NodeType,
         EdgeType
       >({
         nodesToRemove,
-        edgesToRemove,
+        edgesToRemove: explicitEdges,
         nodes: store.nodes,
         edges: store.edges,
         onBeforeDelete: store.onBeforeDelete,

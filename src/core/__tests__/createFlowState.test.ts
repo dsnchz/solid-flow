@@ -1,9 +1,9 @@
 // @vitest-environment node
-import { type PanZoomInstance, Position } from "@xyflow/system";
+import { getElementsToRemove, type PanZoomInstance, Position } from "@xyflow/system";
 import { createRoot, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Edge, Node } from "@/types";
+import type { Edge, Node, OnBeforeDelete } from "@/types";
 
 import { createFlowState } from "../createFlowState";
 
@@ -206,6 +206,50 @@ describe("FlowCommands", () => {
         expect(flow.layoutedEdges.e1).toBeUndefined();
       },
     );
+  });
+
+  it("deleteElements matches xyflow's getElementsToRemove on a mixed delete", async () => {
+    const nodes = [
+      makeNode({ id: "a" }),
+      makeNode({ id: "b" }),
+      makeNode({ id: "c" }),
+      makeNode({ id: "d", deletable: false }),
+      makeNode({ id: "p" }),
+      makeNode({ id: "ch", parentId: "p" }),
+    ];
+    const edges = [
+      makeEdge({ id: "e1", source: "a", target: "b" }),
+      makeEdge({ id: "e2", source: "b", target: "c" }),
+      makeEdge({ id: "e3", source: "c", target: "d" }),
+      makeEdge({ id: "e4", source: "d", target: "b" }),
+      makeEdge({ id: "e5", source: "ch", target: "c" }),
+      makeEdge({ id: "e6", source: "a", target: "c", deletable: false }),
+    ];
+    // Select-all shape: the nodes AND every edge passed in, including edges
+    // the node cascade already covers, one whose endpoint is undeletable, and
+    // one reached only through a parent.
+    const request = {
+      nodes: [{ id: "a" }, { id: "d" }, { id: "p" }],
+      edges: edges.map(({ id }) => ({ id })),
+    };
+    const oracle = await getElementsToRemove({
+      nodesToRemove: request.nodes,
+      edgesToRemove: request.edges,
+      nodes: structuredClone(nodes),
+      edges: structuredClone(edges),
+    });
+    const ids = (rows: readonly { id: string }[]) => rows.map(({ id }) => id);
+
+    const onBeforeDelete = vi.fn<OnBeforeDelete>(async () => true);
+    await withFlow({ nodes, edges, onBeforeDelete }, async ({ flow, commands }) => {
+      const { deletedNodes, deletedEdges } = await commands.deleteElements(request);
+      flush();
+
+      expect(ids(deletedNodes)).toEqual(ids(oracle.nodes));
+      expect(ids(deletedEdges)).toEqual(ids(oracle.edges));
+      expect(ids(onBeforeDelete.mock.calls[0]![0].edges)).toEqual(ids(oracle.edges));
+      expect(ids(flow.edges)).toEqual(ids(edges).filter((id) => !ids(oracle.edges).includes(id)));
+    });
   });
 
   it("deleteElements honors an onBeforeDelete veto", async () => {
