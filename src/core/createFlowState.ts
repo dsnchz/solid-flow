@@ -86,6 +86,18 @@ const getInitialViewport = (
   }
 };
 
+/**
+ * The ids of a store array, subscribed to its structure only: enumerating
+ * the array is ONE source that changes when a slot or the length does
+ * (committed or optimistic), where reading each slot and its id was two per
+ * row. The ids are read untracked: a row's id is its identity, never edited
+ * in place (a different id is a different row, in a different slot).
+ */
+const rowIds = (rows: readonly { readonly id: string }[]): string[] => {
+  Reflect.ownKeys(rows);
+  return untrack(() => rows.map((row) => row.id));
+};
+
 /** Same ids in the same order. */
 const sameIds = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((id, i) => id === b[i]);
@@ -592,7 +604,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Value-equal: a write that replaces rows but keeps their ids (a measuring
   // pass writing back into a controlled array) keeps the list, so the
   // renderer, the row index and the measurement GC do not re-run.
-  const visibleNodeIds = createMemo(() => nodesStore.map((node) => node.id), {
+  const visibleNodeIds = createMemo(() => rowIds(nodesStore), {
     equals: sameIds,
     name: "visibleNodeIds",
   });
@@ -645,7 +657,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   // Same membership-vs-layout split as visibleNodeIds; unresolved edges are
   // filtered by the renderer's per-row guard (their resolved row is null).
-  const visibleEdgeIds = createMemo(() => edgesStore.map((edge) => edge.id), {
+  const visibleEdgeIds = createMemo(() => rowIds(edgesStore), {
     equals: sameIds,
     name: "visibleEdgeIds",
   });

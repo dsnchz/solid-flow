@@ -168,4 +168,34 @@ describe("mount diagnostics", () => {
       }),
     ).toEqual([]);
   });
+
+  it("the id lists subscribe to the arrays' structure, not to every row", async () => {
+    // Reading each slot and its id was two sources per row: any flow past ~15
+    // nodes reported WIDE_SCOPE_DEPS on visibleNodeIds and visibleEdgeIds.
+    const many: Node[] = Array.from({ length: 40 }, (_, i) => ({
+      id: `n${i}`,
+      position: { x: i * 60, y: 0 },
+      data: { label: `${i}` },
+      width: 50,
+      height: 20,
+    }));
+    const chain: Edge[] = many.slice(1).map((node, i) => ({
+      id: `e${i}`,
+      source: `n${i}`,
+      target: node.id,
+    }));
+    const { artifact } = await captureArtifact(
+      async () => {
+        render(() => (
+          <SolidFlow defaultNodes={many} defaultEdges={chain} width={800} height={600} />
+        ));
+        for (let i = 0; i < 6; i++) await tick();
+      },
+      { scenario: "mount", attribution: { log: false } },
+    );
+    const idLists = artifact.diagnostics
+      .map((d) => `${d.code}:${d.nodeName ?? ""}`)
+      .filter((key) => /visible(Node|Edge)Ids/.test(key));
+    expect(idLists).toEqual([]);
+  });
 });
