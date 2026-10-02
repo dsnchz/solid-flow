@@ -19,12 +19,9 @@ import type { Edge, Node } from "@/types";
 // By design, with the reason:
 // - `resolvedEdges.row` (~38 sources): an edge's layout reads every key of
 //   the edge and both endpoints' geometry; any of them changing must re-lay it.
-// - NodeWrapper's element effect: the compiler folds all dynamic attributes
-//   of one element into one effect; the per-frame transform has its own.
-const BY_DESIGN: ReadonlySet<string> = new Set([
-  "WIDE_SCOPE_DEPS:resolvedEdges.row",
-  "WIDE_SCOPE_DEPS:div.data-id, div.class, div.style, div.tabindex, div.role, div.aria-describedby",
-]);
+// (NodeWrapper's element effect was here too: its class is its own effect
+// now, and neither crosses the line.)
+const BY_DESIGN: ReadonlySet<string> = new Set(["WIDE_SCOPE_DEPS:resolvedEdges.row"]);
 const nodes: Node[] = [
   {
     id: "in",

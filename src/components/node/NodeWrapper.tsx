@@ -1,6 +1,6 @@
 import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
-import { dynamic, isServer } from "@solidjs/web";
+import { className, dynamic, isServer } from "@solidjs/web";
 import {
   elementSelectionKeys,
   errorMessages,
@@ -68,13 +68,16 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     if (el) props.resizeObserver?.unobserve(el);
   });
 
+  // The row-reading accessors take the row when the caller already holds it:
+  // the element's attributes compile into ONE effect, where every node()
+  // call is one more source (see nodeClass).
   const nodeId = () => node().id;
-  const nodeType = () => node().type ?? "default";
+  const nodeType = (row = node()) => row.type ?? "default";
   const deletable = () => node().deletable ?? true;
-  const selectable = () => node().selectable ?? store.elementsSelectable;
-  const focusable = () => node().focusable ?? store.nodesFocusable;
-  const draggable = () => node().draggable ?? store.nodesDraggable;
-  const connectable = () => node().connectable ?? store.nodesConnectable;
+  const selectable = (row = node()) => row.selectable ?? store.elementsSelectable;
+  const focusable = (row = node()) => row.focusable ?? store.nodesFocusable;
+  const draggable = (row = node()) => row.draggable ?? store.nodesDraggable;
+  const connectable = (row = node()) => row.connectable ?? store.nodesConnectable;
   const userNode = () => node().internals.userNode;
 
   const nodeTypeValid = () => nodeType() in store.nodeTypes;
@@ -84,7 +87,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   // `dynamic()` directly: <Dynamic> re-copies every prop descriptor per row
   // (its `omit(props, "component")`), ~110ms of a 10k mount (bench round 21).
   const NodeComponent = dynamic(nodeComponent);
-  const isParentNode = () => !!parentIds[node().id];
+  const isParentNode = (row = node()) => !!parentIds[row.id];
 
   // #15 culling flag: arithmetic re-runs only when this node's geometry,
   // selection, or the quantized culling viewport change; the style only
@@ -123,6 +126,33 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     out.visibility = isCulled || !nodeHasDimensions(row) ? "hidden" : "visible";
     out["pointer-events"] = isCulled ? "none" : undefined;
     return out;
+  };
+
+  // The element's class and role, each reading the row once (they share the
+  // element's attribute effect with data-id, style and tabindex, which ran
+  // past the dev runtime's 30-source WIDE_SCOPE_DEPS line with a read per
+  // accessor).
+  const nodeClass = () => {
+    const row = node();
+    const isDraggable = !!draggable(row);
+    return cx(
+      "solid-flow__node",
+      `solid-flow__node-${nodeType(row)}`,
+      {
+        connectable: !!connectable(row),
+        draggable: isDraggable,
+        dragging: !!row.dragging,
+        nopan: isDraggable,
+        parent: isParentNode(row),
+        selectable: !!selectable(row),
+        selected: !!row.selected,
+      },
+      row.class,
+    );
+  };
+  const nodeRole = () => {
+    const row = node();
+    return row.ariaRole ?? (focusable(row) ? "group" : undefined);
   };
 
   const onSelectNodeHandler = (event: MouseEvent) => {
@@ -211,6 +241,17 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         el.style.transform = transform;
       },
     );
+    // The class is its own effect too (the server markup carries it on the
+    // element): a selection or setting change rewrites the class without
+    // re-running the element's other attributes (the style object rebuild
+    // and diff included), and neither effect crosses the dev runtime's
+    // 30-source WIDE_SCOPE_DEPS line, which the one combined effect did on
+    // every node.
+    let appliedClass: string | undefined;
+    createRenderEffect(nodeClass, (next) => {
+      className(el, next, appliedClass);
+      appliedClass = next;
+    });
     // `pointerenter`/`pointerleave` cannot be delegated (they do not bubble)
     // and the compiler attaches a listener even for an undefined handler:
     // attached here only when the flow passes the callback, so the common
@@ -346,20 +387,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         runWithOwner(owner, () => clientOnlySetup(() => mountElement(el)));
       }}
       data-id={node().id}
-      class={cx(
-        "solid-flow__node",
-        `solid-flow__node-${nodeType()}`,
-        {
-          connectable: !!connectable(),
-          draggable: !!draggable(),
-          dragging: !!node().dragging,
-          nopan: !!draggable(),
-          parent: isParentNode(),
-          selectable: !!selectable(),
-          selected: !!node().selected,
-        },
-        node().class,
-      )}
+      class={isServer ? nodeClass() : undefined}
       style={style()}
       onClick={onSelectNodeHandler}
       onContextMenu={(event) => props.events.onNodeContextMenu?.({ node: userNode(), event })}
@@ -368,7 +396,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       // on THIS element matching :focus-visible, so a descendant's focus returns.
       onFocusIn={() => focusable() && onFocus()}
       tabindex={focusable() ? 0 : undefined}
-      role={node().ariaRole ?? (focusable() ? "group" : undefined)}
+      role={nodeRole()}
       aria-roledescription="node"
       aria-describedby={store.disableKeyboardA11y ? undefined : `${ARIA_NODE_DESC_KEY}-${store.id}`}
     >

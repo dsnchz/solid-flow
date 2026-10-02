@@ -31,8 +31,7 @@ import { scenarios } from "./scenarios";
  *    server from its own copy of the element, so this is what keeps the two
  *    copies in step.
  */
-const BY_DESIGN_DIAGNOSTIC =
-  /^\[WIDE_SCOPE_DEPS\] (memo "resolvedEdges\.row"|effect "div\.data-id, div\.class)/;
+const BY_DESIGN_DIAGNOSTIC = /^\[WIDE_SCOPE_DEPS\] memo "resolvedEdges\.row"/;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
