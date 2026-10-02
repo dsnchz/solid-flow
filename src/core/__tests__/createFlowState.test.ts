@@ -124,6 +124,31 @@ describe("FlowState struct", () => {
       expect([flow.width, flow.height]).toEqual([800, 600]);
     });
   });
+
+  it("keeps the id lists when a write replaces rows but not ids", async () => {
+    // A measuring pass writes fresh row objects back into a controlled array:
+    // the renderers' lists (and everything keyed on them) must not re-run.
+    const a = makeNode({ id: "a" });
+    const b = makeNode({ id: "b" });
+    await withFlow(
+      { nodes: [a, b], edges: [makeEdge({ id: "e", source: "a", target: "b" })] },
+      ({ store, commands }) => {
+        const nodeIds = store.visibleNodeIds;
+        const edgeIds = store.visibleEdgeIds;
+        commands.updateNode("a", makeNode({ id: "a", data: { label: "fresh" } }), {
+          replace: true,
+        });
+        commands.updateEdge("e", { id: "e", source: "a", target: "b" }, { replace: true });
+        flush();
+        expect(store.visibleNodeIds).toBe(nodeIds);
+        expect(store.visibleEdgeIds).toBe(edgeIds);
+
+        commands.addNodes([makeNode({ id: "c" })]);
+        flush();
+        expect(store.visibleNodeIds).toEqual(["a", "b", "c"]);
+      },
+    );
+  });
 });
 
 describe("FlowCommands", () => {

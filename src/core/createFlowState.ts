@@ -86,6 +86,10 @@ const getInitialViewport = (
   }
 };
 
+/** Same ids in the same order. */
+const sameIds = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((id, i) => id === b[i]);
+
 /**
  * Plain enumerable getters over a signal-held props object, one per key —
  * merge-compatible (no proxy, no memo) so the merged store stays a plain
@@ -585,7 +589,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // membership edit mid-action, while direct row reads pierce the overlay
   // (#3085; spike 30). Renderers guard per-row against not-yet-materialized
   // projection rows.
+  // Value-equal: a write that replaces rows but keeps their ids (a measuring
+  // pass writing back into a controlled array) keeps the list, so the
+  // renderer, the row index and the measurement GC do not re-run.
   const visibleNodeIds = createMemo(() => nodesStore.map((node) => node.id), {
+    equals: sameIds,
     name: "visibleNodeIds",
   });
   // Membership-cadence id → index maps for the per-frame writers.
@@ -638,6 +646,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Same membership-vs-layout split as visibleNodeIds; unresolved edges are
   // filtered by the renderer's per-row guard (their resolved row is null).
   const visibleEdgeIds = createMemo(() => edgesStore.map((edge) => edge.id), {
+    equals: sameIds,
     name: "visibleEdgeIds",
   });
   const edgeIndex = createRowIndex<EdgeType>(visibleEdgeIds);
