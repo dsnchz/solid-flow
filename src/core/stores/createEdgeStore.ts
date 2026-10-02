@@ -50,8 +50,13 @@ type EdgesInput<TUserEdgeTypes extends EdgeTypes> = SolidFlowEdge<TUserEdgeTypes
  * edge types. When a specific edge type is selected, TypeScript automatically infers the
  * required data structure and validates the edge configuration.
  *
+ * Also accepts an async seed ("Fetch High"): pass `async () => edges`
+ * instead of an array. Reads throw `NotReadyError` until the first value
+ * (cover the flow with `<Loading fallback>`); afterwards the store is an
+ * ordinary writable store. See {@link createNodeStore} for details.
+ *
  * @template TUserEdgeTypes - The user's custom edge types map (optional)
- * @param edges - Array of edge configurations to create
+ * @param edges - The edge configurations, or an async seed (a function returning a promise or an async iterable of them)
  * @returns A SolidJS store tuple [store, setStore] with properly typed Edge objects
  *
  * @example
@@ -117,12 +122,6 @@ type EdgesInput<TUserEdgeTypes extends EdgeTypes> = SolidFlowEdge<TUserEdgeTypes
  * - Supports all Edge properties (style, animated, selectable, etc.)
  * - Works seamlessly with both built-in and custom edge types
  * - Type errors prevent invalid type names or incorrect data structures
- */
-/**
- * Also accepts an async seed ("Fetch High"): pass `async () => edges`
- * instead of an array. Reads throw `NotReadyError` until the first value
- * (cover the flow with `<Loading fallback>`); afterwards the store is an
- * ordinary writable store. See {@link createNodeStore} for details.
  */
 export const createEdgeStore = <TUserEdgeTypes extends EdgeTypes = Record<string, never>>(
   edges:

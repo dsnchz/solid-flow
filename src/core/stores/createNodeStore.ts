@@ -52,8 +52,22 @@ type NodesInput<TUserNodeTypes extends NodeTypes> = SolidFlowNode<TUserNodeTypes
  * node types. When a specific node type is selected, TypeScript automatically infers the
  * required data structure and validates the node configuration.
  *
+ * Also accepts an async seed ("Fetch High"): pass `async () => nodes` —
+ * typically an API call — instead of an array. No memo required: the
+ * function goes straight to `createStore`'s projection derive, so reads
+ * throw `NotReadyError` until the first value (cover the flow with
+ * `<Loading fallback>`), and the graph retries them when the data lands.
+ * Afterwards the store is an ordinary writable store — draft writes and
+ * wholesale replacement work exactly like the array form.
+ *
+ * An async GENERATOR works the same way ("a value that keeps arriving"):
+ * `createNodeStore(async function* () { for await (const g of stream) yield g.nodes; })`
+ * is unsettled until the first yield, then every yield updates the store —
+ * the natural source for server-pushed / collaborative graphs (pair with a
+ * `live()` server function).
+ *
  * @template TUserNodeTypes - The user's custom node types map (optional)
- * @param nodes - Array of node configurations to create
+ * @param nodes - The node configurations, or an async seed (a function returning a promise or an async iterable of them)
  * @returns A SolidJS store tuple [store, setStore] with properly typed Node objects
  *
  * @example
@@ -114,21 +128,6 @@ type NodesInput<TUserNodeTypes extends NodeTypes> = SolidFlowNode<TUserNodeTypes
  * - Supports all Node properties (style, draggable, hidden, etc.)
  * - Works seamlessly with both built-in and custom node types
  * - Type errors prevent invalid type names or incorrect data structures
- */
-/**
- * Also accepts an async seed ("Fetch High"): pass `async () => nodes` —
- * typically an API call — instead of an array. No memo required: the
- * function goes straight to `createStore`'s projection derive, so reads
- * throw `NotReadyError` until the first value (cover the flow with
- * `<Loading fallback>`), and the graph retries them when the data lands.
- * Afterwards the store is an ordinary writable store — draft writes and
- * wholesale replacement work exactly like the array form.
- *
- * An async GENERATOR works the same way ("a value that keeps arriving"):
- * `createNodeStore(async function* () { for await (const g of stream) yield g.nodes; })`
- * is unsettled until the first yield, then every yield updates the store —
- * the natural source for server-pushed / collaborative graphs (pair with a
- * `live()` server function).
  */
 export const createNodeStore = <TUserNodeTypes extends NodeTypes = Record<string, never>>(
   nodes:

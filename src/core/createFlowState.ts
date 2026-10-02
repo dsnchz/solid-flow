@@ -87,13 +87,6 @@ const getInitialViewport = (
 };
 
 /**
- * The headless data graph: writable roots, the projection DAG, the internal
- * store surface, and the public FlowState/FlowCommands structs — no DOM, no
- * components. The DOM seams (measurement ingest, media queries, built-in
- * renderer maps) are injected by createSolidFlow; commands invoked by user
- * code may read injected DOM handles (domNode, panZoom) at call time.
- */
-/**
  * Plain enumerable getters over a signal-held props object, one per key —
  * merge-compatible (no proxy, no memo) so the merged store stays a plain
  * object with bound getters. See the `store` construction below.
@@ -113,6 +106,13 @@ const propGetters = <T extends object, K extends keyof T>(
   return out;
 };
 
+/**
+ * The headless data graph: writable roots, the projection DAG, the internal
+ * store surface, and the public FlowState/FlowCommands structs — no DOM, no
+ * components. The DOM seams (measurement ingest, media queries, built-in
+ * renderer maps) are injected by createSolidFlow; commands invoked by user
+ * code may read injected DOM handles (domNode, panZoom) at call time.
+ */
 export const createFlowState = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   props: SolidFlowProps<NodeType, EdgeType>,
   injections: FlowStateInjections = {},

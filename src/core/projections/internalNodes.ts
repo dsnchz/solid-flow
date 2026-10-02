@@ -114,12 +114,6 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly elevateNodesOnSelect: boolean;
   readonly zIndexMode?: ZIndexMode;
   /**
-   * Called (untracked, plain) whenever a row's derive lands a different
-   * absolute position or size — the graph's geometry "version" for consumers
-   * that sample instead of subscribe (the minimap's bounds). Not reactive
-   * state by design: a signal write inside a derive is forbidden.
-   */
-  /**
    * Called with a row's absolute rect (and parentId) whenever it changes, and
    * with `null` when the row is removed — the one place geometry is known the
    * moment it changes. Gesture starts read the resulting plain map instead of

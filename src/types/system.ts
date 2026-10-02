@@ -134,11 +134,9 @@ export type OnResizeStart = SystemOnResizeStart;
 /** Handler called while a selection of nodes is dragged. */
 export type OnSelectionDrag<NodeType extends NodeBase = NodeBase> = SystemOnSelectionDrag<NodeType>;
 
-/** Pro/attribution options (`hideAttribution`). */
 /**
  * Attribution options (formerly exported by @xyflow/system; the export was
  * removed in 0.0.81, so the shape lives here now — upstream parity).
- * If you hide the attribution, please support the xyflow project.
  */
 export type ProOptions = {
   account?: string;

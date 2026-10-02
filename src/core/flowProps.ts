@@ -435,6 +435,12 @@ export type SolidFlowConnectionProps<NodeType extends Node = Node, EdgeType exte
    * @default true
    */
   readonly autoPanOnConnect?: boolean;
+  /**
+   * This callback can be used to validate a new connection.
+   * If you return `false`, the edge will not be added to your flow.
+   * If you have custom connection logic its preferred to use this callback over the
+   * `isValidConnection` prop on the handle component for performance reasons.
+   */
   readonly isValidConnection?: IsValidConnection<EdgeType>;
 };
 
@@ -495,12 +501,6 @@ export type SolidFlowRenderingProps = {
    * @default true
    */
   readonly elevateEdgesOnSelect?: boolean;
-  /**
-   * This callback can be used to validate a new connection.
-   * If you return `false`, the edge will not be added to your flow.
-   * If you have custom connection logic its preferred to use this callback over the
-   * `isValidConnection` prop on the handle component for performance reasons.
-   */
   /**
    * Set position of the attribution
    * @default 'bottom-right'
