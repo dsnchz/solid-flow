@@ -35,9 +35,15 @@ export const createInitialFitView = (source: InitialFitViewSource) => {
   );
 
   return {
-    /** Arms the initial fit with the `fitView` prop: false never fits. */
+    /**
+     * Arms the initial fit with the `fitView` prop: false never fits. Each
+     * mount arms it and waits for its own measuring pass: under a provider
+     * the state outlives the flow, and the previous flow's pass says nothing
+     * about the new nodes.
+     */
     arm: (fitView: boolean) => {
       applied = !fitView;
+      nodesMeasured = false;
     },
     /** Marks the first measuring pass complete (may fire the fit). */
     markNodesMeasured: () => {

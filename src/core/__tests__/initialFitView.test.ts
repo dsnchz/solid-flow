@@ -70,4 +70,27 @@ describe("createInitialFitView", () => {
     expect(fits()).toBe(0);
     dispose();
   });
+
+  it("a re-arm waits for its own measuring pass (a new flow on a provider's state)", () => {
+    // Under SolidFlowProvider the state outlives each <SolidFlow>: the next
+    // one arms again and mounts a new pan-zoom. The previous flow's measured
+    // nodes must not fire its fit: none of its own nodes has a size yet.
+    const { initialFitView, setReady, fits, dispose } = setup();
+    initialFitView.arm(true);
+    initialFitView.markNodesMeasured();
+    setReady(true);
+    flush();
+    expect(fits()).toBe(1);
+
+    setReady(false);
+    flush();
+    initialFitView.arm(true);
+    setReady(true);
+    flush();
+    expect(fits()).toBe(1);
+
+    initialFitView.markNodesMeasured();
+    expect(fits()).toBe(2);
+    dispose();
+  });
 });
