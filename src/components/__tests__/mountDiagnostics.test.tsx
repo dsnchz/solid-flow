@@ -9,19 +9,14 @@ import { useInternalSolidFlow } from "@/contexts";
 import { Background, Controls, MiniMap, NodeResizer } from "@/plugins";
 import type { Edge, Node } from "@/types";
 
-// Mounting a flow with the built-in nodes, edges and plugins may emit only
-// the dev diagnostics that fire by design (docs/ARCHITECTURE.md, "Reactive
-// nodes are named"); anything else the engine names is a finding. The one
-// that motivated this: STRICT_READ_UNTRACKED, a reactive value read outside
-// any tracking scope — a prop or flow setting that stops following changes
-// after mount (Handle's `clickConnect`, found this way).
-//
-// By design, with the reason:
-// - `resolvedEdges.row` (~38 sources): an edge's layout reads every key of
-//   the edge and both endpoints' geometry; any of them changing must re-lay it.
-// (NodeWrapper's element effect was here too: its class is its own effect
-// now, and neither crosses the line.)
-const BY_DESIGN: ReadonlySet<string> = new Set(["WIDE_SCOPE_DEPS:resolvedEdges.row"]);
+// Mounting a flow with the built-in nodes, edges and plugins emits no dev
+// diagnostic (docs/ARCHITECTURE.md, "Reactive nodes are named"): anything
+// the engine names is a finding. The one that motivated this:
+// STRICT_READ_UNTRACKED, a reactive value read outside any tracking scope — a
+// prop or flow setting that stops following changes after mount (Handle's
+// `clickConnect`, found this way). The per-row WIDE_SCOPE_DEPS of the edge
+// row and the node element were allowed here until each got under the line
+// (endpoint versions; the class as its own effect).
 const nodes: Node[] = [
   {
     id: "in",
@@ -62,18 +57,16 @@ const unexpectedDiagnostics = async (mount: () => void): Promise<string[]> => {
       },
     },
   );
-  const unexpected = artifact.diagnostics
-    .map((d) =>
-      d.code === "STRICT_READ_UNTRACKED"
-        ? `${d.code}:${d.data?.strictRead ?? ""} (${d.nodeName ?? "?"})`
-        : `${d.code}:${d.nodeName ?? d.ownerName ?? ""}`,
-    )
-    .filter((key) => !BY_DESIGN.has(key));
+  const unexpected = artifact.diagnostics.map((d) =>
+    d.code === "STRICT_READ_UNTRACKED"
+      ? `${d.code}:${d.data?.strictRead ?? ""} (${d.nodeName ?? "?"})`
+      : `${d.code}:${d.nodeName ?? d.ownerName ?? ""}`,
+  );
   return [...new Set(unexpected)];
 };
 
 describe("mount diagnostics", () => {
-  it("mounting a flow with built-in nodes, edges and plugins emits only by-design diagnostics", async () => {
+  it("mounting a flow with built-in nodes, edges and plugins emits no diagnostics", async () => {
     expect(
       await unexpectedDiagnostics(() =>
         render(() => (
@@ -87,7 +80,7 @@ describe("mount diagnostics", () => {
     ).toEqual([]);
   });
 
-  it("nodes carrying a NodeResizer emit only by-design diagnostics", async () => {
+  it("nodes carrying a NodeResizer emit no diagnostics", async () => {
     const ResizableNode = () => <NodeResizer />;
     const resizable = nodes.map((node) => ({ ...node, type: "resizable" }));
     expect(
@@ -105,7 +98,7 @@ describe("mount diagnostics", () => {
     ).toEqual([]);
   });
 
-  it("custom edges carrying EdgeReconnectAnchors emit only by-design diagnostics", async () => {
+  it("custom edges carrying EdgeReconnectAnchors emit no diagnostics", async () => {
     const AnchoredEdge = () => (
       <>
         <EdgeReconnectAnchor type="source" position={{ x: 0, y: 0 }} />
@@ -128,7 +121,7 @@ describe("mount diagnostics", () => {
     ).toEqual([]);
   });
 
-  it("a controlled flow fed by signals emits only by-design diagnostics", async () => {
+  it("a controlled flow fed by signals emits no diagnostics", async () => {
     // The seed is read once at setup (later changes arrive through the
     // controlled reset effects): those reads must be marked untracked, or
     // every signal-backed `nodes`/`edges` prop warns. Found by the hydration lane.
@@ -141,7 +134,7 @@ describe("mount diagnostics", () => {
     ).toEqual([]);
   });
 
-  it("a programmatic viewport change emits only by-design diagnostics", async () => {
+  it("a programmatic viewport change emits no diagnostics", async () => {
     // setViewport syncs d3-zoom's transform, which calls the pan/zoom
     // callbacks synchronously inside the flow's effect: any signal they read
     // there must be marked untracked. Found through the MiniMap test.

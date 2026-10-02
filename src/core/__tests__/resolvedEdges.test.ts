@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { Position } from "@xyflow/system";
-import { createEffect, createRoot, createStore, flush } from "solid-js";
+import { createEffect, createRoot, createSignal, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import type { Edge, InternalNode, Node } from "@/types";
@@ -67,6 +67,8 @@ const makeSource = (edges: Edge[], nodes: InternalNode[]) => {
     elevateEdgesOnSelect: true,
     zIndexMode: "auto",
     nodeLookup,
+    // A plain map: the derives re-run through edge writes in these tests.
+    endpointVersion: () => 0,
   };
   return { source, setEdgesStore, nodeLookup };
 };
@@ -241,6 +243,7 @@ describe("createResolvedEdges (core, headless)", () => {
       elevateEdgesOnSelect: false,
       zIndexMode: "auto",
       nodeLookup,
+      endpointVersion: () => 0,
     };
 
     const { resolved, dispose } = createRoot((dispose) => ({
@@ -344,9 +347,13 @@ describe("createResolvedEdges — re-layout of the same edge", () => {
       [{ id: "e1", source: "a", target: "b", label: "first", data: { weight: 1 } }] as Edge[],
       [],
     );
+    // The endpoints' version, bumped with every geometry write (the
+    // internalNodes row derive does that in the flow).
+    const [version, setVersion] = createSignal(0);
     const tracked: ResolvedEdgesSource<Node, Edge> = {
       ...source,
       nodeLookup: { get: (id) => nodes[id], size: 2 },
+      endpointVersion: () => version(),
     };
     let resolved!: ReturnType<typeof createResolvedEdges<Node, Edge>>;
     let dispose!: () => void;
@@ -380,6 +387,7 @@ describe("createResolvedEdges — re-layout of the same edge", () => {
     setNodes((draft) => {
       draft.b!.internals.positionAbsolute.x = 400;
     });
+    setVersion((v) => v + 1);
     flush();
     expect(resolved.e1).toBe(before);
     expect(resolved.e1!.targetX).not.toBe(200 + 46 + 4);

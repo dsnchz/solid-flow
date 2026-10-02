@@ -16,8 +16,7 @@ import { scenarios } from "./scenarios";
  *
  * 1. Hydration neither throws nor warns (the dev runtime warns on a claim
  *    mismatch and on server nodes left unclaimed, and throws when it would
- *    have to create DOM). The by-design dev diagnostics are not warnings
- *    about hydration and are filtered (mountDiagnostics.test.tsx pins them).
+ *    have to create DOM), and no other dev diagnostic fires either.
  * 2. Every node and edge element the server rendered is the element the
  *    client ends up with — claimed, never re-created — after hydration,
  *    after the measurement pass, and after a state update; and hydration
@@ -31,7 +30,6 @@ import { scenarios } from "./scenarios";
  *    server from its own copy of the element, so this is what keeps the two
  *    copies in step.
  */
-const BY_DESIGN_DIAGNOSTIC = /^\[WIDE_SCOPE_DEPS\] memo "resolvedEdges\.row"/;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -170,10 +168,7 @@ describe("hydration lane — client hydrate", () => {
         expect(clicked.classList.contains("selected")).toBe(true);
 
         // (1) no hydration warnings, no errors
-        const warnings = warn.mock.calls
-          .map((args) => String(args[0]))
-          .filter((message) => !BY_DESIGN_DIAGNOSTIC.test(message));
-        expect(warnings).toEqual([]);
+        expect(warn.mock.calls.map((args) => String(args[0]))).toEqual([]);
         expect(error.mock.calls.map((args) => String(args[0]))).toEqual([]);
       } finally {
         warn.mockRestore();

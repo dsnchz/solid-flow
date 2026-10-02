@@ -6,7 +6,11 @@ import { describe, expect, it } from "vitest";
 import type { Edge, Node } from "@/types";
 
 import { RecordMapFacade } from "../facades";
-import { createInternalNodes, type NodeMeasurements } from "../projections/internalNodes";
+import {
+  createInternalNodes,
+  type EndpointVersions,
+  type NodeMeasurements,
+} from "../projections/internalNodes";
 import { createResolvedEdges } from "../projections/resolvedEdges";
 
 const makeNode = (id: string, x: number): Node => ({
@@ -68,7 +72,9 @@ describe("integration: resolvedEdges over chained internalNodes sub-stores", () 
         { id: "e3", source: "c", target: "d" },
       ]);
 
+      const endpointVersions: EndpointVersions = new Map();
       const internalNodes = createInternalNodes({
+        endpointVersions,
         selectionOverlay: {},
         dragOverlay: {},
         get nodes() {
@@ -90,6 +96,7 @@ describe("integration: resolvedEdges over chained internalNodes sub-stores", () 
       void nodeLookup.get("a")?.internals.positionAbsolute.x;
 
       const resolved = createResolvedEdges({
+        endpointVersion: (id) => endpointVersions.get(id)?.endpoint,
         selectionOverlay: {},
         get edges() {
           return edges;
@@ -197,5 +204,132 @@ describe("integration: resolvedEdges over chained internalNodes sub-stores", () 
       expect(sourceXSeen.value).toBeTypeOf("number");
       dispose();
     }
+  });
+});
+
+describe("integration: an edge row follows its endpoints' versions", () => {
+  // The edge row subscribes to each endpoint's version and reads the
+  // geometry untracked: every geometry input must bump the version, and
+  // nothing else may.
+  const setup = (nodes: Node[]) =>
+    createRoot((dispose) => {
+      const [nodesStore, setNodes] = createStore<Node[]>(nodes);
+      const [measurements, setMeasurements] = createStore<NodeMeasurements>({});
+      const [edges] = createStore<Edge[]>([{ id: "e1", source: "a", target: "b" }]);
+      const endpointVersions: EndpointVersions = new Map();
+      const internalNodes = createInternalNodes({
+        endpointVersions,
+        selectionOverlay: {},
+        dragOverlay: {},
+        get nodes() {
+          return nodesStore;
+        },
+        get measurements() {
+          return measurements;
+        },
+        nodeOrigin: [0, 0],
+        nodeExtent: [
+          [-Infinity, -Infinity],
+          [Infinity, Infinity],
+        ],
+        elevateNodesOnSelect: true,
+      });
+      // The edge row reads the selection sidecar once per run: a counting
+      // getter counts the edge's derive runs.
+      let edgeRuns = 0;
+      const resolved = createResolvedEdges({
+        endpointVersion: (id) => endpointVersions.get(id)?.endpoint,
+        get selectionOverlay() {
+          edgeRuns++;
+          return {};
+        },
+        get edges() {
+          return edges;
+        },
+        connectionMode: "strict",
+        defaultEdgeOptions: {},
+        elevateEdgesOnSelect: true,
+        zIndexMode: undefined,
+        nodeLookup: new RecordMapFacade(internalNodes),
+      });
+      const measure = (id: string, bounds = hb(id)) =>
+        setMeasurements((draft) => {
+          draft[id] = {
+            measured: { width: 100, height: 40 },
+            handleSource: bounds.source,
+            handleTarget: bounds.target,
+          };
+          return undefined;
+        });
+      return { dispose, setNodes, measure, resolved, edgeRuns: () => edgeRuns };
+    });
+
+  it("re-lays the edge when an endpoint moves, is measured, or its handles move", () => {
+    const { dispose, setNodes, measure, resolved } = setup([makeNode("a", 0), makeNode("b", 200)]);
+    flush();
+    expect(resolved.e1).toBeUndefined();
+
+    measure("a");
+    measure("b");
+    flush();
+    expect(resolved.e1!.sourceX).toBe(50);
+
+    setNodes((draft) => {
+      draft[0]!.position = { x: 30, y: 0 };
+      return undefined;
+    });
+    flush();
+    expect(resolved.e1!.sourceX).toBe(80);
+
+    const moved = hb("a");
+    moved.source[0]!.x = 76;
+    measure("a", moved);
+    flush();
+    expect(resolved.e1!.sourceX).toBe(110);
+    dispose();
+  });
+
+  it("re-lays the edge when an unmeasured endpoint's own handles change", () => {
+    const withHandles = (id: string, x: number, handleX: number): Node => ({
+      ...makeNode(id, x),
+      handles: [
+        { type: "source", position: Position.Bottom, x: handleX, y: 36, width: 8, height: 8 },
+        { type: "target", position: Position.Top, x: handleX, y: -4, width: 8, height: 8 },
+      ],
+    });
+    const { dispose, setNodes, resolved } = setup([
+      withHandles("a", 0, 46),
+      withHandles("b", 200, 46),
+    ]);
+    flush();
+    expect(resolved.e1!.sourceX).toBe(50);
+
+    setNodes((draft) => {
+      draft[0] = withHandles("a", 0, 6);
+      return undefined;
+    });
+    flush();
+    expect(resolved.e1!.sourceX).toBe(10);
+    dispose();
+  });
+
+  it("re-runs no edge row for an endpoint change the edge does not draw from", () => {
+    const { dispose, setNodes, measure, resolved, edgeRuns } = setup([
+      makeNode("a", 0),
+      makeNode("b", 200),
+    ]);
+    measure("a");
+    measure("b");
+    flush();
+    void resolved.e1;
+    const runs = edgeRuns();
+
+    setNodes((draft) => {
+      draft[0]!.data = { label: "renamed" };
+      return undefined;
+    });
+    flush();
+    expect(edgeRuns()).toBe(runs);
+    dispose();
   });
 });

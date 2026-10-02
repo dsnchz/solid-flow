@@ -128,7 +128,29 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
    * walking every row through the store proxies (bench round 23).
    */
   readonly onGeometryChange?: (id: string, rect: NodeGeometry | null) => void;
+  /** Filled with each row's endpoint version (see EndpointVersions). */
+  readonly endpointVersions?: EndpointVersions;
 };
+
+/**
+ * Per node id, the row store's `endpoint`: a counter that changes whenever
+ * anything an edge draws from the node changes (its absolute position, size,
+ * measured size, handles). An edge's row reads the two counters and the
+ * endpoints' geometry untracked, so it subscribes to two sources instead of
+ * a dozen leaves of each endpoint.
+ */
+export type EndpointVersions = Map<string, { readonly endpoint?: number }>;
+
+/** Whether anything an edge draws from the node differs between two states. */
+const endpointChanged = (prev: RowState, next: RowState): boolean =>
+  next.x !== prev.x ||
+  next.y !== prev.y ||
+  next.width !== prev.width ||
+  next.height !== prev.height ||
+  next.measuredWidth !== prev.measuredWidth ||
+  next.measuredHeight !== prev.measuredHeight ||
+  next.handleSource !== prev.handleSource ||
+  next.handleTarget !== prev.handleTarget;
 
 const EMPTY_AUTO_INDEX: ReadonlyMap<string, number> = new Map();
 
@@ -255,8 +277,10 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       let lastUser: NodeType | undefined;
       let lastUserNode: NodeType | undefined;
       let last: RowState | undefined;
-      const store: { row: InternalNode<NodeType> } = createProjection<{
+      let endpoint = 0;
+      const store: { row: InternalNode<NodeType>; endpoint?: number } = createProjection<{
         row: InternalNode<NodeType>;
+        endpoint?: number;
       }>(
         (draft) => {
           // the accessor tracks the item slot: a controlled array reset swaps
@@ -306,12 +330,22 @@ export const createInternalNodes = <NodeType extends Node = Node>(
 
           const prev = last;
           last = next;
+          // The user's `handles` (unmeasured handle positions) are an
+          // endpoint input too; they arrive on the reconcile path.
+          if (
+            prev === undefined ||
+            endpointChanged(prev, next) ||
+            user.handles !== lastUser?.handles
+          ) {
+            endpoint++;
+          }
           if (prev === undefined || user !== lastUser || userNode !== lastUserNode) {
             lastUser = user;
             lastUserNode = userNode;
-            return { row: buildRow(user, userNode, next) };
+            return { row: buildRow(user, userNode, next), endpoint };
           }
           writeChangedLeaves(draft.row, prev, next);
+          if (draft.endpoint !== endpoint) draft.endpoint = endpoint;
           return undefined;
         },
         {},
@@ -320,6 +354,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
 
       const entry = { store, index };
       entryById.set(id, entry);
+      source.endpointVersions?.set(id, store);
       // mapArray creates replacement rows BEFORE disposing removed ones, so
       // only delete the registration this row actually owns.
       onCleanup(() => {
@@ -327,6 +362,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           entryById.delete(id);
           source.onGeometryChange?.(id, null);
         }
+        if (source.endpointVersions?.get(id) === store) source.endpointVersions.delete(id);
       });
 
       return { id, store };

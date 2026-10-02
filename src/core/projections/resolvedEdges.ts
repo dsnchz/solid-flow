@@ -5,7 +5,7 @@ import {
   type Rect,
   type ZIndexMode,
 } from "@xyflow/system";
-import { createMemo, createProjection, mapArray, onCleanup } from "solid-js";
+import { createMemo, createProjection, mapArray, onCleanup, untrack } from "solid-js";
 
 import type { DefaultEdgeOptions, Edge, InternalNode, Node, ResolvedEdge } from "@/types";
 
@@ -27,6 +27,12 @@ export type ResolvedEdgesSource<NodeType extends Node = Node, EdgeType extends E
   readonly zIndexMode?: ZIndexMode;
   readonly onError?: OnError;
   readonly nodeLookup: Pick<Map<string, InternalNode<NodeType>>, "get" | "size">;
+  /**
+   * A node's endpoint version (internalNodes' EndpointVersions): changes
+   * whenever anything an edge draws from the node does. Read tracked, then
+   * the endpoints' geometry untracked.
+   */
+  readonly endpointVersion: (nodeId: string) => number | undefined;
   /** Called with the edge's segment box whenever it changes, null when the row is gone. */
   readonly onGeometryChange?: (id: string, box: Rect | null) => void;
 };
@@ -136,7 +142,10 @@ type EdgeSettings = Pick<
 >;
 
 const buildRow = <NodeType extends Node, EdgeType extends Edge>(
-  source: Pick<ResolvedEdgesSource<NodeType, EdgeType>, "nodeLookup" | "selectionOverlay">,
+  source: Pick<
+    ResolvedEdgesSource<NodeType, EdgeType>,
+    "nodeLookup" | "selectionOverlay" | "endpointVersion"
+  >,
   settings: EdgeSettings,
   edge: EdgeType,
 ): ResolvedEdge<EdgeType> | null => {
@@ -154,15 +163,23 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
     return null;
   }
 
-  const edgePosition = getEdgePosition({
-    id: fields.id,
-    sourceNode,
-    targetNode,
-    sourceHandle: fields.sourceHandle || null,
-    targetHandle: fields.targetHandle || null,
-    connectionMode: settings.connectionMode as ConnectionMode,
-    onError: settings.onError,
-  });
+  // The endpoints' geometry (position, size, handles) is a dozen leaves of
+  // each node: subscribe to each node's endpoint version instead, and read
+  // the geometry untracked (the dev runtime's WIDE_SCOPE_DEPS flagged every
+  // edge at ~35 sources).
+  source.endpointVersion(fields.source);
+  source.endpointVersion(fields.target);
+  const edgePosition = untrack(() =>
+    getEdgePosition({
+      id: fields.id,
+      sourceNode,
+      targetNode,
+      sourceHandle: fields.sourceHandle || null,
+      targetHandle: fields.targetHandle || null,
+      connectionMode: settings.connectionMode as ConnectionMode,
+      onError: settings.onError,
+    }),
+  );
 
   if (!edgePosition) return null;
 

@@ -43,6 +43,7 @@ import { createConnections } from "./projections/connections";
 import { createEdgeLookup } from "./projections/edgeLookup";
 import {
   createInternalNodes,
+  type EndpointVersions,
   type NodeGeometry,
   type NodeMeasurements,
 } from "./projections/internalNodes";
@@ -214,7 +215,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const nodeGeometryFeed = createGeometryFeed<NodeGeometry>("nodeGeometry");
   const nodeGeometry = nodeGeometryFeed.map;
   const edgeGeometryFeed = createGeometryFeed<Rect>("edgeGeometry");
+  // Each node's endpoint version, filled by the row derive and read by the
+  // edge rows (one source per endpoint instead of its geometry leaves).
+  const endpointVersions: EndpointVersions = new Map();
   const internalNodes = createInternalNodes<NodeType>({
+    endpointVersions,
     get nodes() {
       return nodesStore;
     },
@@ -631,6 +636,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // across derive re-runs. Replaces the mapArray layout effect + ReactiveMap.
   const resolvedEdges = createResolvedEdges<NodeType, EdgeType>({
     onGeometryChange: edgeGeometryFeed.report,
+    endpointVersion: (id) => endpointVersions.get(id)?.endpoint,
     get selectionOverlay() {
       return selectionOverlay.edges;
     },

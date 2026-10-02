@@ -9,8 +9,7 @@ import { centerOf, drag, expect, nodeById, test } from "./helpers";
 const SSR = "http://localhost:3020/";
 
 // The only dev diagnostics the page may print (docs/ARCHITECTURE.md): the
-// by-design wide scopes, and the two machine-speed findings the drag below
-// can trip on a slow runner: WASTED_RECOMPUTE on the row projections and the
+// two machine-speed findings the drag below can trip on a slow runner: WASTED_RECOMPUTE on the row projections and the
 // on-screen sweep memos (computes whose work is their writes and whose value
 // is `undefined`, which the diagnostic always counts as unchanged:
 // solidjs/solid#3715), and HOT_SCOPE_TIME on the row projections (the
@@ -18,7 +17,6 @@ const SSR = "http://localhost:3020/";
 // warning, a strict read, another scope, an error) fails.
 const ALLOWED_WARNING = new RegExp(
   [
-    String.raw`^\[WIDE_SCOPE_DEPS\]`,
     String.raw`^\[(WASTED_RECOMPUTE|HOT_SCOPE_TIME)\] memo "(internalNodes|resolvedEdges)\.row"`,
     String.raw`^\[WASTED_RECOMPUTE\] memo "onScreen(Node|Edge)Ids"`,
   ].join("|"),
