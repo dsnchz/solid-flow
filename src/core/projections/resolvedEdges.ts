@@ -140,8 +140,13 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   settings: EdgeSettings,
   edge: EdgeType,
 ): ResolvedEdge<EdgeType> | null => {
-  const sourceNode = source.nodeLookup.get(edge.source);
-  const targetNode = source.nodeLookup.get(edge.target);
+  // Every field read once: each read of the user's edge is a source of the
+  // row, and the fields below were each read twice (here and in the spread).
+  // The spread also subscribes to the edge's key set, so a field added later
+  // re-runs the row.
+  const fields = { ...edge };
+  const sourceNode = source.nodeLookup.get(fields.source);
+  const targetNode = source.nodeLookup.get(fields.target);
 
   // A hidden endpoint hides the edge (upstream parity, xyflow#5977): the
   // node's element is gone, so there is nothing to draw the edge to.
@@ -150,29 +155,29 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   }
 
   const edgePosition = getEdgePosition({
-    id: edge.id,
+    id: fields.id,
     sourceNode,
     targetNode,
-    sourceHandle: edge.sourceHandle || null,
-    targetHandle: edge.targetHandle || null,
+    sourceHandle: fields.sourceHandle || null,
+    targetHandle: fields.targetHandle || null,
     connectionMode: settings.connectionMode as ConnectionMode,
     onError: settings.onError,
   });
 
   if (!edgePosition) return null;
 
-  const selected = joinSelected(edge.selected, overlayEntry(source.selectionOverlay, edge.id));
+  const selected = joinSelected(fields.selected, overlayEntry(source.selectionOverlay, fields.id));
 
   return {
     ...settings.defaultEdgeOptions,
-    ...edge,
+    ...fields,
     selected,
     ...edgePosition,
     // The edge's OWN z only: the endpoint part (a selected or child node's
     // z) is added where the z is drawn (edgeEndpointZ), so a node selection
     // does not re-run this row, geometry included (bench round 65).
     zIndex: edgeOwnZ(
-      edge.zIndex ?? settings.defaultEdgeOptions.zIndex ?? 0,
+      fields.zIndex ?? settings.defaultEdgeOptions.zIndex ?? 0,
       selected,
       settings.elevateEdgesOnSelect,
       settings.zIndexMode,
