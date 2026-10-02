@@ -87,12 +87,9 @@ export const Controls = (props: ParentProps<ControlsProps>): JSX.Element => {
 
   const onToggleInteractivity = () => {
     const newValue = !getIsInteractive();
-
-    {
-      actions.setNodesDraggable(newValue);
-      actions.setNodesConnectable(newValue);
-      actions.setElementsSelectable(newValue);
-    }
+    actions.setNodesDraggable(newValue);
+    actions.setNodesConnectable(newValue);
+    actions.setElementsSelectable(newValue);
   };
 
   const buttonProps = () => ({

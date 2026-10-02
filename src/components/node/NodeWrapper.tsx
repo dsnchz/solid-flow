@@ -151,19 +151,17 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     const arrowKeyDiff = ARROW_KEY_DIFFS[event.key];
 
     if (draggable() && node().selected && arrowKeyDiff) {
-      {
-        // prevent default scrolling behavior on arrow key press when node is moved
-        event.preventDefault();
-        actions.setAriaLiveMessage(
-          store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
-            direction: event.key.replace("Arrow", "").toLowerCase(),
-            x: ~~node().internals.positionAbsolute.x,
-            y: ~~node().internals.positionAbsolute.y,
-          }),
-        );
+      // prevent default scrolling behavior on arrow key press when node is moved
+      event.preventDefault();
+      actions.setAriaLiveMessage(
+        store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
+          direction: event.key.replace("Arrow", "").toLowerCase(),
+          x: ~~node().internals.positionAbsolute.x,
+          y: ~~node().internals.positionAbsolute.y,
+        }),
+      );
 
-        actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
-      }
+      actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
     }
   };
 
