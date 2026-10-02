@@ -48,5 +48,14 @@ export default defineConfig({
       reuseExistingServer: true,
       stdout: "ignore",
     },
+    {
+      // The unmount-retention fixture (e2e/unmount.spec.ts): a bare flow,
+      // built for production (dev builds retain trees for diagnostics).
+      command:
+        "bunx vite build --config e2e/unmount/vite.config.ts && bunx vite preview --config e2e/unmount/vite.config.ts",
+      url: "http://localhost:3012",
+      reuseExistingServer: true,
+      stdout: "ignore",
+    },
   ],
 });
