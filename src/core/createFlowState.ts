@@ -142,7 +142,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const [elementsSelectable, setElementsSelectable] = createSignal(
     () => config().elementsSelectable,
   );
-  const [height, setHeight] = createSignal(() => config().height);
+  const [height, setHeight] = createSignal(() => config().height ?? 0);
   const minZoom = createMemo(() => config().minZoom, { name: "minZoom" });
   const maxZoom = createMemo(() => config().maxZoom, { name: "maxZoom" });
   const [nodesConnectable, setNodesConnectable] = createSignal(() => config().nodesConnectable);
@@ -154,7 +154,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const translateExtent = createMemo(() => config().translateExtent ?? infiniteExtent, {
     name: "translateExtent",
   });
-  const [width, setWidth] = createSignal(() => config().width);
+  const [width, setWidth] = createSignal(() => config().width ?? 0);
 
   // Key flags
   const [selectionKeyPressed, setSelectionKeyPressed] = createSignal(false);

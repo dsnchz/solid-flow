@@ -112,6 +112,18 @@ describe("FlowState struct", () => {
       },
     );
   });
+
+  it("sizes the container 0 x 0 until it is measured, unless width and height are given", async () => {
+    // Read before the first measurement (the minimap's first render divides
+    // by them): never undefined, as in React Flow and Svelte Flow.
+    await withFlow({ nodes: [], edges: [] }, ({ flow, store }) => {
+      expect([flow.width, flow.height]).toEqual([0, 0]);
+      expect([store.width, store.height]).toEqual([0, 0]);
+    });
+    await withFlow({ nodes: [], edges: [], width: 800, height: 600 }, ({ flow }) => {
+      expect([flow.width, flow.height]).toEqual([800, 600]);
+    });
+  });
 });
 
 describe("FlowCommands", () => {
