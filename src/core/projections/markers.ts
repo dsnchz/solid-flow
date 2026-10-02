@@ -36,7 +36,7 @@ export const createMarkerIndex = <EdgeType extends Edge = Edge>(
       (edgeAccessor) =>
         createMemo(
           () =>
-            createMarkerIds([edgeAccessor()] as Edge[], {
+            createMarkerIds([edgeAccessor()], {
               id: source.id,
               defaultColor: source.defaultColor ?? undefined,
               defaultMarkerStart: source.defaultMarkerStart,

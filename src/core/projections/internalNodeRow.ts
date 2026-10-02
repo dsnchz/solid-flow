@@ -191,21 +191,20 @@ export const buildRow = <NodeType extends Node>(
   user: NodeType,
   userNode: NodeType,
   state: RowState,
-): InternalNode<NodeType> =>
-  ({
-    ...user,
-    selected: state.selected,
-    position: { x: state.positionX, y: state.positionY },
-    dragging: state.dragging,
-    measured: { width: state.measuredWidth, height: state.measuredHeight },
-    internals: {
-      positionAbsolute: { x: state.x, y: state.y },
-      handleBounds: state.handleBounds,
-      z: state.z,
-      ...(state.rootParentIndex !== undefined ? { rootParentIndex: state.rootParentIndex } : {}),
-      userNode,
-    },
-  }) as InternalNode<NodeType>;
+): InternalNode<NodeType> => ({
+  ...user,
+  selected: state.selected,
+  position: { x: state.positionX, y: state.positionY },
+  dragging: state.dragging,
+  measured: { width: state.measuredWidth, height: state.measuredHeight },
+  internals: {
+    positionAbsolute: { x: state.x, y: state.y },
+    handleBounds: state.handleBounds,
+    z: state.z,
+    ...(state.rootParentIndex !== undefined ? { rootParentIndex: state.rootParentIndex } : {}),
+    userNode,
+  },
+});
 
 /**
  * The in-place path (measurement, overlay, drag, parent move): writes the

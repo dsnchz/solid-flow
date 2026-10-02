@@ -73,7 +73,7 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
     // directly.
     if (controlledEdges()) return;
     setEdgesStore((edges) => {
-      const next = systemAddEdge(edgeParams, edges as EdgeType[]);
+      const next = systemAddEdge(edgeParams, edges);
       // systemAddEdge returns the same array when the edge is invalid/duplicate
       if (next !== edges) {
         edges.push(next[next.length - 1]!);

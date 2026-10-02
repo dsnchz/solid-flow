@@ -334,7 +334,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // otherwise reads it before initialization.
   const edgeLookup = createEdgeLookup<EdgeType>({
     get edges() {
-      return edgesStore as EdgeType[];
+      return edgesStore;
     },
   });
   // The node view and the bounds are LAZY: a memo is eager by default and
@@ -435,10 +435,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return minZoom();
     },
     get edges(): EdgeType[] {
-      return edgesStore as EdgeType[];
+      return edgesStore;
     },
     get nodes(): NodeType[] {
-      return nodesStore as NodeType[];
+      return nodesStore;
     },
     get nodesConnectable() {
       return nodesConnectable();

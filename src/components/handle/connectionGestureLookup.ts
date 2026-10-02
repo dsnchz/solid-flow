@@ -4,7 +4,6 @@ import {
   getEventPosition,
   getHostForElement,
   type InternalNodeBase,
-  type IsValidConnection as SystemIsValidConnection,
   type NodeBase,
   pointToRendererPoint,
   type Rect,
@@ -121,7 +120,7 @@ export const buildConnectionGestureParams = <
       actions.setConnection(connection);
       flush();
     }) as unknown as UpdateConnection<InternalNodeBase>,
-    isValidConnection: store.isValidConnection as SystemIsValidConnection,
+    isValidConnection: store.isValidConnection,
     onConnectStart: store.onConnectStart,
     onConnectEnd: store.onConnectEnd,
     getTransform: () => store.transform,

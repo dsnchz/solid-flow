@@ -54,5 +54,5 @@ export function useNodesData<NodeType extends Node = Node>(
     return Array.isArray(idValues) ? nodesData : nodesData[0];
   });
 
-  return result as Accessor<NodeData<NodeType> | NodeData<NodeType>[] | undefined>;
+  return result;
 }

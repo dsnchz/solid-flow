@@ -107,8 +107,7 @@ export const renderResizeControl = <NodeType extends Node = Node>(
   const nodeId = () => props.nodeId ?? ctxNodeId();
   const isLineVariant = () => variant() === "line";
 
-  const controlPosition = () =>
-    parts.position() ?? ((isLineVariant() ? "right" : "bottom-right") as ControlPosition);
+  const controlPosition = () => parts.position() ?? (isLineVariant() ? "right" : "bottom-right");
 
   // Mount the resize controller on the control element (external system: XYResizer)
   const [resizer, setResizer] = createSignal<ReturnType<typeof XYResizer>>();
