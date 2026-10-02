@@ -1,5 +1,5 @@
 /**
- * The headless data graph (P3.2, design: .agent/planning/p32-flowstate.md).
+ * The headless data graph (docs/ARCHITECTURE.md, The data graph).
  *
  * Everything in src/core is DOM-free: writable roots + a DAG of keyed
  * projections deriving the flow's state, composed into the FlowState struct.

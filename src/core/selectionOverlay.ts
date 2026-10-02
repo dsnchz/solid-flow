@@ -7,7 +7,7 @@
  *
  * Entry lifecycle is CONFIRM-THEN-RELEASE: a selection command writes the
  * overlay entry and writes through to the row in the same pass; a release
- * effect (createFlowState) deletes the entry once it observes the row
+ * effect (core/overlayRelease.ts) deletes the entry once it observes the row
  * carrying the written value. On plain stores that is the next flush — the
  * row governs from then on, so later USER writes through their own store win
  * naturally. On optimistic stores the write-through reverts, the entry never

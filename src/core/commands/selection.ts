@@ -114,8 +114,8 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     joinSelected(edge.selected, overlayEntry(selectionOverlay.edges, edge.id));
 
   // Sidecar write + best-effort row write-through happen together; the
-  // release effect in createFlowState deletes the entry once the row
-  // confirms the value (see core/selectionOverlay.ts).
+  // release effect (core/overlayRelease.ts) deletes the entry once the
+  // row confirms the value (see core/selectionOverlay.ts).
   const writeOverlay = (kind: "nodes" | "edges", row: SelectableRow, value: boolean) => {
     setSelectionOverlay((draft) => {
       draft[kind][row.id] = { value, row };

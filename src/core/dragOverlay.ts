@@ -12,7 +12,7 @@ import type { XYPosition } from "@xyflow/system";
  * reverted (optimistic store) — the overlay governs. A row sitting at the
  * overlay's own position means the write-through landed — both agree. Any
  * OTHER row value is a genuine user/reconcile write — the row governs.
- * The release effect (createFlowState) additionally deletes confirmed
+ * The release effect (core/overlayRelease.ts) additionally deletes confirmed
  * entries post-gesture so an undo to the exact pre-drag position works on
  * plain stores.
  */

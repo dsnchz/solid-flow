@@ -164,8 +164,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const [zoomActivationKeyPressed, setZoomActivationKeyPressed] = createSignal(false);
 
   // Graph-membership seeding: the controlled/uncontrolled policy lives in
-  // core/seeding.ts (headless-tested); it creates the two writable roots and
-  // the reset/late-adoption effects.
+  // core/stores/seeding.ts (headless-tested); it creates the two writable
+  // roots and the reset/late-adoption effects.
   const { nodesStore, setNodesStore, edgesStore, setEdgesStore } = createSeededGraphStores<
     NodeType,
     EdgeType
