@@ -177,7 +177,11 @@ describe("integration: resolvedEdges over chained internalNodes sub-stores", () 
       // one node per flush, mirroring staggered ResizeObserver delivery
       for (const id of ["a", "b", "c", "d"]) {
         setMeasurements((draft) => {
-          draft[id] = { measured: { width: 100, height: 40 }, handleBounds: hb(id) };
+          draft[id] = {
+            measured: { width: 100, height: 40 },
+            handleSource: hb(id).source,
+            handleTarget: hb(id).target,
+          };
           return undefined;
         });
         flush();

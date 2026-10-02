@@ -1,4 +1,10 @@
-import type { CoordinateExtent, NodeHandleBounds, NodeOrigin, ZIndexMode } from "@xyflow/system";
+import type {
+  CoordinateExtent,
+  Handle,
+  NodeHandleBounds,
+  NodeOrigin,
+  ZIndexMode,
+} from "@xyflow/system";
 import { type Accessor, createMemo, createProjection, mapArray, onCleanup } from "solid-js";
 
 import type { InternalNode, Node } from "@/types";
@@ -59,13 +65,15 @@ const snapshotUserRow = <NodeType extends Node>(
 export type NodeMeasurement = {
   measured: { width: number; height: number };
   /**
-   * Cleared (not deleted) while the node is hidden, so unhiding re-measures.
-   * An immutable record (the ingest deep-freezes it): the stores serve it
-   * RAW by identity, so a changed measurement is a replaced slot and an
-   * equal one is no write at all — the row rebuild and the edge layouts
-   * compare it by reference.
+   * The node's source and target handles, each its own leaf: a pass that
+   * moves only the source handles leaves the readers of the target handles
+   * alone. Each list is immutable (the ingest deep-freezes it), so the stores
+   * serve it RAW by identity and an equal list is no write at all. Both are
+   * `undefined` until the node is measured, and again while it is hidden, so
+   * unhiding re-measures.
    */
-  handleBounds?: NodeHandleBounds;
+  handleSource?: Handle[] | null;
+  handleTarget?: Handle[] | null;
 };
 
 /**

@@ -4,6 +4,7 @@ import {
   type CoordinateExtent,
   getNodeDimensions,
   getNodePositionWithOrigin,
+  type Handle,
   isCoordinateExtent,
   isNumeric,
   type NodeBase,
@@ -80,7 +81,9 @@ export type RowState = {
   /** The node's dimensions as the geometry helpers resolve them. */
   readonly width: number;
   readonly height: number;
-  readonly handleBounds: NodeHandleBounds | undefined;
+  /** The measured handles, each list by identity; `undefined` until measured. */
+  readonly handleSource: Handle[] | null | undefined;
+  readonly handleTarget: Handle[] | null | undefined;
   readonly rootParentIndex: number | undefined;
 };
 
@@ -176,10 +179,17 @@ export const computeRowState = <NodeType extends Node>(
     z,
     width: dimensions.width,
     height: dimensions.height,
-    handleBounds: measurement?.handleBounds,
+    handleSource: measurement?.handleSource,
+    handleTarget: measurement?.handleTarget,
     rootParentIndex,
   };
 };
+
+/** The row's `internals.handleBounds` (a fresh container) from its state. */
+const handleBoundsOf = (state: RowState): NodeHandleBounds | undefined =>
+  state.handleSource === undefined
+    ? undefined
+    : { source: state.handleSource, target: state.handleTarget ?? null };
 
 /**
  * The fresh row of the reconcile path (a user change): the user snapshot
@@ -199,7 +209,7 @@ export const buildRow = <NodeType extends Node>(
   measured: { width: state.measuredWidth, height: state.measuredHeight },
   internals: {
     positionAbsolute: { x: state.x, y: state.y },
-    handleBounds: state.handleBounds,
+    handleBounds: handleBoundsOf(state),
     z: state.z,
     ...(state.rootParentIndex !== undefined ? { rootParentIndex: state.rootParentIndex } : {}),
     userNode,
@@ -230,10 +240,12 @@ export const writeChangedLeaves = <NodeType extends Node>(
     rowMeasured.height = next.measuredHeight;
   }
   const moved = next.x !== prev.x || next.y !== prev.y;
+  const handlesChanged =
+    next.handleSource !== prev.handleSource || next.handleTarget !== prev.handleTarget;
   if (
     moved ||
     next.z !== prev.z ||
-    next.handleBounds !== prev.handleBounds ||
+    handlesChanged ||
     next.rootParentIndex !== prev.rootParentIndex
   ) {
     const { internals } = row;
@@ -243,7 +255,19 @@ export const writeChangedLeaves = <NodeType extends Node>(
       positionAbsolute.y = next.y;
     }
     if (next.z !== prev.z) internals.z = next.z;
-    if (next.handleBounds !== prev.handleBounds) internals.handleBounds = next.handleBounds;
+    if (handlesChanged) {
+      // Each list is a leaf: a pass that moved one list leaves the readers of
+      // the other alone. The container is replaced only when the node gains
+      // or loses its measurement.
+      const bounds = internals.handleBounds;
+      if (next.handleSource === undefined || bounds === undefined) {
+        internals.handleBounds = handleBoundsOf(next);
+      } else {
+        if (next.handleSource !== prev.handleSource) bounds.source = next.handleSource;
+        const target = next.handleTarget ?? null;
+        if (target !== (prev.handleTarget ?? null)) bounds.target = target;
+      }
+    }
     if (next.rootParentIndex !== prev.rootParentIndex) {
       if (next.rootParentIndex === undefined) delete internals.rootParentIndex;
       else internals.rootParentIndex = next.rootParentIndex;

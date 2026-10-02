@@ -80,13 +80,20 @@ describe("computeRowState", () => {
     const node = makeNode({ id: "a", measured: { width: 1, height: 2 } });
     const state = computeRowState(
       node,
-      joins(node, { measurement: { measured: { width: 80, height: 30 }, handleBounds } }),
+      joins(node, {
+        measurement: {
+          measured: { width: 80, height: 30 },
+          handleSource: handleBounds.source,
+          handleTarget: handleBounds.target,
+        },
+      }),
       settings(),
       undefined,
     );
     expect([state.measuredWidth, state.measuredHeight]).toEqual([80, 30]);
     expect([state.width, state.height]).toEqual([80, 30]);
-    expect(state.handleBounds).toBe(handleBounds);
+    expect(state.handleSource).toBe(handleBounds.source);
+    expect(state.handleTarget).toBe(handleBounds.target);
 
     const seeded = computeRowState(node, joins(node), settings(), undefined);
     expect([seeded.measuredWidth, seeded.measuredHeight]).toEqual([1, 2]);
@@ -269,7 +276,8 @@ describe("writeChangedLeaves", () => {
       ...state,
       measuredWidth: 30,
       measuredHeight: 40,
-      handleBounds,
+      handleSource: handleBounds.source,
+      handleTarget: handleBounds.target,
     });
     expect(writes).toEqual([
       "measured.width",
@@ -279,5 +287,21 @@ describe("writeChangedLeaves", () => {
     ]);
     expect(row.measured).toEqual({ width: 30, height: 40 });
     expect("rootParentIndex" in row.internals).toBe(false);
+  });
+
+  it("writes a moved handle list as its own leaf, and drops the handles when unmeasured", () => {
+    const { node, state } = base();
+    const measured = { ...state, handleSource: handleBounds.source, handleTarget: null };
+    const row = buildRow(node, node, measured);
+    const { proxy, writes } = recordWrites(row);
+    const moved = [{ ...handleBounds.source![0]!, x: 9 }];
+    writeChangedLeaves(proxy, measured, { ...measured, handleSource: moved });
+    expect(writes).toEqual(["internals.handleBounds.source"]);
+    expect(row.internals.handleBounds).toEqual({ source: moved, target: null });
+
+    writes.length = 0;
+    writeChangedLeaves(proxy, { ...measured, handleSource: moved }, state);
+    expect(writes).toEqual(["internals.handleBounds"]);
+    expect(row.internals.handleBounds).toBeUndefined();
   });
 });

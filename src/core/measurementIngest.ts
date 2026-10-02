@@ -1,9 +1,4 @@
-import type {
-  Handle,
-  NodeDimensionChange,
-  NodeHandleBounds,
-  NodePositionChange,
-} from "@xyflow/system";
+import type { Handle, NodeDimensionChange, NodePositionChange } from "@xyflow/system";
 import { createEffect, type StoreSetter } from "solid-js";
 
 import type { Node } from "@/types";
@@ -43,25 +38,20 @@ const handleListEqual = (a: readonly Handle[] | null, b: readonly Handle[] | nul
 };
 
 /**
- * Handle bounds are immutable records: frozen objects are not wrappable, so
- * every store serves them RAW by identity — a row rebuild's reconcile and the
- * edge layouts compare them by reference, and an in-place row write of the
- * same record is a no-op.
+ * A handle list is immutable: frozen objects are not wrappable, so every
+ * store serves it RAW by identity, and a row write of the same list is a
+ * no-op.
  */
-const freezeHandleBounds = (bounds: NodeHandleBounds): NodeHandleBounds => {
-  for (const list of [bounds.source, bounds.target]) {
-    if (list === null) continue;
-    for (const handle of list) Object.freeze(handle);
-    Object.freeze(list);
-  }
-  return Object.freeze(bounds);
+const freezeHandles = (list: Handle[] | null): Handle[] | null => {
+  if (list === null) return null;
+  for (const handle of list) Object.freeze(handle);
+  Object.freeze(list);
+  return list;
 };
 
-/** Structural equality of a stored handle-bounds record and a pass's fresh one. */
-const handleBoundsEqual = (stored: NodeHandleBounds | undefined, next: NodeHandleBounds): boolean =>
-  stored !== undefined &&
-  handleListEqual(stored.source, next.source) &&
-  handleListEqual(stored.target, next.target);
+/** The stored list when it equals the pass's fresh one, else the fresh one frozen. */
+const nextHandles = (stored: Handle[] | null | undefined, next: Handle[] | null) =>
+  stored !== undefined && handleListEqual(stored, next) ? stored : freezeHandles(next);
 
 /**
  * The measurement ingest lifecycle (WP3): everything that flows FROM the DOM
@@ -82,12 +72,16 @@ export const createMeasurementIngest = <NodeType extends Node>({
       for (const write of writes) {
         const entry = draft[write.id];
         if (write.hidden) {
-          // Clear handle bounds (keep dimensions) so unhiding re-measures.
-          if (entry) entry.handleBounds = undefined;
+          // Clear the handles (keep dimensions) so unhiding re-measures.
+          if (entry) {
+            entry.handleSource = undefined;
+            entry.handleTarget = undefined;
+          }
         } else if (entry === undefined) {
           draft[write.id] = {
             measured: write.measured,
-            handleBounds: freezeHandleBounds(write.handleBounds),
+            handleSource: freezeHandles(write.handleBounds.source),
+            handleTarget: freezeHandles(write.handleBounds.target),
           };
         } else {
           // Leaf writes into the existing entry: an equal leaf is a no-op for
@@ -96,9 +90,8 @@ export const createMeasurementIngest = <NodeType extends Node>({
           // row and no edge (bench round 34).
           entry.measured.width = write.measured.width;
           entry.measured.height = write.measured.height;
-          if (!handleBoundsEqual(entry.handleBounds, write.handleBounds)) {
-            entry.handleBounds = freezeHandleBounds(write.handleBounds);
-          }
+          entry.handleSource = nextHandles(entry.handleSource, write.handleBounds.source);
+          entry.handleTarget = nextHandles(entry.handleTarget, write.handleBounds.target);
         }
       }
       return undefined;

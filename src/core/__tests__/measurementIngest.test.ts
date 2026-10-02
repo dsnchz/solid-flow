@@ -105,7 +105,7 @@ describe("createMeasurementIngest — applyMeasurementWrites", () => {
     ]);
     flush();
     const entryBefore = measurements["a"];
-    const boundsBefore = measurements["a"]!.handleBounds;
+    const handlesBefore = [measurements["a"]!.handleSource, measurements["a"]!.handleTarget];
 
     let widthRuns = 0;
     createRoot(() => {
@@ -126,9 +126,45 @@ describe("createMeasurementIngest — applyMeasurementWrites", () => {
     expect(internalNodes["a"]!.measured).toEqual({ width: 130, height: 60 });
     expect(widthRuns).toBe(2);
     expect(measurements["a"]).toBe(entryBefore);
-    // Equal handle bounds are not re-assigned.
-    expect(measurements["a"]!.handleBounds).toBe(boundsBefore);
+    // Equal handle lists are not re-assigned.
+    expect(measurements["a"]!.handleSource).toBe(handlesBefore[0]);
+    expect(measurements["a"]!.handleTarget).toBe(handlesBefore[1]);
     expect(runs()).toBe(3);
+  });
+
+  it("a pass that moves one handle list writes that list only", () => {
+    // The two lists are leaves (the dev runtime's IMMUTABLE_UPDATE_IN_STORE
+    // flagged the replaced record): a reader of the target handles does not
+    // re-run when only the source handles moved.
+    const { internalNodes, ingest } = createRoot(() => setup());
+    flush();
+    void internalNodes["a"];
+    ingest.applyMeasurementWrites([
+      { id: "a", measured: { width: 120, height: 60 }, handleBounds: handleBounds("a") },
+    ]);
+    flush();
+
+    let targetRuns = 0;
+    let sourceRuns = 0;
+    createRoot(() => {
+      createEffect(
+        () => internalNodes["a"]!.internals.handleBounds?.target,
+        () => void targetRuns++,
+      );
+      createEffect(
+        () => internalNodes["a"]!.internals.handleBounds?.source,
+        () => void sourceRuns++,
+      );
+    });
+    flush();
+
+    ingest.applyMeasurementWrites([
+      { id: "a", measured: { width: 120, height: 60 }, handleBounds: handleBounds("a", 90) },
+    ]);
+    flush();
+    expect(internalNodes["a"]!.internals.handleBounds!.source![0]!.x).toBe(90);
+    expect(sourceRuns).toBe(2);
+    expect(targetRuns).toBe(1);
   });
 
   it("the measured write-through after a pass does not re-run a handleBounds subscriber", () => {

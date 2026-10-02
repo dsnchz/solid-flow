@@ -18,6 +18,12 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   ...overrides,
 });
 
+/** A measurement's two handle leaves (the ingest stores them apart). */
+const measuredHandles = (nodeId: string) => {
+  const { source, target } = handleBounds(nodeId);
+  return { handleSource: source, handleTarget: target };
+};
+
 const handleBounds = (nodeId: string) => ({
   source: [
     {
@@ -195,7 +201,7 @@ describe("createInternalNodes (core, headless)", () => {
     expect(internalNodes.a!.internals.handleBounds).toBeUndefined();
 
     setMeasurements((draft) => {
-      draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
+      draft.a = { measured: { width: 120, height: 48 }, ...measuredHandles("a") };
       return undefined;
     });
     flush();
@@ -228,7 +234,7 @@ describe("createInternalNodes (core, headless)", () => {
   it("preserves measurements across a controlled nodes-array reset (two-root)", () => {
     const { internalNodes, setNodes, setMeasurements, dispose } = mount([makeNode({ id: "a" })]);
     setMeasurements((draft) => {
-      draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
+      draft.a = { measured: { width: 120, height: 48 }, ...measuredHandles("a") };
       return undefined;
     });
     flush();
@@ -250,15 +256,16 @@ describe("createInternalNodes (core, headless)", () => {
       makeNode({ id: "a", hidden: true }),
     ]);
     setMeasurements((draft) => {
-      draft.a = { measured: { width: 120, height: 48 }, handleBounds: handleBounds("a") };
+      draft.a = { measured: { width: 120, height: 48 }, ...measuredHandles("a") };
       return undefined;
     });
     flush();
     expect(internalNodes.a!.internals.handleBounds).toBeDefined();
 
-    // the ingest writes `handleBounds: undefined` for hidden nodes
+    // the ingest clears both handle lists for hidden nodes
     setMeasurements((draft) => {
-      draft.a!.handleBounds = undefined;
+      draft.a!.handleSource = undefined;
+      draft.a!.handleTarget = undefined;
       return undefined;
     });
     flush();
@@ -522,7 +529,7 @@ describe("createInternalNodes — the user row is enumerated once per user chang
     expect(afterMount).toBeGreaterThan(0);
 
     setMeasurements((draft) => {
-      draft["a"] = { measured: { width: 120, height: 60 }, handleBounds: handleBounds("a") };
+      draft["a"] = { measured: { width: 120, height: 60 }, ...measuredHandles("a") };
       return undefined;
     });
     flush();
@@ -754,7 +761,7 @@ describe("createInternalNodes — row writes land in place", () => {
     const positionAbsolute = row.internals.positionAbsolute;
 
     setMeasurements((draft) => {
-      draft["a"] = { measured: { width: 120, height: 60 }, handleBounds: handleBounds("a") };
+      draft["a"] = { measured: { width: 120, height: 60 }, ...measuredHandles("a") };
       return undefined;
     });
     flush();
