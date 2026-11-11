@@ -136,6 +136,24 @@ const segmentBox = (
   height: Math.abs(row.sourceY - row.targetY),
 });
 
+/**
+ * An endpoint as @xyflow/system's getEdgePosition needs it. Without measured
+ * handle bounds that helper falls back to the node's declared `handles` and
+ * WRITES into each handle object (toHandleBounds: `width`/`height` default
+ * to 1). A row store ignores those writes, so a handle declared without a
+ * size stayed unsized and the edge's coordinates came out NaN. Before
+ * measurement the helper gets plain copies of the declared handles to write
+ * into; once handle bounds are measured it reads those and the node goes
+ * through as is.
+ */
+const withWritableHandles = <NodeType extends Node>(
+  node: InternalNode<NodeType>,
+): InternalNode<NodeType> => {
+  const handles = node.handles;
+  if (node.internals.handleBounds || !handles?.length) return node;
+  return { ...node, handles: handles.map((handle) => ({ ...handle })) };
+};
+
 type EdgeSettings = Pick<
   ResolvedEdgesSource,
   "connectionMode" | "defaultEdgeOptions" | "elevateEdgesOnSelect" | "zIndexMode" | "onError"
@@ -172,8 +190,8 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   const edgePosition = untrack(() =>
     getEdgePosition({
       id: fields.id,
-      sourceNode,
-      targetNode,
+      sourceNode: withWritableHandles(sourceNode),
+      targetNode: withWritableHandles(targetNode),
       sourceHandle: fields.sourceHandle || null,
       targetHandle: fields.targetHandle || null,
       connectionMode: settings.connectionMode as ConnectionMode,

@@ -313,6 +313,22 @@ describe("integration: an edge row follows its endpoints' versions", () => {
     dispose();
   });
 
+  it("lays an unmeasured endpoint's own handles out at upstream's default size when they carry none", () => {
+    // `handles` without width/height: @xyflow/system sizes them 1x1 by
+    // writing into the handle objects, which a store row ignores.
+    const withUnsizedHandles = (id: string, x: number): Node => ({
+      ...makeNode(id, x),
+      handles: [
+        { type: "source", position: Position.Bottom, x: 50, y: 40 },
+        { type: "target", position: Position.Top, x: 50, y: 0 },
+      ],
+    });
+    const { dispose, resolved } = setup([withUnsizedHandles("a", 0), withUnsizedHandles("b", 200)]);
+    flush();
+    expect(resolved.e1).toMatchObject({ sourceX: 50.5, sourceY: 41, targetX: 250.5, targetY: 0 });
+    dispose();
+  });
+
   it("re-runs no edge row for an endpoint change the edge does not draw from", () => {
     const { dispose, setNodes, measure, resolved, edgeRuns } = setup([
       makeNode("a", 0),
