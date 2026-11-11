@@ -1,41 +1,24 @@
-import type { JSX } from "@solidjs/web";
 import { getSmoothStepPath } from "@xyflow/system";
-import { createMemo } from "solid-js";
 
 import type { SmoothStepEdgeProps } from "@/types";
 
-import { BaseEdge } from "./BaseEdge";
+import { createPathEdge } from "./pathEdge";
 
-/** Built-in smooth-step edge component. */
-export const SmoothStepEdge = (props: SmoothStepEdgeProps): JSX.Element => {
-  const pathData = createMemo(() => {
-    const [path, labelX, labelY] = getSmoothStepPath({
-      sourceX: props.sourceX,
-      sourceY: props.sourceY,
-      targetX: props.targetX,
-      targetY: props.targetY,
-      sourcePosition: props.sourcePosition,
-      targetPosition: props.targetPosition,
-      borderRadius: props.pathOptions?.borderRadius,
-      offset: props.pathOptions?.offset,
-      stepPosition: props.pathOptions?.stepPosition,
-    });
-
-    return { path, labelX, labelY };
+const smoothStepPath = (edge: SmoothStepEdgeProps) =>
+  getSmoothStepPath({
+    sourceX: edge.sourceX,
+    sourceY: edge.sourceY,
+    targetX: edge.targetX,
+    targetY: edge.targetY,
+    sourcePosition: edge.sourcePosition,
+    targetPosition: edge.targetPosition,
+    borderRadius: edge.pathOptions?.borderRadius,
+    offset: edge.pathOptions?.offset,
+    stepPosition: edge.pathOptions?.stepPosition,
   });
 
-  return (
-    <BaseEdge
-      id={props.id}
-      path={pathData().path}
-      labelX={pathData().labelX}
-      labelY={pathData().labelY}
-      label={props.label}
-      labelStyle={props.labelStyle}
-      markerStart={props.markerStart}
-      markerEnd={props.markerEnd}
-      interactionWidth={props.interactionWidth}
-      style={props.style}
-    />
-  );
-};
+/** Built-in smooth-step edge component. */
+export const SmoothStepEdge = createPathEdge(smoothStepPath, true);
+
+/** Renderer-internal smooth-step edge variant. */
+export const SmoothStepEdgeInternal = createPathEdge(smoothStepPath, false);

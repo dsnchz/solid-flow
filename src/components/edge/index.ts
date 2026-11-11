@@ -1,19 +1,13 @@
-// We distinguish between internal and exported edges
-// The internal edges are used directly like custom edges and always get an id, source and target props
-// If you import an edge from the library, the id is optional and source and target are not used at all
-
-// @todo: how can we prevent this duplication in ...Edge/ ...EdgeInternal?
-// both are quite similar, it's just about 1-2 props that are different
+// Each built-in edge shape exports two components from one path function
+// (pathEdge.tsx): the public one, whose optional `id` goes on the path, and
+// the renderer's ...Internal one, used like a custom edge, which leaves the
+// path without a DOM id.
 export { BaseEdge } from "./BaseEdge";
-export { BezierEdge } from "./BezierEdge";
-export { BezierEdgeInternal } from "./BezierEdgeInternal";
+export { BezierEdge, BezierEdgeInternal } from "./BezierEdge";
 export { EdgeLabel } from "./EdgeLabel";
 export { EdgeLabelRenderer } from "./EdgeLabelRenderer";
 export { EdgeReconnectAnchor } from "./EdgeReconnectAnchor";
 export { EdgeWrapper } from "./EdgeWrapper";
-export { SmoothStepEdge } from "./SmoothStepEdge";
-export { SmoothStepEdgeInternal } from "./SmoothStepEdgeInternal";
-export { StepEdge } from "./StepEdge";
-export { StepEdgeInternal } from "./StepEdgeInternal";
-export { StraightEdge } from "./StraightEdge";
-export { StraightEdgeInternal } from "./StraightEdgeInternal";
+export { SmoothStepEdge, SmoothStepEdgeInternal } from "./SmoothStepEdge";
+export { StepEdge, StepEdgeInternal } from "./StepEdge";
+export { StraightEdge, StraightEdgeInternal } from "./StraightEdge";

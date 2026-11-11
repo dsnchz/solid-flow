@@ -1,36 +1,22 @@
-import type { JSX } from "@solidjs/web";
 import { getStraightPath } from "@xyflow/system";
-import { createMemo } from "solid-js";
 
 import type { StraightEdgeProps } from "@/types";
 
-import { BaseEdge } from "./BaseEdge";
+import { createPathEdge } from "./pathEdge";
 
-/** Built-in straight edge component. */
-export const StraightEdge = (props: StraightEdgeProps): JSX.Element => {
-  const pathData = createMemo(() => {
-    const [path, labelX, labelY] = getStraightPath({
-      sourceX: props.sourceX,
-      sourceY: props.sourceY,
-      targetX: props.targetX,
-      targetY: props.targetY,
-    });
+// A straight edge ignores the handle sides: the renderer's variant does not take them.
+type StraightPathProps = Omit<StraightEdgeProps, "sourcePosition" | "targetPosition">;
 
-    return { path, labelX, labelY };
+const straightPath = (edge: StraightPathProps) =>
+  getStraightPath({
+    sourceX: edge.sourceX,
+    sourceY: edge.sourceY,
+    targetX: edge.targetX,
+    targetY: edge.targetY,
   });
 
-  return (
-    <BaseEdge
-      id={props.id}
-      path={pathData().path}
-      labelX={pathData().labelX}
-      labelY={pathData().labelY}
-      label={props.label}
-      labelStyle={props.labelStyle}
-      markerStart={props.markerStart}
-      markerEnd={props.markerEnd}
-      interactionWidth={props.interactionWidth}
-      style={props.style}
-    />
-  );
-};
+/** Built-in straight edge component. */
+export const StraightEdge = createPathEdge<StraightEdgeProps>(straightPath, true);
+
+/** Renderer-internal straight edge variant. */
+export const StraightEdgeInternal = createPathEdge(straightPath, false);

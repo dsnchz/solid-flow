@@ -1,40 +1,22 @@
-import type { JSX } from "@solidjs/web";
 import { getBezierPath } from "@xyflow/system";
-import { createMemo } from "solid-js";
 
 import type { BezierEdgeProps } from "@/types";
 
-import { BaseEdge } from "./BaseEdge";
+import { createPathEdge } from "./pathEdge";
 
-/** Built-in bezier edge component. */
-export const BezierEdge = (props: BezierEdgeProps): JSX.Element => {
-  // One path computation per input change: three getters read it (bench round 35).
-  const pathData = createMemo(() => {
-    const [path, labelX, labelY] = getBezierPath({
-      sourceX: props.sourceX,
-      sourceY: props.sourceY,
-      targetX: props.targetX,
-      targetY: props.targetY,
-      sourcePosition: props.sourcePosition,
-      targetPosition: props.targetPosition,
-      curvature: props.pathOptions?.curvature,
-    });
-
-    return { path, labelX, labelY };
+const bezierPath = (edge: BezierEdgeProps) =>
+  getBezierPath({
+    sourceX: edge.sourceX,
+    sourceY: edge.sourceY,
+    targetX: edge.targetX,
+    targetY: edge.targetY,
+    sourcePosition: edge.sourcePosition,
+    targetPosition: edge.targetPosition,
+    curvature: edge.pathOptions?.curvature,
   });
 
-  return (
-    <BaseEdge
-      id={props.id}
-      path={pathData().path}
-      labelX={pathData().labelX}
-      labelY={pathData().labelY}
-      label={props.label}
-      labelStyle={props.labelStyle}
-      markerStart={props.markerStart}
-      markerEnd={props.markerEnd}
-      interactionWidth={props.interactionWidth}
-      style={props.style}
-    />
-  );
-};
+/** Built-in bezier edge component. */
+export const BezierEdge = createPathEdge(bezierPath, true);
+
+/** Renderer-internal bezier edge variant. */
+export const BezierEdgeInternal = createPathEdge(bezierPath, false);
