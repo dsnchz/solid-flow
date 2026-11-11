@@ -55,6 +55,16 @@ const viteConfig = defineConfig({
 });
 
 const vitestConfig = defineConfig({
+  // The DOM-free core lane (`// @vitest-environment node` docblocks) runs
+  // through Vite's ssr environment, which @solidjs/vite-plugin resolves to
+  // Solid's SERVER build when the default environment is jsdom (no live
+  // reactivity there). That lane tests the client runtime, so its
+  // conditions are the client's.
+  ssr: {
+    resolve: {
+      conditions: ["development", "browser"],
+    },
+  },
   test: {
     globals: true,
     environment: "jsdom",

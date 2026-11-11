@@ -227,7 +227,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
   // id → row store (+ array position, to enforce the parents-first contract).
   const entryById = new Map<
     string,
-    { store: { row: InternalNode<NodeType> }; index: Accessor<number> }
+    { store: { row: InternalNode<NodeType> | null }; index: Accessor<number> }
   >();
 
   const rowStores = mapArray(
@@ -247,7 +247,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       const linkedParent = (parentId: string | undefined) => {
         if (!parentId) return undefined;
         const parentEntry = entryById.get(parentId);
-        if (parentEntry && parentEntry.index() < index()) return parentEntry.store.row;
+        if (parentEntry && parentEntry.index() < index()) return parentEntry.store.row ?? undefined;
         // Subscribe to membership so the row re-runs if the parent is added
         // (or reordered to the front) later.
         void source.nodes.length;
@@ -278,8 +278,10 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       let lastUserNode: NodeType | undefined;
       let last: RowState | undefined;
       let endpoint = 0;
-      const store: { row: InternalNode<NodeType>; endpoint?: number } = createProjection<{
-        row: InternalNode<NodeType>;
+      // Seeded with a null row (rowRecord's "not present"); the first run
+      // always returns a full row, so a reader never sees the seed.
+      const store: { row: InternalNode<NodeType> | null; endpoint?: number } = createProjection<{
+        row: InternalNode<NodeType> | null;
         endpoint?: number;
       }>(
         (draft) => {
@@ -344,11 +346,12 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             lastUserNode = userNode;
             return { row: buildRow(user, userNode, next), endpoint };
           }
-          writeChangedLeaves(draft.row, prev, next);
+          const row = draft.row;
+          if (row) writeChangedLeaves(row, prev, next);
           if (draft.endpoint !== endpoint) draft.endpoint = endpoint;
           return undefined;
         },
-        {},
+        { row: null },
         { key: "id", name: "internalNodes.row" },
       );
 

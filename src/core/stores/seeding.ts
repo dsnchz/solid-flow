@@ -4,6 +4,9 @@ import type { Edge, Node } from "@/types";
 
 import { seedNodeRow } from "../nodeSeed";
 
+/** A seed handed from an adoption effect's compute to its effect, which empties it. */
+type SeedBox<T> = { rows: T[] | undefined };
+
 /**
  * The graph-membership slice of the flow's props: the two controlled axes
  * and their uncontrolled counterparts. Expressed structurally so the
@@ -149,13 +152,11 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   // rows were deleted from the flow — the largest library-side retention in
   // the heap attribution (bench round 19).
   createEffect(
-    () => {
+    (): SeedBox<NodeType> | undefined => {
       const defaultNodes = config().defaultNodes;
       // Copy in the COMPUTE: row reads must happen in a tracking scope (the
       // body is untracked, and a pending source must throw HERE to hold).
-      return defaultNodes
-        ? { rows: copyNodeRows(defaultNodes) as NodeType[] | undefined }
-        : undefined;
+      return defaultNodes ? { rows: copyNodeRows(defaultNodes) } : undefined;
     },
     (box) => {
       const rows = box?.rows;
@@ -168,9 +169,9 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
     { name: "defaultNodesAdoption" },
   );
   createEffect(
-    () => {
+    (): SeedBox<EdgeType> | undefined => {
       const defaultEdges = config().defaultEdges;
-      return defaultEdges ? { rows: copyRows(defaultEdges) as EdgeType[] | undefined } : undefined;
+      return defaultEdges ? { rows: copyRows(defaultEdges) } : undefined;
     },
     (box) => {
       const rows = box?.rows;
