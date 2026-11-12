@@ -28,6 +28,7 @@ import { createSelectionCommands } from "./commands/selection";
 import { createViewportCommands } from "./commands/viewport";
 import { createConnectionState } from "./connectionState";
 import { createCullingViewport } from "./culling";
+import { createCullPins } from "./cullPins";
 import { getDefaultFlowStateProps } from "./defaults";
 import { type DragOverlay } from "./dragOverlay";
 import { RecordMapFacade } from "./facades";
@@ -48,6 +49,7 @@ import {
   type NodeMeasurements,
 } from "./projections/internalNodes";
 import { createEdgeMarkers } from "./projections/markers";
+import { sameIds } from "./projections/mountedIds";
 import { createOnScreenIds } from "./projections/onScreenIds";
 import { createParentIds } from "./projections/parentIds";
 import { createReportedIds } from "./projections/reportedIds";
@@ -98,10 +100,6 @@ const rowIds = (rows: readonly { readonly id: string }[]): string[] => {
   Reflect.ownKeys(rows);
   return untrack(() => rows.map((row) => row.id));
 };
-
-/** Same ids in the same order. */
-const sameIds = (a: readonly string[], b: readonly string[]) =>
-  a.length === b.length && a.every((id, i) => id === b[i]);
 
 /**
  * Plain enumerable getters over a signal-held props object, one per key —
@@ -232,6 +230,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const unmeasuredNodes = createReportedIds("unmeasuredNodeIds");
   const selectedNodeIds = selectedNodes.record;
   const selectedEdgeIds = selectedEdges.record;
+  // Plain sets of the rows pinned against culling by their own state
+  // (nodePinned / edgePinned), kept by the row derives: the unmount tier's
+  // mounted lists read them instead of every row (#22).
+  const nodeCullPins = createCullPins("nodeCullPins");
+  const edgeCullPins = createCullPins("edgeCullPins");
   const internalNodes = createInternalNodes<NodeType>({
     endpointVersions,
     reportSelected: selectedNodes.set,
@@ -249,6 +252,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
       return dragOverlay;
     },
     onGeometryChange: nodeGeometryFeed.report,
+    reportCullPin: nodeCullPins.set,
     get nodeOrigin() {
       return config().nodeOrigin;
     },
@@ -542,10 +546,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   /**********************************************************************************/
 
   // The #15 culling viewport: quantized/overscanned flow-space rect, null
-  // while the container is unmeasured. Two consumers: per-element culled
-  // memos in NodeWrapper/EdgeWrapper (always-on CSS tier), and the
-  // renderers' per-row unmount gates (opt-in onlyRenderVisibleElements
-  // tier, design doc §4 + bench round 6).
+  // while the container is unmeasured. Two consumers, both through the
+  // on-screen membership below: per-element culled memos in
+  // NodeWrapper/EdgeWrapper (always-on CSS tier), and the renderers'
+  // mounted lists (opt-in onlyRenderVisibleElements tier, createMountedIds).
   const viewportRect = createCullingViewport({
     get width() {
       return store.width;
@@ -654,6 +658,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     markers: edgeMarkers,
     onGeometryChange: edgeGeometryFeed.report,
     reportSelected: selectedEdges.set,
+    reportCullPin: edgeCullPins.set,
     endpointVersion: (id) => endpointVersions.get(id)?.endpoint,
     get selectionOverlay() {
       return selectionOverlay.edges;
@@ -915,6 +920,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     onScreenEdgeIds,
     /** The unique edge markers, sorted by id (MarkerDefinition). */
     markers: edgeMarkers.list,
+    nodeCullPins,
+    edgeCullPins,
     actions: {
       getResolvedEdge,
       armInitialFitView: initialFitView.arm,

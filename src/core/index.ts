@@ -36,6 +36,7 @@ export {
   type NodeMeasurements,
   type NodeMeasurementWrite,
 } from "./projections/internalNodes";
+export { createMountedIds } from "./projections/mountedIds";
 export { createParentIds, type ParentIdsSource } from "./projections/parentIds";
 export { createResolvedEdges, type ResolvedEdgesSource } from "./projections/resolvedEdges";
 export { getSelectedNodesBounds } from "./projections/selectedBounds";

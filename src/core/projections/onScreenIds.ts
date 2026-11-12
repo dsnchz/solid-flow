@@ -17,6 +17,16 @@ export type OnScreenSource = {
 export type OnScreenIds = { readonly has: (id: string) => boolean };
 
 /**
+ * The whole membership, for a reader that lists ids (the unmount tier's
+ * mounted list): `version` changes when any id flips, `present` is the plain
+ * set behind it (reading it never subscribes).
+ */
+export type OnScreenMembership = OnScreenIds & {
+  readonly version: Accessor<number>;
+  readonly present: ReadonlySet<string>;
+};
+
+/**
  * The rows whose rect overlaps the culling viewport (bench rounds 26 and 52).
  * The overlap test runs here, ONCE per change, over the plain geometry map —
  * a full pass when the viewport steps (10k rect tests, ~1 ms), only the
@@ -34,14 +44,17 @@ export type OnScreenIds = { readonly has: (id: string) => boolean };
  * auto-pan moves both the node and the viewport. Signals have nothing to
  * fold: a step costs the flips.
  *
- * The sweep is an eager memo nobody reads; it writes the flipped rows'
- * signals from inside the flush (`ownedWrite`), so a row settles in the same
- * flush as the step. Nothing is on screen while the viewport is null; the
- * row rules treat "culling inactive" separately (`nodeCulled` /
- * `edgeCulled`), so an empty membership never hides anything on its own.
+ * The sweep is an eager memo; it writes the flipped rows' signals from
+ * inside the flush (`ownedWrite`), so a row settles in the same flush as
+ * the step. Its value is the membership `version`, bumped when a pass flips
+ * any id: a list reader wakes on flips, not on every geometry report.
+ * Nothing is on screen while the viewport is null; the row rules treat
+ * "culling inactive" separately (`nodeCulled` / `edgeCulled`), so an empty
+ * membership never hides anything on its own.
  */
-export const createOnScreenIds = (source: OnScreenSource, name: string): OnScreenIds => {
+export const createOnScreenIds = (source: OnScreenSource, name: string): OnScreenMembership => {
   let lastViewport: Rect | null = null;
+  let flips = 0;
   const present = new Set<string>();
   const signals = new Map<string, Signal<boolean>>();
 
@@ -50,32 +63,38 @@ export const createOnScreenIds = (source: OnScreenSource, name: string): OnScree
     if (on === present.has(id)) return;
     if (on) present.add(id);
     else present.delete(id);
+    flips++;
     signals.get(id)?.[1](on);
   };
 
-  // eslint-disable-next-line solid/reactivity -- the eager sweep memo nobody reads (see above)
-  createMemo(
+  const sweep = (viewport: Rect | null, changed: Set<string>) => {
+    if (viewport !== lastViewport) {
+      lastViewport = viewport;
+      if (!viewport) {
+        for (const id of [...present]) apply(id, undefined, null);
+        return;
+      }
+      source.geometry.forEach((rect, id) => apply(id, rect, viewport));
+      // ids reported and then removed before this pass: drop them
+      for (const id of changed) if (!source.geometry.has(id)) apply(id, undefined, viewport);
+      return;
+    }
+    for (const id of changed) apply(id, source.geometry.get(id), viewport);
+  };
+
+  const version = createMemo(
     () => {
       const viewport = source.cullingViewport;
       source.changes();
-      const changed = source.takeChanged();
-      if (viewport !== lastViewport) {
-        lastViewport = viewport;
-        if (!viewport) {
-          for (const id of [...present]) apply(id, undefined, null);
-          return;
-        }
-        source.geometry.forEach((rect, id) => apply(id, rect, viewport));
-        // ids reported and then removed before this pass: drop them
-        for (const id of changed) if (!source.geometry.has(id)) apply(id, undefined, viewport);
-        return;
-      }
-      for (const id of changed) apply(id, source.geometry.get(id), viewport);
+      sweep(viewport, source.takeChanged());
+      return flips;
     },
     { name },
   );
 
   return {
+    version,
+    present,
     has: (id) => {
       // An untracked read has nothing to subscribe: answer from the set.
       if (!getObserver()) return present.has(id);

@@ -9,6 +9,7 @@ import { createMemo, createProjection, mapArray, onCleanup, untrack } from "soli
 
 import type { DefaultEdgeOptions, Edge, InternalNode, Node, ResolvedEdge } from "@/types";
 
+import { edgePinned } from "../culling";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import type { EdgeMarkers } from "./markers";
 import { createRowRecordProjection } from "./rowRecord";
@@ -44,6 +45,11 @@ export type ResolvedEdgesSource<NodeType extends Node = Node, EdgeType extends E
   readonly reportSelected?: (id: string, selected: boolean) => void;
   /** The flow's edge markers (markers.ts): each edge reports its own two, on every run. */
   readonly markers?: Pick<EdgeMarkers, "set" | "remove">;
+  /**
+   * Called with whether the edge is pinned (edgePinned: never culled for a
+   * reason of its own) on every run, and with `false` when it is removed.
+   */
+  readonly reportCullPin?: (id: string, pinned: boolean) => void;
 };
 
 /**
@@ -126,6 +132,7 @@ export const createResolvedEdges = <NodeType extends Node = Node, EdgeType exten
               ? !!row.selected
               : joinSelected(edge.selected, overlayEntry(source.selectionOverlay, id)),
           );
+          source.reportCullPin?.(id, !!row && edgePinned(row.selected, row.cullable));
           return { row };
         },
         { row: null },
@@ -135,6 +142,7 @@ export const createResolvedEdges = <NodeType extends Node = Node, EdgeType exten
         if (geometry !== "") source.onGeometryChange?.(id, null);
         source.reportSelected?.(id, false);
         source.markers?.remove(id);
+        source.reportCullPin?.(id, false);
       });
       return { id, store };
     },

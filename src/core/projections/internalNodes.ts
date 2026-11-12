@@ -19,6 +19,7 @@ import {
 
 import type { InternalNode, Node } from "@/types";
 
+import { nodePinned } from "../culling";
 import { dragEntry, type DragOverlay, joinDragging, joinPosition } from "../dragOverlay";
 import { emitFlowError } from "../rules";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
@@ -141,6 +142,11 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
    * walking every row through the store proxies (bench round 23).
    */
   readonly onGeometryChange?: (id: string, rect: NodeGeometry | null) => void;
+  /**
+   * Called with whether the row is pinned (nodePinned: never culled for a
+   * reason of its own) on every run, and with `false` when it is removed.
+   */
+  readonly reportCullPin?: (id: string, pinned: boolean) => void;
   /** Filled with each row's endpoint version (see EndpointVersions). */
   readonly endpointVersions?: EndpointVersions;
   /**
@@ -470,6 +476,17 @@ export const createInternalNodes = <NodeType extends Node = Node>(
                 (next.measuredWidth === undefined || next.measuredHeight === undefined),
             );
 
+            source.reportCullPin?.(
+              id,
+              nodePinned(
+                next.selected,
+                user.cullable,
+                next.measuredWidth,
+                next.measuredHeight,
+                next.handleSource !== undefined || !!user.handles?.length,
+              ),
+            );
+
             const prev = last;
             last = next;
             // The user's `handles` (unmeasured handle positions) are an
@@ -519,6 +536,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           source.onGeometryChange?.(id, null);
           source.reportSelected?.(id, false);
           source.reportUnmeasured?.(id, false);
+          source.reportCullPin?.(id, false);
         }
         const created = entry.created;
         if (created && source.endpointVersions?.get(id) === created) {

@@ -89,32 +89,49 @@ export const createCullingViewport = (source: CullingSource): Accessor<Rect | nu
   );
 
 /**
- * Row-level culling over the on-screen membership (bench rounds 26 and 52).
- * The never-cull guards live here — inactive culling, selected, `cullable:
+ * The never-cull guards a node row decides on its own: selected, `cullable:
  * false`, unmeasured, handle bounds neither measured in this instance nor
- * declared — and the rect overlap is the membership's job. A node whose size
- * (`measured`) and `handles` are declared has nothing to measure, so the
- * unmount tier never mounts it while it is off screen (#22); edges anchor on
- * the declared handles until it mounts. `onScreen.has(id)` subscribes to that
- * row's own signal (see projections/onScreenIds.ts).
+ * declared. A node whose size (`measured`) and `handles` are declared has
+ * nothing to measure, so the unmount tier never mounts it while it is off
+ * screen (#22); edges anchor on the declared handles until it mounts. The
+ * row derives report it to the flow's CullPins (the unmount tier's mounted
+ * list), and nodeCulled reads it from the row: one rule for both.
+ */
+export const nodePinned = (
+  selected: boolean | undefined,
+  cullable: boolean | undefined,
+  width: number | undefined,
+  height: number | undefined,
+  handlesKnown: boolean,
+): boolean => !!selected || cullable === false || !width || !height || !handlesKnown;
+
+/** An edge's never-cull guards (see nodePinned): selected, `cullable: false`. */
+export const edgePinned = (selected: boolean | undefined, cullable: boolean | undefined): boolean =>
+  !!selected || cullable === false;
+
+/**
+ * Row-level culling over the on-screen membership (bench rounds 26 and 52):
+ * inactive culling and the row's own guards (nodePinned) never cull, and the
+ * rect overlap is the membership's job. `onScreen.has(id)` subscribes to
+ * that row's own signal (see projections/onScreenIds.ts).
  */
 export const nodeCulled = <NodeType extends Node>(
   node: InternalNode<NodeType>,
   cullingActive: boolean,
   onScreen: OnScreenIds,
-): boolean => {
-  if (!cullingActive || node.selected || node.cullable === false) return false;
-  const { width, height } = node.measured;
-  if (!width || !height) return false;
-  if (!node.internals.handleBounds && !node.handles?.length) return false;
-  return !onScreen.has(node.id);
-};
+): boolean =>
+  cullingActive &&
+  !nodePinned(
+    node.selected,
+    node.cullable,
+    node.measured.width,
+    node.measured.height,
+    !!node.internals.handleBounds || !!node.handles?.length,
+  ) &&
+  !onScreen.has(node.id);
 
 export const edgeCulled = (
   row: Pick<ResolvedEdge, "id" | "selected" | "cullable">,
   cullingActive: boolean,
   onScreen: OnScreenIds,
-): boolean => {
-  if (!cullingActive || row.selected || row.cullable === false) return false;
-  return !onScreen.has(row.id);
-};
+): boolean => cullingActive && !edgePinned(row.selected, row.cullable) && !onScreen.has(row.id);

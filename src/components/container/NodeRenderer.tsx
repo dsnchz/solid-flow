@@ -1,10 +1,10 @@
 import type { JSX } from "@solidjs/web";
 import { isServer } from "@solidjs/web";
-import { createMemo, For, onCleanup, Show } from "solid-js";
+import { For, onCleanup, Show } from "solid-js";
 
 import { NodeWrapper } from "@/components/node/NodeWrapper";
 import { useInternalSolidFlow } from "@/contexts";
-import { nodeCulled } from "@/core";
+import { createMountedIds } from "@/core";
 import type { Node, NodeEvents } from "@/types";
 
 import { createFocusedIdTracker } from "./focusedIdTracker";
@@ -26,7 +26,8 @@ const NO_ROWS: readonly string[] = [];
 export const NodeRenderer = <NodeType extends Node = Node>(
   props: NodeRendererProps<NodeType>,
 ): JSX.Element => {
-  const { actions, store, nodeLookup, onScreenNodeIds } = useInternalSolidFlow<NodeType>();
+  const { actions, store, nodeLookup, onScreenNodeIds, nodeCullPins } =
+    useInternalSolidFlow<NodeType>();
 
   // Nodes are measured in the browser only; during SSR the observer is absent
   // and NodeWrapper's measurement effect never runs.
@@ -57,28 +58,34 @@ export const NodeRenderer = <NodeType extends Node = Node>(
   // here and never unmounted mid-interaction — focus cannot survive removal.
   const { focusedId: focusedNodeId, onFocusIn, onFocusOut } = createFocusedIdTracker();
 
+  // Opt-in unmount culling (onlyRenderVisibleElements): the `For` iterates
+  // only the rows to mount, so an off-screen row has no scope at all (#22);
+  // the list wakes on membership flips only (see createMountedIds).
+  const mountedIds = createMountedIds(
+    {
+      get ids() {
+        return (props.rowsReady?.() ?? true) ? store.visibleNodeIds : NO_ROWS;
+      },
+      get active() {
+        return store.onlyRenderVisibleElements && store.cullingActive;
+      },
+      onScreen: onScreenNodeIds,
+      pins: nodeCullPins,
+      get focusedId() {
+        return focusedNodeId();
+      },
+    },
+    "nodeRenderer.mountedIds",
+  );
+
   return (
     <div
       class="solid-flow__container solid-flow__nodes"
       onFocusIn={onFocusIn}
       onFocusOut={onFocusOut}
     >
-      <For each={(props.rowsReady?.() ?? true) ? store.visibleNodeIds : NO_ROWS}>
+      <For each={mountedIds()}>
         {(nodeId) => {
-          // Opt-in unmount culling (onlyRenderVisibleElements): a per-row
-          // boolean with an equality cut, so a geometry change recomputes
-          // only this row's flag and nothing downstream runs unless it
-          // actually flips. A central filtered-list memo instead re-reads
-          // every row per change — measured 5x slower at 10k (bench round 6).
-          const unmounted = createMemo(
-            () => {
-              if (!store.onlyRenderVisibleElements || focusedNodeId() === nodeId) return false;
-              const node = nodeLookup.get(nodeId);
-              return !!node && nodeCulled(node, store.cullingActive, onScreenNodeIds);
-            },
-            { name: "nodeRenderer.unmounted" },
-          );
-
           // Membership now comes from the user-facing store; the projection
           // row materializes in the same flush, but guard the window (and
           // any future null-row semantics) rather than crash NodeWrapper.
@@ -88,7 +95,6 @@ export const NodeRenderer = <NodeType extends Node = Node>(
           // accessor: one row resolution per row, not a second memo in the
           // wrapper (audit C9).
           const visibleRow = () => {
-            if (unmounted()) return undefined;
             const node = nodeLookup.get(nodeId);
             return node !== undefined && !node.hidden ? node : undefined;
           };

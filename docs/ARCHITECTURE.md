@@ -86,11 +86,11 @@ The numbers in this section come from the maintainer's private head-to-head benc
 
 ### Renderers iterate stable id lists
 
-Renderers iterate `visibleNodeIds` / `visibleEdgeIds` and guard per row against not-yet-materialized projection rows. Membership changes never rebuild the list pipeline.
+Renderers iterate `visibleNodeIds` / `visibleEdgeIds` (with the unmount tier on, the mounted subset of them, below) and guard per row against not-yet-materialized projection rows. Membership changes never rebuild the list pipeline.
 
 ### Two culling tiers
 
-An always-on CSS tier (visibility/pointer-events on off-viewport elements; no userland contract) and the opt-in `onlyRenderVisibleElements` unmount tier (per-row `Show` gates inside the renderer `For`, so the id list stays stable).
+An always-on CSS tier (visibility/pointer-events on off-viewport elements; no userland contract) and the opt-in `onlyRenderVisibleElements` unmount tier. The unmount tier's renderers iterate only the ids to mount (`projections/mountedIds.ts`): in array order, the ids on screen, pinned by their own row (selected, `cullable: false`, unmeasured, handles unknown: `nodePinned` / `edgePinned`, which the row derives report to a plain set) or holding focus. The list reads no row: it filters the id list against the plain on-screen and pin sets, and wakes only when one of them flips, so an off-screen row has no reactive scope in the renderer at all. A list that read every row through the store per change measured 5x slower than per-row gates (bench round 6); the gates cost a memo and a `Show` per row, mounted or not (#22).
 
 ### Gesture-scoped spatial lookups
 
