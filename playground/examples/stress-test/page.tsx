@@ -1,3 +1,4 @@
+import { Position } from "@xyflow/system";
 import { createSignal, DEV, flush, onCleanup, Show } from "solid-js";
 import { attribution, costs } from "solid-js/attribution";
 import {
@@ -51,6 +52,12 @@ const BenchProbe = () => {
   return null;
 };
 
+// The default node's size and its two default handles (`declared=1`).
+const declaredHandles = (): Node["handles"] => [
+  { type: "target", position: Position.Top, x: 71, y: -3, width: 8, height: 8 },
+  { type: "source", position: Position.Bottom, x: 71, y: 31, width: 8, height: 8 },
+];
+
 // Benchmark-instrumented stress grid. URL params:
 //   x, y     grid dimensions (default 25x25 = 625 nodes, 624 chained edges)
 //   minimap  "1" to include the MiniMap (default off, to isolate the graph pipeline)
@@ -58,6 +65,9 @@ const BenchProbe = () => {
 //   fit      "0" to skip fitView so the grid overflows the viewport (culling visible)
 //   resizer  "1" to give node 5-5 an always-visible NodeResizer
 //   uncontrolled "1" to seed via defaultNodes/defaultEdges (the flow copies and owns the rows)
+//   declared "1" to declare every node's size (`measured`) and its two handles:
+//            nothing to measure, so with `unmount=1` an off-screen node is never
+//            mounted and its internal row is never built (#22)
 //   attr     "1" to enable attribution (dev builds only)
 //   provider "1" to give the flow its own SolidFlowProvider INSIDE the unmount
 //            toggle (full teardown; the playground's app-level provider
@@ -80,6 +90,7 @@ export const StressTest = () => {
   const withResizer = params.get("resizer") === "1";
   const uncontrolled = params.get("uncontrolled") === "1";
   const ownProvider = params.get("provider") === "1";
+  const declared = params.get("declared") === "1";
 
   const nodeItems: Node[] = [];
   const edgeItems: Edge[] = [];
@@ -97,6 +108,7 @@ export const StressTest = () => {
         position,
         type: withResizer && id === "5-5" ? "resizer" : "default",
         ...(withResizer && id === "5-5" ? { width: 120, height: 60 } : {}),
+        ...(declared ? { measured: { width: 150, height: 36 }, handles: declaredHandles() } : {}),
       };
       nodeItems.push(node);
 
