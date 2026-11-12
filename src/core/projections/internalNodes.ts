@@ -25,11 +25,12 @@ import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionO
 import {
   buildRow,
   computeRowState,
+  edgeZOf,
   type RowSettings,
   type RowState,
   writeChangedLeaves,
 } from "./internalNodeRow";
-import { createRowRecordProjection } from "./rowRecord";
+import { createRecordFacade, createRowHolders } from "./rowRecord";
 
 /** Row keys the derive joins itself: read from the row proxy, never from the snapshot. */
 const JOINED_KEYS: ReadonlySet<string> = new Set(["selected", "dragging"]);
@@ -130,6 +131,8 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly nodeExtent: CoordinateExtent;
   readonly onError?: (id: string, message: string) => void;
   readonly elevateNodesOnSelect: boolean;
+  /** For each row's part of its edges' drawn z (see edgeZOf). */
+  readonly elevateEdgesOnSelect?: boolean;
   readonly zIndexMode?: ZIndexMode;
   /**
    * Called with a row's absolute rect (and parentId) whenever it changes, and
@@ -150,6 +153,23 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
  * a dozen leaves of each endpoint.
  */
 export type EndpointVersions = Map<string, { readonly endpoint?: number }>;
+
+/** Reads a node's part of its edges' drawn z (see edgeZOf) by node id. */
+export type EdgeZReader = (nodeId: string) => number;
+
+const edgeZReaders = new WeakMap<object, EdgeZReader>();
+
+/**
+ * The edge z reader of an internalNodes record: a tracked read of the id's
+ * record slot (a re-created row repoints it, and the reader runs again),
+ * then of that row store's `edgeZ`. Two reads per endpoint, against six
+ * through the record facade and the row (bench round 80).
+ */
+export const edgeZReaderOf = (internalNodes: object): EdgeZReader => {
+  const reader = edgeZReaders.get(internalNodes);
+  if (!reader) throw new Error("edgeZReaderOf: not an internalNodes record");
+  return reader;
+};
 
 /** Whether anything an edge draws from the node differs between two states. */
 const endpointChanged = (prev: RowState, next: RowState): boolean =>
@@ -265,18 +285,20 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       nodeExtent: source.nodeExtent,
       zIndexMode: source.zIndexMode,
       elevateNodesOnSelect: source.elevateNodesOnSelect,
+      elevateEdgesOnSelect: source.elevateEdgesOnSelect,
     }),
     {
       equals: (a, b) =>
         a.nodeOrigin === b.nodeOrigin &&
         a.nodeExtent === b.nodeExtent &&
         a.zIndexMode === b.zIndexMode &&
-        a.elevateNodesOnSelect === b.elevateNodesOnSelect,
+        a.elevateNodesOnSelect === b.elevateNodesOnSelect &&
+        a.elevateEdgesOnSelect === b.elevateEdgesOnSelect,
       name: "internalNodes.settings",
     },
   );
 
-  type RowStore = { row: InternalNode<NodeType> | null; endpoint?: number };
+  type RowStore = { row: InternalNode<NodeType> | null; endpoint?: number; edgeZ?: number };
 
   // id → the row's registration (user node, row store created on first use).
   const entryById = new Map<string, RowEntry<NodeType, RowStore>>();
@@ -379,12 +401,10 @@ export const createInternalNodes = <NodeType extends Node = Node>(
         let lastUserNode: NodeType | undefined;
         let last: RowState | undefined;
         let endpoint = 0;
+        let edgeZ = 0;
         // Seeded with a null row (rowRecord's "not present"); the first run
         // always returns a full row, so a reader never sees the seed.
-        const store: { row: InternalNode<NodeType> | null; endpoint?: number } = createProjection<{
-          row: InternalNode<NodeType> | null;
-          endpoint?: number;
-        }>(
+        const store: RowStore = createProjection<RowStore>(
           (draft) => {
             // the accessor tracks the item slot: a controlled array reset swaps
             // the user node object while THIS row store (keyed by id) survives,
@@ -396,6 +416,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             // position feeds the row field AND the absolute-position derive.
             const dragOverlayEntry = dragEntry(source.dragOverlay, user.id);
             const parent = linkedParent(id, user.parentId);
+            const rowSettings = settings();
             const next = computeRowState(
               user,
               {
@@ -414,7 +435,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
                   user.id in source.measurements ? source.measurements[user.id] : undefined,
                 rootParentIndex: autoIndex().get(user.id),
               },
-              settings(),
+              rowSettings,
               parent,
             );
 
@@ -446,14 +467,20 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             ) {
               endpoint++;
             }
+            const nextEdgeZ = edgeZOf(user.parentId, next, rowSettings);
             if (prev === undefined || user !== lastUser || userNode !== lastUserNode) {
               lastUser = user;
               lastUserNode = userNode;
-              return { row: buildRow(user, userNode, next), endpoint };
+              edgeZ = nextEdgeZ;
+              return { row: buildRow(user, userNode, next), endpoint, edgeZ };
             }
             const row = draft.row;
             if (row) writeChangedLeaves(row, prev, next);
             if (draft.endpoint !== endpoint) draft.endpoint = endpoint;
+            if (nextEdgeZ !== edgeZ) {
+              edgeZ = nextEdgeZ;
+              draft.edgeZ = edgeZ;
+            }
             return undefined;
           },
           { row: null },
@@ -490,6 +517,10 @@ export const createInternalNodes = <NodeType extends Node = Node>(
   );
 
   // Shared keyed-record tail — see createRowRecordProjection. (These rows
-  // are never null; the helper's null-skip is a no-op here.)
-  return createRowRecordProjection(rows, "internalNodes");
+  // are never null; the helper's null-skip is a no-op here.) The holders
+  // also serve the rows' edge z (edgeZReaderOf).
+  const holders = createRowHolders<InternalNode<NodeType>, RowStore>(rows, "internalNodes");
+  const record = createRecordFacade(holders);
+  edgeZReaders.set(record, (nodeId) => holders[nodeId]?.store.edgeZ ?? 0);
+  return record;
 };

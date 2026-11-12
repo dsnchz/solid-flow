@@ -9,9 +9,10 @@ import { createProjection } from "solid-js";
  * signal owned by the long-lived record rather than the row, and deleting the
  * row would leave those signals (and their last values) attached to the
  * record for the flow's lifetime (bench round 20: ~26 KB retained per deleted
- * node+edge pair @10k).
+ * node+edge pair @10k). `store` is the row store itself, for readers of the
+ * store's own leaves next to `row`.
  */
-export type RowHolder<Row> = { readonly row: Row | null };
+export type RowHolder<Row, Store = unknown> = { readonly row: Row | null; readonly store: Store };
 
 /**
  * Read-only record view over a holder record: `facade[id]` is the row itself,
@@ -68,10 +69,20 @@ export const createRecordFacade = <Row extends object>(
 export const createRowRecordProjection = <Row extends object>(
   rowStores: () => readonly { readonly id: string; readonly store: { readonly row: Row | null } }[],
   name = "rowRecord",
-): Record<string, Row> => {
-  const holderOf = new WeakMap<{ readonly row: Row | null }, RowHolder<Row>>();
-  const assigned = new Map<string, RowHolder<Row>>();
-  const holders = createProjection<Record<string, RowHolder<Row>>>(
+): Record<string, Row> => createRecordFacade(createRowHolders(rowStores, name));
+
+/**
+ * The holder record behind createRowRecordProjection, for a caller that also
+ * reads the row stores' own leaves: `holders[id].store` is a tracked read of
+ * the id's slot (a re-created row store repoints it), then the store.
+ */
+export const createRowHolders = <Row extends object, Store extends { readonly row: Row | null }>(
+  rowStores: () => readonly { readonly id: string; readonly store: Store }[],
+  name: string,
+): Record<string, RowHolder<Row, Store>> => {
+  const holderOf = new WeakMap<Store, RowHolder<Row, Store>>();
+  const assigned = new Map<string, RowHolder<Row, Store>>();
+  return createProjection<Record<string, RowHolder<Row, Store>>>(
     (draft) => {
       const seen = new Set<string>();
       for (const { id, store } of rowStores()) {
@@ -83,6 +94,7 @@ export const createRowRecordProjection = <Row extends object>(
             get row() {
               return store.row;
             },
+            store,
           });
           holderOf.set(store, holder);
         }
@@ -102,5 +114,4 @@ export const createRowRecordProjection = <Row extends object>(
     {},
     { key: null, shallow: true, name },
   );
-  return createRecordFacade(holders);
 };

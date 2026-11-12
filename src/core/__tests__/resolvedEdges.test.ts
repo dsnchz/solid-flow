@@ -5,11 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Edge, InternalNode, Node } from "@/types";
 
-import {
-  createResolvedEdges,
-  edgeEndpointZ,
-  type ResolvedEdgesSource,
-} from "../projections/resolvedEdges";
+import { createResolvedEdges, type ResolvedEdgesSource } from "../projections/resolvedEdges";
 
 // Headless core test: the layout join runs entirely without a DOM. Internal
 // nodes are fed directly (simulating the adoption + measurement pipeline).
@@ -443,12 +439,13 @@ describe("createResolvedEdges — hidden endpoints", () => {
 
 /**
  * Edge elevation on node selection (elevateEdgesOnSelect, the default): the
- * endpoint part of the edge's z is added where the z is drawn, so a node
+ * endpoint part of the edge's z is added where the z is drawn (each node
+ * row's edgeZ, pinned at the DOM in edgeZIndex.test.tsx), so a node
  * selection does not re-run the edge's row, geometry included (bench round
  * 65: a node select-all re-ran every edge row through its z).
  */
 describe("createResolvedEdges — endpoint z", () => {
-  it("a node selection re-runs no edge row; the drawn z still rises", () => {
+  it("a node selection re-runs no edge row", () => {
     const [nodes, setNodes] = createStore<Record<string, InternalNode>>({
       a: internalNode("a", 0, 0),
       b: internalNode("b", 200, 100),
@@ -479,9 +476,6 @@ describe("createResolvedEdges — endpoint z", () => {
 
     expect(gets).toBe(runs);
     expect(resolved.e1!.zIndex).toBe(0);
-    expect(edgeEndpointZ(resolved.e1!, nodeLookup, true, "auto")).toBe(1000);
-    expect(edgeEndpointZ(resolved.e1!, nodeLookup, false, "auto")).toBe(0);
-    expect(edgeEndpointZ(resolved.e1!, nodeLookup, true, "manual")).toBe(0);
     dispose();
   });
 });

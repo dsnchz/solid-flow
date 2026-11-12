@@ -242,6 +242,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     get elevateNodesOnSelect() {
       return config().elevateNodesOnSelect;
     },
+    get elevateEdgesOnSelect() {
+      return config().elevateEdgesOnSelect;
+    },
     get zIndexMode() {
       return config().zIndexMode;
     },

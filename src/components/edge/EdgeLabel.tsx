@@ -9,7 +9,7 @@ import {
   toPxString,
 } from "@/components/internal/dom";
 import { useEdgeId, useInternalSolidFlow } from "@/contexts";
-import { edgeEndpointZ } from "@/core/projections/resolvedEdges";
+import { edgeZReaderOf } from "@/core/projections/internalNodes";
 
 import { labelLayerOf } from "./EdgeLabelRenderer";
 
@@ -73,18 +73,15 @@ export const renderEdgeLabel = (
 ): JSX.Element => {
   const owner = getOwner();
 
-  const { store, actions, nodeLookup } = useInternalSolidFlow();
+  const { store, actions, internalNodes } = useInternalSolidFlow();
+  const endpointZ = edgeZReaderOf(internalNodes);
 
   const id = useEdgeId();
 
-  // The drawn z: the edge row's own z plus its endpoints' (see edgeEndpointZ).
+  // The drawn z: the edge row's own z plus its endpoints' part (see edgeZOf).
   const zIndex = () => {
     const edge = actions.getResolvedEdge(id());
-    return (
-      edge &&
-      (edge.zIndex ?? 0) +
-        edgeEndpointZ(edge, nodeLookup, store.elevateEdgesOnSelect, store.zIndexMode)
-    );
+    return edge && (edge.zIndex ?? 0) + Math.max(endpointZ(edge.source), endpointZ(edge.target));
   };
 
   const createLabel = (): HTMLDivElement | undefined => {

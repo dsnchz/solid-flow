@@ -209,8 +209,8 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
     selected,
     ...edgePosition,
     // The edge's OWN z only: the endpoint part (a selected or child node's
-    // z) is added where the z is drawn (edgeEndpointZ), so a node selection
-    // does not re-run this row, geometry included (bench round 65).
+    // z) is each node row's `edgeZ`, added where the z is drawn, so a node
+    // selection does not re-run this row, geometry included (bench round 65).
     zIndex: edgeOwnZ(
       fields.zIndex ?? settings.defaultEdgeOptions.zIndex ?? 0,
       selected,
@@ -225,27 +225,8 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
 
 /**
  * The edge's own part of xyflow's getElevatedEdgeZIndex: its zIndex, raised
- * by its own selection when edges elevate on select.
+ * by its own selection when edges elevate on select. The endpoint part is
+ * internalNodes' edgeZOf.
  */
 const edgeOwnZ = (zIndex: number, selected: boolean, elevate: boolean, mode?: ZIndexMode) =>
   mode === "manual" ? zIndex : elevate && selected ? zIndex + 1000 : zIndex;
-
-/**
- * The endpoint part of xyflow's getElevatedEdgeZIndex: a child node's z, or
- * a selected node's elevated z when edges elevate on select. Added to the
- * row's own z where the z is drawn (EdgeWrapper, EdgeLabel); the drawn value
- * is upstream's.
- */
-export const edgeEndpointZ = (
-  edge: Pick<ResolvedEdge, "source" | "target">,
-  nodeLookup: Pick<Map<string, InternalNode>, "get">,
-  elevate: boolean,
-  mode?: ZIndexMode,
-): number => {
-  if (mode === "manual") return 0;
-  const nodeZ = (id: string) => {
-    const node = nodeLookup.get(id);
-    return node && (node.parentId || (elevate && node.selected)) ? (node.internals.z ?? 0) : 0;
-  };
-  return Math.max(nodeZ(edge.source), nodeZ(edge.target));
-};

@@ -51,6 +51,8 @@ export type RowSettings = {
   readonly nodeExtent: CoordinateExtent;
   readonly zIndexMode?: ZIndexMode;
   readonly elevateNodesOnSelect: boolean;
+  /** Only for the row's edge z (see edgeZOf). */
+  readonly elevateEdgesOnSelect?: boolean;
 };
 
 /** The row's tracked inputs besides the user snapshot, already joined. */
@@ -184,6 +186,24 @@ export const computeRowState = <NodeType extends Node>(
     rootParentIndex,
   };
 };
+
+/**
+ * The node's part of an edge's drawn z: per endpoint, @xyflow/system's
+ * getElevatedEdgeZIndex takes the node's z when the node is a child, or is
+ * selected while edges elevate on select, and nothing in manual mode. The
+ * edge draws its own z plus the larger part of its two endpoints, so a node
+ * selection re-runs neither the edge's row nor anything but the edge's z.
+ */
+export const edgeZOf = (
+  parentId: string | undefined,
+  state: RowState,
+  settings: RowSettings,
+): number =>
+  isManualZIndexMode(settings.zIndexMode)
+    ? 0
+    : parentId || (settings.elevateEdgesOnSelect && state.selected)
+      ? state.z
+      : 0;
 
 /** The row's `internals.handleBounds` (a fresh container) from its state. */
 const handleBoundsOf = (state: RowState): NodeHandleBounds | undefined =>

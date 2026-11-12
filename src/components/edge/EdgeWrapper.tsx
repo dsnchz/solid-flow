@@ -9,7 +9,7 @@ import { clientOnlySetup, cx, spreadOnDemand } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
 import { EdgeIdContext } from "@/contexts/edgeId";
 import { edgeCulled } from "@/core";
-import { edgeEndpointZ } from "@/core/projections/resolvedEdges";
+import { edgeZReaderOf } from "@/core/projections/internalNodes";
 import { isEdgeSelectable } from "@/core/rules";
 import type { Edge, EdgeEvents, Node, ResolvedEdge } from "@/types";
 
@@ -25,10 +25,12 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   props: EdgeWrapperProps<EdgeType>,
 ): JSX.Element => {
   let edgeRef!: SVGGElement;
-  const { store, actions, nodeLookup, onScreenEdgeIds } = useInternalSolidFlow<
+  const { store, actions, internalNodes, onScreenEdgeIds } = useInternalSolidFlow<
     NodeType,
     EdgeType
   >();
+  // Each node row carries its part of its edges' drawn z (edgeZOf).
+  const endpointZ = edgeZReaderOf(internalNodes);
   // The ref callback runs outside the component owner; the domAttributes
   // spread effects must be owned (disposal + no NO_OWNER diagnostics).
   const owner = getOwner();
@@ -123,7 +125,13 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   // The <g> is its own template, so its attributes are their own effect:
   // the wrapper's z-index follows the endpoints' selection and its culling
   // style the viewport, and neither re-runs the class and aria attributes
-  // (a node select-all re-ran them on every edge, bench round 69).
+  // (a node select-all re-ran them on every edge, bench round 69). The z is
+  // the row's own plus the larger of its endpoints' parts: two reads per
+  // endpoint and no flow setting (each node row folds those in).
+  const zIndex = () => {
+    const row = edge();
+    return (row.zIndex ?? 0) + Math.max(endpointZ(row.source), endpointZ(row.target));
+  };
   const EdgeBody = () => (
     <g
       ref={(el) => {
@@ -186,9 +194,7 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
       <svg
         class="solid-flow__edge-wrapper"
         style={{
-          "z-index":
-            (edge().zIndex ?? 0) +
-            edgeEndpointZ(edge(), nodeLookup, store.elevateEdgesOnSelect, store.zIndexMode),
+          "z-index": zIndex(),
           visibility: culled() ? "hidden" : undefined,
           "pointer-events": culled() ? "none" : undefined,
         }}
