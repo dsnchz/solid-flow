@@ -10,7 +10,7 @@ import type { Edge, Node } from "@/types";
 import { SolidFlow } from "../SolidFlow";
 
 // Geometry: an 800x600 container at the default [0, 0, 1] transform gives a
-// culling rect of [-400, 1200] x [-300, 900] (bucketed dims + 0.5 overscan,
+// culling rect of [-200, 1000] x [-150, 750] (bucketed dims + 0.25 overscan,
 // see core culling tests). FAR_X is safely outside it; nodes carry explicit
 // width/height so the jsdom measurement stubs (setupTests.ts) measure them.
 const FAR_X = 5000;

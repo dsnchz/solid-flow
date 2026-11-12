@@ -44,7 +44,7 @@ const makeInternalNode = (
 };
 
 // A 800x600 container at zoom 1 centered on the origin-anchored viewport:
-// culling rect spans [-400, 1200] x [-300, 900] (bucketed dims + 0.5 overscan).
+// culling rect spans [-200, 1000] x [-150, 750] (bucketed dims + 0.25 overscan).
 const makeSource = (initial: { width?: number; height?: number; transform?: Transform } = {}) => {
   const [state, setState] = createStore({
     width: initial.width ?? 800,
@@ -99,7 +99,7 @@ describe("createCullingViewport (core, headless)", () => {
     dispose();
   });
 
-  it("always covers the actual visible rect (property sweep)", () => {
+  it("always covers the actual visible rect, and at most 1.5 * 2^(1/4) of it per axis (property sweep)", () => {
     const { setTransform, setState, source } = makeSource();
     const { cullingViewport, dispose } = createRoot((dispose) => ({
       cullingViewport: createCullingViewport(source),
@@ -133,6 +133,12 @@ describe("createCullingViewport (core, headless)", () => {
       expect(rect.y).toBeLessThanOrEqual(visible.y);
       expect(rect.x + rect.width).toBeGreaterThanOrEqual(visible.x + visible.width);
       expect(rect.y + rect.height).toBeGreaterThanOrEqual(visible.y + visible.height);
+      // The bound keeps each quantization step's mount / unmount stripe
+      // small: octave buckets (up to 2x) put 100+ ms frames on a zoomed-out
+      // 10k pan in the unmount tier.
+      const bound = 1.5 * 2 ** 0.25 + 1e-9;
+      expect(rect.width).toBeLessThanOrEqual(visible.width * bound);
+      expect(rect.height).toBeLessThanOrEqual(visible.height * bound);
     }
     dispose();
   });
@@ -153,7 +159,7 @@ describe("createCullingViewport (core, headless)", () => {
     expect(initial).not.toBeNull();
     expect(runs.count).toBe(1);
 
-    // Step is 0.25 * 800 = 200 flow units; a 30px pan stays inside it.
+    // Step is 0.125 * 800 = 100 flow units; a 30px pan stays inside it.
     setTransform([-30, -10, 1]);
     flush();
     expect(dependent()).toBe(initial);

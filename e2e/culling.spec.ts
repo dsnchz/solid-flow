@@ -39,7 +39,7 @@ test.describe("viewport culling", () => {
 
     // Zoom back in: the mounted set shrinks again — the tier stays live.
     // fitView rests at a lower zoom for this wider grid; the culling rect is
-    // bucketed to powers of two with 0.5 overscan, so it takes several
+    // bucketed to quarter octaves with 0.25 overscan, so it takes several
     // wheel ticks before the rect stops covering the whole grid.
     await page.mouse.move(640, 400);
     for (let i = 0; i < 5; i++) {
