@@ -7,7 +7,6 @@ import {
   getNodesInside,
   isInputDOMNode,
   nodeHasDimensions,
-  type OnDrag,
 } from "@xyflow/system";
 import {
   type Accessor,
@@ -22,6 +21,7 @@ import {
 } from "solid-js";
 
 import createDraggable from "@/actions/createDraggable";
+import { toNodeDragHandlers } from "@/actions/nodeDragHandlers";
 import { ARIA_NODE_DESC_KEY } from "@/components/accessibility";
 import { clientOnlySetup, cx, spreadOnDemand } from "@/components/internal/dom";
 import { ARROW_KEY_DIFFS, toPxString } from "@/components/internal/dom";
@@ -333,15 +333,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     // rows without domAttributes skip the spread machinery entirely.
     spreadOnDemand(el, () => node()?.domAttributes);
 
-    const onDrag: OnDrag = (event, _, targetNode, nodes) => {
-      props.events.onNodeDrag?.({
-        event,
-        targetNode: targetNode as NodeType,
-        nodes: nodes as NodeType[],
-      });
-    };
-
-    createDraggable(
+    createDraggable<NodeType>(
       () => el,
       () => ({
         nodeId: node().id,
@@ -351,26 +343,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         noDragClass: store.noDragClass,
         nodeClickDistance: props.nodeClickDistance,
         onNodeMouseDown: actions.handleNodeSelection,
-        // Only when a user handler exists: with `onDrag` set, XYDrag builds
-        // the handler params EVERY frame — a spread of every dragged node's
-        // store proxy (audit finding 6; a 1000-node selection drag paid it
-        // with no listener registered). Start/stop stay unconditional (the
-        // drag helper needs them; once per gesture).
-        onDrag: props.events.onNodeDrag ? onDrag : undefined,
-        onDragStart: (event, _, targetNode, nodes) => {
-          props.events.onNodeDragStart?.({
-            event,
-            targetNode: targetNode as NodeType,
-            nodes: nodes as NodeType[],
-          });
-        },
-        onDragStop: (event, _, targetNode, nodes) => {
-          props.events.onNodeDragStop?.({
-            event,
-            targetNode: targetNode as NodeType,
-            nodes: nodes as NodeType[],
-          });
-        },
+        ...toNodeDragHandlers(props.events, true),
       }),
     );
   };

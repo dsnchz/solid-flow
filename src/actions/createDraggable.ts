@@ -7,7 +7,10 @@ import { SubsetMapView } from "@/core/subsetMapView";
 import type { Node } from "../types";
 
 type InternalFlow = ReturnType<typeof useInternalSolidFlow>;
-type StoreItems = ReturnType<Parameters<typeof XYDrag<Node>>[0]["getStoreItems"]>;
+// @xyflow/system does not export XYDrag's StoreItems type.
+type StoreItems<NodeType extends Node> = ReturnType<
+  Parameters<typeof XYDrag<NodeType>>[0]["getStoreItems"]
+>;
 
 /**
  * XYDrag calls `getStoreItems()` about five times per drag move (its drag
@@ -74,22 +77,22 @@ const storeItemsPrototype = ({ store, actions }: InternalFlow): object => {
   return items;
 };
 
-export type CreateDraggableParams = {
+export type CreateDraggableParams<NodeType extends Node = Node> = {
   readonly disabled: boolean;
   readonly noDragClass: string;
   readonly handleSelector: string;
   readonly nodeId: string;
   readonly isSelectable: boolean;
   readonly nodeClickDistance: number;
-  readonly onDrag: OnDrag;
-  readonly onDragStart: OnDrag;
-  readonly onDragStop: OnDrag;
+  readonly onDrag: OnDrag<NodeType>;
+  readonly onDragStart: OnDrag<NodeType>;
+  readonly onDragStop: OnDrag<NodeType>;
   readonly onNodeMouseDown: (id: string) => void;
 };
 
-const createDraggable = (
+const createDraggable = <NodeType extends Node = Node>(
   elem: Accessor<HTMLElement | undefined>,
-  params: Accessor<Partial<CreateDraggableParams>>,
+  params: Accessor<Partial<CreateDraggableParams<NodeType>>>,
 ) => {
   const flow = useInternalSolidFlow();
   const { nodeLookup, selectedNodeIds, actions } = flow;
@@ -107,7 +110,7 @@ const createDraggable = (
   const [dragging, setDragging] = createSignal(false);
   // This node's items: the shared getters plus its own gesture lookup,
   // created on its first drag (a mount creates none).
-  let storeItems: StoreItems | undefined;
+  let storeItems: StoreItems<NodeType> | undefined;
 
   // Mount the drag controller on the element (external system: XYDrag/d3-drag)
   createEffect(
@@ -118,7 +121,7 @@ const createDraggable = (
       const { onDrag, onDragStart, onDragStop, onNodeMouseDown } = current;
       dragNodeId = current.nodeId;
 
-      const dragInstance = XYDrag<Node>({
+      const dragInstance = XYDrag<NodeType>({
         onDrag,
         onDragStart: (event, dragItems, node, nodes) => {
           setDragging(true);
@@ -138,7 +141,7 @@ const createDraggable = (
           (storeItems ??= Object.create(storeItemsPrototype(flow), {
             nodeLookup: { value: dragLookup },
             // Store arrays are readonly in 2.0; XYDrag's StoreItems expects mutable
-          }) as StoreItems),
+          }) as StoreItems<NodeType>),
       });
 
       dragInstance.update({
