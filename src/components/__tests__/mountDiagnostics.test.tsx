@@ -98,6 +98,25 @@ describe("mount diagnostics", () => {
     ).toEqual([]);
   });
 
+  it("a subflow whose children come before their parents emits no diagnostics", async () => {
+    // A row with a parent is created on first use, from the record
+    // projection or a descendant's derive, under its own owner.
+    const subflow: Node[] = [
+      { id: "g", position: { x: 5, y: 5 }, parentId: "c", data: { label: "g" } },
+      { id: "c", position: { x: 10, y: 10 }, parentId: "p", data: { label: "c" } },
+      { id: "p", type: "group", position: { x: 0, y: 0 }, data: {}, width: 300, height: 200 },
+    ];
+    expect(
+      await unexpectedDiagnostics(() =>
+        render(() => (
+          <SolidFlow defaultNodes={subflow} zIndexMode="auto" width={800} height={600}>
+            <MiniMap />
+          </SolidFlow>
+        )),
+      ),
+    ).toEqual([]);
+  });
+
   it("custom edges carrying EdgeReconnectAnchors emit no diagnostics", async () => {
     const AnchoredEdge = () => (
       <>

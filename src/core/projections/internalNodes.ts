@@ -5,7 +5,16 @@ import type {
   NodeOrigin,
   ZIndexMode,
 } from "@xyflow/system";
-import { type Accessor, createMemo, createProjection, mapArray, onCleanup } from "solid-js";
+import {
+  type Accessor,
+  createMemo,
+  createProjection,
+  getOwner,
+  mapArray,
+  onCleanup,
+  type Owner,
+  runWithOwner,
+} from "solid-js";
 
 import type { InternalNode, Node } from "@/types";
 
@@ -155,6 +164,31 @@ const endpointChanged = (prev: RowState, next: RowState): boolean =>
 const EMPTY_AUTO_INDEX: ReadonlyMap<string, number> = new Map();
 
 /**
+ * One node's registration in the row map: its user node accessor and its row
+ * store, created on the first read of `store` under the row's own owner. One
+ * object per row, doubling as the mapArray item the record projection reads.
+ */
+class RowEntry<NodeType extends Node, Store> {
+  created: Store | undefined;
+  readonly #owner: Owner | null;
+  readonly #create: () => Store;
+
+  constructor(
+    readonly id: string,
+    readonly node: Accessor<NodeType>,
+    owner: Owner | null,
+    create: () => Store,
+  ) {
+    this.#owner = owner;
+    this.#create = create;
+  }
+
+  get store(): Store {
+    return (this.created ??= runWithOwner(this.#owner, this.#create));
+  }
+}
+
+/**
  * The adoption pass, decomposed into SUB-STORES (spike 13): each row is its
  * own keyed projection — user node joined with the measurements root into an
  * InternalNode (absolute position with origin/extent clamping and parent
@@ -174,30 +208,47 @@ const EMPTY_AUTO_INDEX: ReadonlyMap<string, number> = new Map();
  * side: nodes-array resets, membership changes, and measurement updates all
  * converge by derivation.
  *
- * Nodes must come before their children in the array (upstream contract);
- * a child whose parent has not been adopted yet keeps its own position and
- * warns, matching @xyflow/system. Rows link only backwards in the array,
- * which also makes parentId cycles unrepresentable.
+ * Parents may come anywhere in the array (@xyflow/system 1.0): a row is
+ * positioned from its parent when its ancestor chain reaches a root through
+ * nodes that exist. A row whose chain does not (a missing ancestor, or a
+ * parentId cycle) keeps its own position and reports, matching upstream's
+ * unresolved children. Because links follow only chains that end at a root,
+ * no row derive ever reads a row that reads it back.
  */
 export const createInternalNodes = <NodeType extends Node = Node>(
   source: InternalNodesSource<NodeType>,
 ): Record<string, InternalNode<NodeType>> => {
-  // Root parents get staggered z blocks in "auto" mode, indexed in order of
-  // first-child appearance (upstream: rootParentIndex). Depends only on
-  // membership and parentId slots — node moves do not re-run it.
+  // Root parents get staggered z blocks in "auto" mode, indexed in the order
+  // their first child resolves (upstream: rootParentIndex). A child of a root
+  // parent resolves once both have been reached in the array: at the later
+  // of the two slots. Depends only on membership and parentId slots — node
+  // moves do not re-run it.
   const autoIndex: Accessor<ReadonlyMap<string, number>> = createMemo(
     () => {
       if (source.zIndexMode !== "auto") return EMPTY_AUTO_INDEX;
 
-      const index = new Map<string, number>();
-      const rootIds = new Set<string>();
-      for (const node of source.nodes) {
-        if (!node.parentId) {
-          rootIds.add(node.id);
-        } else if (rootIds.has(node.parentId) && !index.has(node.parentId)) {
-          index.set(node.parentId, index.size + 1);
-        }
+      const nodes = source.nodes;
+      const parentOf: (string | undefined)[] = [];
+      const slotOf = new Map<string, number>();
+      for (let slot = 0; slot < nodes.length; slot++) {
+        const node = nodes[slot]!;
+        parentOf.push(node.parentId);
+        slotOf.set(node.id, slot);
       }
+      // root parent id → the slot at which its first child resolves
+      const resolvedAt = new Map<string, number>();
+      for (let slot = 0; slot < parentOf.length; slot++) {
+        const parentId = parentOf[slot];
+        if (!parentId) continue;
+        const parentSlot = slotOf.get(parentId);
+        if (parentSlot === undefined || parentOf[parentSlot]) continue;
+        const at = Math.max(parentSlot, slot);
+        const known = resolvedAt.get(parentId);
+        if (known === undefined || at < known) resolvedAt.set(parentId, at);
+      }
+      const index = new Map<string, number>();
+      const order = [...resolvedAt].sort((a, b) => a[1] - b[1]);
+      for (const [parentId] of order) index.set(parentId, index.size + 1);
       return index;
     },
     { name: "autoIndex" },
@@ -224,144 +275,165 @@ export const createInternalNodes = <NodeType extends Node = Node>(
     },
   );
 
-  // id → row store (+ array position, to enforce the parents-first contract).
-  const entryById = new Map<
-    string,
-    { store: { row: InternalNode<NodeType> | null }; index: Accessor<number> }
-  >();
+  type RowStore = { row: InternalNode<NodeType> | null; endpoint?: number };
 
-  const rowStores = mapArray(
+  // id → the row's registration (user node, row store created on first use).
+  const entryById = new Map<string, RowEntry<NodeType, RowStore>>();
+
+  /**
+   * The row of `parentId` when the row `id` is positioned from it: the
+   * ancestor chain reaches a root through existing nodes. Reads membership
+   * and each ancestor's parentId, so a write that adds or removes an
+   * ancestor, or breaks or closes the chain, re-runs the row; reading the
+   * parent's row store subscribes to exactly the parent leaves the child's
+   * geometry depends on. Only rows with a parent call this, and those are
+   * created after `rows` below has returned (see RowEntry's `store`).
+   */
+  const linkedParent = (id: string, parentId: string | undefined) => {
+    if (!parentId) return undefined;
+    // Reading the mapArray also brings it up to date first: a row created in
+    // the same write is registered by the time this returns.
+    rows();
+    const parentEntry = entryById.get(parentId);
+    const seen = new Set([id]);
+    let entry = parentEntry;
+    let ancestorId = parentId;
+    while (entry && !seen.has(ancestorId)) {
+      seen.add(ancestorId);
+      const next = entry.node().parentId;
+      if (!next) return parentEntry?.store.row ?? undefined;
+      ancestorId = next;
+      entry = entryById.get(ancestorId);
+    }
+    emitFlowError(
+      source.onError,
+      "parent-missing",
+      `Parent node with id "${parentId}" is missing for child node with id "${id}"`,
+    );
+    return undefined;
+  };
+
+  const rows = mapArray(
     () => source.nodes,
-    (userNodeAccessor, index) => {
+    (userNodeAccessor) => {
       const id = userNodeAccessor().id;
       // The row rides in a `{ row }` wrapper (matching resolvedEdges): the
       // wrapper is what keeps TS happy across the Store<T>=Readonly<T>
       // mapped type with an unresolved NodeType generic, and the inner
       // `.row` proxy is what the public record holds.
       let geometryKey = "";
-      // The parent's row when this row links to it: only backwards (the
-      // upstream parents-first contract, which also rules out parentId
-      // cycles). Reading the parent's row store subscribes to exactly the
-      // parent leaves the child's geometry depends on. A parent not found
-      // (or not yet in front) reports, and the row keeps its own position.
-      const linkedParent = (parentId: string | undefined) => {
-        if (!parentId) return undefined;
-        const parentEntry = entryById.get(parentId);
-        if (parentEntry && parentEntry.index() < index()) return parentEntry.store.row ?? undefined;
-        // Subscribe to membership so the row re-runs if the parent is added
-        // (or reordered to the front) later.
-        void source.nodes.length;
-        emitFlowError(
-          source.onError,
-          "parent-missing",
-          `Parent node ${parentId} not found. Please make sure that parent nodes are in front of their child nodes in the nodes array.`,
-        );
-        return undefined;
-      };
-      // ONE enumeration of the user row per USER change: the projection
-      // reads this plain snapshot, so a measurement or overlay change
-      // re-runs the geometry without re-spreading the proxy — the spread ran
-      // three times per node at a 10k mount, each pass ~170 ms of trap self
-      // time plus a presence node per key (bench round 30, solidjs/solid#3664).
-      const userKeys = createUserKeys(userNodeAccessor);
-      const userSnapshot = createMemo(() => snapshotUserRow(userNodeAccessor(), userKeys()), {
-        name: "internalNodes.user",
-      });
-      // Two write paths (bench round 34). A user-snapshot change (or a swapped
-      // user object) RETURNS a fresh row and lets the engine reconcile it —
-      // the cheap path for a ~25-key change, and what keeps the userNode
-      // copy in sync. A geometry-only run (measurement, overlay, drag,
-      // parent move) writes the few leaves that changed IN PLACE, against
-      // the previous run's state (writeChangedLeaves): writing all ~25 keys
-      // through the draft cost twice the reconcile.
-      let lastUser: NodeType | undefined;
-      let lastUserNode: NodeType | undefined;
-      let last: RowState | undefined;
-      let endpoint = 0;
-      // Seeded with a null row (rowRecord's "not present"); the first run
-      // always returns a full row, so a reader never sees the seed.
-      const store: { row: InternalNode<NodeType> | null; endpoint?: number } = createProjection<{
-        row: InternalNode<NodeType> | null;
-        endpoint?: number;
-      }>(
-        (draft) => {
-          // the accessor tracks the item slot: a controlled array reset swaps
-          // the user node object while THIS row store (keyed by id) survives,
-          // so downstream subscriptions never strand on disposed stores
-          const userNode = userNodeAccessor();
-          const user = userSnapshot();
+      const createRow = (): RowStore => {
+        // ONE enumeration of the user row per USER change: the projection
+        // reads this plain snapshot, so a measurement or overlay change
+        // re-runs the geometry without re-spreading the proxy — the spread ran
+        // three times per node at a 10k mount, each pass ~170 ms of trap self
+        // time plus a presence node per key (bench round 30, solidjs/solid#3664).
+        const userKeys = createUserKeys(userNodeAccessor);
+        const userSnapshot = createMemo(() => snapshotUserRow(userNodeAccessor(), userKeys()), {
+          name: "internalNodes.user",
+        });
+        // Two write paths (bench round 34). A user-snapshot change (or a swapped
+        // user object) RETURNS a fresh row and lets the engine reconcile it —
+        // the cheap path for a ~25-key change, and what keeps the userNode
+        // copy in sync. A geometry-only run (measurement, overlay, drag,
+        // parent move) writes the few leaves that changed IN PLACE, against
+        // the previous run's state (writeChangedLeaves): writing all ~25 keys
+        // through the draft cost twice the reconcile.
+        let lastUser: NodeType | undefined;
+        let lastUserNode: NodeType | undefined;
+        let last: RowState | undefined;
+        let endpoint = 0;
+        // Seeded with a null row (rowRecord's "not present"); the first run
+        // always returns a full row, so a reader never sees the seed.
+        const store: { row: InternalNode<NodeType> | null; endpoint?: number } = createProjection<{
+          row: InternalNode<NodeType> | null;
+          endpoint?: number;
+        }>(
+          (draft) => {
+            // the accessor tracks the item slot: a controlled array reset swaps
+            // the user node object while THIS row store (keyed by id) survives,
+            // so downstream subscriptions never strand on disposed stores
+            const userNode = userNodeAccessor();
+            const user = userSnapshot();
 
-          // Position/dragging = drag overlay joined with the row; the joined
-          // position feeds the row field AND the absolute-position derive.
-          const dragOverlayEntry = dragEntry(source.dragOverlay, user.id);
-          const parent = linkedParent(user.parentId);
-          const next = computeRowState(
-            user,
-            {
-              // Selection = overlay joined with the row (solid#3085
-              // composition); the same value feeds the row and z elevation.
-              // Read from the row PROXY (the snapshot skips the joined keys).
-              selected: joinSelected(
-                userNode.selected,
-                overlayEntry(source.selectionOverlay, user.id),
-              ),
-              dragging: joinDragging(userNode.dragging, dragOverlayEntry),
-              position: joinPosition(user.position, dragOverlayEntry),
-              // `in` guard: subscribes even while the key is absent, so the
-              // first measurement of a node re-runs (absent-key footgun).
-              measurement:
-                user.id in source.measurements ? source.measurements[user.id] : undefined,
-              rootParentIndex: autoIndex().get(user.id),
-            },
-            settings(),
-            parent,
-          );
+            // Position/dragging = drag overlay joined with the row; the joined
+            // position feeds the row field AND the absolute-position derive.
+            const dragOverlayEntry = dragEntry(source.dragOverlay, user.id);
+            const parent = linkedParent(id, user.parentId);
+            const next = computeRowState(
+              user,
+              {
+                // Selection = overlay joined with the row (solid#3085
+                // composition); the same value feeds the row and z elevation.
+                // Read from the row PROXY (the snapshot skips the joined keys).
+                selected: joinSelected(
+                  userNode.selected,
+                  overlayEntry(source.selectionOverlay, user.id),
+                ),
+                dragging: joinDragging(userNode.dragging, dragOverlayEntry),
+                position: joinPosition(user.position, dragOverlayEntry),
+                // `in` guard: subscribes even while the key is absent, so the
+                // first measurement of a node re-runs (absent-key footgun).
+                measurement:
+                  user.id in source.measurements ? source.measurements[user.id] : undefined,
+                rootParentIndex: autoIndex().get(user.id),
+              },
+              settings(),
+              parent,
+            );
 
-          if (source.onGeometryChange) {
-            // The parentId only for a parent this row is positioned from: the
-            // geometry consumers walk it (a parentId cycle recursed forever).
-            const parentId = parent ? user.parentId : undefined;
-            const key = `${next.x},${next.y},${next.width},${next.height},${parentId ?? ""}`;
-            if (key !== geometryKey) {
-              geometryKey = key;
-              source.onGeometryChange(id, {
-                x: next.x,
-                y: next.y,
-                width: next.width,
-                height: next.height,
-                ...(parentId ? { parentId } : {}),
-              });
+            if (source.onGeometryChange) {
+              // The parentId only for a parent this row is positioned from: the
+              // geometry consumers walk it (a parentId cycle recursed forever).
+              const parentId = parent ? user.parentId : undefined;
+              const key = `${next.x},${next.y},${next.width},${next.height},${parentId ?? ""}`;
+              if (key !== geometryKey) {
+                geometryKey = key;
+                source.onGeometryChange(id, {
+                  x: next.x,
+                  y: next.y,
+                  width: next.width,
+                  height: next.height,
+                  ...(parentId ? { parentId } : {}),
+                });
+              }
             }
-          }
 
-          const prev = last;
-          last = next;
-          // The user's `handles` (unmeasured handle positions) are an
-          // endpoint input too; they arrive on the reconcile path.
-          if (
-            prev === undefined ||
-            endpointChanged(prev, next) ||
-            user.handles !== lastUser?.handles
-          ) {
-            endpoint++;
-          }
-          if (prev === undefined || user !== lastUser || userNode !== lastUserNode) {
-            lastUser = user;
-            lastUserNode = userNode;
-            return { row: buildRow(user, userNode, next), endpoint };
-          }
-          const row = draft.row;
-          if (row) writeChangedLeaves(row, prev, next);
-          if (draft.endpoint !== endpoint) draft.endpoint = endpoint;
-          return undefined;
-        },
-        { row: null },
-        { key: "id", name: "internalNodes.row" },
-      );
+            const prev = last;
+            last = next;
+            // The user's `handles` (unmeasured handle positions) are an
+            // endpoint input too; they arrive on the reconcile path.
+            if (
+              prev === undefined ||
+              endpointChanged(prev, next) ||
+              user.handles !== lastUser?.handles
+            ) {
+              endpoint++;
+            }
+            if (prev === undefined || user !== lastUser || userNode !== lastUserNode) {
+              lastUser = user;
+              lastUserNode = userNode;
+              return { row: buildRow(user, userNode, next), endpoint };
+            }
+            const row = draft.row;
+            if (row) writeChangedLeaves(row, prev, next);
+            if (draft.endpoint !== endpoint) draft.endpoint = endpoint;
+            return undefined;
+          },
+          { row: null },
+          { key: "id", name: "internalNodes.row" },
+        );
+        source.endpointVersions?.set(id, store);
+        return store;
+      };
 
-      const entry = { store, index };
+      // A derive runs as its projection is created. A child's derive reads
+      // rows that may come later in the array, so a row with a parent is
+      // created on first use, under its own owner: by the record projection
+      // below once every row of the pass is registered, or earlier by a
+      // descendant that links to it. Rows without a parent are created here.
+      const entry = new RowEntry(id, userNodeAccessor, getOwner(), createRow);
       entryById.set(id, entry);
-      source.endpointVersions?.set(id, store);
       // mapArray creates replacement rows BEFORE disposing removed ones, so
       // only delete the registration this row actually owns.
       onCleanup(() => {
@@ -369,15 +441,19 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           entryById.delete(id);
           source.onGeometryChange?.(id, null);
         }
-        if (source.endpointVersions?.get(id) === store) source.endpointVersions.delete(id);
+        const created = entry.created;
+        if (created && source.endpointVersions?.get(id) === created) {
+          source.endpointVersions.delete(id);
+        }
       });
+      if (!userNodeAccessor().parentId) void entry.store;
 
-      return { id, store };
+      return entry;
     },
     { keyed: (userNode) => userNode.id },
   );
 
   // Shared keyed-record tail — see createRowRecordProjection. (These rows
   // are never null; the helper's null-skip is a no-op here.)
-  return createRowRecordProjection(rowStores, "internalNodes");
+  return createRowRecordProjection(rows, "internalNodes");
 };

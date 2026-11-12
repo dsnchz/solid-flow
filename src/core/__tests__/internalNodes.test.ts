@@ -543,6 +543,176 @@ describe("createInternalNodes (core, headless)", () => {
   });
 });
 
+describe("createInternalNodes — parents in any array order (@xyflow/system 1.0)", () => {
+  const missing = (parentId: string, id: string) =>
+    `Parent node with id "${parentId}" is missing for child node with id "${id}"`;
+
+  const mountWithErrors = (nodes: Node[], zIndexMode?: ZIndexMode) => {
+    const errors: string[] = [];
+    const graph = createRoot((dispose) => ({
+      dispose,
+      ...setup(nodes, { zIndexMode, onError: (_, message) => errors.push(message) }),
+    }));
+    flush();
+    return { ...graph, errors };
+  };
+
+  it("positions a child from a parent that comes after it", () => {
+    const { internalNodes, errors, dispose } = mountWithErrors([
+      makeNode({ id: "child", position: { x: 10, y: 20 }, parentId: "parent" }),
+      makeNode({ id: "parent", position: { x: 100, y: 100 }, zIndex: 4 }),
+    ]);
+
+    expect(internalNodes.child!.internals.positionAbsolute).toEqual({ x: 110, y: 120 });
+    expect(internalNodes.child!.internals.z).toBeGreaterThan(internalNodes.parent!.internals.z);
+    expect(errors).toEqual([]);
+    dispose();
+  });
+
+  it("resolves a chain whose ancestors all come later", () => {
+    const { internalNodes, errors, setNodes, dispose } = mountWithErrors([
+      makeNode({ id: "g", position: { x: 1, y: 1 }, parentId: "c" }),
+      makeNode({ id: "c", position: { x: 10, y: 10 }, parentId: "p" }),
+      makeNode({ id: "p", position: { x: 100, y: 100 } }),
+    ]);
+    expect(internalNodes.g!.internals.positionAbsolute).toEqual({ x: 111, y: 111 });
+
+    // the root moves: the whole chain follows
+    setNodes((draft) => {
+      draft[2]!.position = { x: 200, y: 100 };
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.g!.internals.positionAbsolute).toEqual({ x: 211, y: 111 });
+    expect(errors).toEqual([]);
+    dispose();
+  });
+
+  it("links a child to a parent added later, wherever it lands in the array", () => {
+    const { internalNodes, errors, setNodes, dispose } = mountWithErrors([
+      makeNode({ id: "child", position: { x: 10, y: 20 }, parentId: "parent" }),
+    ]);
+    expect(internalNodes.child!.internals.positionAbsolute).toEqual({ x: 10, y: 20 });
+    expect(errors).toContain(missing("parent", "child"));
+
+    setNodes((draft) => {
+      draft.push(makeNode({ id: "parent", position: { x: 100, y: 100 } }));
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.child!.internals.positionAbsolute).toEqual({ x: 110, y: 120 });
+    dispose();
+  });
+
+  it("unlinks a child whose parent is removed, and links it again when the parent returns", () => {
+    const { internalNodes, errors, setNodes, dispose } = mountWithErrors([
+      makeNode({ id: "parent", position: { x: 100, y: 100 } }),
+      makeNode({ id: "child", position: { x: 10, y: 20 }, parentId: "parent" }),
+    ]);
+    expect(internalNodes.child!.internals.positionAbsolute).toEqual({ x: 110, y: 120 });
+
+    setNodes((draft) => {
+      draft.splice(0, 1);
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.child!.internals.positionAbsolute).toEqual({ x: 10, y: 20 });
+    expect(errors).toContain(missing("parent", "child"));
+
+    setNodes((draft) => {
+      draft.push(makeNode({ id: "parent", position: { x: 200, y: 200 } }));
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.child!.internals.positionAbsolute).toEqual({ x: 210, y: 220 });
+    dispose();
+  });
+
+  it("links a child created in the same write as its later parent", () => {
+    const { internalNodes, setNodes, dispose } = mountWithErrors([makeNode({ id: "a" })]);
+
+    setNodes((draft) => {
+      draft.push(
+        makeNode({ id: "child", position: { x: 10, y: 20 }, parentId: "parent" }),
+        makeNode({ id: "parent", position: { x: 100, y: 100 } }),
+      );
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.child!.internals.positionAbsolute).toEqual({ x: 110, y: 120 });
+    dispose();
+  });
+
+  it("keeps every row on a parentId cycle, and below it, at its own position", () => {
+    const { internalNodes, errors, dispose } = mountWithErrors([
+      makeNode({ id: "a", position: { x: 1, y: 0 }, parentId: "b" }),
+      makeNode({ id: "b", position: { x: 2, y: 0 }, parentId: "a" }),
+      makeNode({ id: "c", position: { x: 3, y: 0 }, parentId: "a" }),
+    ]);
+
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 1, y: 0 });
+    expect(internalNodes.b!.internals.positionAbsolute).toEqual({ x: 2, y: 0 });
+    expect(internalNodes.c!.internals.positionAbsolute).toEqual({ x: 3, y: 0 });
+    expect(new Set(errors)).toEqual(
+      new Set([missing("b", "a"), missing("a", "b"), missing("a", "c")]),
+    );
+    dispose();
+  });
+
+  it("links the rows of a cycle once it is broken", () => {
+    const { internalNodes, setNodes, dispose } = mountWithErrors([
+      makeNode({ id: "a", position: { x: 1, y: 0 }, parentId: "b" }),
+      makeNode({ id: "b", position: { x: 100, y: 0 }, parentId: "a" }),
+    ]);
+
+    setNodes((draft) => {
+      delete draft[1]!.parentId;
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 101, y: 0 });
+    expect(internalNodes.b!.internals.positionAbsolute).toEqual({ x: 100, y: 0 });
+    dispose();
+  });
+
+  it("unlinks a chain when a write closes it into a cycle", () => {
+    const { internalNodes, errors, setNodes, dispose } = mountWithErrors([
+      makeNode({ id: "a", position: { x: 1, y: 0 }, parentId: "b" }),
+      makeNode({ id: "b", position: { x: 100, y: 0 } }),
+    ]);
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 101, y: 0 });
+
+    setNodes((draft) => {
+      draft[1]!.parentId = "a";
+      return undefined;
+    });
+    flush();
+    expect(internalNodes.a!.internals.positionAbsolute).toEqual({ x: 1, y: 0 });
+    expect(internalNodes.b!.internals.positionAbsolute).toEqual({ x: 100, y: 0 });
+    expect(errors).toContain(missing("b", "a"));
+    dispose();
+  });
+
+  it("indexes root parents in the order their first child resolves (auto zIndexMode)", () => {
+    // @xyflow/system 1.0 resolves c1 only when p1 is reached (last), c2 at
+    // its own slot: p2 gets the first block, p1 the second.
+    const { internalNodes, dispose } = mountWithErrors(
+      [
+        makeNode({ id: "c1", parentId: "p1" }),
+        makeNode({ id: "p2" }),
+        makeNode({ id: "c2", parentId: "p2" }),
+        makeNode({ id: "p1" }),
+      ],
+      "auto",
+    );
+
+    expect(internalNodes.p2!.internals.z).toBe(10);
+    expect(internalNodes.p1!.internals.z).toBe(20);
+    expect(internalNodes.c1!.internals.z).toBeGreaterThan(20);
+    dispose();
+  });
+});
+
 describe("createInternalNodes — the user row is enumerated once per user change", () => {
   it("a measurement write re-derives the row without re-spreading the user node", () => {
     // The raw seed is a Proxy counting ownKeys: the store's own enumeration
