@@ -112,18 +112,21 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     const h = row.height ?? row.initialHeight;
     if (w) out.width = toPxString(w);
     if (h) out.height = toPxString(h);
-    out["z-index"] = row.internals.z;
-    // The transform is written straight onto the element by its own render
-    // effect (mountElement): a moved node then writes one property instead
-    // of rebuilding and diffing this whole object per frame (bench round
-    // 42: ~55 ms of a 10k move-all). Server markup still carries it so a
-    // node is positioned before hydration.
-    // A user `transform` never applies (the binding would otherwise write it
-    // over the render effect's).
+    // The transform and z-index are written straight onto the element by
+    // their own render effects (mountElement): a moved node then writes one
+    // property instead of rebuilding and diffing this whole object per frame
+    // (bench round 42: ~55 ms of a 10k move-all), and a selection change
+    // (which moves the z) does not re-run the element's attribute effect
+    // (bench round 79). Server markup still carries both so a node is
+    // positioned and stacked before hydration. A user `transform` or
+    // `z-index` never applies (the binding would otherwise write it over the
+    // render effect's).
     if (out.transform !== undefined) delete out.transform;
+    if (out["z-index"] !== undefined) delete out["z-index"];
     if (isServer) {
       const { x, y } = row.internals.positionAbsolute;
       out.transform = `translate(${x}px, ${y}px)`;
+      out["z-index"] = row.internals.z;
     }
     out.visibility = isCulled || !nodeHasDimensions(row) ? "hidden" : "visible";
     out["pointer-events"] = isCulled ? "none" : undefined;
@@ -243,6 +246,14 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         el.style.transform = transform;
       },
       { name: "nodeWrapper.transform" },
+    );
+    // Stacking: a selection change moves the z (elevateNodesOnSelect).
+    createRenderEffect(
+      () => node().internals.z,
+      (z) => {
+        el.style.zIndex = String(z);
+      },
+      { name: "nodeWrapper.zIndex" },
     );
     // The class is its own effect too (the server markup carries it on the
     // element): a selection or setting change rewrites the class without
