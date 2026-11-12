@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@solidjs/testing-library";
+import { Position } from "@xyflow/system";
 import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
@@ -31,19 +32,24 @@ const renderFlow = (props: {
   edges?: Edge[];
   onlyRenderVisibleElements?: boolean;
   probeRef?: (api: ReturnType<typeof useSolidFlow>) => void;
+  /** "layout": no width/height props, the container's own size (style) is measured. */
+  sized?: "props" | "layout";
 }) => {
   const Probe = () => {
     props.probeRef?.(useSolidFlow());
     return null;
   };
+  const size =
+    props.sized === "layout"
+      ? { style: { width: "800px", height: "600px" } }
+      : { width: 800, height: 600 };
 
   return render(() => (
     <SolidFlow
       nodes={props.nodes}
       edges={props.edges ?? []}
       onlyRenderVisibleElements={props.onlyRenderVisibleElements}
-      width={800}
-      height={600}
+      {...size}
     >
       <Probe />
     </SolidFlow>
@@ -206,6 +212,43 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
     // The far node mounted exactly once for measurement, then unmounted.
     expect(second.container.querySelector('[data-id="far"]')).toBeNull();
   });
+
+  it.each(["props", "layout"] as const)(
+    "never mounts an off-screen node whose size and handles are declared (container sized by %s)",
+    async (sized) => {
+      // Nothing to measure: `measured` and `handles` are given, so the far
+      // node's row is complete without its element (#22) and the edge
+      // anchors on the declared handles. Sized by layout, the container's
+      // size must be known before the first row computes whether it is culled.
+      const handles: Node["handles"] = [
+        { type: "target", position: Position.Top, x: 46, y: -4, width: 8, height: 8 },
+        { type: "source", position: Position.Bottom, x: 46, y: 36, width: 8, height: 8 },
+      ];
+      const declared = (id: string, x: number): Node =>
+        makeNode({ id, position: { x, y: 0 }, measured: { width: 100, height: 40 }, handles });
+      const mounted = new Set<string>();
+      const observer = new MutationObserver((records) => {
+        for (const { addedNodes } of records)
+          for (const added of addedNodes)
+            if (added instanceof HTMLElement)
+              for (const el of [added, ...added.querySelectorAll<HTMLElement>("[data-id]")])
+                if (el.dataset.id) mounted.add(el.dataset.id);
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      const { container } = renderFlow({
+        nodes: [declared("near", 0), declared("far", FAR_X)],
+        edges: [makeEdge({ id: "eNear", source: "near", target: "far" })],
+        onlyRenderVisibleElements: true,
+        sized,
+      });
+      await settle();
+      observer.disconnect();
+
+      expect(mounted.has("near")).toBe(true);
+      expect(mounted.has("far")).toBe(false);
+      expect(container.querySelector('.solid-flow__edge[data-id="eNear"]')).not.toBeNull();
+    },
+  );
 
   it("keeps unmounted nodes on the MiniMap (data-graph driven, not DOM driven)", async () => {
     const { container } = render(() => (

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { Rect, Transform } from "@xyflow/system";
+import { Position, type Rect, type Transform } from "@xyflow/system";
 import { createMemo, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
@@ -17,6 +17,7 @@ const makeInternalNode = (
     measured?: boolean;
     mounted?: boolean;
     cullable?: boolean;
+    handles?: Node["handles"];
   } = {},
 ): InternalNode => {
   const {
@@ -28,8 +29,9 @@ const makeInternalNode = (
     measured = true,
     mounted = true,
     cullable,
+    handles,
   } = overrides;
-  const node: Node = { id: "n", position: { x, y }, data: {}, selected, cullable };
+  const node: Node = { id: "n", position: { x, y }, data: {}, selected, cullable, handles };
   return {
     ...node,
     measured: measured ? { width, height } : {},
@@ -199,6 +201,18 @@ describe("nodeCulled / edgeCulled (on-screen membership)", () => {
     expect(nodeCulled(makeInternalNode({ cullable: false }), true, none)).toBe(false);
     expect(nodeCulled(makeInternalNode({ measured: false }), true, none)).toBe(false);
     expect(nodeCulled(makeInternalNode({ mounted: false }), true, none)).toBe(false);
+  });
+  it("culls a node that was never mounted when its handles are declared (nothing to measure)", () => {
+    const handles: Node["handles"] = [
+      { type: "target", position: Position.Top, x: 45, y: -4, width: 10, height: 8 },
+      { type: "source", position: Position.Bottom, x: 45, y: 46, width: 10, height: 8 },
+    ];
+    expect(nodeCulled(makeInternalNode({ mounted: false, handles }), true, none)).toBe(true);
+    expect(nodeCulled(makeInternalNode({ mounted: false, handles }), true, onScreen)).toBe(false);
+    // the size still has to be known: declared handles alone do not cull
+    expect(
+      nodeCulled(makeInternalNode({ mounted: false, measured: false, handles }), true, none),
+    ).toBe(false);
   });
   it("edges: culled when not on screen, never when inactive / selected / cullable:false", () => {
     const row = {

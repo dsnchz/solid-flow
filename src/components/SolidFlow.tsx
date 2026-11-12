@@ -80,8 +80,15 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     actions.armInitialFitView(_props.fitView);
     actions.setConfig(_props);
     actions.setDomNode(domNode);
-    // Last: the culling viewport is live (domNode set) when the rows' culled
-    // memos first compute, so nothing re-runs when it appears.
+    // The container's size now, not at the ResizeObserver's first callback:
+    // with it the culling viewport is live (domNode set, size known) when the
+    // rows' culled memos first compute, so nothing re-runs when it appears,
+    // and the unmount tier never mounts a row that is off screen and has
+    // nothing to measure (#22). One layout of the canvas, before any row.
+    if (domNode) {
+      actions.setWidth(domNode.clientWidth);
+      actions.setHeight(domNode.clientHeight);
+    }
     setRowsReady(true);
 
     return () => {

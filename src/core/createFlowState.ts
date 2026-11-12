@@ -159,7 +159,12 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const [elementsSelectable, setElementsSelectable] = createSignal(
     () => config().elementsSelectable,
   );
-  const [height, setHeight] = createSignal(() => config().height ?? 0);
+  // The container size: the `width` / `height` props when given, else the
+  // last measured size. A config swap (SolidFlow's `setConfig` in onSettled)
+  // re-derives these; without a prop the measured size must survive it, or
+  // the culling viewport stays null until the ResizeObserver's first
+  // callback and every row mounts before it (#22).
+  const [height, setHeight] = createSignal<number>((prev) => config().height ?? prev ?? 0);
   const minZoom = createMemo(() => config().minZoom, { name: "minZoom" });
   const maxZoom = createMemo(() => config().maxZoom, { name: "maxZoom" });
   const [nodesConnectable, setNodesConnectable] = createSignal(() => config().nodesConnectable);
@@ -171,7 +176,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   const translateExtent = createMemo(() => config().translateExtent ?? infiniteExtent, {
     name: "translateExtent",
   });
-  const [width, setWidth] = createSignal(() => config().width ?? 0);
+  const [width, setWidth] = createSignal<number>((prev) => config().width ?? prev ?? 0);
 
   // Key flags
   const [selectionKeyPressed, setSelectionKeyPressed] = createSignal(false);

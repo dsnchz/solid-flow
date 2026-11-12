@@ -91,9 +91,12 @@ export const createCullingViewport = (source: CullingSource): Accessor<Rect | nu
 /**
  * Row-level culling over the on-screen membership (bench rounds 26 and 52).
  * The never-cull guards live here — inactive culling, selected, `cullable:
- * false`, unmeasured, handle bounds not yet populated in this instance — and
- * the rect overlap is the membership's job. `onScreen.has(id)` subscribes to
- * that row's own signal (see projections/onScreenIds.ts).
+ * false`, unmeasured, handle bounds neither measured in this instance nor
+ * declared — and the rect overlap is the membership's job. A node whose size
+ * (`measured`) and `handles` are declared has nothing to measure, so the
+ * unmount tier never mounts it while it is off screen (#22); edges anchor on
+ * the declared handles until it mounts. `onScreen.has(id)` subscribes to that
+ * row's own signal (see projections/onScreenIds.ts).
  */
 export const nodeCulled = <NodeType extends Node>(
   node: InternalNode<NodeType>,
@@ -103,7 +106,7 @@ export const nodeCulled = <NodeType extends Node>(
   if (!cullingActive || node.selected || node.cullable === false) return false;
   const { width, height } = node.measured;
   if (!width || !height) return false;
-  if (!node.internals.handleBounds) return false;
+  if (!node.internals.handleBounds && !node.handles?.length) return false;
   return !onScreen.has(node.id);
 };
 
