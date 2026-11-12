@@ -544,14 +544,29 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           // Hot: the row derive reports from now on (this run drops the deps).
           if (entry.created) return;
           const userNode = userNodeAccessor();
+          // ONE key-set read, then only the keys the row has: a read of an
+          // absent key is a subscription too, and a declared node carries
+          // ~5 of the ~12 keys below (the key set re-runs this on an add).
+          const keys = Object.keys(userNode);
+          const read = <K extends keyof NodeType>(key: K): NodeType[K] | undefined =>
+            keys.includes(String(key)) ? userNode[key] : undefined;
           // A row with a parent is created by the record pass (subflows are hot).
-          if (userNode.parentId) return;
+          if (read("parentId")) return;
           const measurement = id in source.measurements ? source.measurements[id] : undefined;
-          const measuredWidth = measurement?.measured.width ?? userNode.measured?.width;
-          const measuredHeight = measurement?.measured.height ?? userNode.measured?.height;
+          const measured = read("measured");
+          const measuredWidth = measurement?.measured.width ?? measured?.width;
+          const measuredHeight = measurement?.measured.height ?? measured?.height;
           reportGeometry(
             coldRootRect(
-              userNode,
+              {
+                id,
+                origin: read("origin"),
+                extent: read("extent"),
+                width: read("width"),
+                height: read("height"),
+                initialWidth: read("initialWidth"),
+                initialHeight: read("initialHeight"),
+              },
               joinPosition(userNode.position, dragEntry(source.dragOverlay, id)),
               measuredWidth,
               measuredHeight,
@@ -560,23 +575,23 @@ export const createInternalNodes = <NodeType extends Node = Node>(
             undefined,
           );
           const selected = joinSelected(
-            userNode.selected,
+            read("selected"),
             overlayEntry(source.selectionOverlay, id),
           );
           source.reportCullPin?.(
             id,
             nodePinned(
               selected,
-              userNode.cullable,
+              read("cullable"),
               measuredWidth,
               measuredHeight,
-              measurement?.handleSource !== undefined || !!userNode.handles?.length,
+              measurement?.handleSource !== undefined || !!read("handles")?.length,
             ),
           );
           source.reportSelected?.(id, selected);
           source.reportUnmeasured?.(
             id,
-            !userNode.hidden && (measuredWidth === undefined || measuredHeight === undefined),
+            !read("hidden") && (measuredWidth === undefined || measuredHeight === undefined),
           );
         },
         { name: "internalNodes.cold" },

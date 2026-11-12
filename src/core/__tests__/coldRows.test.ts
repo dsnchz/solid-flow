@@ -80,6 +80,18 @@ describe("cold node rows (lazyRows)", () => {
     expect(pins.get("a")).toBe(false);
     expect(pins.get("b")).toBe(true); // selected (and unmeasured)
 
+    // a key the row did not have re-runs the cold row (it reads present keys only)
+    setNodes((draft) => {
+      draft[0]!.cullable = false;
+    });
+    flush();
+    expect(pins.get("a")).toBe(true);
+    setNodes((draft) => {
+      draft[0]!.cullable = true;
+    });
+    flush();
+    expect(pins.get("a")).toBe(false);
+
     setNodes((draft) => {
       draft[0]!.position = { x: 300, y: 0 };
     });
