@@ -1,16 +1,18 @@
 import { getNodesInside, type NodeLookup, type Rect, type Transform } from "@xyflow/system";
+import { untrack } from "solid-js";
 
 import type { Edge, InternalNode, IsNodeSelectable, Node } from "@/types";
 
 import type { SelectionDelta } from "./commands/selection";
-import type { ConnectionsRecord } from "./projections/connections";
+import { pairKey } from "./projections/connections";
 import { GestureSpatialLookup } from "./spatial/gestureLookup";
 
 export type BoxSelectionDeps<NodeType extends Node, EdgeType extends Edge> = {
   readonly nodeLookup: NodeLookup<InternalNode<NodeType>>;
   /** Node rects in flow space; frozen into the spatial lookup at `arm`. */
   readonly nodeGeometry: ReadonlyMap<string, Rect>;
-  readonly connections: ConnectionsRecord;
+  /** The user edges, read once per gesture (see `edgeIdsOf`). */
+  readonly edges: () => readonly EdgeType[];
   readonly edgeLookup: Readonly<Record<string, EdgeType | undefined>>;
   /** The live selection, read at `begin` when the box keeps it. */
   readonly selectedNodeIds: Readonly<Record<string, unknown>>;
@@ -68,11 +70,37 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
     },
   });
 
+  // node id → (pair key → edge id), exactly as the connection index holds it
+  // (one entry per pairing, the later edge of a pair wins), built from the
+  // edges on the gesture's first edge count: the reactive index is built
+  // only for a flow that reads it (createLazyConnections), and edges stay
+  // put during a box gesture like the geometry does.
+  let edgesByNode: Map<string, Map<string, string>> | undefined;
+  const edgeIdsOf = (nodeId: string): Iterable<string> | undefined => {
+    if (edgesByNode === undefined) {
+      const byNode = new Map<string, Map<string, string>>();
+      const add = (node: string, entry: string, edgeId: string) => {
+        let pairs = byNode.get(node);
+        if (pairs === undefined) byNode.set(node, (pairs = new Map()));
+        pairs.set(entry, edgeId);
+      };
+      for (const edge of untrack(deps.edges)) {
+        const { id, source, target } = edge;
+        const sourceHandle = edge.sourceHandle ?? null;
+        const targetHandle = edge.targetHandle ?? null;
+        add(source, pairKey(target, targetHandle, source, sourceHandle), id);
+        add(target, pairKey(source, sourceHandle, target, targetHandle), id);
+      }
+      edgesByNode = byNode;
+    }
+    return edgesByNode.get(nodeId)?.values();
+  };
+
   /** Counts `nodeId`'s selectable edges up or down; pushes the edges that flip. */
   const countEdges = (nodeId: string, step: 1 | -1, flipped: string[]) => {
-    const nodeConnections = deps.connections[nodeId];
-    if (!nodeConnections) return;
-    for (const { edgeId } of Object.values(nodeConnections)) {
+    const edgeIds = edgeIdsOf(nodeId);
+    if (!edgeIds) return;
+    for (const edgeId of edgeIds) {
       const edge = deps.edgeLookup[edgeId];
       if (!edge || !deps.isEdgeSelectable(edge)) continue;
       const count = (edgeRefs.get(edgeId) ?? 0) + step;
@@ -92,6 +120,7 @@ export const createBoxSelection = <NodeType extends Node, EdgeType extends Edge>
     arm: (): void => {
       spatial.armFrom(deps.nodeGeometry);
       frozen = new Map();
+      edgesByNode = undefined;
     },
 
     /** The pointer passed the click distance: the box takes over the selection. */

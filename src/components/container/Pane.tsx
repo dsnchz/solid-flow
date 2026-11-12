@@ -36,7 +36,6 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     store,
     nodeLookup,
     edgeLookup,
-    connections,
     actions,
     nodeGeometry,
     selectedNodeIds: selectedNodeIdsRecord,
@@ -45,7 +44,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
   const box = createBoxSelection<NodeType, EdgeType>({
     nodeLookup,
     nodeGeometry,
-    connections,
+    edges: () => store.edges,
     edgeLookup,
     selectedNodeIds: selectedNodeIdsRecord,
     selectedEdgeIds: selectedEdgeIdsRecord,

@@ -39,7 +39,7 @@ import { createGeometryFeed } from "./geometryFeed";
 import { createInitialFitView } from "./initialFitView";
 import { createMeasurementIngest } from "./measurementIngest";
 import { createOverlayRelease } from "./overlayRelease";
-import { createConnections } from "./projections/connections";
+import { createLazyConnections } from "./projections/connections";
 import { createEdgeLookup } from "./projections/edgeLookup";
 import {
   createInternalNodes,
@@ -629,8 +629,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   // Edge-derived indexes (core projections): fully derived from the edges
   // store — no write side, no GC, no adoption pipeline. edgeLookup is
-  // declared above with the selection views that read it.
-  const connections = createConnections<EdgeType>({
+  // declared above with the selection views that read it. The connection
+  // index is built on its first read (see createLazyConnections).
+  const connections = createLazyConnections<EdgeType>({
     get edges() {
       return store.edges;
     },

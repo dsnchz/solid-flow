@@ -1,5 +1,5 @@
 import type { HandleConnection, HandleType } from "@xyflow/system";
-import { createMemo, createProjection, mapArray } from "solid-js";
+import { createMemo, createProjection, getOwner, mapArray, runWithOwner, untrack } from "solid-js";
 
 import type { Edge } from "@/types";
 
@@ -16,7 +16,7 @@ export const connectionKey = (
 ): string => `${nodeId}${type ? (handleId ? `-${type}-${handleId}` : `-${type}`) : ""}`;
 
 /** connection-entry key: identifies one edge's connection pairing */
-const pairKey = (
+export const pairKey = (
   aNode: string,
   aHandle: string | null,
   bNode: string,
@@ -201,5 +201,35 @@ export const createConnections = <EdgeType extends Edge = Edge>(
     },
     {},
     { key: null, name: "connections" },
+  );
+};
+
+/**
+ * The connection index, built on its first read. A default flow reads it
+ * only in a box selection (and from Handle callbacks and useNodeConnections
+ * when an app uses them), so until then its per-edge memos and the record
+ * are not built at mount, and edge writes (a new graph, a deletion) do not
+ * maintain it. Built under the owner that called this (the flow's), and
+ * untracked: the scope that reads first subscribes to the keys it reads,
+ * like any later reader, and owns nothing.
+ */
+export const createLazyConnections = <EdgeType extends Edge = Edge>(
+  source: ConnectionsSource<EdgeType>,
+): ConnectionsRecord => {
+  const owner = getOwner();
+  let record: ConnectionsRecord | undefined;
+  const built = () =>
+    (record ??= untrack(() => runWithOwner(owner, () => createConnections(source))));
+  return new Proxy<ConnectionsRecord>(
+    {},
+    {
+      get: (_, key) => Reflect.get(built(), key),
+      has: (_, key) => Reflect.has(built(), key),
+      ownKeys: () => Reflect.ownKeys(built()),
+      getOwnPropertyDescriptor: (_, key) => Reflect.getOwnPropertyDescriptor(built(), key),
+      // Read-only, as the projection itself (a write outside its derive is a no-op).
+      set: () => true,
+      deleteProperty: () => true,
+    },
   );
 };

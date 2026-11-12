@@ -4,7 +4,11 @@ import { describe, expect, it } from "vitest";
 
 import type { Edge } from "@/types";
 
-import { connectionKey, createConnections } from "../projections/connections";
+import {
+  connectionKey,
+  createConnections,
+  createLazyConnections,
+} from "../projections/connections";
 
 describe("createConnections (core, headless)", () => {
   it("indexes every edge under node, node-type, and node-type-handle keys", () => {
@@ -263,6 +267,74 @@ describe("createConnections — same-id replacement", () => {
       "c",
       "c-target",
     ]);
+    dispose();
+  });
+});
+
+describe("createLazyConnections", () => {
+  it("reads no edge until the index is read, then indexes the edges of that moment", () => {
+    const [edges, setEdges] = createStore([{ id: "e1", source: "a", target: "b" }] as Edge[]);
+    let edgeReads = 0;
+    const { connections, dispose } = createRoot((dispose) => ({
+      dispose,
+      connections: createLazyConnections({
+        get edges() {
+          edgeReads++;
+          return edges;
+        },
+      }),
+    }));
+    flush();
+    setEdges((draft) => {
+      draft.push({ id: "e2", source: "a", target: "c" });
+    });
+    flush();
+    expect(edgeReads).toBe(0);
+
+    expect(Object.keys(connections[connectionKey("a", "source")] ?? {})).toHaveLength(2);
+    expect(edgeReads).toBeGreaterThan(0);
+    dispose();
+  });
+
+  it("outlives the scope that read it first", () => {
+    const [edges, setEdges] = createStore([{ id: "e1", source: "a", target: "b" }] as Edge[]);
+    const { connections, dispose } = createRoot((dispose) => ({
+      dispose,
+      connections: createLazyConnections({
+        get edges() {
+          return edges;
+        },
+      }),
+    }));
+
+    // The first read happens in a reader's effect, which is then disposed.
+    const disposeReader = createRoot((dispose) => {
+      createEffect(
+        () => Object.keys(connections.a ?? {}).length,
+        () => {},
+      );
+      return dispose;
+    });
+    flush();
+    disposeReader();
+
+    const seen: number[] = [];
+    const disposeLater = createRoot((dispose) => {
+      createEffect(
+        () => Object.keys(connections.a ?? {}).length,
+        (count) => {
+          seen.push(count);
+        },
+      );
+      return dispose;
+    });
+    flush();
+    setEdges((draft) => {
+      draft.push({ id: "e2", source: "a", target: "c" });
+    });
+    flush();
+    expect(seen).toEqual([1, 2]);
+    disposeLater();
     dispose();
   });
 });

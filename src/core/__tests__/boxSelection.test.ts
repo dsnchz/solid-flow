@@ -40,6 +40,7 @@ const withBox = async (
     selected: () => { nodes: string[]; edges: string[] };
     writes: ReturnType<typeof vi.fn>;
     select: (nodeIds: string[], edgeIds?: string[]) => void;
+    commands: ReturnType<typeof createFlowState<Node, Edge>>["commands"];
   }) => void | Promise<void>,
   options: { isNodeSelectable?: IsNodeSelectable<Node> } = {},
 ) => {
@@ -61,7 +62,7 @@ const withBox = async (
   const box = createBoxSelection<Node, Edge>({
     nodeLookup: state.nodeLookup,
     nodeGeometry: state.nodeGeometry,
-    connections: state.connections,
+    edges: () => state.store.edges,
     edgeLookup: state.edgeLookup,
     selectedNodeIds: state.selectedNodeIds,
     selectedEdgeIds: state.selectedEdgeIds,
@@ -84,7 +85,7 @@ const withBox = async (
     flush();
   };
   try {
-    await run({ box, selected, writes, select });
+    await run({ box, selected, writes, select, commands: state.commands });
   } finally {
     dispose();
   }
@@ -105,6 +106,24 @@ describe("createBoxSelection", () => {
       // edges follow the selected nodes, as upstream).
       expect(selected()).toEqual({ nodes: ["a", "b"], edges: ["e-ab", "e-bc"] });
       expect(box.selectedNodeCount).toBe(2);
+    });
+  });
+
+  it("a later gesture sees an edge added after the earlier one", async () => {
+    await withBox(({ box, selected, commands }) => {
+      box.arm();
+      box.begin({ keepPrevious: false });
+      box.update(AB);
+      flush();
+      expect(selected().edges).toEqual(["e-ab", "e-bc"]);
+
+      commands.addEdges({ id: "e-bd", source: "b", target: "d" });
+      flush();
+      box.arm();
+      box.begin({ keepPrevious: false });
+      box.update(AB);
+      flush();
+      expect(selected().edges).toEqual(["e-ab", "e-bc", "e-bd"]);
     });
   });
 
