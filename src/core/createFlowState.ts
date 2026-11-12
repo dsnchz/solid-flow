@@ -47,6 +47,7 @@ import {
   type NodeGeometry,
   type NodeMeasurements,
 } from "./projections/internalNodes";
+import { createEdgeMarkers } from "./projections/markers";
 import { createOnScreenIds } from "./projections/onScreenIds";
 import { createParentIds } from "./projections/parentIds";
 import { createReportedIds } from "./projections/reportedIds";
@@ -625,9 +626,27 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     },
   });
 
+  // The unique edge markers (projections/markers.ts), reported by the edge
+  // rows; MarkerDefinition renders the list.
+  const edgeMarkers = createEdgeMarkers({
+    get id() {
+      return store.id;
+    },
+    get defaultColor() {
+      return store.defaultMarkerColor;
+    },
+    get defaultMarkerStart() {
+      return store.defaultEdgeOptions.markerStart;
+    },
+    get defaultMarkerEnd() {
+      return store.defaultEdgeOptions.markerEnd;
+    },
+  });
+
   // Edge layout join (core projection): id-keyed record, row identity stable
   // across derive re-runs. Replaces the mapArray layout effect + ReactiveMap.
   const resolvedEdges = createResolvedEdges<NodeType, EdgeType>({
+    markers: edgeMarkers,
     onGeometryChange: edgeGeometryFeed.report,
     reportSelected: selectedEdges.set,
     endpointVersion: (id) => endpointVersions.get(id)?.endpoint,
@@ -889,6 +908,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     nodeGeometryChanges: nodeGeometryFeed.changes,
     onScreenNodeIds,
     onScreenEdgeIds,
+    /** The unique edge markers, sorted by id (MarkerDefinition). */
+    markers: edgeMarkers.list,
     actions: {
       getResolvedEdge,
       armInitialFitView: initialFitView.arm,

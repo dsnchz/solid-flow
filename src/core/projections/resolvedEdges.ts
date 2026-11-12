@@ -10,6 +10,7 @@ import { createMemo, createProjection, mapArray, onCleanup, untrack } from "soli
 import type { DefaultEdgeOptions, Edge, InternalNode, Node, ResolvedEdge } from "@/types";
 
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
+import type { EdgeMarkers } from "./markers";
 import { createRowRecordProjection } from "./rowRecord";
 
 /**
@@ -41,6 +42,8 @@ export type ResolvedEdgesSource<NodeType extends Node = Node, EdgeType extends E
    * record, projections/reportedIds.ts).
    */
   readonly reportSelected?: (id: string, selected: boolean) => void;
+  /** The flow's edge markers (markers.ts): each edge reports its own two, on every run. */
+  readonly markers?: Pick<EdgeMarkers, "set" | "remove">;
 };
 
 /**
@@ -116,6 +119,7 @@ export const createResolvedEdges = <NodeType extends Node = Node, EdgeType exten
               source.onGeometryChange(id, row ? segmentBox(row) : null);
             }
           }
+          source.markers?.set(id, edge.markerStart, edge.markerEnd);
           source.reportSelected?.(
             id,
             row
@@ -130,6 +134,7 @@ export const createResolvedEdges = <NodeType extends Node = Node, EdgeType exten
       onCleanup(() => {
         if (geometry !== "") source.onGeometryChange?.(id, null);
         source.reportSelected?.(id, false);
+        source.markers?.remove(id);
       });
       return { id, store };
     },

@@ -1,169 +1,115 @@
 // @vitest-environment node
-import { createMarkerIds, MarkerType } from "@xyflow/system";
-import { createEffect, createRoot, createSignal, createStore, flush } from "solid-js";
+import { createMarkerIds, type EdgeMarker, MarkerType } from "@xyflow/system";
+import { createEffect, createRoot, createSignal, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import type { Edge } from "@/types";
 
-import { createMarkerIndex, type MarkerEntry } from "../projections/markers";
+import { createEdgeMarkers } from "../projections/markers";
+
+// The edge rows report their own markers; the list must match
+// @xyflow/system's createMarkerIds over the same edges, and wake its readers
+// only when the set of unique markers (id + color) changes.
 
 const arrow = { type: MarkerType.Arrow };
 const closed = { type: MarkerType.ArrowClosed, color: "red" };
 
-const setup = (initial: Edge[]) => {
-  const [edges, setEdges] = createStore<Edge[]>(initial);
-  const [defaultColor, setDefaultColor] = createSignal("#b1b1b7");
-  let index!: Record<string, MarkerEntry>;
-  let dispose!: () => void;
-  const runs = { membership: 0 };
-  const options = () => ({
-    id: "flow",
-    defaultColor: defaultColor(),
-    defaultMarkerStart: undefined,
-    defaultMarkerEnd: undefined,
-  });
-  createRoot((d) => {
-    dispose = d;
-    index = createMarkerIndex({
-      get edges() {
-        return edges;
-      },
-      get id() {
-        return "flow";
-      },
+const setup = (defaults?: { start?: EdgeMarker; end?: EdgeMarker }) =>
+  createRoot((dispose) => {
+    const [defaultColor, setDefaultColor] = createSignal("#b1b1b7", { ownedWrite: true });
+    const options = {
+      id: "flow",
       get defaultColor() {
         return defaultColor();
       },
-      get defaultMarkerStart() {
-        return undefined;
-      },
-      get defaultMarkerEnd() {
-        return undefined;
-      },
-    });
+      defaultMarkerStart: defaults?.start,
+      defaultMarkerEnd: defaults?.end,
+    };
+    const markers = createEdgeMarkers(options);
+    const runs = { list: 0 };
     createEffect(
-      () => Object.keys(index).length,
+      () => markers.list(),
       () => {
-        runs.membership++;
+        runs.list++;
       },
     );
+    const edges = new Map<string, Edge>();
+    const report = (edge: Edge) => {
+      edges.set(edge.id, edge);
+      markers.set(edge.id, edge.markerStart, edge.markerEnd);
+    };
+    const remove = (id: string) => {
+      edges.delete(id);
+      markers.remove(id);
+    };
+    const expected = () => createMarkerIds([...edges.values()], options);
+    return { dispose, markers, runs, report, remove, expected, setDefaultColor };
   });
-  flush();
-  const expected = () => createMarkerIds(edges as Edge[], options());
-  const actual = () => Object.values(index).sort((a, b) => a.id.localeCompare(b.id));
-  return { edges, setEdges, setDefaultColor, index: () => index, runs, expected, actual, dispose };
-};
 
-describe("createMarkerIndex", () => {
+describe("createEdgeMarkers", () => {
   it("matches the system helper: object markers only, defaults applied, deduped, sorted", () => {
-    const { actual, expected, dispose } = setup([
-      { id: "e1", source: "a", target: "b", markerEnd: arrow },
-      { id: "e2", source: "b", target: "c", markerEnd: arrow, markerStart: closed },
-      { id: "e3", source: "c", target: "d", markerEnd: "url(#custom)" },
-      { id: "e4", source: "d", target: "e" },
-    ] as Edge[]);
-    expect(actual()).toEqual(expected());
-    expect(actual()).toHaveLength(2);
+    const { dispose, markers, report, expected } = setup({ start: closed });
+    report({ id: "e1", source: "a", target: "b", markerEnd: arrow });
+    report({ id: "e2", source: "b", target: "c", markerEnd: arrow, markerStart: closed });
+    report({ id: "e3", source: "c", target: "d", markerEnd: "url(#custom)" });
+    report({ id: "e4", source: "d", target: "e" });
+    flush();
+    expect(markers.list()).toEqual(expected());
+    expect(markers.list()).toHaveLength(2);
     dispose();
   });
 
-  it("an edge's non-marker write and a same-marker rewrite touch nothing", () => {
-    const { setEdges, index, runs, dispose } = setup([
-      { id: "e1", source: "a", target: "b", markerEnd: arrow },
-      { id: "e2", source: "b", target: "c", markerEnd: arrow },
-    ] as Edge[]);
-    const entry = Object.values(index())[0];
-    expect(runs.membership).toBe(1);
-
-    setEdges((draft) => {
-      draft[1]!.source = "z";
-      draft[1]!.markerEnd = { type: MarkerType.Arrow };
-    });
+  it("applies a default marker only while some edge has none of its own", () => {
+    const { dispose, markers, report, remove, expected } = setup({ end: closed });
+    report({ id: "e1", source: "a", target: "b", markerEnd: arrow });
     flush();
-    expect(Object.values(index())[0]).toBe(entry);
-    expect(runs.membership).toBe(1);
+    expect(markers.list()).toEqual(expected());
+    expect(markers.list().map((m) => m.type)).toEqual([MarkerType.Arrow]);
+    report({ id: "e2", source: "b", target: "c" });
+    flush();
+    expect(markers.list()).toEqual(expected());
+    expect(markers.list()).toHaveLength(2);
+    remove("e2");
+    flush();
+    expect(markers.list()).toEqual(expected());
+    expect(markers.list()).toHaveLength(1);
     dispose();
   });
 
-  it("a marker change on one edge updates only the id set that changed", () => {
-    const { setEdges, index, runs, actual, expected, dispose } = setup([
-      { id: "e1", source: "a", target: "b", markerEnd: arrow },
-      { id: "e2", source: "b", target: "c", markerEnd: arrow },
-    ] as Edge[]);
-    const arrowEntry = Object.values(index())[0];
-
-    setEdges((draft) => {
-      draft[1]!.markerEnd = closed;
-    });
+  it("keeps a shared marker until its last edge goes; an equal rewrite wakes nothing", () => {
+    const { dispose, markers, runs, report, remove } = setup();
+    report({ id: "e1", source: "a", target: "b", markerEnd: arrow });
+    report({ id: "e2", source: "b", target: "c", markerEnd: arrow });
     flush();
-    expect(actual()).toEqual(expected());
-    expect(Object.keys(index())).toHaveLength(2);
-    expect(Object.values(index()).find((m) => m === arrowEntry)).toBe(arrowEntry);
-    expect(runs.membership).toBe(2);
+    const list = markers.list();
+    const before = runs.list;
+
+    // a fresh object of an equal marker, and a non-marker change (same values)
+    report({ id: "e2", source: "z", target: "c", markerEnd: { type: MarkerType.Arrow } });
+    report({ id: "e1", source: "a", target: "b", markerEnd: arrow });
+    flush();
+    expect(markers.list()).toBe(list);
+    expect(runs.list).toBe(before);
+
+    remove("e1");
+    flush();
+    expect(markers.list()).toBe(list);
+    remove("e2");
+    flush();
+    expect(markers.list()).toEqual([]);
+    expect(runs.list).toBe(before + 1);
     dispose();
   });
 
   it("follows the default color for markers without their own", () => {
-    const { setDefaultColor, actual, expected, dispose } = setup([
-      { id: "e1", source: "a", target: "b", markerEnd: arrow },
-    ] as Edge[]);
-    expect(actual()[0]!.color).toBe("#b1b1b7");
+    const { dispose, markers, report, expected, setDefaultColor } = setup();
+    report({ id: "e1", source: "a", target: "b", markerEnd: arrow, markerStart: closed });
+    flush();
+    expect(markers.list().map((m) => m.color)).toEqual(["red", "#b1b1b7"]);
     setDefaultColor("blue");
     flush();
-    expect(actual()[0]!.color).toBe("blue");
-    expect(actual()).toEqual(expected());
-    dispose();
-  });
-});
-
-/**
- * A whole-graph replacement with FRESH edge objects of the same ids (bench
- * round 41, "set graph"): the per-edge marker memos are keyed by id and
- * equality-cut, so unchanged markers leave the record untouched and a
- * marker changed inside the fresh object still lands.
- */
-describe("createMarkerIndex — same-id replacement", () => {
-  it("keeps the entries and stays silent when the markers did not change", () => {
-    const { setEdges, index, runs, actual, expected, dispose } = setup([
-      { id: "e1", source: "a", target: "b", markerEnd: arrow },
-      { id: "e2", source: "b", target: "c", markerEnd: arrow, markerStart: closed },
-    ] as Edge[]);
-    const entry = Object.values(index())[0];
-    setEdges(
-      () =>
-        [
-          {
-            id: "e1",
-            source: "a",
-            target: "b",
-            markerEnd: { type: MarkerType.Arrow },
-            data: { v: 1 },
-          },
-          {
-            id: "e2",
-            source: "b",
-            target: "c",
-            markerEnd: { type: MarkerType.Arrow },
-            markerStart: { type: MarkerType.ArrowClosed, color: "red" },
-            data: { v: 1 },
-          },
-        ] as Edge[],
-    );
-    flush();
-    expect(actual()).toEqual(expected());
-    expect(Object.values(index())[0]).toBe(entry);
-    expect(runs.membership).toBe(1);
-    dispose();
-  });
-
-  it("lands a marker changed inside the fresh object", () => {
-    const { setEdges, actual, expected, dispose } = setup([
-      { id: "e1", source: "a", target: "b", markerEnd: arrow },
-    ] as Edge[]);
-    setEdges(() => [{ id: "e1", source: "a", target: "b", markerEnd: closed }] as Edge[]);
-    flush();
-    expect(actual()).toEqual(expected());
-    expect(actual().map((m) => m.type)).toEqual([MarkerType.ArrowClosed]);
+    expect(markers.list()).toEqual(expected());
+    expect(markers.list().map((m) => m.color)).toEqual(["red", "blue"]);
     dispose();
   });
 });
