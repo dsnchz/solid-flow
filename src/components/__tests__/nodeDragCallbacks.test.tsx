@@ -1,13 +1,11 @@
 import { render } from "@solidjs/testing-library";
-import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useInternalSolidFlow } from "@/contexts";
 import type { Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -69,10 +67,10 @@ describe("node drag callbacks", () => {
 
   it("a node drag reports the grabbed node as the target", async () => {
     const { calls, container } = renderRecorded();
-    await tick();
+    await settle();
 
     dragElement(container.querySelector('.solid-flow__node[data-id="a"]')!);
-    await tick();
+    await settle();
 
     expect(calls.map((c) => c.name)).toEqual(["start", "drag", "stop"]);
     for (const call of calls) expect(call).toMatchObject({ target: "a", nodes: ["a"] });
@@ -80,16 +78,15 @@ describe("node drag callbacks", () => {
 
   it("a drag of the selection box reports no target and every selected node", async () => {
     const { calls, container, internal } = renderRecorded();
-    await tick();
+    await settle();
     internal().actions.addSelectedNodes(["a", "b"]);
     internal().actions.setSelectionRectMode("nodes");
-    flush();
-    await tick();
+    await settle();
 
     const box = container.querySelector(".solid-flow__selection-wrapper");
     expect(box).not.toBeNull();
     dragElement(box!);
-    await tick();
+    await settle();
 
     expect(calls.map((c) => c.name)).toEqual(["start", "drag", "stop"]);
     for (const call of calls) expect(call).toMatchObject({ target: null, nodes: ["a", "b"] });

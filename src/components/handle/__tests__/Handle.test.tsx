@@ -3,6 +3,7 @@ import { fireEvent } from "@solidjs/testing-library";
 import { createSignal, flush } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { Handle } from "@/components/handle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { createEdgeStore } from "@/core";
@@ -23,8 +24,6 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   ...overrides,
 });
 
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
-
 afterEach(restoreElementFromPoint);
 
 describe("<Handle /> connection gesture", () => {
@@ -43,7 +42,7 @@ describe("<Handle /> connection gesture", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     await connectByDrag(container);
 
     const renderedEdges = Array.from(container.querySelectorAll(".solid-flow__edge")).map((edge) =>
@@ -71,7 +70,7 @@ describe("<Handle /> connection gesture", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     await connectByDrag(container);
 
     expect(edges.map((edge) => edge.id)).toEqual(["xy-edge__a-b"]);
@@ -88,7 +87,7 @@ describe("<Handle /> connection gesture", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     await connectByDrag(container);
 
     expect(edges).toHaveLength(0);
@@ -104,7 +103,7 @@ describe("<Handle /> connection gesture", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
 
     const sourceHandle = container.querySelector<HTMLElement>(
       '.solid-flow__handle.source[data-nodeid="a"]',
@@ -115,7 +114,7 @@ describe("<Handle /> connection gesture", () => {
     fireEvent.pointerDown(sourceHandle, { button: 0, pointerId: 1, clientX: 50, clientY: 40 });
     fireEvent.mouseMove(document, { clientX: 400, clientY: 400 });
     fireEvent.mouseUp(document, { clientX: 400, clientY: 400 });
-    await tick();
+    flush();
 
     expect(container.querySelectorAll(".solid-flow__edge")).toHaveLength(0);
   });
@@ -157,11 +156,11 @@ describe("<Handle /> connection gesture", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     expect(onConnect).not.toHaveBeenCalled();
 
     flow.addEdges({ id: "e1", source: "a", target: "b" });
-    await tick();
+    flush();
     expect(onConnect).toHaveBeenCalledTimes(1);
     expect(onConnect.mock.lastCall![0]).toEqual([
       expect.objectContaining({ source: "a", target: "b" }),
@@ -169,7 +168,7 @@ describe("<Handle /> connection gesture", () => {
     expect(onDisconnect).not.toHaveBeenCalled();
 
     await flow.deleteElements({ edges: [{ id: "e1" }] });
-    await tick();
+    flush();
     expect(onDisconnect).toHaveBeenCalledTimes(1);
     expect(onDisconnect.mock.lastCall![0]).toEqual([
       expect.objectContaining({ source: "a", target: "b" }),
@@ -217,12 +216,12 @@ describe("<Handle /> connection gesture", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     flow.addEdges({ id: "e1", source: "a", target: "b" });
-    await tick();
+    flush();
     flow.addEdges({ id: "e2", source: "a", target: "c" });
-    await tick();
+    flush();
 
     expect(onConnect).toHaveBeenCalledTimes(2);
     expect(onConnect.mock.lastCall![0]).toEqual([
@@ -230,7 +229,7 @@ describe("<Handle /> connection gesture", () => {
     ]);
 
     await flow.deleteElements({ edges: [{ id: "e1" }] });
-    await tick();
+    flush();
 
     expect(onDisconnect).toHaveBeenCalledTimes(1);
     expect(onDisconnect.mock.lastCall![0]).toEqual([
@@ -254,14 +253,13 @@ describe("<Handle /> click-to-connect", () => {
     const { container } = render(() => (
       <SolidFlow nodes={nodes()} defaultEdges={[]} clickConnect width={800} height={600} />
     ));
-    await tick();
+    await settle();
     fireEvent.click(handle(container, "a", "source"));
     flush();
     expect(armed(container)).toBe(true);
     stubElementFromPoint(handle(container, "b", "target"));
     fireEvent.click(handle(container, "b", "target"));
-    flush();
-    await tick();
+    await settle();
     expect(armed(container)).toBe(false);
     expect(
       Array.from(container.querySelectorAll(".solid-flow__edge")).map((e) =>
@@ -274,7 +272,7 @@ describe("<Handle /> click-to-connect", () => {
     const { container } = render(() => (
       <SolidFlow nodes={nodes()} defaultEdges={[]} width={800} height={600} />
     ));
-    await tick();
+    await settle();
     fireEvent.click(handle(container, "a", "source"));
     flush();
     expect(armed(container)).toBe(true);
@@ -291,7 +289,7 @@ describe("<Handle /> click-to-connect", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     fireEvent.click(handle(container, "a", "source"));
     flush();
     expect(armed(container)).toBe(false);
@@ -313,7 +311,7 @@ describe("<Handle /> click-to-connect", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     setClickConnect(false);
     flush();
     fireEvent.click(handle(container, "a", "source"));

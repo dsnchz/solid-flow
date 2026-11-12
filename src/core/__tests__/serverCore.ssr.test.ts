@@ -2,6 +2,8 @@ import { type NodeHandle, Position } from "@xyflow/system";
 import { createRoot, flush, isPending } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
+
 import { createFlowState } from "../createFlowState";
 import { createNodeStore } from "../stores/createNodeStore";
 
@@ -71,8 +73,7 @@ describe("headless core on the server build", () => {
       expect(() => isPending(() => flow.store.nodes.length)).toThrow();
 
       resolveSeed([node("a", 0, "source")]);
-      await new Promise((r) => setTimeout(r, 0));
-      flush();
+      await settle();
       expect(isPending(() => flow.store.nodes.length)).toBe(false);
       expect(flow.store.nodes).toHaveLength(1);
       expect(flow.nodeLookup.get("a")?.internals.positionAbsolute).toEqual({ x: 0, y: 0 });

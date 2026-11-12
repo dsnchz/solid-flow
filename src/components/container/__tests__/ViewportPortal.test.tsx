@@ -1,12 +1,11 @@
 import { render } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Node } from "@/types";
 
 import { ViewportPortal } from "../ViewportPortal";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const nodes: Node[] = [{ id: "a", position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 }];
 
@@ -22,7 +21,7 @@ describe("ViewportPortal", () => {
         </ViewportPortal>
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const content = container.querySelector('[data-testid="front-content"]');
     expect(content).not.toBeNull();
@@ -44,7 +43,7 @@ describe("ViewportPortal", () => {
         </ViewportPortal>
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const content = container.querySelector('[data-testid="back-content"]')!;
     const back = content.closest(".solid-flow__viewport-back")!;

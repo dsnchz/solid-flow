@@ -9,12 +9,15 @@ import type { Node } from "@/types";
 
 import { MiniMap } from "../MiniMap";
 
-const tick = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const nodes: Node[] = [
   { id: "a", position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 },
   { id: "b", position: { x: 200, y: 100 }, data: {}, width: 100, height: 40 },
 ];
+
+// minimapBounds.ts: one trailing idle re-sample per RESAMPLE_MS window; a
+// drag samples once per animation frame (16 ms under fake timers).
+const RESAMPLE_MS = 250;
+const FRAME_MS = 16;
 
 /**
  * Graph bounds feeding the minimap are SAMPLED (never a tracked O(n) memo):
@@ -43,47 +46,56 @@ describe("MiniMap bounds sampling", () => {
   };
 
   it("follows a programmatic node move outside any drag", async () => {
-    const { api, viewBox } = renderProbed();
-    await tick(20);
-    const before = viewBox();
+    vi.useFakeTimers();
+    try {
+      const { api, viewBox } = renderProbed();
+      await vi.advanceTimersByTimeAsync(RESAMPLE_MS);
+      const before = viewBox();
 
-    api().commands.updateNode("b", { position: { x: 5000, y: 100 } });
-    flush();
-    await tick(400);
-    expect(viewBox()).not.toBe(before);
+      api().commands.updateNode("b", { position: { x: 5000, y: 100 } });
+      flush();
+      await vi.advanceTimersByTimeAsync(RESAMPLE_MS);
+      expect(viewBox()).not.toBe(before);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("follows dragged rows frame by frame while dragging", async () => {
-    const { internal, viewBox } = renderProbed();
-    await tick(20);
-    const before = viewBox();
+    vi.useFakeTimers();
+    try {
+      const { internal, viewBox } = renderProbed();
+      await vi.advanceTimersByTimeAsync(RESAMPLE_MS);
+      const before = viewBox();
 
-    internal().actions.setDragging(true);
-    internal().actions.updateNodePositions(
-      new Map([["a", { position: { x: -4000, y: 0 } }]]),
-      true,
-    );
-    flush();
-    await tick(60);
-    const during = viewBox();
-    expect(during).not.toBe(before);
+      internal().actions.setDragging(true);
+      internal().actions.updateNodePositions(
+        new Map([["a", { position: { x: -4000, y: 0 } }]]),
+        true,
+      );
+      flush();
+      await vi.advanceTimersByTimeAsync(FRAME_MS);
+      const during = viewBox();
+      expect(during).not.toBe(before);
 
-    internal().actions.updateNodePositions(
-      new Map([["a", { position: { x: -8000, y: 0 } }]]),
-      true,
-    );
-    flush();
-    await tick(60);
-    expect(viewBox()).not.toBe(during);
+      internal().actions.updateNodePositions(
+        new Map([["a", { position: { x: -8000, y: 0 } }]]),
+        true,
+      );
+      flush();
+      await vi.advanceTimersByTimeAsync(FRAME_MS);
+      expect(viewBox()).not.toBe(during);
 
-    internal().actions.updateNodePositions(
-      new Map([["a", { position: { x: -8000, y: 0 } }]]),
-      false,
-    );
-    internal().actions.setDragging(false);
-    flush();
-    await tick(60);
-    expect(viewBox()).toContain("-8");
+      internal().actions.updateNodePositions(
+        new Map([["a", { position: { x: -8000, y: 0 } }]]),
+        false,
+      );
+      internal().actions.setDragging(false);
+      flush();
+      expect(viewBox()).toContain("-8");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps no timer armed while the graph is idle", async () => {

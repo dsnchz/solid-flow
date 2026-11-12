@@ -3,6 +3,7 @@ import { getEdgeToolbarTransform, getNodeToolbarTransform, Position } from "@xyf
 import { createSignal, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Edge, Node, NodeProps } from "@/types";
@@ -13,8 +14,6 @@ import { NodeToolbar, type NodeToolbarProps } from "../NodeToolbar";
 // The props contract of the two toolbars (none was pinned), written before
 // their props handling changes: one toolbar per node or edge that carries
 // one, hidden until it is shown.
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const node = (id: string, x: number, extra: Partial<Node> = {}): Node => ({
   id,
@@ -38,7 +37,7 @@ const renderNodes = async (
       <Probe />
     </SolidFlow>
   ));
-  await tick();
+  await settle();
   const toolbars = () =>
     Array.from(container.querySelectorAll<HTMLDivElement>(".solid-flow__node-toolbar"));
   return { container, toolbars, setNodes, api: () => api };
@@ -165,7 +164,7 @@ const renderEdge = async (content: () => ReturnType<typeof EdgeToolbar>, initial
       <Probe />
     </SolidFlow>
   ));
-  await tick();
+  await settle();
   const toolbar = () => container.querySelector<HTMLDivElement>(".solid-flow__edge-toolbar");
   return { container, toolbar, setEdges, api: () => api };
 };

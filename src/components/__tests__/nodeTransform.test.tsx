@@ -2,12 +2,11 @@ import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import type { Node } from "@/types";
 
 import { useSolidFlow } from "../../hooks/useSolidFlow";
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 /**
  * A node's transform is its own DOM write (a render effect over the row's
@@ -41,7 +40,7 @@ describe("NodeWrapper transform", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     const el = container.querySelector<HTMLElement>('.solid-flow__node[data-id="a"]')!;
     expect(el.style.transform).toBe("translate(10px, 20px)");
     expect(el.style.color).toBe("red");
@@ -50,7 +49,6 @@ describe("NodeWrapper transform", () => {
 
     api.commands.updateNode("a", { position: { x: 300, y: 40 } });
     flush();
-    await tick();
     expect(el.style.transform).toBe("translate(300px, 40px)");
     expect(el.style.color).toBe("red");
     expect(el.style.width).toBe("100px");

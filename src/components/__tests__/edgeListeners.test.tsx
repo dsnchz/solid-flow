@@ -1,11 +1,10 @@
 import { fireEvent, render } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import type { Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -42,7 +41,7 @@ describe("per-edge listeners", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     expect(container.querySelector('.solid-flow__edge[data-id="e1"]')).not.toBeNull();
     expect(edgeListeners("pointerenter")).toBe(0);
     expect(edgeListeners("pointerleave")).toBe(0);
@@ -61,7 +60,7 @@ describe("per-edge listeners", () => {
         onEdgePointerMove={({ edge, event }) => moves.push(`${event.type}:${edge.id}`)}
       />
     ));
-    await tick();
+    await settle();
     expect(edgeListeners("pointermove")).toBe(1);
     fireEvent.pointerMove(container.querySelector('.solid-flow__edge[data-id="e1"]')!);
     expect(moves).toEqual(["pointermove:e1"]);
@@ -80,7 +79,7 @@ describe("per-edge listeners", () => {
         onEdgeDoubleClick={({ edge, event }) => events.push(`${event.type}:${edge.id}`)}
       />
     ));
-    await tick();
+    await settle();
     expect(edgeListeners("pointerenter")).toBe(1);
     expect(edgeListeners("pointerleave")).toBe(1);
     expect(edgeListeners("dblclick")).toBe(1);

@@ -1,10 +1,10 @@
 import { render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { createNodeStore } from "@/core";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Literal shape (not the broad Node type): the guided-union store narrows
 // `data` by `type`, so seeds are typed by inference.
@@ -55,7 +55,7 @@ describe("live (async-iterable) node stores", () => {
 
     const [nodes] = createNodeStore(stream);
     const { container } = render(() => <SolidFlow nodes={nodes} width={800} height={600} />);
-    await tick();
+    flush();
     const inDom = (id: string) =>
       container.querySelector(`.solid-flow__node[data-id="${id}"]`) !== null;
 
@@ -63,24 +63,24 @@ describe("live (async-iterable) node stores", () => {
     expect(container.querySelectorAll(".solid-flow__node")).toHaveLength(0);
 
     push([makeNode("a", 0)]);
-    await tick();
+    await settle();
     expect(inDom("a")).toBe(true);
 
     // Membership grows on a later yield (a "remote user" adds a node)...
     push([makeNode("a", 0), makeNode("b", 300)]);
-    await tick();
+    await settle();
     expect(inDom("a")).toBe(true);
     expect(inDom("b")).toBe(true);
 
     // ...and a position-only yield moves the node.
     const el = container.querySelector('.solid-flow__node[data-id="a"]')!;
     push([makeNode("a", 250), makeNode("b", 300)]);
-    await tick();
+    await settle();
     expect((el as HTMLElement).style.transform).toContain("250px");
 
     // Removal streams through too.
     push([makeNode("a", 250)]);
-    await tick();
+    await settle();
     expect(inDom("b")).toBe(false);
     expect(inDom("a")).toBe(true);
 
@@ -91,7 +91,7 @@ describe("live (async-iterable) node stores", () => {
     // the reactive graph into a recompute loop (heap OOM ~1 in 5 full-suite
     // runs; see .agent/spikes/p33-live-store-oom-repro.ts).
     close();
-    await tick();
+    await settle();
     expect(inDom("a")).toBe(true);
   });
 });

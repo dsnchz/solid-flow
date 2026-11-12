@@ -3,12 +3,11 @@ import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
 import { MiniMap } from "@/plugins/minimap/MiniMap";
 import type { Node } from "@/types";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 describe("minimap bounds guard (WP2 / B1)", () => {
   it("keeps the viewBox finite while nodes are unmeasured", async () => {
@@ -24,7 +23,7 @@ describe("minimap bounds guard (WP2 / B1)", () => {
         <MiniMap />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const viewBox = container.querySelector(".solid-flow__minimap-svg")?.getAttribute("viewBox");
     expect(viewBox).toBeTruthy();
@@ -55,8 +54,7 @@ describe("minimap bounding rect", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
-    await tick();
+    await settle();
     const viewBox = () =>
       container.querySelector(".solid-flow__minimap-svg")?.getAttribute("viewBox");
     const before = viewBox();

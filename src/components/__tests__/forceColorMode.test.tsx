@@ -1,12 +1,11 @@
 import { render } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { createSignal, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Node } from "@/types";
 import type { ColorMode } from "@/types/system";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const nodes: Node[] = [{ id: "a", position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 }];
 
@@ -15,7 +14,7 @@ const nodes: Node[] = [{ id: "a", position: { x: 0, y: 0 }, data: {}, width: 100
 describe("forceColorMode", () => {
   it("without it the container carries no scheme class, so the CSS follows the OS", async () => {
     const { getByTestId } = render(() => <SolidFlow nodes={nodes} width={800} height={600} />);
-    await tick();
+    await settle();
     const classes = getByTestId("solid-flow__wrapper").classList;
     expect(classes.contains("light")).toBe(false);
     expect(classes.contains("dark")).toBe(false);
@@ -26,17 +25,17 @@ describe("forceColorMode", () => {
     const { getByTestId } = render(() => (
       <SolidFlow nodes={nodes} width={800} height={600} forceColorMode={mode()} />
     ));
-    await tick();
+    await settle();
     const classes = getByTestId("solid-flow__wrapper").classList;
     expect(classes.contains("dark")).toBe(true);
 
     setMode("light");
-    await tick();
+    flush();
     expect(classes.contains("light")).toBe(true);
     expect(classes.contains("dark")).toBe(false);
 
     setMode(undefined);
-    await tick();
+    flush();
     expect(classes.contains("light")).toBe(false);
     expect(classes.contains("dark")).toBe(false);
   });

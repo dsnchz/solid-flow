@@ -2,6 +2,7 @@ import { render } from "@solidjs/testing-library";
 import { createSignal, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Edge, Node } from "@/types";
 
@@ -12,7 +13,6 @@ import { SolidFlowProvider } from "../SolidFlowProvider";
 // seed flow-OWNED stores once. The flow owns membership — commands and
 // connections write through and persist (there is no controlled re-seed to
 // clobber them), and the default arrays are initial-only.
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },
@@ -32,7 +32,7 @@ describe("uncontrolled flows (defaultNodes/defaultEdges)", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
 
     expect(container.querySelector('[data-id="a"]')).not.toBeNull();
     expect(container.querySelector('[data-id="b"]')).not.toBeNull();
@@ -50,12 +50,11 @@ describe("uncontrolled flows (defaultNodes/defaultEdges)", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     api.addNodes(makeNode({ id: "added", position: { x: 200, y: 0 } }));
     api.addEdges({ id: "eAdded", source: "a", target: "added" } as Edge);
-    flush();
-    await tick();
+    await settle();
 
     expect(container.querySelector('[data-id="added"]')).not.toBeNull();
     expect(container.querySelector('.solid-flow__edge[data-id="eAdded"]')).not.toBeNull();
@@ -64,7 +63,6 @@ describe("uncontrolled flows (defaultNodes/defaultEdges)", () => {
 
     await api.deleteElements({ nodes: [{ id: "a" }] });
     flush();
-    await tick();
     expect(container.querySelector('[data-id="a"]')).toBeNull();
     // The edge lost its source node and goes with it.
     expect(api.flow.nodes).toHaveLength(1);
@@ -75,12 +73,11 @@ describe("uncontrolled flows (defaultNodes/defaultEdges)", () => {
     const { container } = render(() => (
       <SolidFlow defaultNodes={defaults()} width={800} height={600} />
     ));
-    await tick();
+    await settle();
     expect(container.querySelector('[data-id="a"]')).not.toBeNull();
 
     setDefaults([makeNode({ id: "replacement" })]);
     flush();
-    await tick();
 
     // Unlike the controlled `nodes` prop, swapping defaultNodes re-seeds nothing.
     expect(container.querySelector('[data-id="a"]')).not.toBeNull();
@@ -100,7 +97,7 @@ describe("uncontrolled flows (defaultNodes/defaultEdges)", () => {
         />
       </SolidFlowProvider>
     ));
-    await tick();
+    await settle();
 
     expect(container.querySelector('[data-id="late"]')).not.toBeNull();
   });
@@ -116,7 +113,7 @@ describe("uncontrolled flows (defaultNodes/defaultEdges)", () => {
           height={600}
         />
       ));
-      await tick();
+      await settle();
 
       expect(container.querySelector('[data-id="controlled"]')).not.toBeNull();
       expect(container.querySelector('[data-id="ignored"]')).toBeNull();

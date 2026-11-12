@@ -1,11 +1,10 @@
 import { render } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { MiniMap } from "@/plugins/minimap/MiniMap";
 import type { Node } from "@/types";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 30));
 
 const nodes: Node[] = [
   { id: "a", position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 },
@@ -18,7 +17,7 @@ const viewBoxWith = async (offsetScale?: number) => {
       <MiniMap offsetScale={offsetScale} />
     </SolidFlow>
   ));
-  await tick();
+  await settle();
   const viewBox = container.querySelector(".solid-flow__minimap-svg")?.getAttribute("viewBox");
   unmount();
   return viewBox;

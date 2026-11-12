@@ -1,12 +1,12 @@
 import { render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Edge, Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -35,13 +35,13 @@ describe("row stability", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const edgeBefore = container.querySelector('.solid-flow__edge[data-id="e1"]');
     expect(edgeBefore).not.toBeNull();
 
     api.addNodes(makeNode("c", 400));
-    await tick();
+    await settle();
 
     const edgeAfter = container.querySelector('.solid-flow__edge[data-id="e1"]');
     // Upstream: edges unmount for one or more frames on a node add. Ours must
@@ -74,7 +74,7 @@ describe("row stability", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const farPath = container.querySelector(
       '.solid-flow__edge[data-id="far"] .solid-flow__edge-path',
@@ -86,7 +86,7 @@ describe("row stability", () => {
     const nearD = nearPath!.getAttribute("d");
 
     api.updateNode("a", { position: { x: 50, y: 60 } });
-    await tick();
+    flush();
 
     // Adjacent edge re-laid-out; non-adjacent edge's geometry untouched
     // (Svelte Flow's dead layout memo re-laid EVERY edge per drag frame).

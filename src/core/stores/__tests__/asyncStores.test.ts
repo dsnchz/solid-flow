@@ -2,9 +2,8 @@
 import { createEffect, createRoot, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { createEdgeStore, createNodeStore } from "@/core";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 10));
 
 // Async-seeded stores (Solid 2.0 "Fetch High"): the function form hands the
 // promise straight to createStore's projection derive — no memo required.
@@ -41,8 +40,7 @@ describe("createNodeStore / createEdgeStore (async function form)", () => {
       expect(seen).toEqual(["not-ready"]);
 
       resolveFetch([{ id: "a", type: "default", position: { x: 0, y: 0 }, data: { label: "a" } }]);
-      await tick();
-      flush();
+      await settle();
       expect(seen).toEqual(["not-ready", "len=1"]);
 
       // The async seed hands over to normal store semantics: drafts persist.
@@ -59,7 +57,8 @@ describe("createNodeStore / createEdgeStore (async function form)", () => {
   it("edge store: same contract", async () => {
     await createRoot(async (dispose) => {
       const [edges, setEdges] = createEdgeStore(async () => {
-        await tick();
+        // The seed resolves on a later task, like a fetch.
+        await new Promise((resolve) => setTimeout(resolve, 0));
         return [{ id: "e1", source: "a", target: "b" }];
       });
 
@@ -76,10 +75,7 @@ describe("createNodeStore / createEdgeStore (async function form)", () => {
           seen.push(String(v));
         },
       );
-      flush();
-      await tick();
-      await tick();
-      flush();
+      await settle();
       expect(seen).toEqual(["not-ready", "1"]);
 
       setEdges((draft) => {

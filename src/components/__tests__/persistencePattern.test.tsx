@@ -1,13 +1,12 @@
 import { render } from "@solidjs/testing-library";
-import { action, createStore, Loading, refresh } from "solid-js";
+import { action, createStore, flush, Loading, refresh } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Edge, Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -80,14 +79,14 @@ describe("draft-then-commit persistence pattern", () => {
 
   it("holds the Loading fallback while server truth is unresolved, then seeds from it", async () => {
     const { container, inDom, resolveLoad } = setup();
-    await tick();
+    flush();
 
     // Unresolved async seed: the flow subtree is held by the boundary.
     expect(container.querySelector('[data-testid="loading"]')).not.toBeNull();
     expect(inDom("a")).toBe(false);
 
     resolveLoad();
-    await tick(50);
+    await settle();
     expect(container.querySelector('[data-testid="loading"]')).toBeNull();
     expect(inDom("a")).toBe(true);
     expect(inDom("c")).toBe(true);
@@ -96,11 +95,11 @@ describe("draft-then-commit persistence pattern", () => {
   it("edits accumulate in the flow draft without touching server truth", async () => {
     const { server, serverGraph, inDom, resolveLoad, flowApi } = setup();
     resolveLoad();
-    await tick(50);
+    await settle();
 
     flowApi().addNodes(makeNode("b", 200));
     flowApi().updateNode("a", { position: { x: 999, y: 50 } });
-    await tick();
+    await settle();
 
     expect(inDom("b")).toBe(true);
     // Server truth untouched: no writes upstream, no saves fired.
@@ -112,11 +111,11 @@ describe("draft-then-commit persistence pattern", () => {
   it("save action batch-submits toObject() and the refresh reconcile leaves the draft intact", async () => {
     const { api, server, serverGraph, inDom, resolveLoad, flowApi } = setup();
     resolveLoad();
-    await tick(50);
+    await settle();
 
     flowApi().addNodes(makeNode("b", 200));
     flowApi().updateNode("a", { position: { x: 999, y: 50 } });
-    await tick();
+    await settle();
 
     const save = action(function* () {
       const { nodes, edges } = flowApi().toObject();
@@ -124,7 +123,7 @@ describe("draft-then-commit persistence pattern", () => {
       void refresh(serverGraph);
     });
     await save();
-    await tick(50);
+    await settle();
 
     // One batch save carrying the whole draft.
     expect(server.saves).toHaveLength(1);
@@ -143,10 +142,10 @@ describe("draft-then-commit persistence pattern", () => {
   it("a failed save leaves the draft intact for retry", async () => {
     const { server, inDom, resolveLoad, flowApi } = setup();
     resolveLoad();
-    await tick(50);
+    await settle();
 
     flowApi().addNodes(makeNode("b", 200));
-    await tick();
+    await settle();
 
     let failFirst = true;
     const flakySave = async (payload: GraphPayload) => {
@@ -162,7 +161,7 @@ describe("draft-then-commit persistence pattern", () => {
     });
 
     await expect(save()).rejects.toThrow("network down");
-    await tick();
+    await settle();
     // Nothing reverted: the draft is flow-owned, not an optimistic overlay.
     expect(inDom("b")).toBe(true);
     expect(server.saves).toHaveLength(0);

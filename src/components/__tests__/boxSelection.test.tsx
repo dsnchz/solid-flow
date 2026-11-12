@@ -1,12 +1,11 @@
 import { fireEvent, render } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Edge, Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -37,7 +36,7 @@ const boxSelect = async (
   // the click a browser fires after the pointer-up; the pane swallows it to
   // end the gesture
   fireEvent.click(pane, { clientX: to.x, clientY: to.y });
-  await tick();
+  await settle();
 };
 
 const renderFlow = (props: Record<string, unknown> = {}) => {
@@ -71,10 +70,10 @@ const renderFlow = (props: Record<string, unknown> = {}) => {
 describe("box selection", () => {
   it("replaces the previous selection by default", async () => {
     const { container, api, selectedNodes, selectedEdges } = renderFlow();
-    await tick();
+    await settle();
     api().updateNode("a", { selected: true });
     api().updateEdge("ab", { selected: true });
-    await tick();
+    await settle();
     expect(selectedNodes()).toEqual(["a"]);
 
     await boxSelect(container, { x: 380, y: -10 }, { x: 520, y: 60 });
@@ -88,10 +87,10 @@ describe("box selection", () => {
     const { container, api, selectedNodes, selectedEdges } = renderFlow({
       deselectOnSelection: false,
     });
-    await tick();
+    await settle();
     api().updateNode("a", { selected: true });
     api().updateEdge("ab", { selected: true });
-    await tick();
+    await settle();
 
     await boxSelect(container, { x: 380, y: -10 }, { x: 520, y: 60 });
     expect(selectedNodes()).toEqual(["a", "c"]);
@@ -108,14 +107,14 @@ describe("box selection", () => {
       isNodeSelectable: (node: Node) => node.id !== "b",
       selectNodesOnDrag: false,
     });
-    await tick();
+    await settle();
 
     await boxSelect(container, { x: 180, y: -10 }, { x: 520, y: 60 });
     expect(selectedNodes()).toEqual(["c"]);
 
     const b = container.querySelector<HTMLElement>('.solid-flow__node[data-id="b"]')!;
     fireEvent.click(b);
-    await tick();
+    await settle();
     expect(selectedNodes()).toContain("b");
   });
 });

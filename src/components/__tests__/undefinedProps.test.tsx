@@ -1,12 +1,12 @@
 import { render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { SolidFlowProvider } from "@/components/SolidFlowProvider";
 import { useInternalSolidFlow } from "@/contexts";
 import type { Node } from "@/types";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const nodes: Node[] = [{ id: "a", position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 }];
 
@@ -38,7 +38,7 @@ describe("explicitly undefined props keep the flow's defaults", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(internal.store.minZoom).toBe(0.5);
     expect(internal.store.maxZoom).toBe(2);
@@ -60,7 +60,7 @@ describe("explicitly undefined props keep the flow's defaults", () => {
         <Probe />
       </SolidFlowProvider>
     ));
-    await tick();
+    flush();
 
     expect(internal.store.minZoom).toBe(0.5);
     expect(internal.store.maxZoom).toBe(2);
@@ -76,7 +76,7 @@ describe("explicitly undefined props keep the flow's defaults", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(internal.store.minZoom).toBe(0.1);
     expect(internal.store.nodesDraggable).toBe(false);

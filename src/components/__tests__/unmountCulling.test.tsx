@@ -1,6 +1,8 @@
 import { fireEvent, render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import { MiniMap } from "@/plugins/minimap/MiniMap";
 import type { Edge, Node } from "@/types";
@@ -23,8 +25,6 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
 
 const makeEdge = (overrides: Partial<Edge> & { id: string; source: string; target: string }) =>
   ({ ...overrides }) as Edge;
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const renderFlow = (props: {
   nodes: Node[];
@@ -55,7 +55,7 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
     const { container } = renderFlow({
       nodes: [makeNode({ id: "near" }), makeNode({ id: "far", position: { x: FAR_X, y: 0 } })],
     });
-    await tick();
+    await settle();
 
     const far = container.querySelector<HTMLElement>('[data-id="far"]');
     expect(far).not.toBeNull();
@@ -81,7 +81,7 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
       onlyRenderVisibleElements: true,
       probeRef: (a) => (api = a),
     });
-    await tick();
+    await settle();
 
     // Far nodes mounted once (measurement must not starve), then unmounted.
     expect(container.querySelector('[data-id="near"]')).not.toBeNull();
@@ -106,7 +106,7 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
       ],
       onlyRenderVisibleElements: true,
     });
-    await tick();
+    await settle();
 
     expect(container.querySelector('[data-id="far"]')).not.toBeNull();
   });
@@ -127,7 +127,7 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
 
     // CSS tier (default mode): opted-out element stays visible off-screen.
     const cssTier = renderFlow({ nodes, edges });
-    await tick();
+    await settle();
     const keep = cssTier.container.querySelector<HTMLElement>('[data-id="farKeep"]')!;
     expect(keep.style.visibility).toBe("visible");
     expect(cssTier.container.querySelector<HTMLElement>('[data-id="farCull"]')!.style.visibility) //
@@ -136,7 +136,7 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
 
     // Unmount tier: opted-out node and edge stay mounted, controls unmount.
     const unmountTier = renderFlow({ nodes, edges, onlyRenderVisibleElements: true });
-    await tick();
+    await settle();
     expect(unmountTier.container.querySelector('[data-id="farKeep"]')).not.toBeNull();
     expect(unmountTier.container.querySelector('[data-id="farCull"]')).toBeNull();
     expect(
@@ -152,18 +152,18 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
       onlyRenderVisibleElements: true,
       probeRef: (p) => (api = p),
     });
-    await tick();
+    await settle();
 
     const node = container.querySelector<HTMLElement>('[data-id="a"]')!;
     fireEvent.focusIn(node);
     api.updateNode("a", { position: { x: FAR_X, y: 0 } });
-    await tick();
+    flush();
 
     // Off-viewport but focused: stays mounted (the CSS tier may still hide it).
     expect(container.querySelector('[data-id="a"]')).not.toBeNull();
 
     fireEvent.focusOut(node);
-    await tick();
+    flush();
     expect(container.querySelector('[data-id="a"]')).toBeNull();
   });
 
@@ -174,11 +174,11 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
       onlyRenderVisibleElements: true,
       probeRef: (p) => (api = p),
     });
-    await tick();
+    await settle();
     expect(container.querySelector('[data-id="far"]')).toBeNull();
 
     await api.setViewport({ x: -4800, y: 0, zoom: 1 });
-    await tick();
+    await settle();
 
     const far = container.querySelector<HTMLElement>('[data-id="far"]');
     expect(far).not.toBeNull();
@@ -196,11 +196,11 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
     const edges = [makeEdge({ id: "eNear", source: "near", target: "far" })];
 
     const first = renderFlow({ nodes, edges });
-    await tick();
+    await settle();
     first.unmount();
 
     const second = renderFlow({ nodes, edges, onlyRenderVisibleElements: true });
-    await tick();
+    await settle();
 
     expect(second.container.querySelector('.solid-flow__edge[data-id="eNear"]')).not.toBeNull();
     // The far node mounted exactly once for measurement, then unmounted.
@@ -219,7 +219,7 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
         <MiniMap />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(container.querySelector('.solid-flow__nodes [data-id="far"]')).toBeNull();
     expect(container.querySelectorAll(".solid-flow__minimap-node")).toHaveLength(2);
@@ -234,11 +234,11 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
         onlyRenderVisibleElements: true,
         probeRef: (p) => (api = p),
       });
-      await tick();
+      await settle();
 
       const element = container.querySelector<HTMLElement>('[data-id="a"]')!;
       api.updateNode("a", { position: { x: FAR_X, y: 0 } });
-      await tick();
+      flush();
 
       expect(container.querySelector('[data-id="a"]')).toBeNull();
       expect(unobserve).toHaveBeenCalledWith(element);

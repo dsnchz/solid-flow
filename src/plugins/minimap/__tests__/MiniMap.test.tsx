@@ -3,6 +3,7 @@ import type { JSX } from "@solidjs/web";
 import { createSignal, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Node } from "@/types";
 
@@ -21,8 +22,6 @@ const nodes: Node[] = [
   { id: "b", position: { x: 200, y: 100 }, data: {}, width: 100, height: 40 },
 ];
 
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
-
 describe("MiniMap", () => {
   it("renders the default rounded-rect node per visible node", async () => {
     const { container } = render(() => (
@@ -30,7 +29,7 @@ describe("MiniMap", () => {
         <MiniMap />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const rects = container.querySelectorAll(".solid-flow__minimap-node");
     expect(rects).toHaveLength(2);
@@ -50,7 +49,7 @@ describe("MiniMap", () => {
         <MiniMap nodeComponent={CustomNode} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(container.querySelectorAll(".custom-mini-node")).toHaveLength(2);
     expect(container.querySelectorAll(".solid-flow__minimap-node")).toHaveLength(0);
@@ -84,13 +83,12 @@ describe("MiniMap", () => {
         <MiniMap nodeComponent={shape().C} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     expect(container.querySelectorAll(".mini-circle")).toHaveLength(2);
     expect(container.querySelectorAll(".mini-square")).toHaveLength(0);
 
     setShape({ C: Square });
     flush();
-    await tick();
     expect(container.querySelectorAll(".mini-circle")).toHaveLength(0);
     expect(container.querySelectorAll(".mini-square")).toHaveLength(2);
     expect(container.querySelectorAll(".solid-flow__minimap-node")).toHaveLength(0);
@@ -104,7 +102,7 @@ describe("MiniMap", () => {
         <MiniMap onNodeClick={onNodeClick} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const rects = container.querySelectorAll(".solid-flow__minimap-node");
     fireEvent.click(rects[1]!);
@@ -122,7 +120,7 @@ describe("MiniMap", () => {
         <MiniMap onNodeClick={handler()} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     setHandler(() => onNodeClick);
     flush();
@@ -140,7 +138,7 @@ describe("MiniMap", () => {
         <MiniMap onClick={onClick} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     fireEvent.click(container.querySelector(".solid-flow__minimap-svg")!);
 
@@ -156,7 +154,7 @@ describe("MiniMap", () => {
         <MiniMap />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     // clicking a default rect without onNodeClick must not throw
     fireEvent.click(container.querySelector(".solid-flow__minimap-node")!);

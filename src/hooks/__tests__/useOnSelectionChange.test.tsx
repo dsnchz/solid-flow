@@ -1,14 +1,13 @@
 import { render } from "@solidjs/testing-library";
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, flush, For, Show } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Edge, Node, OnSelectionChange } from "@/types";
 
 import { useOnSelectionChange } from "../useOnSelectionChange";
 import { useSolidFlow } from "../useSolidFlow";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const nodes: Node[] = [
   { id: "a", position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 },
@@ -46,15 +45,15 @@ describe("useOnSelectionChange", () => {
   it("reports the initial selection, then every change of the selected ids", async () => {
     const spy = vi.fn<OnSelectionChange>();
     const { api } = renderFlow([spy]);
-    await tick();
+    await settle();
     expect(calls(spy)).toEqual([{ nodes: [], edges: [] }]);
 
     api().updateNode("a", { selected: true });
-    await tick();
+    await settle();
     api().updateEdge("e1", { selected: true });
-    await tick();
+    await settle();
     api().updateNode("a", { selected: false });
-    await tick();
+    await settle();
 
     expect(calls(spy)).toEqual([
       { nodes: [], edges: [] },
@@ -68,12 +67,12 @@ describe("useOnSelectionChange", () => {
     const spy = vi.fn<OnSelectionChange>();
     const { api } = renderFlow([spy]);
     api().updateNode("a", { selected: true });
-    await tick();
+    await settle();
     spy.mockClear();
 
     api().updateNodeData("a", { label: "renamed" });
     api().updateNode("b", { position: { x: 400, y: 0 } });
-    await tick();
+    await settle();
 
     expect(spy).not.toHaveBeenCalled();
   });
@@ -82,19 +81,19 @@ describe("useOnSelectionChange", () => {
     const first = vi.fn<OnSelectionChange>();
     const second = vi.fn<OnSelectionChange>();
     const { api, setMounted } = renderFlow([first, second]);
-    await tick();
+    await settle();
 
     api().updateNode("b", { selected: true });
-    await tick();
+    await settle();
     expect(calls(first).at(-1)).toEqual({ nodes: ["b"], edges: [] });
     expect(calls(second).at(-1)).toEqual({ nodes: ["b"], edges: [] });
 
     setMounted(false);
-    await tick();
+    flush();
     first.mockClear();
     second.mockClear();
     api().updateNode("a", { selected: true });
-    await tick();
+    await settle();
 
     expect(first).not.toHaveBeenCalled();
     expect(second).not.toHaveBeenCalled();

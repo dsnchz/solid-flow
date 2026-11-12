@@ -1,12 +1,11 @@
 import { render } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 // getIntersectingNodes through the microtask-cached spatial grid must return
 // exactly what the old full scan returned, stay consistent across repeated
@@ -31,7 +30,7 @@ describe("spatial intersection queries", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     return api;
   };
 
@@ -69,7 +68,7 @@ describe("spatial intersection queries", () => {
     expect(api.getIntersectingNodes(rect)).toHaveLength(0);
 
     api.updateNode("n0", { position: { x: 2050, y: 2050 } });
-    await tick();
+    await settle();
 
     expect(api.getIntersectingNodes(rect).map((n) => n.id)).toEqual(["n0"]);
   });

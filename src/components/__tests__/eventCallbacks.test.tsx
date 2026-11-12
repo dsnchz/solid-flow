@@ -2,12 +2,11 @@ import { fireEvent, render } from "@solidjs/testing-library";
 import type { Viewport } from "@xyflow/system";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -37,7 +36,7 @@ describe("event callback parity", () => {
         onNodeDoubleClick={({ node, event }) => calls.push({ id: node.id, type: event.type })}
       />
     ));
-    await tick();
+    await settle();
 
     fireEvent.dblClick(container.querySelector('.solid-flow__node[data-id="a"]')!);
     expect(calls).toEqual([{ id: "a", type: "dblclick" }]);
@@ -56,7 +55,7 @@ describe("event callback parity", () => {
         onEdgePointerMove={({ edge }) => moves.push(edge.id)}
       />
     ));
-    await tick();
+    await settle();
 
     const edge = container.querySelector('.solid-flow__edge[data-id="e1"]')!;
     fireEvent.dblClick(edge);
@@ -79,7 +78,7 @@ describe("event callback parity", () => {
         onPanePointerLeave={({ event }) => events.push(event.type)}
       />
     ));
-    await tick();
+    await settle();
 
     const pane = container.querySelector(".solid-flow__pane")!;
     fireEvent.pointerEnter(pane);
@@ -107,11 +106,11 @@ describe("event callback parity", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     const before = viewports.length;
 
     await flowApi.setViewport({ x: 50, y: 25, zoom: 2 });
-    await tick();
+    await settle();
 
     expect(viewports.length).toBeGreaterThan(before);
     expect(viewports.at(-1)).toEqual({ x: 50, y: 25, zoom: 2 });

@@ -2,6 +2,7 @@ import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useInternalSolidFlow } from "@/contexts";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
@@ -11,7 +12,6 @@ import { SolidFlow } from "../SolidFlow";
 // Regression tests for the 2026-08-24 quality audit's Tier-1 findings
 // (.agent/audit/2026-08-24-quality-audit.md). Each test failed against the
 // pre-fix code.
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   position: { x: 0, y: 0 },
@@ -45,14 +45,14 @@ const renderProbed = (props: Record<string, unknown> = {}, nodes: Node[] = []) =
 describe("audit fixes (Tier 1)", () => {
   it("A1: nodesConnectable is its own prop, not an alias of nodesDraggable", async () => {
     const { store } = renderProbed({ nodesConnectable: false, nodesDraggable: true });
-    await tick();
+    flush();
     expect(store().nodesConnectable).toBe(false);
     expect(store().nodesDraggable).toBe(true);
   });
 
   it("A2: the flow id never leaks onto the DOM as an id attribute", async () => {
     const { rendered } = renderProbed();
-    await tick();
+    flush();
     const wrapper = rendered.container.querySelector<HTMLElement>(
       '[data-testid="solid-flow__wrapper"]',
     )!;
@@ -71,7 +71,7 @@ describe("audit fixes (Tier 1)", () => {
         style: { visibility: "visible" },
       }),
     ]);
-    await tick();
+    await settle();
     const container = rendered.container;
 
     // Explicit width prop (100) must beat style.width (50px).
@@ -87,11 +87,10 @@ describe("audit fixes (Tier 1)", () => {
     const onDelete = vi.fn();
     const onNodesDelete = vi.fn();
     const { api } = renderProbed({ onDelete, onNodesDelete }, [makeNode({ id: "a" })]);
-    await tick();
+    await settle();
 
     await api().deleteElements({ nodes: [{ id: "a" }] });
     flush();
-    await tick();
 
     expect(onNodesDelete).toHaveBeenCalledTimes(1);
     expect(onNodesDelete.mock.calls[0]![0]).toHaveLength(1);
@@ -101,7 +100,7 @@ describe("audit fixes (Tier 1)", () => {
 
   it("A5: screenToFlowPosition preserves fractional positions when snapping is off", async () => {
     const { api } = renderProbed();
-    await tick();
+    flush();
 
     // No snapGrid configured: the guard must actually disable snapping
     // instead of rounding to a [1, 1] grid.
@@ -123,7 +122,7 @@ describe("audit fixes (Tier 1)", () => {
       },
       [makeNode({ id: "out", position: { x: 900, y: 50 } })],
     );
-    await tick();
+    await settle();
 
     const internal = nodeLookup().get("out")!;
     expect(internal.internals.positionAbsolute.x).toBeLessThanOrEqual(300);
@@ -133,7 +132,7 @@ describe("audit fixes (Tier 1)", () => {
 
   it("A8: getIntersectingNodes returns [] for an unknown node id instead of throwing", async () => {
     const { api } = renderProbed({}, [makeNode({ id: "a" })]);
-    await tick();
+    await settle();
 
     expect(api().getIntersectingNodes({ id: "does-not-exist" })).toEqual([]);
   });
@@ -144,7 +143,7 @@ describe("audit fixes (Tier 1)", () => {
 describe("screenToFlowPosition snapGrid option", () => {
   it("snaps to the override grid, and to the flow's grid when no override is given", async () => {
     const { api } = renderProbed({ snapGrid: [20, 20] });
-    await tick();
+    flush();
     expect(api().screenToFlowPosition({ x: 33, y: 47 })).toEqual({ x: 40, y: 40 });
     expect(api().screenToFlowPosition({ x: 33, y: 47 }, { snapGrid: [10, 10] })).toEqual({
       x: 30,

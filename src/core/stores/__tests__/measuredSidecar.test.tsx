@@ -1,12 +1,11 @@
 import { render } from "@solidjs/testing-library";
-import { createOptimisticStore, createStore } from "solid-js";
+import { createOptimisticStore, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
 import type { Node } from "@/types";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const makeNode = (id: string, x: number, extra: Partial<Node> = {}): Node => ({
   id,
@@ -49,12 +48,12 @@ describe("measured sidecar", () => {
     const api = { list: async () => [makeNode("a", 0), makeNode("b", 300)] };
     const [nodes] = createOptimisticStore<Node[]>(() => api.list(), []);
     const { internal, measure } = renderFlow(nodes);
-    await tick();
+    await settle();
 
     expect(internal().store.nodesInitialized).toBe(false);
     measure("a", 100, 40);
     measure("b", 100, 40);
-    await tick();
+    flush();
     // The row write-through reverted; the measurements root must carry it.
     expect(internal().store.nodesInitialized).toBe(true);
   });
@@ -65,23 +64,23 @@ describe("measured sidecar", () => {
     };
     const [nodes] = createOptimisticStore<Node[]>(() => api.list(), []);
     const { internal, measure } = renderFlow(nodes);
-    await tick();
+    await settle();
 
     // Pre-measurement: the user seed governs (SSR-style sizing).
     expect(internal().nodeLookup.get("a")!.measured.width).toBe(50);
 
     measure("a", 120, 60);
-    await tick();
+    flush();
     expect(internal().nodeLookup.get("a")!.measured).toEqual({ width: 120, height: 60 });
   });
 
   it("plain stores keep the measured write-through parity contract", async () => {
     const [nodes] = createStore<Node[]>([makeNode("a", 0)]);
     const { measure } = renderFlow(nodes);
-    await tick();
+    await settle();
 
     measure("a", 100, 40);
-    await tick();
+    flush();
     // Best-effort write-through landed in the USER's store.
     expect(nodes[0]!.measured).toEqual({ width: 100, height: 40 });
   });

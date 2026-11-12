@@ -1,14 +1,13 @@
 import { render } from "@solidjs/testing-library";
 import { Position } from "@xyflow/system";
-import { createSignal, flush, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { Handle } from "@/components/handle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useUpdateNodeInternals } from "@/hooks";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 30));
 
 // jsdom lays nothing out: every element measures 0 x 0, and a node with no
 // size is never measured. Give elements a size for these tests.
@@ -49,7 +48,7 @@ describe("useUpdateNodeInternals", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     const sourceHandles = () =>
       api.flow.internalNodes.a!.internals.handleBounds?.source?.map((handle) => handle.id);
     return { setExtra, update: () => update, sourceHandles };
@@ -60,20 +59,19 @@ describe("useUpdateNodeInternals", () => {
     expect(sourceHandles()).toEqual(["h1"]);
 
     setExtra(true);
-    flush();
-    await tick();
+    await settle();
     // nothing re-measures a handle added after mount on its own
     expect(sourceHandles()).toEqual(["h1"]);
 
     update()("a");
-    await tick();
+    await settle();
     expect(sourceHandles()).toEqual(["h1", "h2"]);
   });
 
   it("ignores ids with no node element", async () => {
     const { update, sourceHandles } = await renderFlow();
     expect(() => update()(["a", "missing"])).not.toThrow();
-    await tick();
+    await settle();
     expect(sourceHandles()).toEqual(["h1"]);
   });
 });

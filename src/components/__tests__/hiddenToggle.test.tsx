@@ -1,12 +1,12 @@
 import { render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number, hidden?: boolean): Node => ({
   id,
@@ -37,7 +37,7 @@ describe("hidden toggle round-trip", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const query = (id: string) => container.querySelector(`.solid-flow__node[data-id="${id}"]`);
 
@@ -47,17 +47,17 @@ describe("hidden toggle round-trip", () => {
 
     // Unhide "h".
     api.updateNode("h", (node) => ({ hidden: !node.hidden }));
-    await tick();
+    await settle();
     expect(query("h")).not.toBeNull();
 
     // Re-hide "h" — the round trip must remove it again.
     api.updateNode("h", (node) => ({ hidden: !node.hidden }));
-    await tick();
+    flush();
     expect(query("h")).toBeNull();
 
     // A never-hidden node must also be hideable.
     api.updateNode("a", (node) => ({ hidden: !node.hidden }));
-    await tick();
+    flush();
     expect(query("a")).toBeNull();
   });
 
@@ -80,7 +80,7 @@ describe("hidden toggle round-trip", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const query = (id: string) => container.querySelector(`.solid-flow__edge[data-id="${id}"]`);
 
@@ -88,15 +88,15 @@ describe("hidden toggle round-trip", () => {
     expect(query("eh")).toBeNull();
 
     api.updateEdge("eh", (edge) => ({ hidden: !edge.hidden }));
-    await tick();
+    flush();
     expect(query("eh")).not.toBeNull();
 
     api.updateEdge("eh", (edge) => ({ hidden: !edge.hidden }));
-    await tick();
+    flush();
     expect(query("eh")).toBeNull();
 
     api.updateEdge("e1", (edge) => ({ hidden: !edge.hidden }));
-    await tick();
+    flush();
     expect(query("e1")).toBeNull();
   });
 });
@@ -125,18 +125,18 @@ describe("hidden node hides its edges", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     const edge = (id: string) => container.querySelector(`.solid-flow__edge[data-id="${id}"]`);
     expect(edge("ab")).not.toBeNull();
     expect(edge("bc")).not.toBeNull();
 
     api.updateNode("b", { hidden: true });
-    await tick();
+    flush();
     expect(edge("ab")).toBeNull();
     expect(edge("bc")).toBeNull();
 
     api.updateNode("b", { hidden: false });
-    await tick();
+    await settle();
     expect(edge("ab")).not.toBeNull();
     expect(edge("bc")).not.toBeNull();
   });

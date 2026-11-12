@@ -1,14 +1,13 @@
 import { fireEvent, render } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { createSignal, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { EdgeProps, Node } from "@/types";
 
 import { EdgeLabel } from "../EdgeLabel";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -35,7 +34,7 @@ const renderLabel = async (Label: (props: EdgeProps) => ReturnType<typeof EdgeLa
       <Probe />
     </SolidFlow>
   ));
-  await tick();
+  await settle();
   const label = () => container.querySelector<HTMLElement>(".solid-flow__edge-label")!;
   return { api: () => api, label };
 };
@@ -76,7 +75,7 @@ describe("EdgeLabel", () => {
     expect(label().style.cursor).toBe("help");
 
     setX(40);
-    await tick();
+    flush();
     expect(label().style.transform).toContain("translate(40px,20px)");
   });
 
@@ -90,7 +89,7 @@ describe("EdgeLabel", () => {
     expect(label().getAttribute("data-testid")).toBe("lbl");
     expect(label().getAttribute("title")).toBe("one");
     setTitle("two");
-    await tick();
+    flush();
     expect(label().getAttribute("title")).toBe("two");
   });
 
@@ -104,14 +103,14 @@ describe("EdgeLabel", () => {
     ));
     expect(label().style.cursor).toBe("");
     fireEvent.click(label());
-    await tick();
+    await settle();
     expect(api().flow.selection.edges).toHaveLength(0);
 
     setSelectOnClick(true);
-    await tick();
+    flush();
     expect(label().style.cursor).toBe("pointer");
     fireEvent.click(label());
-    await tick();
+    await settle();
     expect(api().flow.selection.edges.map((e) => e.id)).toEqual(["e1"]);
   });
 
@@ -120,7 +119,7 @@ describe("EdgeLabel", () => {
     const { label } = await renderLabel(() => <>{show() ? <EdgeLabel>text</EdgeLabel> : null}</>);
     expect(label().parentElement?.classList.contains("solid-flow__edge-labels")).toBe(true);
     setShow(false);
-    await tick();
+    flush();
     expect(label()).toBeNull();
   });
 });

@@ -1,11 +1,10 @@
 import { render } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import type { Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 // WP4-D6: unknown node/edge types must fall back to the "default" renderer
 // (upstream parity) and report through the error channel — previously nodes
@@ -28,7 +27,7 @@ describe("unknown element types", () => {
     const { container } = render(() => (
       <SolidFlow defaultNodes={nodes} onFlowError={onFlowError} width={800} height={600} />
     ));
-    await tick();
+    await settle();
 
     const unknown = container.querySelector('[data-id="a"]');
     expect(unknown).not.toBeNull();
@@ -50,7 +49,7 @@ describe("unknown element types", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
 
     const edge = container.querySelector('.solid-flow__edge[data-id="e1"]');
     expect(edge).not.toBeNull();

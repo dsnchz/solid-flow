@@ -1,13 +1,12 @@
 import { render } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { createSignal, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import type { EdgeProps, Node } from "@/types";
 
 import { BaseEdge } from "../edge/BaseEdge";
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -49,7 +48,7 @@ describe("BaseEdge", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
 
     const path = container.querySelector<SVGPathElement>(
       '.solid-flow__edge[data-id="e1"] .solid-flow__edge-path',
@@ -64,7 +63,7 @@ describe("BaseEdge", () => {
     expect(path.getAttribute("stroke-linecap")).toBe("round");
 
     setDash("1 1");
-    await tick();
+    flush();
     expect(path.getAttribute("stroke-dasharray")).toBe("1 1");
   });
 
@@ -82,7 +81,7 @@ describe("BaseEdge", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
 
     const interaction = () =>
       container.querySelector<SVGPathElement>(
@@ -96,11 +95,11 @@ describe("BaseEdge", () => {
     );
 
     setWidth(0);
-    await tick();
+    flush();
     expect(interaction()).toBeNull();
 
     setWidth(8);
-    await tick();
+    flush();
     expect(interaction()!.getAttribute("stroke-width")).toBe("8");
   });
 
@@ -118,17 +117,17 @@ describe("BaseEdge", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     expect(container.querySelector(".solid-flow__edge-label")).toBeNull();
 
     setLabel("hello");
-    await tick();
+    flush();
     const el = container.querySelector<HTMLElement>(".solid-flow__edge-label")!;
     expect(el.textContent).toBe("hello");
     expect(el.style.transform).toContain("translate(10px,20px)");
 
     setLabel(undefined);
-    await tick();
+    flush();
     expect(container.querySelector(".solid-flow__edge-label")).toBeNull();
   });
 });

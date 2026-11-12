@@ -2,6 +2,7 @@ import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Edge, Node } from "@/types";
 
@@ -72,8 +73,7 @@ describe("domAttributes", () => {
 
   it("lands on the edge wrapper and follows updateEdge", async () => {
     const { api, edgeEl } = renderProbed();
-    flush();
-    await new Promise((r) => setTimeout(r, 20));
+    await settle();
     expect(edgeEl().getAttribute("data-kind")).toBe("link");
     api().commands.updateEdge("e1", {
       domAttributes: { "data-kind": "wire" } as Edge["domAttributes"],
@@ -105,8 +105,7 @@ describe("domAttributes", () => {
 
   it("an edge that gains domAttributes after mount applies them", async () => {
     const { api, edgeEl } = renderProbed();
-    flush();
-    await new Promise((r) => setTimeout(r, 20));
+    await settle();
     api().commands.updateEdge("e1", { domAttributes: undefined });
     flush();
     expect(edgeEl().getAttribute("data-kind")).toBeNull();

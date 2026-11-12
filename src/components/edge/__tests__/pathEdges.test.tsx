@@ -2,6 +2,7 @@ import { render } from "@solidjs/testing-library";
 import { getBezierPath, getSmoothStepPath, getStraightPath, Position } from "@xyflow/system";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
 import type { Edge, EdgeProps, EdgeTypes, Node } from "@/types";
@@ -11,8 +12,6 @@ import { BezierEdge, SmoothStepEdge, StepEdge, StraightEdge } from "..";
 // The built-in edge components: the path each draws is @xyflow/system's for
 // the edge's resolved endpoints. The renderer's built-ins carry no DOM id;
 // the public components (used inside a custom edge) put the given id on it.
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const nodes: Node[] = [
   { id: "a", position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 },
@@ -33,7 +32,7 @@ const renderEdge = async (edge: Edge, edgeTypes?: EdgeTypes) => {
       <Probe />
     </SolidFlow>
   ));
-  await tick();
+  await settle();
   const row = internal.actions.getResolvedEdge(edge.id)!;
   const endpoints = {
     sourceX: row.sourceX,

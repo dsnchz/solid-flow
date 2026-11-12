@@ -1,7 +1,7 @@
 import { render } from "@solidjs/testing-library";
-import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { cx } from "@/components/internal/dom";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
@@ -14,8 +14,6 @@ vi.mock("@/components/internal/dom", async (importOriginal) => {
 });
 const edgeClassBuilds = () =>
   vi.mocked(cx).mock.calls.filter((args) => args[0] === "solid-flow__edge").length;
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -43,7 +41,7 @@ describe("edge z-index", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     const wrapperZ = () =>
       container.querySelector<SVGElement>('.solid-flow__edge[data-id="e1"]')!.closest("svg")!.style
         .zIndex;
@@ -55,13 +53,11 @@ describe("edge z-index", () => {
     expect(wrapperZ()).toBe("2");
 
     api().commands.updateNode("a", { selected: true });
-    flush();
-    await tick();
+    await settle();
     expect(Number(wrapperZ())).toBeGreaterThanOrEqual(1002);
 
     api().commands.updateNode("a", { selected: false });
-    flush();
-    await tick();
+    await settle();
     expect(wrapperZ()).toBe("2");
   });
 
@@ -70,8 +66,7 @@ describe("edge z-index", () => {
     const builds = edgeClassBuilds();
 
     api().commands.updateNode("a", { selected: true });
-    flush();
-    await tick();
+    await settle();
     expect(Number(wrapperZ())).toBeGreaterThanOrEqual(1002);
     expect(edgeClassBuilds()).toBe(builds);
   });
@@ -79,8 +74,7 @@ describe("edge z-index", () => {
   it("stays at the edge's own z without elevateEdgesOnSelect", async () => {
     const { api, wrapperZ } = await renderFlow(false);
     api().commands.updateNode("a", { selected: true });
-    flush();
-    await tick();
+    await settle();
     expect(wrapperZ()).toBe("2");
   });
 });

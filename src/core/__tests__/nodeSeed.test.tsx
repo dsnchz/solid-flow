@@ -1,6 +1,7 @@
 import { createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { createSolidFlow } from "@/browser/createSolidFlow";
 import { createNodeStore, createOptimisticNodeStore } from "@/core/stores/createNodeStore";
 import type { Node } from "@/types";
@@ -48,8 +49,7 @@ describe("measured is seeded on adoption", () => {
         yield [defaultNode("b")];
       }),
     );
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    flush();
+    await settle();
     expect(promised[0]!.measured).toEqual({});
     expect(streamed[0]!.measured).toEqual({});
   });

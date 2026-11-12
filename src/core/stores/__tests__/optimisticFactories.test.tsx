@@ -2,10 +2,9 @@ import { render } from "@solidjs/testing-library";
 import { action, refresh } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { createOptimisticEdgeStore, createOptimisticNodeStore } from "@/core";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Typed optimistic factories: thin guided-union wrappers over
@@ -22,7 +21,7 @@ describe("createOptimisticNodeStore / createOptimisticEdgeStore", () => {
     const { container } = render(() => (
       <SolidFlow nodes={nodes} edges={edges} width={800} height={600} />
     ));
-    await tick();
+    await settle();
     const inDom = (id: string) =>
       container.querySelector(`.solid-flow__node[data-id="${id}"]`) !== null;
     expect(inDom("a")).toBe(true);
@@ -37,11 +36,11 @@ describe("createOptimisticNodeStore / createOptimisticEdgeStore", () => {
       void refresh(nodes);
     });
     add().catch(() => {});
-    await tick();
+    await settle();
     expect(inDom("b")).toBe(true); // optimistic, mid-action
 
     reject(new Error("server said no"));
-    await tick(50);
+    await settle();
     expect(inDom("b")).toBe(false); // overlay dropped
     expect(inDom("a")).toBe(true);
   });
@@ -51,7 +50,7 @@ describe("createOptimisticNodeStore / createOptimisticEdgeStore", () => {
       { id: "a", type: "default" as const, data: { label: "a" }, position: { x: 0, y: 0 } },
     ]);
     const { container } = render(() => <SolidFlow nodes={nodes} width={800} height={600} />);
-    await tick();
+    await settle();
     const inDom = (id: string) =>
       container.querySelector(`.solid-flow__node[data-id="${id}"]`) !== null;
     expect(inDom("a")).toBe(true);
@@ -60,7 +59,7 @@ describe("createOptimisticNodeStore / createOptimisticEdgeStore", () => {
     setNodes((draft) => {
       draft.push({ id: "x", type: "default", data: { label: "x" }, position: { x: 99, y: 0 } });
     });
-    await tick();
+    await settle();
     expect(inDom("x")).toBe(false);
 
     // Inside an action: visible mid-flight, dropped at settle (no refresh
@@ -74,10 +73,10 @@ describe("createOptimisticNodeStore / createOptimisticEdgeStore", () => {
       yield gate;
     });
     void add();
-    await tick();
+    await settle();
     expect(inDom("b")).toBe(true);
     release();
-    await tick(50);
+    await settle();
     expect(inDom("b")).toBe(false);
   });
 });

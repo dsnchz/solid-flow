@@ -2,11 +2,10 @@ import { fireEvent, render } from "@solidjs/testing-library";
 import { action, createOptimisticStore, createStore, refresh } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Edge, Node } from "@/types";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -39,17 +38,17 @@ describe("selection sidecar", () => {
     const api = { list: async () => [makeNode("a", 0), makeNode("c", 400)] };
     const [nodes] = createOptimisticStore<Node[]>(() => api.list(), []);
     const { node, isSelected } = renderFlow(nodes);
-    await tick();
+    await settle();
 
     fireEvent.click(node("a"));
-    await tick();
+    await settle();
     // The row write reverts (optimistic overlay, no action) — the sidecar
     // must carry the selection anyway.
     expect(isSelected("a")).toBe(true);
 
     // Selecting another node routes the deselect through the sidecar too.
     fireEvent.click(node("c"));
-    await tick();
+    await settle();
     expect(isSelected("c")).toBe(true);
     expect(isSelected("a")).toBe(false);
   });
@@ -59,10 +58,10 @@ describe("selection sidecar", () => {
     const api = { list: async () => server.rows.map((r) => ({ ...r })) };
     const [nodes] = createOptimisticStore<Node[]>(() => api.list(), []);
     const { node, isSelected } = renderFlow(nodes);
-    await tick();
+    await settle();
 
     fireEvent.click(node("a"));
-    await tick();
+    await settle();
     expect(isSelected("a")).toBe(true);
 
     const noop = action(function* () {
@@ -70,7 +69,7 @@ describe("selection sidecar", () => {
       void refresh(nodes);
     });
     await noop();
-    await tick(50);
+    await settle();
     expect(isSelected("a")).toBe(true);
   });
 
@@ -88,11 +87,11 @@ describe("selection sidecar", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     flowApi.updateNode("a", { selected: true });
     flowApi.updateEdge("e1", { selected: true });
-    await tick();
+    await settle();
     expect(container.querySelector('.solid-flow__node[data-id="a"].selected')).not.toBeNull();
     expect(flowApi.flow.selection.edges.map((e) => e.id)).toEqual(["e1"]);
   });
@@ -100,16 +99,16 @@ describe("selection sidecar", () => {
   it("plain stores keep the write-through parity contract", async () => {
     const [nodes] = createStore<Node[]>([makeNode("a", 0), makeNode("c", 400)]);
     const { node, isSelected } = renderFlow(nodes);
-    await tick();
+    await settle();
 
     fireEvent.click(node("a"));
-    await tick();
+    await settle();
     expect(isSelected("a")).toBe(true);
     // Best-effort write-through landed in the USER's store.
     expect(nodes.find((n) => n.id === "a")?.selected).toBe(true);
 
     fireEvent.click(node("c"));
-    await tick();
+    await settle();
     expect(nodes.find((n) => n.id === "a")?.selected).toBe(false);
     expect(nodes.find((n) => n.id === "c")?.selected).toBe(true);
   });
@@ -117,10 +116,10 @@ describe("selection sidecar", () => {
   it("a USER row write still governs after the flow's write (row-moved precedence)", async () => {
     const [nodes, setNodes] = createStore<Node[]>([makeNode("a", 0)]);
     const { isSelected, node } = renderFlow(nodes);
-    await tick();
+    await settle();
 
     fireEvent.click(node("a"));
-    await tick();
+    await settle();
     expect(isSelected("a")).toBe(true);
 
     // User deselects through THEIR store: the row moved away from the
@@ -128,7 +127,7 @@ describe("selection sidecar", () => {
     setNodes((draft) => {
       draft[0]!.selected = false;
     });
-    await tick();
+    await settle();
     expect(isSelected("a")).toBe(false);
   });
 
@@ -153,7 +152,7 @@ describe("selection sidecar", () => {
           <Probe />
         </SolidFlow>
       ));
-      await tick();
+      await settle();
       const isSelected = (id: string) =>
         container
           .querySelector(`.solid-flow__node[data-id="${id}"]`)!
@@ -165,32 +164,32 @@ describe("selection sidecar", () => {
     it("updateNodeData keeps an optimistic node selected", async () => {
       const { api, isSelected } = await setup();
       api().updateNode("a", { selected: true });
-      await tick();
+      await settle();
       expect(isSelected("a")).toBe(true);
 
       api().updateNodeData("a", { label: "renamed" });
-      await tick();
+      await settle();
       expect(isSelected("a")).toBe(true);
     });
 
     it("an updateNode updater that spreads the row keeps the selection", async () => {
       const { api, isSelected } = await setup();
       api().updateNode("a", { selected: true });
-      await tick();
+      await settle();
 
       api().updateNode("a", (node) => ({ ...node, data: { label: "moved" } }));
-      await tick();
+      await settle();
       expect(isSelected("a")).toBe(true);
     });
 
     it("an updateEdge updater that spreads the row keeps the selection", async () => {
       const { api, selectedEdges } = await setup();
       api().updateEdge("e1", { selected: true });
-      await tick();
+      await settle();
       expect(selectedEdges()).toEqual(["e1"]);
 
       api().updateEdge("e1", (edge) => ({ ...edge, label: "renamed" }));
-      await tick();
+      await settle();
       expect(selectedEdges()).toEqual(["e1"]);
     });
 
@@ -198,12 +197,12 @@ describe("selection sidecar", () => {
       const { api, isSelected, selectedEdges } = await setup();
       api().updateNode("a", { selected: true });
       api().updateEdge("e1", { selected: true });
-      await tick();
+      await settle();
       expect(isSelected("a")).toBe(true);
 
       api().updateNode("a", { selected: false });
       api().updateEdge("e1", { selected: false });
-      await tick();
+      await settle();
       expect(isSelected("a")).toBe(false);
       expect(selectedEdges()).toEqual([]);
     });

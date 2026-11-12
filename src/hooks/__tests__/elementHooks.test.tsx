@@ -1,13 +1,13 @@
 import { render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useEdge, useNode, useSelectedEdges, useSelectedNodes } from "@/hooks";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
 
 import { SolidFlow } from "../../components/SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const nodes: Node[] = [
   { id: "a", position: { x: 0, y: 0 }, data: { label: "a" }, width: 100, height: 40 },
@@ -37,7 +37,7 @@ describe("element hooks (xyflow#5868 parity)", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(node()?.id).toBe("a");
     expect(edge()?.id).toBe("e1");
@@ -45,7 +45,7 @@ describe("element hooks (xyflow#5868 parity)", () => {
 
     // Reactive: a position write is visible through the hook.
     api.updateNode("a", { position: { x: 42, y: 7 } });
-    await tick();
+    flush();
     expect(node()?.position).toEqual({ x: 42, y: 7 });
   });
 
@@ -69,12 +69,12 @@ describe("element hooks (xyflow#5868 parity)", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     expect(selectedNodes()).toHaveLength(0);
 
     api.updateNode("a", { selected: true });
     api.updateEdge("e1", { selected: true });
-    await tick();
+    await settle();
     expect(selectedNodes().map((n) => n.id)).toEqual(["a"]);
     expect(selectedEdges().map((e) => e.id)).toEqual(["e1"]);
   });

@@ -2,6 +2,7 @@ import { fireEvent, render } from "@solidjs/testing-library";
 import { createSignal, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Node } from "@/types";
 
@@ -10,8 +11,6 @@ import { MiniMapNode } from "../MiniMapNode";
 
 // The contract of the default minimap node, pinned before its props handling
 // changes (one MiniMapNode per node while a MiniMap is shown).
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const sized = (id: string, x: number, y: number, extra: Partial<Node> = {}): Node => ({
   id,
@@ -32,7 +31,7 @@ describe("MiniMapNode (default minimap node)", () => {
         <MiniMap />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const rect = rectOf(container, 0);
     expect(rect.getAttribute("x")).toBe("10");
@@ -50,7 +49,7 @@ describe("MiniMapNode (default minimap node)", () => {
         <MiniMap nodeBorderRadius={2} nodeStrokeWidth={3} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const rect = rectOf(container, 0);
     expect(rect.getAttribute("rx")).toBe("2");
@@ -71,7 +70,7 @@ describe("MiniMapNode (default minimap node)", () => {
         <MiniMap nodeColor={color()} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(rectOf(container, 0).style.fill).toBe("rgb(255, 0, 0)");
     expect(rectOf(container, 1).style.fill).toBe("rgb(0, 0, 255)");
@@ -92,7 +91,7 @@ describe("MiniMapNode (default minimap node)", () => {
         <MiniMap nodeColor={nodeColor} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(rectOf(container, 0).style.fill).toBe("rgb(1, 2, 3)");
     expect(rectOf(container, 1).style.fill).toBe("rgb(4, 5, 6)");
@@ -110,7 +109,7 @@ describe("MiniMapNode (default minimap node)", () => {
         <MiniMap nodeStrokeColor={stroke()} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(rectOf(container, 0).style.stroke).toBe("transparent");
     expect(rectOf(container, 0).style.strokeWidth).toBe("2");
@@ -134,7 +133,7 @@ describe("MiniMapNode (default minimap node)", () => {
         <MiniMap nodeClass={nodeClass()} />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     expect(rectOf(container, 0).getAttribute("class")).toBe("solid-flow__minimap-node mini");
 
@@ -160,11 +159,10 @@ describe("MiniMapNode (default minimap node)", () => {
         <MiniMap />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     setNodes([sized("a", 30, 60)]);
     flush();
-    await tick();
 
     const rect = rectOf(container, 0);
     expect(rect.getAttribute("x")).toBe("30");
@@ -182,12 +180,11 @@ describe("MiniMapNode (default minimap node)", () => {
         <MiniMap />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     expect(container.querySelectorAll(".solid-flow__minimap-node")).toHaveLength(1);
 
     setNodes([sized("a", 0, 0), sized("b", 200, 0)]);
-    flush();
-    await tick();
+    await settle();
     expect(container.querySelectorAll(".solid-flow__minimap-node")).toHaveLength(2);
   });
 

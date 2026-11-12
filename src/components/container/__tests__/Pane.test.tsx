@@ -1,6 +1,8 @@
 import { render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Node } from "@/types";
 
@@ -13,8 +15,6 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   height: 40,
   ...overrides,
 });
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const pointerInit = (x: number, y: number, extra: PointerEventInit = {}): PointerEventInit => ({
   bubbles: true,
@@ -70,11 +70,11 @@ describe("Pane drag selection", () => {
     const onSelectionStart = vi.fn();
     const onSelectionEnd = vi.fn();
     const { container } = renderSelectableFlow({ onSelectionStart, onSelectionEnd });
-    await tick();
+    await settle();
 
     const pane = container.querySelector<HTMLElement>(".solid-flow__pane")!;
     dragSelect(pane, [5, 5], [200, 150]);
-    await tick();
+    await settle();
 
     expect(container.querySelector<HTMLElement>('[data-id="a"]')!.classList).toContain("selected");
     expect(container.querySelector<HTMLElement>('[data-id="far"]')!.classList).not.toContain(
@@ -86,22 +86,22 @@ describe("Pane drag selection", () => {
 
   it("shows the nodes selection box after selecting", async () => {
     const { container } = renderSelectableFlow();
-    await tick();
+    await settle();
 
     const pane = container.querySelector<HTMLElement>(".solid-flow__pane")!;
     dragSelect(pane, [5, 5], [200, 150]);
-    await tick();
+    await settle();
 
     expect(container.querySelector(".solid-flow__selection-wrapper")).not.toBeNull();
   });
 
   it("selects nothing when the rectangle covers empty space", async () => {
     const { container } = renderSelectableFlow();
-    await tick();
+    await settle();
 
     const pane = container.querySelector<HTMLElement>(".solid-flow__pane")!;
     dragSelect(pane, [200, 200], [300, 300]);
-    await tick();
+    await settle();
 
     expect(container.querySelectorAll(".solid-flow__node.selected")).toHaveLength(0);
     expect(container.querySelector(".solid-flow__selection-wrapper")).toBeNull();
@@ -120,7 +120,7 @@ describe("Pane drag selection", () => {
         autoPanOnSelection={false}
       />
     ));
-    await tick();
+    await settle();
 
     const pane = container.querySelector<HTMLElement>(".solid-flow__pane")!;
 
@@ -129,10 +129,10 @@ describe("Pane drag selection", () => {
       pointerInit(x, y, { shiftKey: false });
     pane.dispatchEvent(new PointerEvent("pointerdown", mouse(200, 200)));
     pane.dispatchEvent(new PointerEvent("pointermove", mouse(320, 300)));
-    await tick();
+    flush();
     expect(container.querySelector(".solid-flow__selection")).not.toBeNull();
     pane.dispatchEvent(new PointerEvent("pointerup", mouse(320, 300)));
-    await tick();
+    flush();
     expect(container.querySelector(".solid-flow__selection")).toBeNull();
 
     // ...but the same gesture from a touch pointer defers to panning
@@ -140,7 +140,7 @@ describe("Pane drag selection", () => {
       pointerInit(x, y, { shiftKey: false, pointerType: "touch" });
     pane.dispatchEvent(new PointerEvent("pointerdown", touch(200, 200)));
     pane.dispatchEvent(new PointerEvent("pointermove", touch(320, 300)));
-    await tick();
+    flush();
     expect(container.querySelector(".solid-flow__selection")).toBeNull();
   });
 });
@@ -186,10 +186,10 @@ describe("Pane context menu", () => {
   it("fires on a right click of the pane", async () => {
     const onPaneContextMenu = vi.fn();
     const { container } = renderFlow(true, onPaneContextMenu);
-    await tick();
+    await settle();
 
     rightClick(container.querySelector<HTMLElement>(".solid-flow__pane")!);
-    await tick();
+    flush();
     expect(onPaneContextMenu).toHaveBeenCalledTimes(1);
   });
 
@@ -199,10 +199,10 @@ describe("Pane context menu", () => {
     // right click that did not pan (xyflow pane-context-menu-right-click-pan).
     const onPaneContextMenu = vi.fn();
     const { container } = renderFlow([0, 2], onPaneContextMenu);
-    await tick();
+    await settle();
 
     rightClick(container.querySelector<HTMLElement>(".solid-flow__pane")!);
-    await tick();
+    await settle();
     expect(onPaneContextMenu).toHaveBeenCalledTimes(1);
   });
 });

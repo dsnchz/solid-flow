@@ -1,13 +1,12 @@
 import { fireEvent, render } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { createSignal, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import type { Node } from "@/types";
 
 import { Handle } from "../handle";
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number, type?: string): Node => ({
   id,
@@ -35,7 +34,7 @@ describe("Handle", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     const handle = container.querySelector<HTMLElement>(".solid-flow__handle")!;
     expect(handle).not.toBeNull();
     expect(handle.classList.contains("solid-flow__handle-top")).toBe(true);
@@ -73,7 +72,7 @@ describe("Handle", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     const handle = container.querySelector<HTMLElement>('[data-testid="handle-in"]')!;
     expect(handle).not.toBeNull();
     expect(handle.classList.contains("solid-flow__handle")).toBe(true);
@@ -86,7 +85,7 @@ describe("Handle", () => {
     expect(handle.getAttribute("data-id")).toMatch(/-a-in-target$/);
 
     setTitle("second");
-    await tick();
+    flush();
     expect(handle.getAttribute("title")).toBe("second");
 
     fireEvent.mouseEnter(handle);
@@ -104,7 +103,7 @@ describe("Handle", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     const handle = container.querySelector<HTMLElement>(".solid-flow__handle")!;
     expect(handle.getAttribute("data-nodeid")).toBe("a");
     expect(handle.getAttribute("role")).toBe("button");

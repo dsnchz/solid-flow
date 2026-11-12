@@ -1,11 +1,10 @@
 import { render } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import type { Edge, Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number, y: number): Node => ({
   id,
@@ -65,7 +64,7 @@ describe("edge pathOptions", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     const d = (id: string) =>
       container
         .querySelector<SVGPathElement>(`.solid-flow__edge[data-id="${id}"] .solid-flow__edge-path`)

@@ -5,6 +5,8 @@ import { hydrate, render } from "@solidjs/web";
 import { flush } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
+
 import { artifactPath } from "./artifacts";
 import { scenarios } from "./scenarios";
 
@@ -30,8 +32,6 @@ import { scenarios } from "./scenarios";
  *    server from its own copy of the element, so this is what keeps the two
  *    copies in step.
  */
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const loadArtifact = (name: string): string => {
   const file = artifactPath(name);
@@ -95,7 +95,7 @@ describe("hydration lane — client hydrate", () => {
   afterEach(async () => {
     dispose?.();
     dispose = undefined;
-    await sleep(0);
+    await settle();
     container?.remove();
   });
 
@@ -124,7 +124,7 @@ describe("hydration lane — client hydrate", () => {
         dispose = hydrate(() => <scenario.App />, current);
         flush();
         // hydration completes on a microtask
-        await sleep(10);
+        await Promise.resolve();
         flush();
 
         // (2) claimed, not re-created: nothing the client holds is new, except
@@ -146,14 +146,11 @@ describe("hydration lane — client hydrate", () => {
         expect(rows(current)).toEqual(serverRows);
 
         // the measurement pass (idle) and the settle flushes
-        await sleep(100);
-        flush();
+        await settle();
         expect(rows(current)).toEqual(serverRows);
 
         // (3) a state update lands in the server-rendered elements
         scenario.update();
-        flush();
-        await sleep(20);
         flush();
         expect(current.textContent).toContain(scenario.updatedText);
         expect(rows(current)).toEqual(serverRows);
@@ -190,9 +187,7 @@ describe("hydration lane — client hydrate", () => {
         document.body.appendChild(fresh);
         const { App } = make();
         dispose = render(() => <App />, fresh);
-        flush();
-        await sleep(100);
-        flush();
+        await settle();
         expect(extrasSnapshot(fresh, selectors)).toEqual(extrasSnapshot(server, selectors));
       });
     }

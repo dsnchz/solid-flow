@@ -1,11 +1,10 @@
 import { fireEvent, render } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import type { Node } from "@/types";
 
 import { SolidFlow } from "../SolidFlow";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -45,7 +44,7 @@ describe("per-node listeners", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     expect(nodeListeners("pointerenter")).toBe(0);
     expect(nodeListeners("pointerleave")).toBe(0);
     expect(nodeListeners("pointermove")).toBe(0);
@@ -63,7 +62,7 @@ describe("per-node listeners", () => {
         onNodePointerMove={({ node, event }) => moves.push(`${event.type}:${node.id}`)}
       />
     ));
-    await tick();
+    await settle();
     expect(nodeListeners("pointermove")).toBe(1);
     fireEvent.pointerMove(container.querySelector('.solid-flow__node[data-id="a"]')!);
     expect(moves).toEqual(["pointermove:a"]);
@@ -81,7 +80,7 @@ describe("per-node listeners", () => {
         onNodePointerLeave={({ node, event }) => events.push(`${event.type}:${node.id}`)}
       />
     ));
-    await tick();
+    await settle();
     expect(nodeListeners("pointerenter")).toBe(1);
     expect(nodeListeners("pointerleave")).toBe(1);
     const el = container.querySelector('.solid-flow__node[data-id="a"]')!;
@@ -92,7 +91,7 @@ describe("per-node listeners", () => {
 
   it("attaches dblclick only when onNodeDoubleClick is passed, and it fires", async () => {
     render(() => <SolidFlow nodes={[makeNode("a", 0)]} edges={[]} width={800} height={600} />);
-    await tick();
+    await settle();
     expect(nodeListeners("dblclick")).toBe(0);
     spy.mockClear();
 
@@ -106,7 +105,7 @@ describe("per-node listeners", () => {
         onNodeDoubleClick={({ node, event }) => events.push(`${event.type}:${node.id}`)}
       />
     ));
-    await tick();
+    await settle();
     expect(nodeListeners("dblclick")).toBe(1);
     fireEvent.dblClick(container.querySelector('.solid-flow__node[data-id="b"]')!);
     expect(events).toEqual(["dblclick:b"]);
@@ -135,7 +134,7 @@ describe("pointermove", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
     const targets = spy.mock.calls
       .map(([type], i) => (type === "pointermove" ? spy.mock.instances[i] : undefined))
       .filter((target) => target !== undefined)

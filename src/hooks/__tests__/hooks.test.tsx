@@ -1,8 +1,9 @@
 import { render } from "@solidjs/testing-library";
 import type { JSX } from "@solidjs/web";
-import { createRoot } from "solid-js";
+import { createRoot, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useNodeId } from "@/hooks";
 import type { Node } from "@/types";
@@ -20,8 +21,6 @@ const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
   height: 40,
   ...overrides,
 });
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const renderWithFlow = (Probe: () => JSX.Element, props: { nodes?: Node[] } = {}) =>
   render(() => (
@@ -48,7 +47,7 @@ describe("useSolidFlow: { flow, commands }", () => {
       checked = true;
       return null;
     });
-    await tick();
+    await settle();
 
     expect(checked).toBe(true);
   });
@@ -60,10 +59,10 @@ describe("useSolidFlow: { flow, commands }", () => {
       api = useSolidFlow();
       return null;
     });
-    await tick();
+    await settle();
 
     api.commands.updateNodeData("a", { label: "updated" });
-    await tick();
+    flush();
 
     expect(api.flow.internalNodes.a?.data).toMatchObject({ label: "updated" });
     expect(api.flow.internalNodes.a?.internals.userNode.data).toMatchObject({ label: "updated" });
@@ -85,7 +84,7 @@ describe("hooks", () => {
       expect(edges()).toHaveLength(0);
       return null;
     });
-    await tick();
+    await settle();
 
     expect(probedIds).toEqual(["a"]);
   });
@@ -98,7 +97,7 @@ describe("hooks", () => {
       probe(viewport());
       return null;
     });
-    await tick();
+    await settle();
 
     expect(probe).toHaveBeenCalledWith(
       expect.objectContaining({ x: expect.any(Number), y: expect.any(Number), zoom: 1 }),
@@ -117,7 +116,7 @@ describe("hooks", () => {
     });
 
     expect(states[0]).toBe(false);
-    await tick();
+    await settle();
     expect(read!()).toBe(true);
   });
 
@@ -129,7 +128,7 @@ describe("hooks", () => {
       read = initialized;
       return null;
     });
-    await tick();
+    await settle();
 
     expect(read!()).toBe(true);
   });
@@ -141,7 +140,7 @@ describe("hooks", () => {
       read = useInternalNode(() => "a");
       return null;
     });
-    await tick();
+    await settle();
 
     expect(read()?.id).toBe("a");
     expect(read()?.internals.positionAbsolute).toEqual({ x: 0, y: 0 });
@@ -164,7 +163,7 @@ describe("hooks", () => {
         height={600}
       />
     ));
-    await tick();
+    await settle();
 
     expect(seenId).toBe("a");
   });
@@ -174,7 +173,7 @@ describe("hooks", () => {
       expect(() => useNodeId()).toThrow(/inside a node component/);
       return null;
     });
-    await tick();
+    await settle();
   });
 
   it("useSolidFlow exposes the graph through flow", async () => {
@@ -184,7 +183,7 @@ describe("hooks", () => {
       helpers = useSolidFlow();
       return null;
     });
-    await tick();
+    await settle();
 
     expect(helpers!.flow.internalNodes.a?.id).toBe("a");
     expect(helpers!.flow.nodes.map((n) => n.id)).toEqual(["a"]);
@@ -212,16 +211,16 @@ describe("hooks", () => {
         })()}
       </SolidFlow>
     ));
-    await tick();
+    await settle();
     expect(connections()).toHaveLength(0);
 
     flow.addEdges({ id: "e1", source: "a", target: "b" });
-    await tick();
+    flush();
     expect(connections()).toHaveLength(1);
     expect(connections()[0]).toMatchObject({ source: "a", target: "b", edgeId: "e1" });
 
     await flow.deleteElements({ edges: [{ id: "e1" }] });
-    await tick();
+    flush();
     expect(connections()).toHaveLength(0);
   });
 

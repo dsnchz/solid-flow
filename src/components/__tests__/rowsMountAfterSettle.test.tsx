@@ -2,6 +2,7 @@ import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Edge, Node } from "@/types";
 
@@ -51,7 +52,7 @@ describe("row elements mount after settle", () => {
     expect(container.querySelectorAll(".solid-flow__node")).toHaveLength(2);
     // Edge rows need measured endpoints (jsdom's ResizeObserver stub delivers
     // a microtask later, like the real one).
-    await new Promise((r) => setTimeout(r, 20));
+    await settle();
     expect(container.querySelectorAll(".solid-flow__edge")).toHaveLength(1);
   });
 

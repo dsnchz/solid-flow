@@ -1,7 +1,9 @@
 import { render } from "@solidjs/testing-library";
 import type { XYResizerChange, XYResizerChildChange } from "@xyflow/system";
+import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
@@ -27,8 +29,6 @@ vi.mock("@xyflow/system", async (importOriginal) => {
   };
 });
 
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const ResizableNode = () => <NodeResizer />;
 
 const renderFlow = async (nodes: Node[]) => {
@@ -39,7 +39,7 @@ const renderFlow = async (nodes: Node[]) => {
       <Probe />
     </SolidFlow>
   ));
-  await tick();
+  await settle();
   const node = (id: string) => api.flow.nodes.find((n) => n.id === id)!;
   return { node };
 };
@@ -61,7 +61,7 @@ describe("NodeResizeControl onChange", () => {
     resizer.onChange.get("p")!({ x: 80, y: 90, width: 220, height: 210 }, [
       { id: "c", position: { x: 30, y: 20 } },
     ]);
-    await tick();
+    flush();
 
     expect(node("c").position).toEqual({ x: 30, y: 20 });
     expect(node("c").width).toBe(50);
@@ -81,7 +81,7 @@ describe("NodeResizeControl onChange", () => {
     resizer.onChange.get("a")!({ x: 30, y: 0, width: 120, height: 40 }, []);
     // Top-left resize that lands exactly on the x = 0 line.
     resizer.onChange.get("b")!({ x: 0, y: 50, width: 120, height: 50 }, []);
-    await tick();
+    flush();
 
     expect(node("a").position).toEqual({ x: 30, y: 0 });
     expect(node("a").width).toBe(120);
@@ -97,7 +97,7 @@ describe("NodeResizeControl onChange", () => {
     ]);
 
     resizer.onChange.get("a")!({ width: 140, height: 60 }, []);
-    await tick();
+    flush();
 
     expect(node("a").position).toEqual({ x: 0, y: 0 });
     expect(node("a").width).toBe(140);

@@ -3,6 +3,7 @@ import type { XYResizer } from "@xyflow/system";
 import { createSignal, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import type { Node } from "@/types";
 
@@ -34,8 +35,6 @@ vi.mock("@xyflow/system", async (importOriginal) => {
   };
 });
 
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const node: Node = { id: "n", type: "resizable", position: { x: 0, y: 0 }, data: {} };
 
 const renderResizer = async (Resizer: () => ReturnType<typeof NodeResizer>, zoom = 1) => {
@@ -48,7 +47,7 @@ const renderResizer = async (Resizer: () => ReturnType<typeof NodeResizer>, zoom
       height={600}
     />
   ));
-  await tick();
+  await settle();
   const controls = () =>
     Array.from(result.container.querySelectorAll<HTMLDivElement>(".solid-flow__resize-control"));
   // "top" is the top line, "top-left" the top-left handle

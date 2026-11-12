@@ -2,10 +2,9 @@ import { render } from "@solidjs/testing-library";
 import { flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const renderFlow = () => {
   let internal!: ReturnType<typeof useInternalSolidFlow>;
@@ -27,7 +26,7 @@ const pressShift = () =>
 describe("KeyHandler focus-loss hardening", () => {
   it("heals stuck modifier state from a pointer event's flags (xyflow#5679)", async () => {
     const store = renderFlow();
-    await tick();
+    flush();
 
     // Simulate the macOS-screenshot-HUD scenario: the keydown registered,
     // the keyup was swallowed by an OS overlay, no window blur ever fired.
@@ -41,7 +40,7 @@ describe("KeyHandler focus-loss hardening", () => {
 
   it("does not clear modifier state the event's flags confirm", async () => {
     const store = renderFlow();
-    await tick();
+    flush();
 
     pressShift();
     window.dispatchEvent(new MouseEvent("pointerdown", { shiftKey: true }));
@@ -50,7 +49,7 @@ describe("KeyHandler focus-loss hardening", () => {
 
   it("heals from wheel and keyboard events too", async () => {
     const store = renderFlow();
-    await tick();
+    flush();
 
     // Non-mac default multi-selection key is Control (jsdom UA is not mac).
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Control", ctrlKey: true }));
@@ -67,7 +66,7 @@ describe("KeyHandler focus-loss hardening", () => {
 
   it("leaves non-modifier key state alone (not derivable from flags)", async () => {
     const store = renderFlow();
-    await tick();
+    flush();
 
     // Default pan-activation key is Space — flags can't disprove it.
     window.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
@@ -78,7 +77,7 @@ describe("KeyHandler focus-loss hardening", () => {
 
   it("finalizes in-flight pointer gestures on window blur (xyflow#5852)", async () => {
     renderFlow();
-    await tick();
+    flush();
 
     // d3-drag/d3-zoom/XYHandle end gestures on a window-level release; assert
     // the blur handler synthesizes both flavors. (`event.view` is set on the
@@ -104,14 +103,14 @@ describe("KeyHandler focus-loss hardening", () => {
 
   it("still resets key state on window blur", async () => {
     const store = renderFlow();
-    await tick();
+    flush();
 
     pressShift();
     expect(store().selectionKeyPressed).toBe(true);
     window.dispatchEvent(new Event("blur"));
     // The blur path has no same-task readers, so it relies on the normal
     // deferred flush rather than flushing synchronously.
-    await tick();
+    flush();
     expect(store().selectionKeyPressed).toBe(false);
   });
 });
@@ -148,13 +147,13 @@ describe("KeyHandler key props", () => {
       panActivationKey: null,
       zoomActivationKey: null,
     });
-    await tick();
+    await settle();
 
     press("Shift", { shiftKey: true });
     press("Control", { ctrlKey: true });
     press(" ");
     press("Backspace");
-    await tick();
+    await settle();
 
     const { store } = flow();
     expect(store.selectionKeyPressed).toBe(false);
@@ -167,10 +166,10 @@ describe("KeyHandler key props", () => {
 
   it("an omitted delete key defaults to Backspace", async () => {
     const flow = renderKeyed({});
-    await tick();
+    await settle();
 
     press("Backspace");
-    await tick();
+    await settle();
 
     expect(flow().store.nodes).toHaveLength(0);
   });
@@ -207,7 +206,7 @@ describe("KeyHandler key state", () => {
     ["zoomActivationKeyPressed", { key: "Alt", altKey: true }, { key: "Alt" }],
   ] as const)("%s follows its key down and up", async (flag, down, up) => {
     const store = renderStore();
-    await tick();
+    await settle();
     key("keydown", down);
     expect(store()[flag]).toBe(true);
     key("keyup", up);
@@ -216,15 +215,15 @@ describe("KeyHandler key state", () => {
 
   it("the delete key deletes the selection, unless a modifier is held", async () => {
     const store = renderStore();
-    await tick();
+    await settle();
     key("keydown", { key: "Backspace", shiftKey: true });
-    await tick();
+    await settle();
     expect(store().deleteKeyPressed).toBe(false);
     expect(store().nodes).toHaveLength(1);
 
     key("keydown", { key: "Backspace" });
     expect(store().deleteKeyPressed).toBe(true);
-    await tick();
+    await settle();
     expect(store().nodes).toHaveLength(0);
     key("keyup", { key: "Backspace" });
     expect(store().deleteKeyPressed).toBe(false);
@@ -232,7 +231,7 @@ describe("KeyHandler key state", () => {
 
   it("a context menu resets every key", async () => {
     const store = renderStore();
-    await tick();
+    await settle();
     key("keydown", { key: "Shift", shiftKey: true });
     key("keydown", { key: " " });
     window.dispatchEvent(new MouseEvent("contextmenu"));

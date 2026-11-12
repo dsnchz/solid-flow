@@ -2,12 +2,11 @@ import { render } from "@solidjs/testing-library";
 import { action, createOptimisticStore, refresh } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
 import { useSolidFlow } from "@/hooks/useSolidFlow";
 import type { Node } from "@/types";
-
-const tick = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const makeNode = (id: string, x: number): Node => ({
   id,
@@ -50,7 +49,7 @@ describe("createOptimisticStore compat", () => {
         <Probe />
       </SolidFlow>
     ));
-    await tick();
+    await settle();
 
     const inDom = (id: string) =>
       container.querySelector(`.solid-flow__node[data-id="${id}"]`) !== null;
@@ -75,12 +74,12 @@ describe("createOptimisticStore compat", () => {
     });
 
     void addNode(makeNode("b", 200));
-    await tick();
+    await settle();
     // Optimistic overlay: visible in the flow before the server confirms.
     expect(inDom("b")).toBe(true);
 
     releaseAdd();
-    await tick(50);
+    await settle();
     // Confirmed by refresh: still there after the overlay resolves.
     expect(inDom("b")).toBe(true);
     expect(inDom("a")).toBe(true);
@@ -102,11 +101,11 @@ describe("createOptimisticStore compat", () => {
     });
 
     addNode(makeNode("b", 200)).catch(() => {});
-    await tick();
+    await settle();
     expect(inDom("b")).toBe(true);
 
     rejectAdd(new Error("server said no"));
-    await tick(50);
+    await settle();
     // Overlay dropped: only the truth remains.
     expect(inDom("b")).toBe(false);
     expect(inDom("a")).toBe(true);
@@ -124,7 +123,7 @@ describe("createOptimisticStore compat", () => {
       false,
     );
     flowApi.updateNode("c", { selected: true });
-    await tick();
+    await settle();
     expect(container.querySelector('.solid-flow__node[data-id="c"].selected')).not.toBeNull();
 
     let releaseAdd!: () => void;
@@ -139,7 +138,7 @@ describe("createOptimisticStore compat", () => {
 
     void addNode(makeNode("b", 200));
     releaseAdd();
-    await tick(50);
+    await settle();
     expect(inDom("b")).toBe(true);
 
     // The reconcile must not clobber flow-owned state on untouched rows.
@@ -174,12 +173,12 @@ describe("createOptimisticStore compat", () => {
     });
 
     void combined(makeNode("b", 200));
-    await tick();
+    await settle();
     expect(inDom("b")).toBe(true);
     expect(container.querySelector('.solid-flow__node[data-id="b"].selected')).not.toBeNull();
 
     releaseAdd();
-    await tick(50);
+    await settle();
     expect(inDom("b")).toBe(true);
   });
 });

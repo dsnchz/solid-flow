@@ -1,4 +1,5 @@
 import { fireEvent } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { expect } from "vitest";
 
 /**
@@ -36,7 +37,7 @@ export const connectByDrag = async (
   fireEvent.mouseMove(document, { clientX: 150, clientY: 80 });
   fireEvent.mouseMove(document, { clientX: 220, clientY: 100 });
   fireEvent.mouseUp(document, { clientX: 220, clientY: 100 });
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  flush();
 };
 
 /** Points jsdom's missing `elementFromPoint` at a fixed element (or nothing). */

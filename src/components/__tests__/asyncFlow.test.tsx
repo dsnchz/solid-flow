@@ -1,13 +1,12 @@
 import { render } from "@solidjs/testing-library";
-import { Loading } from "solid-js";
+import { flush, Loading } from "solid-js";
 import { describe, expect, it } from "vitest";
 
+import { settle } from "@/__tests__/settle";
 import { createEdgeStore, createNodeStore } from "@/core";
 
 import { SolidFlow } from "../SolidFlow";
 import { SolidFlowProvider } from "../SolidFlowProvider";
-
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 type SeedNode = {
   id: string;
@@ -36,7 +35,7 @@ describe("async-seeded flow under a Loading boundary", () => {
         <SolidFlow nodes={nodes} edges={edges} width={800} height={600} />
       </Loading>
     ));
-    await tick();
+    await settle();
 
     // Unresolved stores: the boundary holds the whole flow.
     expect(container.querySelector('[data-testid="loading"]')).not.toBeNull();
@@ -60,8 +59,7 @@ describe("async-seeded flow under a Loading boundary", () => {
         height: 40,
       },
     ]);
-    await tick();
-    await tick();
+    await settle();
 
     expect(container.querySelector('[data-testid="loading"]')).toBeNull();
     expect(container.querySelectorAll(".solid-flow__node")).toHaveLength(2);
@@ -86,7 +84,7 @@ describe("async-seeded flow under a Loading boundary", () => {
         </Loading>
       </SolidFlowProvider>
     ));
-    await tick();
+    flush();
 
     expect(container.querySelector('[data-testid="loading"]')).not.toBeNull();
     expect(container.querySelector(".solid-flow__node")).toBeNull();
@@ -101,8 +99,7 @@ describe("async-seeded flow under a Loading boundary", () => {
         height: 40,
       },
     ]);
-    await tick();
-    await tick();
+    await settle();
 
     expect(container.querySelector('[data-testid="loading"]')).toBeNull();
     expect(container.querySelectorAll(".solid-flow__node")).toHaveLength(1);
