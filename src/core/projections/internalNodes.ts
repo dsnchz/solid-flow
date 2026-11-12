@@ -294,6 +294,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           // Position/dragging = drag overlay joined with the row; the joined
           // position feeds the row field AND the absolute-position derive.
           const dragOverlayEntry = dragEntry(source.dragOverlay, user.id);
+          const parent = linkedParent(user.parentId);
           const next = computeRowState(
             user,
             {
@@ -313,11 +314,14 @@ export const createInternalNodes = <NodeType extends Node = Node>(
               rootParentIndex: autoIndex().get(user.id),
             },
             settings(),
-            linkedParent(user.parentId),
+            parent,
           );
 
           if (source.onGeometryChange) {
-            const key = `${next.x},${next.y},${next.width},${next.height},${user.parentId ?? ""}`;
+            // The parentId only for a parent this row is positioned from: the
+            // geometry consumers walk it (a parentId cycle recursed forever).
+            const parentId = parent ? user.parentId : undefined;
+            const key = `${next.x},${next.y},${next.width},${next.height},${parentId ?? ""}`;
             if (key !== geometryKey) {
               geometryKey = key;
               source.onGeometryChange(id, {
@@ -325,7 +329,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
                 y: next.y,
                 width: next.width,
                 height: next.height,
-                ...(user.parentId ? { parentId: user.parentId } : {}),
+                ...(parentId ? { parentId } : {}),
               });
             }
           }

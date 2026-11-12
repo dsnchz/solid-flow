@@ -6,8 +6,13 @@ import { describe, expect, it } from "vitest";
 import type { Node } from "@/types";
 
 import type { DragOverlay } from "../dragOverlay";
+import { createGraphBoundsSampler } from "../graphBounds";
 import { calculateZ, isManualZIndexMode } from "../projections/internalNodeRow";
-import { createInternalNodes, type NodeMeasurements } from "../projections/internalNodes";
+import {
+  createInternalNodes,
+  type NodeGeometry,
+  type NodeMeasurements,
+} from "../projections/internalNodes";
 
 // Headless core tests for the adoption projection: user nodes + the
 // measurements root derive into internal nodes without any DOM.
@@ -46,6 +51,8 @@ const setup = (
     nodeOrigin: NodeOrigin;
     elevateNodesOnSelect: boolean;
     zIndexMode: ZIndexMode;
+    onError: (id: string, message: string) => void;
+    onGeometryChange: (id: string, rect: NodeGeometry | null) => void;
   }>,
 ) => {
   const [nodes, setNodes] = createStore<Node[]>(initialNodes);
@@ -64,6 +71,8 @@ const setup = (
     nodeExtent: infiniteExtent,
     elevateNodesOnSelect: options?.elevateNodesOnSelect ?? true,
     zIndexMode: options?.zIndexMode,
+    onError: options?.onError,
+    onGeometryChange: options?.onGeometryChange,
   });
 
   return { internalNodes, setNodes, setMeasurements };
@@ -475,6 +484,32 @@ describe("createInternalNodes (core, headless)", () => {
 
     expect(internalNodes.p2!.internals.z).toBe(20);
     expect(internalNodes.c2!.internals.z).toBeGreaterThan(20);
+    dispose();
+  });
+
+  it("reports a parentId in the geometry only for a parent the row is positioned from", () => {
+    // A parentId cycle: neither row can be positioned from the other. The
+    // minimap's drag partition follows the reported parentIds; a cycle there
+    // recursed until the stack overflowed.
+    const geometry = new Map<string, NodeGeometry>();
+    const { dispose } = mount(
+      [
+        makeNode({ id: "a", parentId: "b", measured: { width: 10, height: 10 } }),
+        makeNode({ id: "b", parentId: "a", measured: { width: 10, height: 10 } }),
+        makeNode({ id: "x", position: { x: 50, y: 50 }, measured: { width: 10, height: 10 } }),
+      ],
+      {
+        onError: () => {},
+        onGeometryChange: (id, rect) => {
+          if (rect) geometry.set(id, rect);
+          else geometry.delete(id);
+        },
+      },
+    );
+    flush();
+
+    const sampler = createGraphBoundsSampler({ geometry, draggedIds: () => new Set(["x"]) });
+    expect(sampler.sample(true)).toEqual({ x: 0, y: 0, width: 60, height: 60 });
     dispose();
   });
 
