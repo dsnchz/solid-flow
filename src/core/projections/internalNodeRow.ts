@@ -159,11 +159,7 @@ export const computeRowState = <NodeType extends Node>(
       zIndexMode,
     ));
   } else {
-    ({ x, y } = clampPosition(
-      getNodePositionWithOrigin(geometry, nodeOrigin),
-      isCoordinateExtent(user.extent) ? user.extent : nodeExtent,
-      dimensions,
-    ));
+    ({ x, y } = rootXY(geometry, nodeOrigin, nodeExtent, dimensions));
     z =
       calculateZ(geometry, selectedNodeZ, zIndexMode) +
       (rootParentIndex !== undefined ? rootParentIndex * ROOT_PARENT_Z_INCREMENT : 0);
@@ -185,6 +181,57 @@ export const computeRowState = <NodeType extends Node>(
     handleTarget: measurement?.handleTarget,
     rootParentIndex,
   };
+};
+
+/** A root row's absolute position: origin applied, clamped to its extent or the flow's. */
+const rootXY = (
+  geometry: RowGeometryInput,
+  nodeOrigin: NodeOrigin,
+  nodeExtent: CoordinateExtent,
+  dimensions: { width: number; height: number },
+): XYPosition =>
+  clampPosition(
+    getNodePositionWithOrigin(geometry, nodeOrigin),
+    isCoordinateExtent(geometry.extent) ? geometry.extent : nodeExtent,
+    dimensions,
+  );
+
+const NO_DATA: Record<string, unknown> = Object.freeze({});
+
+/** The user-row fields a cold root row's rect reads. */
+export type ColdRowInput = Pick<
+  NodeBase,
+  "id" | "origin" | "extent" | "width" | "height" | "initialWidth" | "initialHeight"
+>;
+
+/**
+ * A COLD root row's absolute rect (#22): what its row derive would report to
+ * the geometry feed, computed without the row (computeRowState's root
+ * branch over the fields a rect needs, so a `data` or z change does not
+ * re-run it).
+ */
+export const coldRootRect = (
+  user: ColdRowInput,
+  position: XYPosition,
+  measuredWidth: number | undefined,
+  measuredHeight: number | undefined,
+  settings: Pick<RowSettings, "nodeOrigin" | "nodeExtent">,
+): { x: number; y: number; width: number; height: number } => {
+  const geometry: RowGeometryInput = {
+    id: user.id,
+    data: NO_DATA,
+    position,
+    origin: user.origin,
+    extent: user.extent,
+    measured: { width: measuredWidth, height: measuredHeight },
+    width: user.width,
+    height: user.height,
+    initialWidth: user.initialWidth,
+    initialHeight: user.initialHeight,
+  };
+  const dimensions = getNodeDimensions(geometry);
+  const { x, y } = rootXY(geometry, settings.nodeOrigin, settings.nodeExtent, dimensions);
+  return { x, y, width: dimensions.width, height: dimensions.height };
 };
 
 /**

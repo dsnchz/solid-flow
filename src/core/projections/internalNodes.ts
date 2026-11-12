@@ -12,7 +12,6 @@ import {
   getOwner,
   mapArray,
   onCleanup,
-  type Owner,
   runWithOwner,
   untrack,
 } from "solid-js";
@@ -25,13 +24,14 @@ import { emitFlowError } from "../rules";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import {
   buildRow,
+  coldRootRect,
   computeRowState,
   edgeZOf,
   type RowSettings,
   type RowState,
   writeChangedLeaves,
 } from "./internalNodeRow";
-import { createRecordFacade, createRowHolders } from "./rowRecord";
+import { createEntryHolders, createRecordFacade, RowEntry } from "./rowRecord";
 
 /** Row keys the derive joins itself: read from the row proxy, never from the snapshot. */
 const JOINED_KEYS: ReadonlySet<string> = new Set(["selected", "dragging"]);
@@ -157,6 +157,13 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
    */
   readonly reportSelected?: (id: string, selected: boolean) => void;
   readonly reportUnmeasured?: (id: string, unmeasured: boolean) => void;
+  /**
+   * Reactive, read when a row is created (untracked): rows start COLD and
+   * are created on first read (#22). The unmount tier's mode, where a row
+   * off screen is never read; with everything mounted every row is read at
+   * mount anyway, so rows start hot there.
+   */
+  readonly lazyRows?: boolean;
 };
 
 /**
@@ -197,31 +204,6 @@ const endpointChanged = (prev: RowState, next: RowState): boolean =>
   next.handleTarget !== prev.handleTarget;
 
 const EMPTY_AUTO_INDEX: ReadonlyMap<string, number> = new Map();
-
-/**
- * One node's registration in the row map: its user node accessor and its row
- * store, created on the first read of `store` under the row's own owner. One
- * object per row, doubling as the mapArray item the record projection reads.
- */
-class RowEntry<NodeType extends Node, Store> {
-  created: Store | undefined;
-  readonly #owner: Owner | null;
-  readonly #create: () => Store;
-
-  constructor(
-    readonly id: string,
-    readonly node: Accessor<NodeType>,
-    owner: Owner | null,
-    create: () => Store,
-  ) {
-    this.#owner = owner;
-    this.#create = create;
-  }
-
-  get store(): Store {
-    return (this.created ??= runWithOwner(this.#owner, this.#create));
-  }
-}
 
 /**
  * The adoption pass, decomposed into SUB-STORES (spike 13): each row is its
@@ -371,7 +353,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
     presenceOf(ancestorId)();
     while (entry && !seen.has(ancestorId)) {
       seen.add(ancestorId);
-      const next = entry.node().parentId;
+      const next = entry.item().parentId;
       if (!next) return parentEntry?.store.row ?? undefined;
       ancestorId = next;
       presenceOf(ancestorId)();
@@ -393,7 +375,25 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       // wrapper is what keeps TS happy across the Store<T>=Readonly<T>
       // mapped type with an unresolved NodeType generic, and the inner
       // `.row` proxy is what the public record holds.
+      // One reporter for the cold memo and the row derive: whichever reports
+      // writes the feed only when the rect (or the linked parent) changed.
       let geometryKey = "";
+      const reportGeometry = (
+        rect: { x: number; y: number; width: number; height: number },
+        parentId: string | undefined,
+      ) => {
+        if (!source.onGeometryChange) return;
+        const key = `${rect.x},${rect.y},${rect.width},${rect.height},${parentId ?? ""}`;
+        if (key === geometryKey) return;
+        geometryKey = key;
+        source.onGeometryChange(id, {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+          ...(parentId ? { parentId } : {}),
+        });
+      };
       const createRow = (): RowStore => {
         // ONE enumeration of the user row per USER change: the projection
         // reads this plain snapshot, so a measurement or overlay change
@@ -453,22 +453,9 @@ export const createInternalNodes = <NodeType extends Node = Node>(
               parent,
             );
 
-            if (source.onGeometryChange) {
-              // The parentId only for a parent this row is positioned from: the
-              // geometry consumers walk it (a parentId cycle recursed forever).
-              const parentId = parent ? user.parentId : undefined;
-              const key = `${next.x},${next.y},${next.width},${next.height},${parentId ?? ""}`;
-              if (key !== geometryKey) {
-                geometryKey = key;
-                source.onGeometryChange(id, {
-                  x: next.x,
-                  y: next.y,
-                  width: next.width,
-                  height: next.height,
-                  ...(parentId ? { parentId } : {}),
-                });
-              }
-            }
+            // The parentId only for a parent this row is positioned from: the
+            // geometry consumers walk it (a parentId cycle recursed forever).
+            reportGeometry(next, parent ? user.parentId : undefined);
             source.reportSelected?.(id, next.selected);
             source.reportUnmeasured?.(
               id,
@@ -521,11 +508,6 @@ export const createInternalNodes = <NodeType extends Node = Node>(
         return store;
       };
 
-      // A derive runs as its projection is created. A child's derive reads
-      // rows that may come later in the array, so a row with a parent is
-      // created on first use, under its own owner: by the record projection
-      // below once every row of the pass is registered, or earlier by a
-      // descendant that links to it. Rows without a parent are created here.
       const entry = new RowEntry(id, userNodeAccessor, getOwner(), createRow);
       entryById.set(id, entry);
       // mapArray creates replacement rows BEFORE disposing removed ones, so
@@ -543,17 +525,77 @@ export const createInternalNodes = <NodeType extends Node = Node>(
           source.endpointVersions.delete(id);
         }
       });
-      if (!userNodeAccessor().parentId) void entry.store;
 
+      // A derive runs as its projection is created. A child's derive reads
+      // rows that may come later in the array, so a row with a parent is
+      // created on first use, under its own owner: by the record projection
+      // below once every row of the pass is registered, or earlier by a
+      // descendant that links to it. Eager rows without a parent are created
+      // here. A LAZY root row (#22) stays cold until something reads it (a
+      // renderer mounting it, an edge, the record): until then a small memo
+      // keeps its rect and cull pin current, which is all culling needs.
+      if (!untrack(() => source.lazyRows)) {
+        if (!untrack(() => userNodeAccessor().parentId)) void entry.store;
+        return entry;
+      }
+      // eslint-disable-next-line solid/reactivity -- a memo nobody reads: it reports to the plain feeds, like the row derive
+      createMemo(
+        () => {
+          // Hot: the row derive reports from now on (this run drops the deps).
+          if (entry.created) return;
+          const userNode = userNodeAccessor();
+          // A row with a parent is created by the record pass (subflows are hot).
+          if (userNode.parentId) return;
+          const measurement = id in source.measurements ? source.measurements[id] : undefined;
+          const measuredWidth = measurement?.measured.width ?? userNode.measured?.width;
+          const measuredHeight = measurement?.measured.height ?? userNode.measured?.height;
+          reportGeometry(
+            coldRootRect(
+              userNode,
+              joinPosition(userNode.position, dragEntry(source.dragOverlay, id)),
+              measuredWidth,
+              measuredHeight,
+              settings(),
+            ),
+            undefined,
+          );
+          const selected = joinSelected(
+            userNode.selected,
+            overlayEntry(source.selectionOverlay, id),
+          );
+          source.reportCullPin?.(
+            id,
+            nodePinned(
+              selected,
+              userNode.cullable,
+              measuredWidth,
+              measuredHeight,
+              measurement?.handleSource !== undefined || !!userNode.handles?.length,
+            ),
+          );
+          source.reportSelected?.(id, selected);
+          source.reportUnmeasured?.(
+            id,
+            !userNode.hidden && (measuredWidth === undefined || measuredHeight === undefined),
+          );
+        },
+        { name: "internalNodes.cold" },
+      );
       return entry;
     },
     { keyed: (userNode) => userNode.id },
   );
 
-  // Shared keyed-record tail — see createRowRecordProjection. (These rows
-  // are never null; the helper's null-skip is a no-op here.) The holders
-  // also serve the rows' edge z (edgeZReaderOf).
-  const holders = createRowHolders<InternalNode<NodeType>, RowStore>(rows, "internalNodes");
+  // The record over the row ENTRIES: building it heats nothing; a read of
+  // `record[id]` creates that row. Rows with a parent are created here, once
+  // every row of the pass is registered (only cold ones are asked: the read
+  // re-runs the pass when a cold row gains a parent). The holders also serve
+  // the rows' edge z (edgeZReaderOf).
+  const holders = createEntryHolders<
+    InternalNode<NodeType>,
+    RowStore,
+    RowEntry<NodeType, RowStore>
+  >(rows, "internalNodes", (entry) => !entry.created && !!entry.item().parentId);
   const record = createRecordFacade(holders);
   edgeZReaders.set(record, (nodeId) => holders[nodeId]?.store.edgeZ ?? 0);
   return record;

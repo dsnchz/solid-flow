@@ -79,7 +79,9 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
       attribution: ATTRIBUTION,
     });
     expectOnlyByDesignDiagnostics(artifact);
-    expectRerunBudget(artifact, 4);
+    // The node row, its two edges' rows, the edge boxes (edge culling boxes
+    // the endpoints' node rects, #22) and the two on-screen sweeps.
+    expectRerunBudget(artifact, 6);
   });
 
   it("ending a drag writes the overlay entry in place", async () => {

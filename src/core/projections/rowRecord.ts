@@ -1,4 +1,4 @@
-import { createProjection } from "solid-js";
+import { type Accessor, createProjection, type Owner, runWithOwner } from "solid-js";
 
 /**
  * A record slot value the engine serves RAW: frozen objects are not
@@ -97,6 +97,90 @@ export const createRowHolders = <Row extends object, Store extends { readonly ro
             store,
           });
           holderOf.set(store, holder);
+        }
+        if (assigned.get(id) !== holder) {
+          assigned.set(id, holder);
+          draft[id] = holder;
+        }
+      }
+      for (const id of assigned.keys()) {
+        if (!seen.has(id)) {
+          assigned.delete(id);
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removing a keyed entry from a store draft IS a dynamic delete
+          delete draft[id];
+        }
+      }
+    },
+    {},
+    { key: null, shallow: true, name },
+  );
+};
+
+/**
+ * One row's registration: its item accessor and its row store, created on
+ * the first read of `store` under the row's own owner. A row is COLD until
+ * then (#22): nothing derives it, and a cold reporter of its own (see the
+ * callers) keeps the plain geometry and cull-pin sets current. Reading the
+ * store turns it HOT for the rest of its life.
+ */
+export class RowEntry<Item, Store> {
+  created: Store | undefined;
+  readonly #owner: Owner | null;
+  readonly #create: () => Store;
+
+  constructor(
+    readonly id: string,
+    readonly item: Accessor<Item>,
+    owner: Owner | null,
+    create: () => Store,
+  ) {
+    this.#owner = owner;
+    this.#create = create;
+  }
+
+  get store(): Store {
+    return (this.created ??= runWithOwner(this.#owner, this.#create));
+  }
+}
+
+/**
+ * The holder record over row ENTRIES (not row stores): one frozen holder per
+ * entry, present while the entry is, whether or not its row is null or even
+ * created. Building it reads no row, so it heats nothing; `holder.row` and
+ * `holder.store` create the row on first read (createRecordFacade reads
+ * `row`). A same-id replacement is a new entry and repoints the slot.
+ * `heat` names the entries that must be created anyway (tracked: it re-runs
+ * the record on whatever it reads).
+ */
+export const createEntryHolders = <
+  Row extends object,
+  Store extends { readonly row: Row | null },
+  Entry extends RowEntry<unknown, Store>,
+>(
+  entries: () => readonly Entry[],
+  name: string,
+  heat?: (entry: Entry) => boolean,
+): Record<string, RowHolder<Row, Store>> => {
+  const holderOf = new WeakMap<Entry, RowHolder<Row, Store>>();
+  const assigned = new Map<string, RowHolder<Row, Store>>();
+  return createProjection<Record<string, RowHolder<Row, Store>>>(
+    (draft) => {
+      const seen = new Set<string>();
+      for (const entry of entries()) {
+        const { id } = entry;
+        seen.add(id);
+        if (heat?.(entry)) void entry.store;
+        let holder = holderOf.get(entry);
+        if (holder === undefined) {
+          holder = Object.freeze({
+            get row() {
+              return entry.store.row;
+            },
+            get store() {
+              return entry.store;
+            },
+          });
+          holderOf.set(entry, holder);
         }
         if (assigned.get(id) !== holder) {
           assigned.set(id, holder);

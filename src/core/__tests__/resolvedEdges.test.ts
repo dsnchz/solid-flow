@@ -70,7 +70,7 @@ const makeSource = (edges: Edge[], nodes: InternalNode[]) => {
 };
 
 describe("createResolvedEdges (core, headless)", () => {
-  it("joins edges with both endpoints and drops edges with missing nodes", () => {
+  it("joins edges with both endpoints; an edge with a missing node has no row", () => {
     const { source } = makeSource(
       [
         { id: "e1", source: "a", target: "b" },
@@ -82,7 +82,8 @@ describe("createResolvedEdges (core, headless)", () => {
     createRoot((dispose) => {
       const resolved = createResolvedEdges(source);
       flush();
-      expect(Object.keys(resolved)).toEqual(["e1"]);
+      expect(Object.keys(resolved)).toEqual(["e1", "ghost"]);
+      expect(resolved.ghost).toBeUndefined();
       expect(resolved.e1!.sourceX).toBeTypeOf("number");
       expect(resolved.e1!.edge.id).toBe("e1");
       dispose();

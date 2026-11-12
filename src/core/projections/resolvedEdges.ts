@@ -2,17 +2,16 @@ import {
   type ConnectionMode,
   getEdgePosition,
   type OnError,
-  type Rect,
   type ZIndexMode,
 } from "@xyflow/system";
-import { createMemo, createProjection, mapArray, onCleanup, untrack } from "solid-js";
+import { createMemo, createProjection, getOwner, mapArray, onCleanup, untrack } from "solid-js";
 
 import type { DefaultEdgeOptions, Edge, InternalNode, Node, ResolvedEdge } from "@/types";
 
 import { edgePinned } from "../culling";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import type { EdgeMarkers } from "./markers";
-import { createRowRecordProjection } from "./rowRecord";
+import { createEntryHolders, createRecordFacade, RowEntry } from "./rowRecord";
 
 /**
  * The reactive inputs of the layout join, expressed structurally so the
@@ -35,8 +34,12 @@ export type ResolvedEdgesSource<NodeType extends Node = Node, EdgeType extends E
    * the endpoints' geometry untracked.
    */
   readonly endpointVersion: (nodeId: string) => number | undefined;
-  /** Called with the edge's segment box whenever it changes, null when the row is gone. */
-  readonly onGeometryChange?: (id: string, box: Rect | null) => void;
+  /**
+   * Called with the edge's endpoint ids on every run, null when the edge is
+   * gone: edge culling boxes the endpoints' node rects (see edgeBoxes.ts),
+   * which needs no edge row.
+   */
+  readonly reportEndpoints?: (id: string, endpoints: EdgeEndpoints | null) => void;
   /**
    * Called with whether the edge is selected (overlay joined), resolved or
    * not, on every run; `false` when it is removed (the flow's selected-edges
@@ -50,32 +53,40 @@ export type ResolvedEdgesSource<NodeType extends Node = Node, EdgeType extends E
    * reason of its own) on every run, and with `false` when it is removed.
    */
   readonly reportCullPin?: (id: string, pinned: boolean) => void;
+  /**
+   * Reactive, read when an edge is created (untracked): edge rows start COLD
+   * and are created on first read (#22; see InternalNodesSource.lazyRows).
+   */
+  readonly lazyRows?: boolean;
 };
+
+/** An edge's endpoint node ids. */
+export type EdgeEndpoints = { readonly source: string; readonly target: string };
+
+type EdgeStore<EdgeType extends Edge> = { row: ResolvedEdge<EdgeType> | null };
 
 /**
  * Edge layout join: user edges × internal nodes → screen-space edge geometry,
  * decomposed into SUB-STORES (spike 13): each edge is its own keyed
  * projection holding `{ row }` — the resolved row, or null while the edge
- * does not resolve (an endpoint missing or hidden, or a handle not found;
- * culling never nulls a row, see below) — and the public record
- * is a SHALLOW projection holding the PRESENT rows' proxies by reference.
+ * does not resolve (an endpoint missing or hidden, or a handle not found) —
+ * and the record is a SHALLOW projection holding one holder per edge.
  *
  * Reads chain: `record[id].sourceX` goes through the shallow slot into the
  * edge's own store, so every materialized leaf signal hangs off its EDGE's
  * computed (defeating rc.1's per-update companion walk — see
  * internalNodes.ts). The edge projection tracks exactly what the join reads —
- * the edge's props and its endpoints' geometry leaves through nodeLookup
- * (which chains into the node row stores) — so one node move re-runs only
- * the adjacent edges' projections; the record computed re-runs only when
- * membership or presence changes.
+ * the edge's props and its endpoints' endpoint versions — so one node move
+ * re-runs only the adjacent edges' projections; the record computed re-runs
+ * only when membership changes.
  *
- * The viewport never participates here: #15 culling is CSS-only, applied by
- * EdgeWrapper from the quantized culling viewport — panning must not touch
- * edge rows, and the record's membership must not change as edges cross the
- * viewport (no mount/unmount churn).
+ * The viewport never participates here: culling decides from the
+ * endpoints' node rects (edgeBoxes.ts), so panning never touches edge rows.
  *
- * Rows whose endpoints are missing or unmeasured simply drop out of the
- * record — the same "no entry" contract the ReactiveMap pipeline had.
+ * Every edge has a key; `record[id]` is undefined while the edge does not
+ * resolve. With `lazyRows` an edge row is created on its first read (#22):
+ * until then a small memo reports its endpoints and cull pin, all culling
+ * needs, and its endpoint nodes stay cold too.
  */
 export const createResolvedEdges = <NodeType extends Node = Node, EdgeType extends Edge = Edge>(
   source: ResolvedEdgesSource<NodeType, EdgeType>,
@@ -101,66 +112,77 @@ export const createResolvedEdges = <NodeType extends Node = Node, EdgeType exten
       name: "resolvedEdges.settings",
     },
   );
-  const rowStores = mapArray(
+  const entries = mapArray(
     () => source.edges,
     (edgeAccessor) => {
       const id = edgeAccessor().id;
-      let geometry = "";
-      const store: { row: ResolvedEdge<EdgeType> | null } = createProjection<{
-        row: ResolvedEdge<EdgeType> | null;
-      }>(
-        // the accessor tracks the item slot: a controlled array reset swaps
-        // the edge object while THIS row store (keyed by id) survives, so
-        // downstream subscriptions never strand on disposed stores
-        () => {
-          const edge = edgeAccessor();
-          // (rc.1 carried post-build dependency re-asserts here — first
-          // nested derives could strand subscriptions; fixed upstream in
-          // solidjs/solid#3037, removed with the rc.2 bump.)
-          const row = buildRow(source, settings(), edge);
-          if (source.onGeometryChange) {
-            const next = row ? `${row.sourceX},${row.sourceY},${row.targetX},${row.targetY}` : "";
-            if (next !== geometry) {
-              geometry = next;
-              source.onGeometryChange(id, row ? segmentBox(row) : null);
-            }
-          }
-          source.markers?.set(id, edge.markerStart, edge.markerEnd);
-          source.reportSelected?.(
-            id,
-            row
-              ? !!row.selected
-              : joinSelected(edge.selected, overlayEntry(source.selectionOverlay, id)),
-          );
-          source.reportCullPin?.(id, !!row && edgePinned(row.selected, row.cullable));
-          return { row };
-        },
-        { row: null },
-        { key: "id", name: "resolvedEdges.row" },
-      );
+      let endpoints: EdgeEndpoints | null = null;
+      const reportEndpoints = (edge: EdgeType) => {
+        if (!source.reportEndpoints) return;
+        if (endpoints?.source === edge.source && endpoints.target === edge.target) return;
+        endpoints = { source: edge.source, target: edge.target };
+        source.reportEndpoints(id, endpoints);
+      };
+      const createRow = (): EdgeStore<EdgeType> =>
+        createProjection<EdgeStore<EdgeType>>(
+          // the accessor tracks the item slot: a controlled array reset swaps
+          // the edge object while THIS row store (keyed by id) survives, so
+          // downstream subscriptions never strand on disposed stores
+          () => {
+            const edge = edgeAccessor();
+            const row = buildRow(source, settings(), edge);
+            reportEndpoints(edge);
+            source.markers?.set(id, edge.markerStart, edge.markerEnd);
+            source.reportSelected?.(
+              id,
+              row
+                ? !!row.selected
+                : joinSelected(edge.selected, overlayEntry(source.selectionOverlay, id)),
+            );
+            source.reportCullPin?.(id, !!row && edgePinned(row.selected, row.cullable));
+            return { row };
+          },
+          { row: null },
+          { key: "id", name: "resolvedEdges.row" },
+        );
+      const entry = new RowEntry(id, edgeAccessor, getOwner(), createRow);
       onCleanup(() => {
-        if (geometry !== "") source.onGeometryChange?.(id, null);
+        if (endpoints) source.reportEndpoints?.(id, null);
         source.reportSelected?.(id, false);
         source.markers?.remove(id);
         source.reportCullPin?.(id, false);
       });
-      return { id, store };
+      if (!untrack(() => source.lazyRows)) {
+        void entry.store;
+        return entry;
+      }
+      // Cold: what culling needs, without the row (see createInternalNodes).
+      // eslint-disable-next-line solid/reactivity -- a memo nobody reads: it reports to the plain feeds, like the row derive
+      createMemo(
+        () => {
+          if (entry.created) return;
+          const edge = edgeAccessor();
+          reportEndpoints(edge);
+          source.markers?.set(id, edge.markerStart, edge.markerEnd);
+          const selected = joinSelected(edge.selected, overlayEntry(source.selectionOverlay, id));
+          source.reportCullPin?.(id, edgePinned(selected, edge.cullable));
+          source.reportSelected?.(id, selected);
+        },
+        { name: "resolvedEdges.cold" },
+      );
+      return entry;
     },
     { keyed: (edge) => edge.id },
   );
 
-  // Shared keyed-record tail — see createRowRecordProjection.
-  return createRowRecordProjection(rowStores, "resolvedEdges");
+  return createRecordFacade(
+    createEntryHolders<
+      ResolvedEdge<EdgeType>,
+      EdgeStore<EdgeType>,
+      RowEntry<EdgeType, EdgeStore<EdgeType>>
+    >(entries, "resolvedEdges"),
+  );
 };
-
-const segmentBox = (
-  row: Pick<ResolvedEdge, "sourceX" | "sourceY" | "targetX" | "targetY">,
-): Rect => ({
-  x: Math.min(row.sourceX, row.targetX),
-  y: Math.min(row.sourceY, row.targetY),
-  width: Math.abs(row.sourceX - row.targetX),
-  height: Math.abs(row.sourceY - row.targetY),
-});
 
 /**
  * An endpoint as @xyflow/system's getEdgePosition needs it. Without measured

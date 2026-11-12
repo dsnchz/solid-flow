@@ -108,8 +108,11 @@ describe("integration: resolvedEdges over chained internalNodes sub-stores", () 
         nodeLookup,
       });
 
-      // app shape: For subscribes to visibleEdgeIds from the start
-      const visibleEdgeIds = createMemo(() => Object.keys(resolved));
+      // app shape: a subscriber to the edges that resolve (every edge has a
+      // key; an unresolved one reads undefined until its endpoints are measured)
+      const visibleEdgeIds = createMemo(() =>
+        Object.keys(resolved).filter((id) => resolved[id] !== undefined),
+      );
       const seenIds: string[][] = [];
       createEffect(
         () => visibleEdgeIds(),

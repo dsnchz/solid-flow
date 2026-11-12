@@ -1,3 +1,4 @@
+import { isServer } from "@solidjs/web";
 import {
   getInternalNodesBounds,
   getViewportForBounds,
@@ -41,6 +42,7 @@ import { createInitialFitView } from "./initialFitView";
 import { createMeasurementIngest } from "./measurementIngest";
 import { createOverlayRelease } from "./overlayRelease";
 import { createLazyConnections } from "./projections/connections";
+import { createEdgeBoxes } from "./projections/edgeBoxes";
 import { createEdgeLookup } from "./projections/edgeLookup";
 import {
   createInternalNodes,
@@ -53,7 +55,7 @@ import { sameIds } from "./projections/mountedIds";
 import { createOnScreenIds } from "./projections/onScreenIds";
 import { createParentIds } from "./projections/parentIds";
 import { createReportedIds } from "./projections/reportedIds";
-import { createResolvedEdges } from "./projections/resolvedEdges";
+import { createResolvedEdges, type EdgeEndpoints } from "./projections/resolvedEdges";
 import { getSelectedNodesBounds } from "./projections/selectedBounds";
 import { propDefaults } from "./propDefaults";
 import { createRowIndex } from "./rowIndex";
@@ -217,7 +219,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // instead of walking the rows through the store proxies.
   const nodeGeometryFeed = createGeometryFeed<NodeGeometry>("nodeGeometry");
   const nodeGeometry = nodeGeometryFeed.map;
+  // Edge culling boxes (projections/edgeBoxes.ts): each edge's endpoint ids,
+  // reported by the edge's cold memo or row, boxed over the node rects.
+  const edgeEndpointsFeed = createGeometryFeed<EdgeEndpoints>("edgeEndpoints");
   const edgeGeometryFeed = createGeometryFeed<Rect>("edgeGeometry");
+  createEdgeBoxes({ nodes: nodeGeometryFeed, endpoints: edgeEndpointsFeed }, edgeGeometryFeed);
   // Each node's endpoint version, filled by the row derive and read by the
   // edge rows (one source per endpoint instead of its geometry leaves).
   const endpointVersions: EndpointVersions = new Map();
@@ -235,10 +241,17 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // mounted lists read them instead of every row (#22).
   const nodeCullPins = createCullPins("nodeCullPins");
   const edgeCullPins = createCullPins("edgeCullPins");
+  // Rows start cold in the unmount tier (#22), where an off-screen row is
+  // never read; read when each row is created. A server render reads every
+  // row (nothing culls there), so its rows start hot.
+  const lazyRows = () => !isServer && !!config().onlyRenderVisibleElements;
   const internalNodes = createInternalNodes<NodeType>({
     endpointVersions,
     reportSelected: selectedNodes.set,
     reportUnmeasured: unmeasuredNodes.set,
+    get lazyRows() {
+      return lazyRows();
+    },
     get nodes() {
       return nodesStore;
     },
@@ -656,8 +669,11 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // across derive re-runs. Replaces the mapArray layout effect + ReactiveMap.
   const resolvedEdges = createResolvedEdges<NodeType, EdgeType>({
     markers: edgeMarkers,
-    onGeometryChange: edgeGeometryFeed.report,
     reportSelected: selectedEdges.set,
+    reportEndpoints: edgeEndpointsFeed.report,
+    get lazyRows() {
+      return lazyRows();
+    },
     reportCullPin: edgeCullPins.set,
     endpointVersion: (id) => endpointVersions.get(id)?.endpoint,
     get selectionOverlay() {
@@ -696,7 +712,9 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Raw user edges live in `edgeLookup` — near-identical names once made
   // this a shape trap (audit D2).
   // `in` guard: subscribe even while the key is absent, so a caller waiting
-  // on an edge's layout (the renderer's mount guard) re-runs when it lands.
+  // on an edge (the renderer's mount guard) re-runs when it lands; a present
+  // edge's read goes through its row store (created by this read in the
+  // unmount tier), so a null row wakes the caller when it resolves.
   const getResolvedEdge = (id: string) => (id in resolvedEdges ? resolvedEdges[id] : undefined);
 
   /**********************************************************************************/
