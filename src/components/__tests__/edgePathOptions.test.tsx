@@ -33,7 +33,10 @@ describe("edge pathOptions", () => {
         type: "smoothstep",
         pathOptions: { stepPosition: 0.1 },
       },
-      { id: "step-default", source: "a", target: "b", type: "step" },
+      // `offset` only shows where the path has to route around: since
+      // @xyflow/system 0.0.84 a straight run through the offset point drops
+      // it, so these two target the node ABOVE a (the source handle points down)
+      { id: "step-default", source: "a", target: "c", type: "step" },
       {
         id: "step-near-source",
         source: "a",
@@ -48,7 +51,7 @@ describe("edge pathOptions", () => {
         type: "smoothstep",
         pathOptions: { borderRadius: 0 },
       },
-      { id: "step-offset", source: "a", target: "b", type: "step", pathOptions: { offset: 60 } },
+      { id: "step-offset", source: "a", target: "c", type: "step", pathOptions: { offset: 60 } },
       // the bezier curvature only shapes a path whose target lies behind the
       // source handle's direction: these two target the node ABOVE a
       { id: "bezier-default", source: "a", target: "c" },
