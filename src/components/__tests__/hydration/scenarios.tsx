@@ -30,6 +30,18 @@ export type Scenario = {
    * element must end with exactly the attributes the server rendered.
    */
   readonly extras?: readonly string[];
+  /**
+   * onlyRenderVisibleElements: the node `id` lies off screen. The server has
+   * no viewport and renders it; hydration claims it like any row; the client
+   * unmounts it once settled (it alone: every other server row stays the
+   * claimed element), and `bringBack` moves it on screen, where it mounts
+   * again showing `text`.
+   */
+  readonly offScreen?: {
+    readonly id: string;
+    readonly bringBack: () => void;
+    readonly text: string;
+  };
 };
 
 // Declared handle geometry: with no DOM the server cannot measure handles,
@@ -172,9 +184,40 @@ const extraAttributes = (): Scenario => {
   };
 };
 
+// The unmount tier over server markup. Every node declares its size and
+// handles, so the client has nothing to measure: the case where an
+// off-screen row stays unmounted, and its row unbuilt, until it is read (#22).
+const unmountTier = (): Scenario => {
+  const { nodes: base, edges } = graph();
+  const far = { x: 3000, y: 3000 };
+  const [nodes, setNodes] = createSignal<Node[]>(
+    base.map((n) => (n.id === "out" ? { ...n, position: far } : n)),
+  );
+  return {
+    name: "unmount tier with an off-screen node",
+    App: () => (
+      <SolidFlow nodes={nodes()} edges={edges} width={800} height={600} onlyRenderVisibleElements />
+    ),
+    update: () => setNodes((current) => relabel(current, "mid", "mid updated")),
+    updatedText: "mid updated",
+    clickNodeId: "in",
+    offScreen: {
+      id: "out",
+      bringBack: () =>
+        setNodes((current) =>
+          current.map((n) =>
+            n.id === "out" ? { ...n, position: { x: 0, y: 200 }, data: { label: "out back" } } : n,
+          ),
+        ),
+      text: "out back",
+    },
+  };
+};
+
 export const scenarios: readonly (() => Scenario)[] = [
   builtIn,
   withPlugins,
   customNode,
   extraAttributes,
+  unmountTier,
 ];

@@ -110,6 +110,32 @@ describe("edges on the server", () => {
     ));
     expect(edgeMarkup(html, "e1")).toContain("custom-edge");
   });
+
+  it("renders an off-screen node with declared geometry, and its edge, under onlyRenderVisibleElements", () => {
+    // Declared size and handles leave the client nothing to measure, so its
+    // unmount tier never mounts such a node off screen (#22). The server has
+    // no viewport: it renders every row, edge geometry included.
+    const html = renderToString(() => (
+      <SolidFlow
+        nodes={[
+          withHandles(makeNode({ id: "a" }), "source", Position.Right),
+          withHandles(
+            makeNode({ id: "far", position: { x: 50000, y: 50000 } }),
+            "target",
+            Position.Left,
+          ),
+        ]}
+        edges={[edge("e1", "a", "far")]}
+        width={800}
+        height={600}
+        onlyRenderVisibleElements
+      />
+    ));
+    expect(html).toContain('data-id="far"');
+    const g = edgeMarkup(html, "e1");
+    expect(g).toMatch(/\sd="M106,23 /);
+    expect(g).not.toContain("visibility:hidden");
+  });
 });
 
 describe("plugins on the server", () => {

@@ -31,6 +31,10 @@ import { scenarios } from "./scenarios";
  *    gives the same ones: the client adds the extras from a ref and the
  *    server from its own copy of the element, so this is what keeps the two
  *    copies in step.
+ * 5. Under onlyRenderVisibleElements the server renders every row (no
+ *    viewport) and hydration claims them all; once settled the client drops
+ *    exactly the off-screen row, keeps every other claimed element, and
+ *    mounts the dropped row again when it comes on screen.
  */
 
 const loadArtifact = (name: string): string => {
@@ -145,15 +149,19 @@ describe("hydration lane — client hydrate", () => {
         ).toEqual([]);
         expect(rows(current)).toEqual(serverRows);
 
-        // the measurement pass (idle) and the settle flushes
+        // the measurement pass (idle) and the settle flushes; the unmount
+        // tier drops its off-screen row then, and only that one
         await settle();
-        expect(rows(current)).toEqual(serverRows);
+        const offScreenId = scenario.offScreen?.id;
+        const keptRows = serverRows.filter((row) => row.getAttribute("data-id") !== offScreenId);
+        if (offScreenId) expect(keptRows).toHaveLength(serverRows.length - 1);
+        expect(rows(current)).toEqual(keptRows);
 
         // (3) a state update lands in the server-rendered elements
         scenario.update();
         flush();
         expect(current.textContent).toContain(scenario.updatedText);
-        expect(rows(current)).toEqual(serverRows);
+        expect(rows(current)).toEqual(keptRows);
         expect(extrasSnapshot(current, scenario.extras ?? [])).toEqual(serverExtras);
 
         // ...and the flow is interactive
@@ -163,6 +171,18 @@ describe("hydration lane — client hydrate", () => {
         fireEvent.click(clicked);
         flush();
         expect(clicked.classList.contains("selected")).toBe(true);
+
+        // (5) the unmount tier stays live after hydration: the dropped row
+        // mounts again when it comes on screen, beside the claimed rows
+        if (scenario.offScreen) {
+          scenario.offScreen.bringBack();
+          await settle();
+          const back = current.querySelector(
+            `.solid-flow__node[data-id="${scenario.offScreen.id}"]`,
+          );
+          expect(back?.textContent).toContain(scenario.offScreen.text);
+          for (const row of keptRows) expect(rows(current)).toContain(row);
+        }
 
         // (1) no hydration warnings, no errors
         expect(warn.mock.calls.map((args) => String(args[0]))).toEqual([]);
