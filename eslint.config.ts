@@ -106,6 +106,17 @@ export default defineConfig(
     },
   },
   {
+    // From `configs/v2-strict`, for the library only (the e2e fixture apps
+    // keep module-level state on purpose): a reactive primitive at module
+    // scope is shared by every flow on the page and every server request;
+    // `<For keyed>` / `<Show keyed={false}>` restate the default.
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "solid/no-module-scope-reactive-primitive": "error",
+      "solid/no-restated-default-options": "error",
+    },
+  },
+  {
     // Tests read store state imperatively in assertions and pass
     // never-written stores / signals as inputs that mirror what the library
     // receives in production: both rules would flag the test's purpose.
