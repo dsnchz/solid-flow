@@ -1,4 +1,6 @@
 import { render } from "@solidjs/testing-library";
+import type { ZIndexMode } from "@xyflow/system";
+import { createSignal } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
 import { settle } from "@/__tests__/settle";
@@ -27,14 +29,18 @@ const makeNode = (id: string, x: number): Node => ({
 // plus its endpoints' when one is selected and edges elevate on select. The
 // endpoint part is added in EdgeWrapper, not in the edge row (round 65).
 describe("edge z-index", () => {
-  const renderFlow = async (elevateEdgesOnSelect?: boolean) => {
+  const renderFlow = async (
+    elevateEdgesOnSelect?: () => boolean | undefined,
+    options: { nodes?: Node[]; zIndexMode?: ZIndexMode } = {},
+  ) => {
     let api!: ReturnType<typeof useSolidFlow>;
     const Probe = () => ((api = useSolidFlow()), null);
     const { container } = render(() => (
       <SolidFlow
-        defaultNodes={[makeNode("a", 0), makeNode("b", 300)]}
+        defaultNodes={options.nodes ?? [makeNode("a", 0), makeNode("b", 300)]}
         defaultEdges={[{ id: "e1", source: "a", target: "b", zIndex: 2 }]}
-        elevateEdgesOnSelect={elevateEdgesOnSelect}
+        elevateEdgesOnSelect={elevateEdgesOnSelect?.()}
+        zIndexMode={options.zIndexMode}
         width={800}
         height={600}
       >
@@ -72,9 +78,63 @@ describe("edge z-index", () => {
   });
 
   it("stays at the edge's own z without elevateEdgesOnSelect", async () => {
-    const { api, wrapperZ } = await renderFlow(false);
+    const { api, wrapperZ } = await renderFlow(() => false);
     api().commands.updateNode("a", { selected: true });
     await settle();
     expect(wrapperZ()).toBe("2");
+  });
+
+  it("follows elevateEdgesOnSelect when it changes at runtime", async () => {
+    const [elevate, setElevate] = createSignal(true);
+    const { api, wrapperZ } = await renderFlow(elevate);
+    api().commands.updateNode("a", { selected: true });
+    await settle();
+    expect(Number(wrapperZ())).toBeGreaterThanOrEqual(1002);
+
+    setElevate(false);
+    await settle();
+    expect(wrapperZ()).toBe("2");
+
+    setElevate(true);
+    await settle();
+    expect(Number(wrapperZ())).toBeGreaterThanOrEqual(1002);
+  });
+
+  it("ignores a selected endpoint in manual zIndexMode", async () => {
+    const { api, wrapperZ } = await renderFlow(undefined, { zIndexMode: "manual" });
+    api().commands.updateNode("a", { selected: true });
+    await settle();
+    expect(wrapperZ()).toBe("2");
+  });
+
+  it("adds a child endpoint's z without a selection", async () => {
+    const parent: Node = { ...makeNode("p", 0), zIndex: 5 };
+    const child: Node = { ...makeNode("a", 10), parentId: "p" };
+    const { api, wrapperZ } = await renderFlow(undefined, {
+      nodes: [parent, child, makeNode("b", 300)],
+    });
+    const childZ = api().flow.internalNodes.a!.internals.z;
+    expect(childZ).toBeGreaterThan(5);
+    expect(Number(wrapperZ())).toBe(2 + childZ);
+  });
+
+  it("follows an endpoint that is deleted and added again", async () => {
+    const { api, wrapperZ } = await renderFlow();
+    await api().commands.deleteElements({ nodes: [{ id: "a" }] });
+    await settle();
+    // deleteElements cascades the edge: both come back, the edge over the
+    // node's new row
+    api().commands.addNodes({ ...makeNode("a", 0), selected: true });
+    api().commands.addEdges({ id: "e1", source: "a", target: "b", zIndex: 2 });
+    await settle();
+    expect(Number(wrapperZ())).toBeGreaterThanOrEqual(1002);
+
+    api().commands.updateNode("a", { selected: false });
+    await settle();
+    expect(wrapperZ()).toBe("2");
+
+    api().commands.updateNode("a", { selected: true });
+    await settle();
+    expect(Number(wrapperZ())).toBeGreaterThanOrEqual(1002);
   });
 });
