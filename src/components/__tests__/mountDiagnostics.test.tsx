@@ -66,6 +66,27 @@ const unexpectedDiagnostics = async (mount: () => void): Promise<string[]> => {
 };
 
 describe("mount diagnostics", () => {
+  it("reports a diagnostic planted inside the flow (control: the harness is not blind)", async () => {
+    // Every other case asserts an EMPTY list; if the capture stopped
+    // recording (an attribution option, a channel rename), they would all
+    // pass vacuously. A child that calls a signal once in its body is the
+    // STRICT_READ_UNTRACKED the guard exists to catch.
+    const Planted = () => {
+      const [count] = createSignal(1);
+      // The planted defect under test.
+      const once = count();
+      return <div>{once}</div>;
+    };
+    const reported = await unexpectedDiagnostics(() =>
+      render(() => (
+        <SolidFlow defaultNodes={nodes} defaultEdges={edges} width={800} height={600}>
+          <Planted />
+        </SolidFlow>
+      )),
+    );
+    expect(reported).toEqual(["STRICT_READ_UNTRACKED:<Planted> (count)"]);
+  });
+
   it("mounting a flow with built-in nodes, edges and plugins emits no diagnostics", async () => {
     expect(
       await unexpectedDiagnostics(() =>

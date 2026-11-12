@@ -1,5 +1,5 @@
 import { captureArtifact, type DiagnosticsArtifact, expectRerunBudget } from "@solidjs/diagnostics";
-import { createRoot, flush } from "solid-js";
+import { createEffect, createRoot, flush } from "solid-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createSolidFlow } from "@/browser/createSolidFlow";
@@ -143,6 +143,36 @@ describe("reactive update budgets (@solidjs/diagnostics)", () => {
     expectRerunBudget(artifact, 0, {
       scope: /^(selectedNodesView|selectedNodesBounds)$/,
     });
+  });
+
+  it("the selection views re-run once something reads them (control for the zero budget above)", async () => {
+    // Without this, the zero budget above would also pass if the views were
+    // renamed or their re-runs stopped being recorded.
+    let disposeReader!: () => void;
+    createRoot((d) => {
+      disposeReader = d;
+      createEffect(
+        () => flow.store.selectedNodes.length,
+        () => {},
+        { name: "test.selectionReader" },
+      );
+    });
+    flush();
+    try {
+      const { artifact } = await captureArtifact(
+        () => {
+          flow.actions.addSelectedNodes(["n9"]);
+          flush();
+        },
+        { scenario: "select-observed", attribution: ATTRIBUTION },
+      );
+      const viewReruns = (artifact.attribution?.reruns ?? []).filter(
+        (rerun) => rerun.nodeName === "selectedNodesView",
+      );
+      expect(viewReruns.length).toBeGreaterThan(0);
+    } finally {
+      disposeReader();
+    }
   });
 
   it("a reconnect re-runs the edge's row and the connections merge only", async () => {
