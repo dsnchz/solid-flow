@@ -2,7 +2,7 @@ import { areConnectionMapsEqual, type HandleType, type NodeConnection } from "@x
 import { type Accessor, createEffect, createSignal, useContext } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
-import { NodeIdContext } from "@/contexts/nodeId";
+import { NodeContext } from "@/contexts/nodeId";
 import { connectionKey } from "@/core";
 
 type UseNodeConnectionsParams = {
@@ -33,8 +33,8 @@ export const useNodeConnections = (
 
   const ctxNodeId = () => {
     // useNodeConnections can be rendered outside of NodeWrapper, so we need to use the context directly.
-    const id = useContext(NodeIdContext);
-    return id ? id() : "";
+    const node = useContext(NodeContext);
+    return node ? node.id() : "";
   };
 
   const id = () => params().handleId;

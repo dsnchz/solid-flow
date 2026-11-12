@@ -1,6 +1,16 @@
 import { type Accessor, createContext, useContext } from "solid-js";
 
-export const NodeIdContext = createContext<Accessor<string> | null>(null);
+/**
+ * The node a component renders inside: its id and whether it is
+ * connectable. ONE provider per node (NodeWrapper): a provider is a root
+ * plus two computeds per row, so the two values share it (#22).
+ */
+export type NodeContextValue = {
+  readonly id: Accessor<string>;
+  readonly connectable: Accessor<boolean>;
+};
+
+export const NodeContext = createContext<NodeContextValue | null>(null);
 
 /**
  * Returns the id of the node this component is rendered inside. Available
@@ -12,7 +22,7 @@ export const NodeIdContext = createContext<Accessor<string> | null>(null);
  * @returns a reactive accessor for the surrounding node's id
  */
 export function useNodeId(): Accessor<string> {
-  const ctx = useContext(NodeIdContext);
+  const ctx = useContext(NodeContext);
 
   if (!ctx) {
     throw new Error(
@@ -20,5 +30,5 @@ export function useNodeId(): Accessor<string> {
     );
   }
 
-  return ctx;
+  return ctx.id;
 }

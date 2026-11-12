@@ -5,7 +5,7 @@ import { getOwner, type ParentComponent, Show, useContext } from "solid-js";
 
 import { cx, extraKeysOf, spreadExtras } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
-import { NodeIdContext } from "@/contexts/nodeId";
+import { NodeContext } from "@/contexts/nodeId";
 import type { InternalNode, Position } from "@/types";
 
 /** Props for the `NodeToolbar` plugin. */
@@ -61,8 +61,8 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
 
   // NodeToolbar can be rendered outside of a node (with `nodeId`), so the
   // context is optional; looked up once, here in the body.
-  const contextNodeId = useContext(NodeIdContext);
-  const ctxNodeId = () => (contextNodeId ? contextNodeId() : "");
+  const contextNode = useContext(NodeContext);
+  const ctxNodeId = () => (contextNode ? contextNode.id() : "");
 
   const toolbarNodes = () => {
     const nodeIds = Array.isArray(props.nodeId) ? props.nodeId : [props.nodeId ?? ctxNodeId()];

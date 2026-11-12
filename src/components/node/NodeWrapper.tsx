@@ -26,8 +26,7 @@ import { ARIA_NODE_DESC_KEY } from "@/components/accessibility";
 import { clientOnlySetup, cx, spreadOnDemand } from "@/components/internal/dom";
 import { ARROW_KEY_DIFFS, toPxString } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
-import { NodeConnectableContext } from "@/contexts/nodeConnectable";
-import { NodeIdContext } from "@/contexts/nodeId";
+import { NodeContext } from "@/contexts/nodeId";
 import { nodeCulled } from "@/core";
 import { emitFlowError } from "@/core/rules";
 import type { InternalNode, Node, NodeEvents } from "@/types";
@@ -79,6 +78,9 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   const draggable = (row = node()) => row.draggable ?? store.nodesDraggable;
   const connectable = (row = node()) => row.connectable ?? store.nodesConnectable;
   const userNode = () => node().internals.userNode;
+  // One context for the subtree (id + connectable): a provider per value
+  // costs a root and two computeds per node (#22).
+  const nodeContext = { id: nodeId, connectable: () => connectable() };
 
   const nodeTypeValid = () => nodeType() in store.nodeTypes;
   // Upstream parity (error003): unknown types render the default component
@@ -391,30 +393,28 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       aria-roledescription="node"
       aria-describedby={store.disableKeyboardA11y ? undefined : `${ARIA_NODE_DESC_KEY}-${store.id}`}
     >
-      <NodeIdContext value={nodeId}>
-        <NodeConnectableContext value={connectable}>
-          <NodeComponent
-            data={node().data}
-            id={node().id}
-            selected={Boolean(node().selected)}
-            selectable={selectable()}
-            deletable={deletable()}
-            sourcePosition={node().sourcePosition}
-            targetPosition={node().targetPosition}
-            zIndex={node().internals.z}
-            dragging={!!node().dragging}
-            draggable={draggable()}
-            dragHandle={node().dragHandle}
-            parentId={node().parentId}
-            type={nodeType()}
-            isConnectable={connectable()}
-            positionAbsoluteX={node().internals.positionAbsolute.x}
-            positionAbsoluteY={node().internals.positionAbsolute.y}
-            width={node().width}
-            height={node().height}
-          />
-        </NodeConnectableContext>
-      </NodeIdContext>
+      <NodeContext value={nodeContext}>
+        <NodeComponent
+          data={node().data}
+          id={node().id}
+          selected={Boolean(node().selected)}
+          selectable={selectable()}
+          deletable={deletable()}
+          sourcePosition={node().sourcePosition}
+          targetPosition={node().targetPosition}
+          zIndex={node().internals.z}
+          dragging={!!node().dragging}
+          draggable={draggable()}
+          dragHandle={node().dragHandle}
+          parentId={node().parentId}
+          type={nodeType()}
+          isConnectable={connectable()}
+          positionAbsoluteX={node().internals.positionAbsolute.x}
+          positionAbsoluteY={node().internals.positionAbsolute.y}
+          width={node().width}
+          height={node().height}
+        />
+      </NodeContext>
     </div>
   );
 };

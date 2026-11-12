@@ -1,9 +1,9 @@
-import { type Accessor, createContext, useContext } from "solid-js";
+import { type Accessor, useContext } from "solid-js";
 
-export const NodeConnectableContext = createContext<Accessor<boolean> | null>(null);
+import { NodeContext } from "./nodeId";
 
-export function useNodeConnectable() {
-  const ctx = useContext(NodeConnectableContext);
+export function useNodeConnectable(): Accessor<boolean> {
+  const ctx = useContext(NodeContext);
 
   if (!ctx) {
     throw new Error(
@@ -11,5 +11,5 @@ export function useNodeConnectable() {
     );
   }
 
-  return ctx;
+  return ctx.connectable;
 }
