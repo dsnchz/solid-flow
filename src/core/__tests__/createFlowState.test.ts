@@ -289,6 +289,32 @@ describe("FlowCommands", () => {
     });
   });
 
+  it("deleteElements removes every descendant of a deleted parent, wherever it sits in nodes", async () => {
+    // Parents may follow their children (7a85a2f). @xyflow/system 1.0
+    // (remove-unordered-descendants) walks the tree; 0.0.84 cascaded only to
+    // a child placed after its parent. An undeletable node keeps its subtree.
+    const nodes = [
+      makeNode({ id: "g", parentId: "c" }),
+      makeNode({ id: "c", parentId: "p" }),
+      makeNode({ id: "keep", parentId: "p", deletable: false }),
+      makeNode({ id: "kept-child", parentId: "keep" }),
+      makeNode({ id: "p" }),
+      makeNode({ id: "other" }),
+    ];
+    const edges = [makeEdge({ id: "e1", source: "g", target: "other" })];
+    await withFlow({ nodes, edges }, async ({ flow, commands }) => {
+      const { deletedNodes, deletedEdges } = await commands.deleteElements({
+        nodes: [{ id: "p" }],
+      });
+      flush();
+
+      const ids = (rows: readonly { id: string }[]) => rows.map(({ id }) => id);
+      expect(new Set(ids(deletedNodes))).toEqual(new Set(["g", "c", "p"]));
+      expect(ids(deletedEdges)).toEqual(["e1"]);
+      expect(ids(flow.nodes)).toEqual(["keep", "kept-child", "other"]);
+    });
+  });
+
   it("deleteElements honors an onBeforeDelete veto", async () => {
     await withFlow(
       {

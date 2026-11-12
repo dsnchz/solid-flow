@@ -18,6 +18,51 @@ import type { RowIndex } from "../rowIndex";
 import { isEdge, isNode } from "../rules";
 import { type SelectionOverlay } from "../selectionOverlay";
 
+/**
+ * The requested nodes plus every deletable descendant, wherever it sits in
+ * `nodes`: parents may follow their children, and @xyflow/system 0.0.84's
+ * getElementsToRemove cascades only to a child placed after its parent (1.0
+ * walks the tree, xyflow `remove-unordered-descendants`). As upstream, the
+ * walk starts from requested nodes that exist and are deletable, and an
+ * undeletable node keeps its subtree. Drop with the system 1.0 bump.
+ */
+const withDescendants = <NodeType extends Node>(
+  requested: readonly Partial<NodeType>[],
+  nodes: readonly NodeType[],
+  nodeIndex: RowIndex<NodeType>,
+): Partial<NodeType>[] => {
+  let children: Map<string, NodeType[]> | undefined;
+  for (const node of nodes) {
+    const parentId = node.parentId;
+    if (!parentId || node.deletable === false) continue;
+    children ??= new Map();
+    const siblings = children.get(parentId);
+    if (siblings) siblings.push(node);
+    else children.set(parentId, [node]);
+  }
+  if (!children) return [...requested];
+
+  const expanded = [...requested];
+  const seen = new Set<string>();
+  const queue: string[] = [];
+  for (const { id } of requested) {
+    if (id === undefined || seen.has(id)) continue;
+    seen.add(id);
+    const node = nodeIndex.get(nodes, id);
+    if (node && node.deletable !== false) queue.push(id);
+  }
+  // The iterator sees ids pushed during the walk: breadth-first.
+  for (const parentId of queue) {
+    for (const child of children.get(parentId) ?? []) {
+      if (seen.has(child.id)) continue;
+      seen.add(child.id);
+      expanded.push(child);
+      queue.push(child.id);
+    }
+  }
+  return expanded;
+};
+
 /** The slice of the internal store the element commands read. */
 type ElementStoreReads<NodeType extends Node, EdgeType extends Edge> = {
   // Mutable array types: these mirror the internal store's getters, and
@@ -235,7 +280,8 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
         return undefined;
       });
     },
-    deleteElements: async ({ nodes: nodesToRemove = [], edges: edgesToRemove = [] }) => {
+    deleteElements: async ({ nodes: requestedNodes = [], edges: edgesToRemove = [] }) => {
+      const nodesToRemove = withDescendants(requestedNodes, store.nodes, nodeIndex);
       // xyflow's getElementsToRemove checks every passed edge against the
       // node cascade with `find`: O(passed x cascaded) reads through store
       // proxies (select all + Delete at 10k + 10k: 5.9 s). An edge with an
