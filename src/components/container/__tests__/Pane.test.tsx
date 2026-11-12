@@ -144,3 +144,65 @@ describe("Pane drag selection", () => {
     expect(container.querySelector(".solid-flow__selection")).toBeNull();
   });
 });
+
+describe("Pane context menu", () => {
+  const renderFlow = (
+    panOnDrag: boolean | number[],
+    onPaneContextMenu: (params: { event: MouseEvent }) => void,
+  ) =>
+    render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "a" })]}
+        edges={[]}
+        width={800}
+        height={600}
+        panOnDrag={panOnDrag}
+        onPaneContextMenu={onPaneContextMenu}
+      />
+    ));
+
+  const rightClick = (target: HTMLElement) => {
+    // d3-zoom ends a gesture on a mouseup on `event.view`, which an event
+    // built here leaves null; jsdom rejects its own window in the init
+    // dictionary (as in nodeDragCallbacks.test.tsx).
+    const view = target.ownerDocument.defaultView!;
+    const mouse = (on: EventTarget, type: string, buttons: number) => {
+      const event = new view.MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+        buttons,
+        clientX: 300,
+        clientY: 300,
+      });
+      Object.defineProperty(event, "view", { value: view });
+      on.dispatchEvent(event);
+    };
+    mouse(target, "mousedown", 2);
+    mouse(view, "mouseup", 0);
+    mouse(target, "contextmenu", 0);
+  };
+
+  it("fires on a right click of the pane", async () => {
+    const onPaneContextMenu = vi.fn();
+    const { container } = renderFlow(true, onPaneContextMenu);
+    await tick();
+
+    rightClick(container.querySelector<HTMLElement>(".solid-flow__pane")!);
+    await tick();
+    expect(onPaneContextMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires once on a right click without a drag when right-click panning is on", async () => {
+    // panOnDrag includes 2: the native contextmenu is suppressed (it would
+    // open on every right-drag pan), and the pan/zoom controller reports a
+    // right click that did not pan (xyflow pane-context-menu-right-click-pan).
+    const onPaneContextMenu = vi.fn();
+    const { container } = renderFlow([0, 2], onPaneContextMenu);
+    await tick();
+
+    rightClick(container.querySelector<HTMLElement>(".solid-flow__pane")!);
+    await tick();
+    expect(onPaneContextMenu).toHaveBeenCalledTimes(1);
+  });
+});

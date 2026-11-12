@@ -332,11 +332,14 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     });
   });
 
-  const onContextMenu = (event: PointerEvent) => {
+  const onContextMenu = (event: MouseEvent) => {
     if (event.target !== container) return;
 
     const result = _panOnDrag();
 
+    // Right-click panning: the native menu would open at the end of every
+    // right-drag pan. The pan/zoom controller reports a right click that did
+    // not pan instead (Zoom passes it onPaneContextMenu).
     if (Array.isArray(result) && result.includes(2)) {
       event.preventDefault();
       return;

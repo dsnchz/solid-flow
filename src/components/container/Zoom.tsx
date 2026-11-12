@@ -29,6 +29,8 @@ export type ZoomProps = {
   readonly panOnDrag: boolean | number[];
   readonly paneClickDistance: number;
   readonly selectionOnDrag?: boolean;
+  /** Reported by the controller for a right click that did not pan (`panOnDrag` includes 2). */
+  readonly onPaneContextMenu?: ({ event }: { event: MouseEvent }) => void;
 };
 
 /** Internal viewport controller wiring pan/zoom gestures (XYPanZoom) to the flow. */
@@ -46,6 +48,10 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
     const [x, y, zoom] = transform;
     actions.setViewport({ x, y, zoom });
   };
+
+  // The controller's report of a right click that did not pan (`panOnDrag`
+  // includes 2; the pane suppresses the native contextmenu then).
+  const onPaneContextMenu = (event: MouseEvent) => props.onPaneContextMenu?.({ event });
 
   // Mount the pan/zoom controller on the container (external system: XYPanZoom/d3)
   createEffect(
@@ -131,9 +137,15 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
         selectionOnDrag: props.selectionOnDrag,
         connectionInProgress: connectionInProgress(),
       },
+      // Presence only: the handler below reads the prop when it fires.
+      hasPaneContextMenu: !!props.onPaneContextMenu,
     }),
-    ({ panZoom, options }) => {
-      panZoom?.update({ ...options, onTransformChange });
+    ({ panZoom, options, hasPaneContextMenu }) => {
+      panZoom?.update({
+        ...options,
+        onTransformChange,
+        onPaneContextMenu: hasPaneContextMenu ? onPaneContextMenu : undefined,
+      });
     },
   );
 

@@ -63,8 +63,12 @@ export type NodeSelectionEvents<NodeType extends Node = Node> = {
 export type PaneEvents = {
   /** This event handler is called when a user clicks the pane. */
   onPaneClick?: ({ event }: { event: MouseEvent }) => void;
-  /** This event handler is called when a user right-clicks the pane. */
-  onPaneContextMenu?: ({ event }: { event: PointerEvent }) => void;
+  /**
+   * This event handler is called when a user right-clicks the pane. With
+   * right-click panning on (`panOnDrag` includes `2`), it is called for a
+   * right click that did not pan, with the `mouseup` event.
+   */
+  onPaneContextMenu?: ({ event }: { event: MouseEvent }) => void;
   /** This event handler is called when a user scrolls the pane. */
   onPaneScroll?: ({ event }: { event: WheelEvent }) => void;
   /** This event handler is called when the pointer of a user enters the pane. */

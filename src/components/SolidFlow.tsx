@@ -202,6 +202,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
           panOnDrag={_props.panOnDrag}
           paneClickDistance={_props.paneClickDistance}
           selectionOnDrag={_props.selectionOnDrag}
+          onPaneContextMenu={_props.onPaneContextMenu}
           onMoveStart={_props.onMoveStart}
           onMove={_props.onMove}
           onMoveEnd={_props.onMoveEnd}
