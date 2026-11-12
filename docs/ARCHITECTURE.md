@@ -136,7 +136,7 @@ System helpers that take a `Map` and SCAN it (XYDrag's `getDragItems` at drag st
 
 ### Geometry is reported once, by the row derive
 
-`internalNodes`'s row derive calls `onGeometryChange(id, rect | null)` with the node's absolute rect (plus `parentId`) whenever it changes; the state keeps a plain `nodeGeometry: ReadonlyMap` from it (and bumps `geometryVersion`). Anything that needs EVERY node's rect at a gesture start reads that map — the connection arm (`GestureSpatialLookup.armFrom`), box selection, the minimap's bounds partition (`core/graphBounds.ts`), the intersection commands' per-task grid (`commands/geometry.ts`) — never the row proxies (~2.5 µs per row through the store traps; 25-40 ms per start @10k, bench round 23).
+`internalNodes`'s row derive calls `onGeometryChange(id, rect | null)` with the node's absolute rect (plus `parentId` when the row is positioned from that parent, so never on a parentId cycle) whenever it changes; the state keeps a plain `nodeGeometry: ReadonlyMap` from it (and bumps `geometryVersion`). Anything that needs EVERY node's rect at a gesture start reads that map — the connection arm (`GestureSpatialLookup.armFrom`), box selection, the minimap's bounds partition (`core/graphBounds.ts`), the intersection commands' per-task grid (`commands/geometry.ts`) — never the row proxies (~2.5 µs per row through the store traps; 25-40 ms per start @10k, bench round 23).
 
 The one remaining gesture-start cost is the browser's style recalc when the root connection classes flip (~25-40 ms @10k: every handle matches the affordance selectors) — by design, one recalc per gesture instead of a class write per handle.
 
