@@ -117,6 +117,60 @@ describe("unmount culling (onlyRenderVisibleElements)", () => {
     expect(container.querySelector('[data-id="far"]')).not.toBeNull();
   });
 
+  it("mounts an off-screen node and edge while selected at runtime, and unmounts them on deselect", async () => {
+    let api!: ReturnType<typeof useSolidFlow>;
+    const { container } = renderFlow({
+      nodes: [
+        makeNode({ id: "near" }),
+        makeNode({ id: "farA", position: { x: FAR_X, y: 0 } }),
+        makeNode({ id: "farB", position: { x: FAR_X + 200, y: 100 } }),
+      ],
+      edges: [makeEdge({ id: "eFar", source: "farA", target: "farB" })],
+      onlyRenderVisibleElements: true,
+      probeRef: (a) => (api = a),
+    });
+    await settle();
+    const edge = () => container.querySelector('.solid-flow__edge[data-id="eFar"]');
+    expect(container.querySelector('[data-id="farA"]')).toBeNull();
+    expect(edge()).toBeNull();
+
+    api.updateNode("farA", { selected: true });
+    api.updateEdge("eFar", { selected: true });
+    flush();
+    expect(container.querySelector('[data-id="farA"]')).not.toBeNull();
+    expect(container.querySelector('[data-id="farB"]')).toBeNull();
+    expect(edge()).not.toBeNull();
+
+    api.updateNode("farA", { selected: false });
+    api.updateEdge("eFar", { selected: false });
+    flush();
+    expect(container.querySelector('[data-id="farA"]')).toBeNull();
+    expect(edge()).toBeNull();
+  });
+
+  it("remounts a node at its place in the nodes array", async () => {
+    // Equal z stacks by DOM order: a node coming back on screen must not be
+    // appended after the nodes that stayed mounted.
+    let api!: ReturnType<typeof useSolidFlow>;
+    const { container } = renderFlow({
+      nodes: [
+        makeNode({ id: "first" }),
+        makeNode({ id: "far", position: { x: FAR_X, y: 0 } }),
+        makeNode({ id: "last", position: { x: 200, y: 0 } }),
+      ],
+      onlyRenderVisibleElements: true,
+      probeRef: (a) => (api = a),
+    });
+    await settle();
+    const order = () =>
+      [...container.querySelectorAll<HTMLElement>(".solid-flow__node")].map((el) => el.dataset.id);
+    expect(order()).toEqual(["first", "last"]);
+
+    api.updateNode("far", { position: { x: 100, y: 100 } });
+    flush();
+    expect(order()).toEqual(["first", "far", "last"]);
+  });
+
   it("cullable: false opts an element out of both tiers", async () => {
     // Two far nodes: one opted out, one control. The opted-out node must be
     // neither CSS-hidden (default mode) nor unmounted (opt-in mode); the
