@@ -49,10 +49,9 @@ import {
 } from "./projections/internalNodes";
 import { createOnScreenIds } from "./projections/onScreenIds";
 import { createParentIds } from "./projections/parentIds";
-import { createPresenceIds } from "./projections/presenceIds";
+import { createReportedIds } from "./projections/reportedIds";
 import { createResolvedEdges } from "./projections/resolvedEdges";
 import { getSelectedNodesBounds } from "./projections/selectedBounds";
-import { createSelectedIds } from "./projections/selectedIds";
 import { propDefaults } from "./propDefaults";
 import { createRowIndex } from "./rowIndex";
 import { type SelectionOverlay } from "./selectionOverlay";
@@ -218,8 +217,19 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // Each node's endpoint version, filled by the row derive and read by the
   // edge rows (one source per endpoint instead of its geometry leaves).
   const endpointVersions: EndpointVersions = new Map();
+  // The selected and unmeasured records, reported by the node and edge rows
+  // that already compute both (projections/reportedIds.ts): a presence
+  // projection per row re-read the same leaves for every row. Consumers
+  // read membership (`Object.keys`, `id in`, `size`, `keys`), never a row.
+  const selectedNodes = createReportedIds("selectedNodeIds");
+  const selectedEdges = createReportedIds("selectedEdgeIds");
+  const unmeasuredNodes = createReportedIds("unmeasuredNodeIds");
+  const selectedNodeIds = selectedNodes.record;
+  const selectedEdgeIds = selectedEdges.record;
   const internalNodes = createInternalNodes<NodeType>({
     endpointVersions,
+    reportSelected: selectedNodes.set,
+    reportUnmeasured: unmeasuredNodes.set,
     get nodes() {
       return nodesStore;
     },
@@ -287,29 +297,15 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     { name: "transform" },
   );
 
-  // "All visible nodes measured": a keyed UNMEASURED presence record (one
-  // tiny projection per row; see projections/presenceIds.ts) and a
-  // membership-level read. The previous monolithic memo read four leaves of
-  // every node (~35k sources @10k) and rebuilt them all on ANY measurement
-  // write — every NodeResizer frame (rc.7 HUGE_FAN_IN, bench round 16).
-  // Measurement-first: the measurements root is authoritative over the row's
-  // seed, and the `in` guard subscribes to the absent key so the first
-  // measurement of a node re-runs its row.
-  const unmeasuredNodeIds = createPresenceIds<NodeType>(
-    () => nodesStore,
-    (node) => {
-      if (node.hidden) return false;
-      const measurement = node.id in measurementsStore ? measurementsStore[node.id] : undefined;
-      const width = measurement?.measured.width ?? node.measured?.width;
-      const height = measurement?.measured.height ?? node.measured?.height;
-      return width === undefined || height === undefined;
-    },
-    "unmeasuredNodeIds",
-  );
-  const nodesInitialized = createMemo(
-    () => nodesStore.length > 0 && Object.keys(unmeasuredNodeIds).length === 0,
-    { name: "nodesInitialized" },
-  );
+  // "All visible nodes measured": the unmeasured record (reported by the
+  // rows, above) read as a count. The previous monolithic memo read four
+  // leaves of every node (~35k sources @10k) and rebuilt them all on ANY
+  // measurement write — every NodeResizer frame (rc.7 HUGE_FAN_IN, bench
+  // round 16); an enumeration of the record per measurement batch is O(n)
+  // per batch.
+  const nodesInitialized = createMemo(() => nodesStore.length > 0 && unmeasuredNodes.size() === 0, {
+    name: "nodesInitialized",
+  });
 
   /**********************************************************************************/
   /*                                                                                */
@@ -340,18 +336,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   });
   // B5 (audit): selection views memoized — the getters scanned and allocated
   // per read; consumers now share one array identity per selection change.
-  // Joined selection views via keyed presence projections (O(changed-row)
-  // updates — see core/projections/selectedIds.ts for why the monolithic
-  // filter memos had to go). The view memos read the presence RECORDS
-  // (membership-level subscription) and resolve rows through the lookups.
-  const selectedNodeIds = createSelectedIds(
-    () => nodesStore,
-    () => selectionOverlay.nodes,
-  );
-  const selectedEdgeIds = createSelectedIds(
-    () => edgesStore,
-    () => selectionOverlay.edges,
-  );
+  // The view memos read the selected records' keys (membership-level
+  // subscription, see above) and resolve rows through the lookups.
   // Id index over the edges store (a core projection, no write side). The
   // selected-edges view below resolves rows through it and computes on
   // creation, so it is declared first: a seeded `selected: true` edge
@@ -374,14 +360,16 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // disposed (see unselectNodesAndEdges).
   const selectedNodesView = createMemo(
     () =>
-      Object.keys(selectedNodeIds)
+      selectedNodes
+        .keys()
         .map((id) => nodeLookup.get(id)?.internals.userNode)
         .filter((node): node is NodeType => node !== undefined),
     { name: "selectedNodesView", lazy: true },
   );
   const selectedEdgesView = createMemo(
     () =>
-      Object.keys(selectedEdgeIds)
+      selectedEdges
+        .keys()
         .map((id) => edgeLookup[id])
         .filter((edge): edge is EdgeType => edge !== undefined),
     { name: "selectedEdgesView" },
@@ -393,8 +381,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     () => {
       // The tick is tracked only while something is selected: with an empty
       // selection a drag frame must not wake this memo at all.
-      if (Object.keys(selectedNodeIds).length > 0) nodeGeometryFeed.changes();
-      return getSelectedNodesBounds(selectedNodeIds, nodeGeometry);
+      if (selectedNodes.size() > 0) nodeGeometryFeed.changes();
+      return getSelectedNodesBounds(selectedNodes.keys(), nodeGeometry);
     },
     { name: "selectedNodesBounds", lazy: true },
   );
@@ -641,6 +629,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // across derive re-runs. Replaces the mapArray layout effect + ReactiveMap.
   const resolvedEdges = createResolvedEdges<NodeType, EdgeType>({
     onGeometryChange: edgeGeometryFeed.report,
+    reportSelected: selectedEdges.set,
     endpointVersion: (id) => endpointVersions.get(id)?.endpoint,
     get selectionOverlay() {
       return selectionOverlay.edges;

@@ -56,8 +56,7 @@ class KeyedOnlyGeometry extends Map<string, NodeRect> {
 
 const geometryOf = (nodes: InternalNode[]) =>
   new KeyedOnlyGeometry(nodes.map((n) => [n.id, rectOf(n)]));
-const selectedIds = (nodes: InternalNode[]) =>
-  Object.fromEntries(nodes.filter((n) => n.selected).map((n) => [n.id, { id: n.id }]));
+const selectedIds = (nodes: InternalNode[]) => nodes.filter((n) => n.selected).map((n) => n.id);
 
 describe("getSelectedNodesBounds", () => {
   it("reads only the selected rows: O(selected) gets, no enumeration", () => {
@@ -91,7 +90,7 @@ describe("getSelectedNodesBounds", () => {
 
   it("returns the system helper's zero rect when nothing is selected", () => {
     const nodes = [internal("a", 0, 0), internal("b", 100, 100)];
-    expect(getSelectedNodesBounds({}, geometryOf(nodes))).toEqual({
+    expect(getSelectedNodesBounds([], geometryOf(nodes))).toEqual({
       x: 0,
       y: 0,
       width: 0,
@@ -99,10 +98,13 @@ describe("getSelectedNodesBounds", () => {
     });
   });
 
-  it("skips ids the map cannot resolve (row removed before the presence record caught up)", () => {
+  it("skips ids the map cannot resolve (row removed before the selection caught up)", () => {
     const nodes = [internal("a", 10, 10, 30, 30, true)];
-    expect(
-      getSelectedNodesBounds({ a: { id: "a" }, gone: { id: "gone" } }, geometryOf(nodes)),
-    ).toEqual({ x: 10, y: 10, width: 30, height: 30 });
+    expect(getSelectedNodesBounds(["a", "gone"], geometryOf(nodes))).toEqual({
+      x: 10,
+      y: 10,
+      width: 30,
+      height: 30,
+    });
   });
 });

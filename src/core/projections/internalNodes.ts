@@ -143,6 +143,14 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
   readonly onGeometryChange?: (id: string, rect: NodeGeometry | null) => void;
   /** Filled with each row's endpoint version (see EndpointVersions). */
   readonly endpointVersions?: EndpointVersions;
+  /**
+   * Called with whether the row is selected (overlay joined), and whether it
+   * is unmeasured (visible, without a measured or declared size), on every
+   * run; `false` when it is removed. They feed the flow's selected and
+   * unmeasured records (projections/reportedIds.ts).
+   */
+  readonly reportSelected?: (id: string, selected: boolean) => void;
+  readonly reportUnmeasured?: (id: string, unmeasured: boolean) => void;
 };
 
 /**
@@ -455,6 +463,12 @@ export const createInternalNodes = <NodeType extends Node = Node>(
                 });
               }
             }
+            source.reportSelected?.(id, next.selected);
+            source.reportUnmeasured?.(
+              id,
+              !user.hidden &&
+                (next.measuredWidth === undefined || next.measuredHeight === undefined),
+            );
 
             const prev = last;
             last = next;
@@ -503,6 +517,8 @@ export const createInternalNodes = <NodeType extends Node = Node>(
         if (entryById.get(id) === entry) {
           entryById.delete(id);
           source.onGeometryChange?.(id, null);
+          source.reportSelected?.(id, false);
+          source.reportUnmeasured?.(id, false);
         }
         const created = entry.created;
         if (created && source.endpointVersions?.get(id) === created) {

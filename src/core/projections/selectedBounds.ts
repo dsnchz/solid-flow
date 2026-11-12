@@ -9,12 +9,13 @@ export type NodeRect = {
 };
 
 /**
- * Bounding rect of the selected nodes, resolved through the KEYED
- * selected-presence record against the row derive's PLAIN geometry map:
- * O(selected) plain reads, no proxy traps. Inside a tracked scope the only
- * subscriptions are the record's membership and the geometry feed's tick
- * (the caller reads it) — a select-all @10k used to spend ~40 ms reading
- * every row's position and size through the store proxies (bench round 41).
+ * Bounding rect of the selected nodes: the selected ids (the flow's
+ * selected record's keys) resolved against the row derive's PLAIN geometry
+ * map: O(selected) plain reads, no proxy traps. Inside a tracked scope the
+ * only subscriptions are the selection's membership and the geometry feed's
+ * tick (the caller reads both) — a select-all @10k used to spend ~40 ms
+ * reading every row's position and size through the store proxies (bench
+ * round 41).
  *
  * The previous derivation was `getInternalNodesBounds(nodeLookup, { filter:
  * selected })`: a tracked walk of the whole lookup that subscribed every node's
@@ -26,12 +27,12 @@ export type NodeRect = {
  * rect when nothing resolves.
  */
 export const getSelectedNodesBounds = (
-  selectedIds: Record<string, unknown>,
+  selectedIds: Iterable<string>,
   geometry: { get(id: string): NodeRect | undefined },
 ): Rect => {
   let box = { x: Infinity, y: Infinity, x2: -Infinity, y2: -Infinity };
   let any = false;
-  for (const id of Object.keys(selectedIds)) {
+  for (const id of selectedIds) {
     const rect = geometry.get(id);
     if (!rect) continue;
     box = getBoundsOfBoxes(box, {

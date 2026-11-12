@@ -19,12 +19,12 @@ import type { Edge, Node } from "@/types";
  * as "unchanged" and would flag them as waste.
  *
  * Diagnostics that fire BY DESIGN (docs/ARCHITECTURE.md): the keyed record
- * merges (`selectedIds`, `connections`) read one memo per row, which the
- * engine reports as a wide scope. Anything else is a finding.
+ * merge `connections` reads one memo per row, which the engine reports as a
+ * wide scope. Anything else is a finding.
  */
-// By-design wide scopes (docs/ARCHITECTURE.md, "Reactive nodes are named"):
-// the two record merges.
-const ALLOWED_DIAGNOSTICS = new Set(["WIDE_SCOPE_DEPS:selectedIds", "WIDE_SCOPE_DEPS:connections"]);
+// By-design wide scope (docs/ARCHITECTURE.md, "Reactive nodes are named"):
+// the record merge.
+const ALLOWED_DIAGNOSTICS = new Set(["WIDE_SCOPE_DEPS:connections"]);
 
 // Wall-clock diagnostics measure the machine, not the graph: the engine's
 // HOT_SCOPE_TIME budget (8 ms of compute per scope per second) trips on a

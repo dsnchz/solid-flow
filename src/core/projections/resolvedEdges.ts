@@ -35,6 +35,12 @@ export type ResolvedEdgesSource<NodeType extends Node = Node, EdgeType extends E
   readonly endpointVersion: (nodeId: string) => number | undefined;
   /** Called with the edge's segment box whenever it changes, null when the row is gone. */
   readonly onGeometryChange?: (id: string, box: Rect | null) => void;
+  /**
+   * Called with whether the edge is selected (overlay joined), resolved or
+   * not, on every run; `false` when it is removed (the flow's selected-edges
+   * record, projections/reportedIds.ts).
+   */
+  readonly reportSelected?: (id: string, selected: boolean) => void;
 };
 
 /**
@@ -110,6 +116,12 @@ export const createResolvedEdges = <NodeType extends Node = Node, EdgeType exten
               source.onGeometryChange(id, row ? segmentBox(row) : null);
             }
           }
+          source.reportSelected?.(
+            id,
+            row
+              ? !!row.selected
+              : joinSelected(edge.selected, overlayEntry(source.selectionOverlay, id)),
+          );
           return { row };
         },
         { row: null },
@@ -117,6 +129,7 @@ export const createResolvedEdges = <NodeType extends Node = Node, EdgeType exten
       );
       onCleanup(() => {
         if (geometry !== "") source.onGeometryChange?.(id, null);
+        source.reportSelected?.(id, false);
       });
       return { id, store };
     },
