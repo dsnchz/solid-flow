@@ -134,24 +134,41 @@ export const createConnections = <EdgeType extends Edge = Edge>(
   const prevByRow = new WeakMap<() => Contribution[], readonly Contribution[]>();
   let prevRows: ReadonlySet<() => Contribution[]> = new Set();
 
-  // An emptied handle key is removed right away. (Until solid-js rc.8 a
-  // root-level write in a projection derive cloned the whole root raw — 20k
-  // keys @10k, ~13 ms — so emptied keys were kept and pruned lazily; rc.8's
-  // overlay path makes the root delete O(1): solidjs/solid#3352.)
+  // What the record holds, mirrored in plain Maps: removals decide from the
+  // mirror and touch the draft only to delete, never to read (a draft read
+  // allocates a wrapper and walks the overlay: deleting half of a 10k graph
+  // spent ~45 ms in these reads and Object.keys on the draft records, bench
+  // round 79). An emptied handle key is removed right away, as one delete.
+  // (Until solid-js rc.8 a root-level write in a projection derive cloned
+  // the whole root raw — 20k keys @10k, ~13 ms — so emptied keys were kept
+  // and pruned lazily; rc.8's overlay path makes the root delete O(1):
+  // solidjs/solid#3352.)
+  const held = new Map<string, Map<string, HandleConnection>>();
   const remove = (draft: ConnectionsRecord, list: readonly Contribution[]) => {
     for (const { key, entry, connection } of list) {
-      const rec = draft[key];
-      if (!rec || rec[entry]?.edgeId !== connection.edgeId) continue;
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
-      delete rec[entry];
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
-      if (Object.keys(rec).length === 0) delete draft[key];
+      const rec = held.get(key);
+      if (!rec || rec.get(entry)?.edgeId !== connection.edgeId) continue;
+      if (rec.size === 1) {
+        held.delete(key);
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- keyed draft removal
+        delete draft[key];
+      } else {
+        rec.delete(entry);
+        delete draft[key]?.[entry];
+      }
     }
   };
   const add = (draft: ConnectionsRecord, list: readonly Contribution[]) => {
     for (const { key, entry, connection } of list) {
-      const rec = (draft[key] ??= {});
-      rec[entry] = connection;
+      const rec = held.get(key);
+      if (rec) {
+        rec.set(entry, connection);
+        const target = draft[key];
+        if (target) target[entry] = connection;
+      } else {
+        held.set(key, new Map([[entry, connection]]));
+        draft[key] = { [entry]: connection };
+      }
     }
   };
 
