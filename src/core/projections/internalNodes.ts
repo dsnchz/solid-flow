@@ -14,6 +14,7 @@ import {
   onCleanup,
   type Owner,
   runWithOwner,
+  untrack,
 } from "solid-js";
 
 import type { InternalNode, Node } from "@/types";
@@ -280,29 +281,64 @@ export const createInternalNodes = <NodeType extends Node = Node>(
   // id → the row's registration (user node, row store created on first use).
   const entryById = new Map<string, RowEntry<NodeType, RowStore>>();
 
+  // Presence of one id, as a small memo per id a child walks through: a
+  // child subscribes to each ancestor's presence, so only adding or removing
+  // one of ITS ancestors re-runs it. A read of the whole mapArray re-ran
+  // every child on any membership change (17 -> 61 ms per added node with
+  // 9,900 children); a keyed presence record cost ~+60 ms on that mount
+  // (a projection leaf read from a row derive is ~4 us). All lazy: nothing
+  // computes until a child reads it, so a flow without subflows never does,
+  // and each memo goes away with its last subscriber.
+  const rowIds = createMemo(() => new Set(rows().map((entry) => entry.id)), {
+    lazy: true,
+    name: "internalNodes.rowIds",
+  });
+  const owner = getOwner();
+  const presenceById = new Map<string, Accessor<boolean>>();
+  const presenceOf = (id: string): Accessor<boolean> => {
+    let presence = presenceById.get(id);
+    if (presence === undefined) {
+      // Owned by the flow, not by the row that asked first: rows share it.
+      presence = runWithOwner(owner, () =>
+        createMemo(() => rowIds().has(id), {
+          lazy: true,
+          unobserved: () => presenceById.delete(id),
+          name: "internalNodes.presence",
+        }),
+      );
+      presenceById.set(id, presence);
+    }
+    return presence;
+  };
+
   /**
    * The row of `parentId` when the row `id` is positioned from it: the
-   * ancestor chain reaches a root through existing nodes. Reads membership
-   * and each ancestor's parentId, so a write that adds or removes an
-   * ancestor, or breaks or closes the chain, re-runs the row; reading the
-   * parent's row store subscribes to exactly the parent leaves the child's
-   * geometry depends on. Only rows with a parent call this, and those are
-   * created after `rows` below has returned (see RowEntry's `store`).
+   * ancestor chain reaches a root through existing nodes. Subscribes to the
+   * presence and the parentId of each ancestor it walks, so a write that
+   * adds or removes an ancestor, or breaks or closes the chain, re-runs the
+   * row; reading the parent's row store subscribes to exactly the parent
+   * leaves the child's geometry depends on. Only rows with a parent call
+   * this, and those are created after `rows` below has returned (see
+   * RowEntry's `store`).
    */
   const linkedParent = (id: string, parentId: string | undefined) => {
     if (!parentId) return undefined;
-    // Reading the mapArray also brings it up to date first: a row created in
-    // the same write is registered by the time this returns.
-    rows();
+    // The walk decides from the registrations; bringing the mapArray up to
+    // date first registers rows created in the same write. Untracked: the
+    // presence reads below are the subscription (a stale presence read only
+    // costs a re-run, never a wrong link).
+    untrack(rows);
     const parentEntry = entryById.get(parentId);
     const seen = new Set([id]);
     let entry = parentEntry;
     let ancestorId = parentId;
+    presenceOf(ancestorId)();
     while (entry && !seen.has(ancestorId)) {
       seen.add(ancestorId);
       const next = entry.node().parentId;
       if (!next) return parentEntry?.store.row ?? undefined;
       ancestorId = next;
+      presenceOf(ancestorId)();
       entry = entryById.get(ancestorId);
     }
     emitFlowError(
