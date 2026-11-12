@@ -26,33 +26,36 @@ export function useNodesData<NodeType extends Node = Node>(
 
   let prevNodesData = [] as NodeData<NodeType>[];
 
-  const result = createMemo(() => {
-    const nodesData = [] as NodeData<NodeType>[];
+  const result = createMemo(
+    () => {
+      const nodesData = [] as NodeData<NodeType>[];
 
-    const idValues = nodeIds();
+      const idValues = nodeIds();
 
-    if (!idValues) return undefined;
+      if (!idValues) return undefined;
 
-    const ids = Array.isArray(idValues) ? idValues : [idValues];
+      const ids = Array.isArray(idValues) ? idValues : [idValues];
 
-    for (const nodeId of ids) {
-      const node = flow.internalNodes[nodeId]?.internals.userNode;
+      for (const nodeId of ids) {
+        const node = flow.internalNodes[nodeId]?.internals.userNode;
 
-      if (!node) continue;
+        if (!node) continue;
 
-      nodesData.push({
-        id: node.id,
-        type: node.type,
-        data: node.data,
-      });
-    }
+        nodesData.push({
+          id: node.id,
+          type: node.type,
+          data: node.data,
+        });
+      }
 
-    if (!shallowNodeData(nodesData, prevNodesData)) {
-      prevNodesData = nodesData;
-    }
+      if (!shallowNodeData(nodesData, prevNodesData)) {
+        prevNodesData = nodesData;
+      }
 
-    return Array.isArray(idValues) ? nodesData : nodesData[0];
-  });
+      return Array.isArray(idValues) ? nodesData : nodesData[0];
+    },
+    { name: "useNodesData" },
+  );
 
   return result;
 }

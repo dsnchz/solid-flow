@@ -36,11 +36,14 @@ export const EdgeRenderer = <NodeType extends Node = Node, EdgeType extends Edge
         {(edgeId) => {
           // Opt-in unmount culling — same per-row equality-cut shape as
           // NodeRenderer (see the comment there and bench round 6).
-          const unmounted = createMemo(() => {
-            if (!store.onlyRenderVisibleElements || focusedEdgeId() === edgeId) return false;
-            const edge = actions.getResolvedEdge(edgeId);
-            return !!edge && edgeCulled(edge, store.cullingActive, onScreenEdgeIds);
-          });
+          const unmounted = createMemo(
+            () => {
+              if (!store.onlyRenderVisibleElements || focusedEdgeId() === edgeId) return false;
+              const edge = actions.getResolvedEdge(edgeId);
+              return !!edge && edgeCulled(edge, store.cullingActive, onScreenEdgeIds);
+            },
+            { name: "edgeRenderer.unmounted" },
+          );
 
           // Membership comes from the user-facing edges store; an edge whose
           // endpoints are not resolved yet has a null row — do not mount it.

@@ -33,7 +33,7 @@ export function useKeyPress(
     () => {
       setPressed(false);
     },
-    { defer: true },
+    { defer: true, name: "useKeyPress" },
   );
 
   // Client-only listeners: outside the hydration id sequence (see clientOnlySetup).

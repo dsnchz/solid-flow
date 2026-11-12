@@ -167,6 +167,7 @@ export const renderResizeControl = <NodeType extends Node = Node>(
         instance.destroy();
       };
     },
+    { name: "nodeResizeControl.resizer" },
   );
 
   createEffect(
@@ -190,6 +191,7 @@ export const renderResizeControl = <NodeType extends Node = Node>(
     ({ instance, options }) => {
       instance?.update(options);
     },
+    { name: "nodeResizeControl.options" },
   );
 
   const controlClass = () =>

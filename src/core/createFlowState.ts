@@ -276,7 +276,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     (next) => {
       if (next) setViewportStore(() => next);
     },
-    { defer: true },
+    { defer: true, name: "controlledViewportReset" },
   );
 
   const transform = createMemo(
@@ -856,6 +856,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     ({ panZoom, viewport }) => {
       panZoom?.syncViewport(viewport);
     },
+    { name: "viewportSync" },
   );
 
   // panZoom is part of each compute: the instance lands after mount and each
@@ -865,6 +866,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     ({ panZoom, extent }) => {
       panZoom?.setScaleExtent(extent);
     },
+    { name: "scaleExtentSync" },
   );
 
   createEffect(
@@ -872,6 +874,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     ({ panZoom, extent }) => {
       panZoom?.setTranslateExtent(extent);
     },
+    { name: "translateExtentSync" },
   );
 
   return {

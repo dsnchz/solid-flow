@@ -104,6 +104,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
       observer.observe(el);
       return () => observer.disconnect();
     },
+    { name: "solidFlow.containerSize" },
   );
 
   // Fires only when the set of selected ids changes, not on unrelated node/edge updates
@@ -115,6 +116,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
     (viewport, prev) => {
       if (prev) untrack(() => _props.onViewportChange)?.(viewport);
     },
+    { name: "solidFlow.viewportChange" },
   );
 
   // Subscribed only while a handler is set: building the selected arrays is

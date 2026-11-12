@@ -23,12 +23,15 @@ export type RowIndex<T extends { readonly id: string }> = {
 export const createRowIndex = <T extends { readonly id: string }>(
   ids: () => readonly string[],
 ): RowIndex<T> => {
-  const index = createMemo(() => {
-    const list = ids();
-    const map = new Map<string, number>();
-    for (let i = 0; i < list.length; i++) map.set(list[i]!, i);
-    return map;
-  });
+  const index = createMemo(
+    () => {
+      const list = ids();
+      const map = new Map<string, number>();
+      for (let i = 0; i < list.length; i++) map.set(list[i]!, i);
+      return map;
+    },
+    { name: "rowIndex" },
+  );
 
   const indexOf = (rows: readonly T[], id: string): number => {
     const i = untrack(index).get(id);

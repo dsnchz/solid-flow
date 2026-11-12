@@ -32,6 +32,7 @@ export const createInitialFitView = (source: InitialFitViewSource) => {
     (ready) => {
       if (ready) tryFit();
     },
+    { name: "initialFitView" },
   );
 
   return {

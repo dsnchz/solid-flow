@@ -23,8 +23,9 @@ export const NodeSelection = <NodeType extends Node = Node>(
   // Gated on the mode so the box is only derived while the wrapper can show;
   // the derivation itself is the core's O(selected) keyed memo (a tracked
   // full-lookup scan used to live here — see projections/selectedBounds.ts).
-  const bounds = createMemo(() =>
-    store.selectionRectMode === "nodes" ? selectedNodesBounds() : null,
+  const bounds = createMemo(
+    () => (store.selectionRectMode === "nodes" ? selectedNodesBounds() : null),
+    { name: "nodeSelection.bounds" },
   );
 
   createEffect(
@@ -34,6 +35,7 @@ export const NodeSelection = <NodeType extends Node = Node>(
         el?.focus({ preventScroll: true });
       }
     },
+    { name: "nodeSelection.focus" },
   );
 
   const onContextMenu = (event: PointerEvent) => {

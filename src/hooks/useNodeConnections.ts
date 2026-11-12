@@ -60,6 +60,7 @@ export const useNodeConnections = (
         setConnections(Array.from(nextConnections.values()));
       }
     },
+    { name: "useNodeConnections" },
   );
 
   return connections;

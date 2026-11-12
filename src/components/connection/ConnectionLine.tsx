@@ -27,10 +27,13 @@ const ConnectionLine = <NodeType extends Node = Node>(
 
   // Narrow the discriminated union ONCE (audit D5): inside the Show callback
   // the in-progress variant's fields are non-null by type, not by assertion.
-  const inProgress = createMemo(() => {
-    const state = store.connection;
-    return state.inProgress ? state : null;
-  });
+  const inProgress = createMemo(
+    () => {
+      const state = store.connection;
+      return state.inProgress ? state : null;
+    },
+    { name: "connectionLine.inProgress" },
+  );
 
   return (
     <Show when={inProgress()}>

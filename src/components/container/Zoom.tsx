@@ -104,6 +104,7 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
         actions.setPanZoom(null);
       };
     },
+    { name: "zoom.panZoom" },
   );
 
   // Sync reactive options into the controller
@@ -112,8 +113,12 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
   // box-selection move, so tracking them directly re-ran this effect — and
   // panZoom.update() rebound every d3 handler — on every move of both
   // gestures. Booleans change once per gesture.
-  const connectionInProgress = createMemo(() => store.connection.inProgress);
-  const userSelectionActive = createMemo(() => !!store.selectionRect);
+  const connectionInProgress = createMemo(() => store.connection.inProgress, {
+    name: "zoom.connectionInProgress",
+  });
+  const userSelectionActive = createMemo(() => !!store.selectionRect, {
+    name: "zoom.userSelectionActive",
+  });
   createEffect(
     () => ({
       panZoom: store.panZoom,
@@ -147,6 +152,7 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
         onPaneContextMenu: hasPaneContextMenu ? onPaneContextMenu : undefined,
       });
     },
+    { name: "zoom.options" },
   );
 
   return (

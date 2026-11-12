@@ -28,7 +28,11 @@ export const createSelectionChange = <NodeType extends Node, EdgeType extends Ed
       a === b || (!!a && !!b && sameIds(a.nodes, b.nodes) && sameIds(a.edges, b.edges)),
     name: "selectionChange",
   });
-  createEffect(selected, (params) => {
-    if (params) onChange(params);
-  });
+  createEffect(
+    selected,
+    (params) => {
+      if (params) onChange(params);
+    },
+    { name: "selectionChange.notify" },
+  );
 };

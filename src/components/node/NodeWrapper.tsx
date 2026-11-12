@@ -92,7 +92,9 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   // #15 culling flag: arithmetic re-runs only when this node's geometry,
   // selection, or the quantized culling viewport change; the style only
   // rewrites visibility when the flag actually flips.
-  const culled = createMemo(() => nodeCulled(node(), store.cullingActive, onScreenNodeIds));
+  const culled = createMemo(() => nodeCulled(node(), store.cullingActive, onScreenNodeIds), {
+    name: "nodeWrapper.culled",
+  });
 
   // Ownership contract: the user's style (spread first) controls everything
   // cosmetic; the flow owns size, stacking, positioning, culling visibility,
@@ -240,6 +242,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       (transform) => {
         el.style.transform = transform;
       },
+      { name: "nodeWrapper.transform" },
     );
     // The class is its own effect too (the server markup carries it on the
     // element): a selection or setting change rewrites the class without
@@ -248,10 +251,14 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     // 30-source WIDE_SCOPE_DEPS line, which the one combined effect did on
     // every node.
     let appliedClass: string | undefined;
-    createRenderEffect(nodeClass, (next) => {
-      className(el, next, appliedClass);
-      appliedClass = next;
-    });
+    createRenderEffect(
+      nodeClass,
+      (next) => {
+        className(el, next, appliedClass);
+        appliedClass = next;
+      },
+      { name: "nodeWrapper.class" },
+    );
     // `pointerenter`/`pointerleave` cannot be delegated (they do not bubble)
     // and the compiler attaches a listener even for an undefined handler:
     // attached here only when the flow passes the callback, so the common

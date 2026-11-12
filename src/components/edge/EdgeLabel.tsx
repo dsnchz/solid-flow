@@ -145,6 +145,7 @@ export const renderEdgeLabel = (
             }),
           );
         },
+        { name: "edgeLabel.portal" },
       ),
     );
   }

@@ -70,11 +70,14 @@ export const NodeRenderer = <NodeType extends Node = Node>(
           // only this row's flag and nothing downstream runs unless it
           // actually flips. A central filtered-list memo instead re-reads
           // every row per change — measured 5x slower at 10k (bench round 6).
-          const unmounted = createMemo(() => {
-            if (!store.onlyRenderVisibleElements || focusedNodeId() === nodeId) return false;
-            const node = nodeLookup.get(nodeId);
-            return !!node && nodeCulled(node, store.cullingActive, onScreenNodeIds);
-          });
+          const unmounted = createMemo(
+            () => {
+              if (!store.onlyRenderVisibleElements || focusedNodeId() === nodeId) return false;
+              const node = nodeLookup.get(nodeId);
+              return !!node && nodeCulled(node, store.cullingActive, onScreenNodeIds);
+            },
+            { name: "nodeRenderer.unmounted" },
+          );
 
           // Membership now comes from the user-facing store; the projection
           // row materializes in the same flush, but guard the window (and

@@ -153,7 +153,9 @@ export const MiniMap = <NodeType extends Node>(
     // @ts-expect-error - TS doesn't know about chrome
     typeof window === "undefined" || !!window.chrome ? "crispEdges" : "geometricPrecision";
 
-  const labelledBy = createMemo(() => `solid-flow__minimap-desc-${store.id}`);
+  const labelledBy = createMemo(() => `solid-flow__minimap-desc-${store.id}`, {
+    name: "minimap.labelledBy",
+  });
 
   // What the minimap must show (minimapBounds.ts): the sampled graph
   // bounds joined with the visible viewport.
@@ -213,6 +215,7 @@ export const MiniMap = <NodeType extends Node>(
           instance.destroy();
         };
       },
+      { name: "minimap.controller" },
     );
 
     createEffect(
@@ -231,6 +234,7 @@ export const MiniMap = <NodeType extends Node>(
       ({ instance, options }) => {
         instance?.update(options);
       },
+      { name: "minimap.options" },
     );
 
     const onSvgClick = (event: MouseEvent) => {

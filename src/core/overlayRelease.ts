@@ -121,5 +121,6 @@ export const createOverlayRelease = ({
         if (confirmed.length || dragConfirmed.length || goneSel.length || goneDrag.length) flush();
       }, 0);
     },
+    { name: "overlayRelease" },
   );
 };

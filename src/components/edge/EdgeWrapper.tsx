@@ -116,7 +116,9 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
 
   // #15 culling flag: the drawn segment's AABB against the quantized culling
   // viewport. CSS-only — the edge row and its subscriptions stay live.
-  const culled = createMemo(() => edgeCulled(edge(), store.cullingActive, onScreenEdgeIds));
+  const culled = createMemo(() => edgeCulled(edge(), store.cullingActive, onScreenEdgeIds), {
+    name: "edgeWrapper.culled",
+  });
 
   // The <g> is its own template, so its attributes are their own effect:
   // the wrapper's z-index follows the endpoints' selection and its culling

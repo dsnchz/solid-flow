@@ -51,12 +51,15 @@ export const createMinimapBounds = ({
   // getInternalNodesBounds scan ~30 times per drag/pan frame, which froze
   // the tab outright at 10k nodes (1.5s per mousemove at 2.5k). One memo
   // per level: exactly one bounds scan per graph/viewport change.
-  const viewBB = createMemo(() => ({
-    x: -store.viewport.x / store.viewport.zoom,
-    y: -store.viewport.y / store.viewport.zoom,
-    width: store.width / store.viewport.zoom,
-    height: store.height / store.viewport.zoom,
-  }));
+  const viewBB = createMemo(
+    () => ({
+      x: -store.viewport.x / store.viewport.zoom,
+      y: -store.viewport.y / store.viewport.zoom,
+      width: store.width / store.viewport.zoom,
+      height: store.height / store.viewport.zoom,
+    }),
+    { name: "minimap.viewBB" },
+  );
 
   // Graph bounds are SAMPLED, not tracked (bench round 7's residual): a
   // tracked memo re-ran the O(n) bounds scan through the reactive lookup on
@@ -97,6 +100,7 @@ export const createMinimapBounds = ({
       });
       return () => cancelAnimationFrame(raf);
     },
+    { name: "minimap.dragSample" },
   );
   createEffect(
     () => ({ count: store.nodes.length, initialized: store.nodesInitialized }),
@@ -104,6 +108,7 @@ export const createMinimapBounds = ({
       cancelResample();
       setGraphBounds(sample(false));
     },
+    { name: "minimap.nodeCountResample" },
   );
   // Geometry changes outside a drag (programmatic moves, user draft writes,
   // resizes): one trailing full pass per RESAMPLE_MS window, armed by the
@@ -117,6 +122,7 @@ export const createMinimapBounds = ({
         setGraphBounds(sample(false));
       }, RESAMPLE_MS);
     },
+    { name: "minimap.geometryResample" },
   );
 
   // Value-equal cut: while the viewport stays inside the graph's bounds,

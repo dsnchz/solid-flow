@@ -136,6 +136,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
 
         prevConnections = next;
       },
+      { name: "handle.connectionChange" },
     );
 
   const onConnectExtended = (connection: Connection) => {

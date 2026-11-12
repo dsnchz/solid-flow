@@ -24,10 +24,13 @@ export const createPathEdge =
   <P extends PathEdgeProps>(pathOf: (props: P) => PathResult, withId: boolean) =>
   (props: P): JSX.Element => {
     // One path computation per input change: three getters read it (bench round 35).
-    const pathData = createMemo(() => {
-      const [path, labelX, labelY] = pathOf(props);
-      return { path, labelX, labelY };
-    });
+    const pathData = createMemo(
+      () => {
+        const [path, labelX, labelY] = pathOf(props);
+        return { path, labelX, labelY };
+      },
+      { name: "pathEdge.pathData" },
+    );
 
     return (
       <BaseEdge
