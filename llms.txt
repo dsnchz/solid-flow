@@ -1,22 +1,25 @@
 # @dschz/solid-flow — agent cheatsheet
 
-SolidJS port of React Flow / Svelte Flow (node-based UIs), built for SolidJS 2.0
-(solid-js@^2.0.0 and @solidjs/web on matching versions). Same gesture engine as
-upstream (@xyflow/system), different state model.
+Node-based UIs (flowcharts, node editors, workflow builders) for SolidJS 2.0
+(solid-js@^2.0.0 and @solidjs/web on matching versions). Gesture math comes from
+@xyflow/system; graph state lives in Solid stores.
 
 ```tsx
 import { SolidFlow, createNodeStore, createEdgeStore } from "@dschz/solid-flow";
 import "@dschz/solid-flow/style.css"; // required, import once (base.css: minimal skin; xy-theme.css: xyflow theme)
 ```
 
-## Unlearn these (React Flow priors that are WRONG here)
+## Core conventions
 
-- NO `applyNodeChanges` / `applyEdgeChanges` and no state ownership in `onNodesChange` — state is store-based; mutate your store. `onNodesChange` / `onEdgesChange` exist as Svelte Flow 2's filters: they receive the flow's own pending writes as a `NodeChangeset` / `EdgeChangeset` (drop or add changes) and the flow applies what is left; leave them unset unless you need to veto or rewrite flow writes.
-- NO `useReactFlow` — it is `useSolidFlow()`, called INSIDE `<SolidFlow>` (or under `<SolidFlowProvider>`).
-- Events are pointer-named: `onNodePointerEnter`, not `onNodeMouseEnter` (same for edges/pane).
-- NO `colorMode` / `colorModeSSR` / `useColorMode` — the flow follows the OS in CSS; `forceColorMode="light" | "dark"` forces one. Theme with `--xy-*` variables (set `--xy-node-background-color`, not the `-default` one); library CSS is in the `xyflow` cascade layer, so plain app rules override it.
-- Components run once (Solid): no re-renders, no dependency arrays; read reactive values in JSX/computations, not component-body statements.
-- `createOptimisticStore` as `nodes`/`edges` IS supported (optimistic adds render mid-action; flow state survives reverts/reconciles). Draft-then-commit remains the simpler default — see "Saving to a server".
+- Graph state lives in your stores: create them with `createNodeStore` / `createEdgeStore` and change them with `setNodes` / `setEdges` draft callbacks. The flow writes its runtime fields (`position`, `selected`, `measured`) onto your rows.
+- `onNodesChange` / `onEdgesChange` are optional filters: they receive the flow's own pending writes as a `NodeChangeset` / `EdgeChangeset`, you drop or add changes, and the flow applies the rest. Leave them unset unless you need to veto or rewrite the flow's writes.
+- The flow API is `useSolidFlow()`, returning `{ flow, commands }`; call it inside `<SolidFlow>` or under `<SolidFlowProvider>`.
+- Events are pointer events: `onNodePointerEnter` / `onNodePointerMove` / `onNodePointerLeave`, and the same for edges and the pane.
+- The color scheme follows the OS through CSS; `forceColorMode="light" | "dark"` pins one. Theme with `--xy-*` variables (set `--xy-node-background-color`, the name without `-default`). Library CSS sits in the `xyflow` cascade layer, so plain app rules override it.
+- Components run once (Solid): read reactive values in JSX or in computations; statements in a component body run a single time.
+- `createOptimisticStore` works as `nodes` / `edges`: optimistic adds render mid-action, and flow state survives reverts and reconciles. Draft-then-commit is the simpler default; see "Saving to a server".
+
+Names that are not part of this API: `applyNodeChanges`, `applyEdgeChanges`, `useReactFlow`, `onNodeMouseEnter` and the other `Mouse` event names, `colorMode`, `colorModeSSR`, `useColorMode`.
 
 ## Creating nodes/edges
 
