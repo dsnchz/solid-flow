@@ -20,7 +20,7 @@ A SolidJS port of [React Flow](https://reactflow.dev/) and [Svelte Flow](https:/
 | `1.x`      | `solid-js` 2.x  | Active development (`next` tag) |
 | `0.2.x`    | `solid-js` 1.9+ | Maintenance (fixes)             |
 
-The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive graph; the stable 1.0.0 ships alongside SolidJS 2.0 stable (until then, install with the `next` tag). Keep `solid-js` and `@solidjs/web` on matching 2.0 versions — mixing them breaks at import time. The 1.x prereleases require `2.0.0-rc.21` or newer: they are built and tested against rc.21, and earlier release candidates lack engine fixes filed from this library (rc.14 and rc.15 can halt a flow that adds and selects a node inside an action, solidjs/solid#4137). Upgrading from 0.2.x? See [Migrating from 0.2.x](#migrating-from-02x).
+The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive graph, and requires `solid-js` and `@solidjs/web` 2.0.0 or newer. Until solid-flow 1.0.0 is published, install it with the `next` tag. Keep `solid-js` and `@solidjs/web` on matching 2.0 versions — mixing them breaks at import time. Upgrading from 0.2.x? See [Migrating from 0.2.x](#migrating-from-02x).
 
 ## Key Features
 
@@ -37,13 +37,13 @@ The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive gr
 ## Installation
 
 ```sh
-npm  install @dschz/solid-flow@next solid-js@next @solidjs/web@next
-pnpm add     @dschz/solid-flow@next solid-js@next @solidjs/web@next
-yarn add     @dschz/solid-flow@next solid-js@next @solidjs/web@next
-bun  add     @dschz/solid-flow@next solid-js@next @solidjs/web@next
+npm  install @dschz/solid-flow@next solid-js @solidjs/web
+pnpm add     @dschz/solid-flow@next solid-js @solidjs/web
+yarn add     @dschz/solid-flow@next solid-js @solidjs/web
+bun  add     @dschz/solid-flow@next solid-js @solidjs/web
 ```
 
-`solid-js` and `@solidjs/web` are **peer dependencies** — install both on matching 2.0 versions. The `@next` tags are the 1.x prerelease line paired with the SolidJS 2.0 RCs; once Solid 2.0 stable ships, plain installs take over (see [Version pairing](#version-pairing)). Also available on [JSR](https://jsr.io/@dschz/solid-flow).
+`solid-js` and `@solidjs/web` are **peer dependencies** — install both on matching 2.0 versions. The `@next` tag is the 1.x prerelease line; once solid-flow 1.0.0 ships, a plain install takes over (see [Version pairing](#version-pairing)). Also available on [JSR](https://jsr.io/@dschz/solid-flow).
 
 Building with an AI agent? The package ships an [`llms.txt`](./llms.txt) cheatsheet — a compact, agent-oriented map of the API that front-loads the differences from React Flow.
 

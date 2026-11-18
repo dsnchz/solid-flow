@@ -1,7 +1,7 @@
 # @dschz/solid-flow — agent cheatsheet
 
 SolidJS port of React Flow / Svelte Flow (node-based UIs), built for SolidJS 2.0
-(solid-js@2.0.0-rc.x; install with the `next` tag). Same gesture engine as
+(solid-js@^2.0.0; install with the `next` tag). Same gesture engine as
 upstream (@xyflow/system), different state model.
 
 ```tsx
@@ -149,6 +149,6 @@ Rules for both:
 
 - Give nodes explicit `width`/`height` for SSR (no DOM to measure) and clean first paint.
 - Viewport culling is on by default (CSS tier); `onlyRenderVisibleElements` unmounts off-screen elements; per-element opt-out: `cullable: false`.
-- Keep `solid-js` and `@solidjs/web` on the same 2.0.0-rc.x version.
+- Keep `solid-js` and `@solidjs/web` on the same 2.0 version.
 - Plugins: `<Background />`, `<Controls />`, `<MiniMap />`, `<Panel position="...">`, `<NodeToolbar />`, `<NodeResizer />`.
 - Full docs: README.md in this package. Examples: playground/ in the repo (https://github.com/dsnchz/solid-flow).
