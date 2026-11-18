@@ -74,6 +74,10 @@ Four rules keep the graph correct under 2.0's async model:
 
 Async seeds and async generators need no special machinery: `createStore` accepts them natively, so `createNodeStore(async () => …)` and live streams are the same code path as arrays.
 
+## onNodesChange / onEdgesChange (`core/changes.ts`)
+
+Every flow-initiated write has one writer: drag and arrow-key positions (`updateNodePositions`), the selection writers, the measuring pass's write-back (`applyNodeChanges`), the connection writer (`addEdge`), NodeResizeControl, and the node/edge commands. Each asks its axis's queue `active()` once per call: unset, it writes exactly as before (the zero-cost contract); set, it describes the write as `NodeChange` / `EdgeChange` records instead. Gesture and measurement writes `queue()` them into one changeset per task (a microtask flush, as Svelte Flow 2's); commands `deliver()` at once, so a command inside an optimistic action stays in the action; and the selection writers `flush()` the queue before Solid's `flush()`, because XYDrag reads selection back in the same event. The callback runs untracked, then `commands/applyChanges.ts` writes what is left through the same raw writers (`writeNodePositions`, `writeNode`, `writeSelectionDelta`, `writeNodeChanges`, the row inserts and removals) rather than `applyTo`'s new array, so per-row leaf writes, the sidecars and optimistic stores behave as they do without the callback. Additions apply first, removals last.
+
 ## Rendering and performance
 
 ### The trade, stated once

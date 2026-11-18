@@ -24,6 +24,8 @@ import type {
   NodeTypes,
 } from "@/types";
 
+import { createFlowChanges } from "./changes";
+import { createChangeAppliers } from "./commands/applyChanges";
 import { createElementCommands } from "./commands/elements";
 import { createGeometryCommands } from "./commands/geometry";
 import { createSelectionCommands } from "./commands/selection";
@@ -751,6 +753,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     setSnapGrid(undefined);
   };
 
+  // ── onNodesChange / onEdgesChange (core/changes.ts): the writers below
+  // branch on them; the appliers are registered once the writers exist ──
+  const changes = createFlowChanges<NodeType, EdgeType>(store);
+
   // ── element command group (core/commands/elements.ts): structural and
   // field mutations of nodes/edges, plus the gesture-driven writers ──
   const elementCommands = createElementCommands<NodeType, EdgeType>({
@@ -765,17 +771,20 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     // Presence check only — referencing the store proxy is not a row read,
     // so a still-pending async-seeded store is safe here.
     controlledEdges: () => untrack(() => config().edges) !== undefined,
+    changes,
   });
   const { addEdge, updateNodePositions } = elementCommands;
 
   // ── measurement ingest (core/measurementIngest.ts): DOM-pass writes into
   // the data graph + the measurements GC effect ──
-  const { applyMeasurementWrites, applyNodeChanges } = createMeasurementIngest<NodeType>({
-    setMeasurementsStore,
-    setNodesStore,
-    nodeIds: visibleNodeIds,
-    nodeIndex,
-  });
+  const { applyMeasurementWrites, applyNodeChanges, writeNodeChanges } =
+    createMeasurementIngest<NodeType>({
+      setMeasurementsStore,
+      setNodesStore,
+      nodeIds: visibleNodeIds,
+      nodeIndex,
+      nodeChanges: changes.nodes,
+    });
 
   // The DOM measuring pass is registered by the wiring layer (createSolidFlow)
   // via setMeasureRequester: core names the nodes to re-measure, the wiring
@@ -796,6 +805,7 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     handleEdgeSelection,
     moveSelectedNodes,
     applySelectionDelta,
+    writeSelectionDelta,
   } = createSelectionCommands<NodeType, EdgeType>({
     store,
     setNodesStore,
@@ -811,7 +821,16 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     selectedEdgeIds,
     nodeIndex,
     edgeIndex,
+    changes,
   });
+
+  changes.setAppliers(
+    createChangeAppliers<NodeType, EdgeType>({
+      ...elementCommands.raw,
+      writeNodeChanges,
+      writeSelectionDelta,
+    }),
+  );
 
   // ── overlay release (core/overlayRelease.ts): confirm-then-release
   // lifecycle for the selection and drag sidecars ──
@@ -935,6 +954,8 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
 
   return {
     store,
+    /** onNodesChange / onEdgesChange routing (core/changes.ts). */
+    changes,
     flow,
     commands,
     internalNodes,

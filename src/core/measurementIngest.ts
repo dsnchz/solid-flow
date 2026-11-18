@@ -1,8 +1,9 @@
-import type { DimensionChange, HandleBounds, PositionChange } from "@xyflow/system";
+import type { DimensionChange, HandleBounds, NodeChange, PositionChange } from "@xyflow/system";
 import { createEffect, type StoreSetter } from "solid-js";
 
 import type { Node } from "@/types";
 
+import type { ChangeQueue } from "./changes";
 import type { NodeMeasurements, NodeMeasurementWrite } from "./projections/internalNodes";
 import type { RowIndex } from "./rowIndex";
 
@@ -13,6 +14,8 @@ export type MeasurementIngestDeps<NodeType extends Node> = {
   readonly nodeIds: () => readonly string[];
   /** O(1) id → draft row resolution (see core/rowIndex.ts). */
   readonly nodeIndex: RowIndex<NodeType>;
+  /** onNodesChange routing (core/changes.ts). */
+  readonly nodeChanges: ChangeQueue<NodeChange<NodeType>>;
 };
 
 const handleListEqual = (
@@ -68,6 +71,7 @@ export const createMeasurementIngest = <NodeType extends Node>({
   setNodesStore,
   nodeIds,
   nodeIndex,
+  nodeChanges,
 }: MeasurementIngestDeps<NodeType>) => {
   /** Applies a DOM measuring pass's writes to the measurements root. */
   const applyMeasurementWrites = (writes: NodeMeasurementWrite[]) => {
@@ -101,8 +105,12 @@ export const createMeasurementIngest = <NodeType extends Node>({
     });
   };
 
-  /** Applies measured dimension/position changes back to the user graph. */
-  const applyNodeChanges = (changes: (DimensionChange | PositionChange)[]) => {
+  /**
+   * Writes measured dimension/position changes into the user graph: the
+   * measuring pass's, and onNodesChange's `dimensions` (which may also set
+   * `width` / `height`, and `resizing`).
+   */
+  const writeNodeChanges = (changes: (DimensionChange | PositionChange)[]) => {
     if (changes.length === 0) return;
 
     setNodesStore((nodes) => {
@@ -117,9 +125,14 @@ export const createMeasurementIngest = <NodeType extends Node>({
         switch (change.type) {
           case "dimensions": {
             if (change.setAttributes) {
-              node.width = change.dimensions?.width ?? node.width;
-              node.height = change.dimensions?.height ?? node.height;
+              if (change.setAttributes !== "height") {
+                node.width = change.dimensions?.width ?? node.width;
+              }
+              if (change.setAttributes !== "width") {
+                node.height = change.dimensions?.height ?? node.height;
+              }
             }
+            if (change.resizing !== undefined) node.resizing = change.resizing;
 
             // Leaf writes into the seeded `measured` object (a replaced slot
             // would rebuild the row — the row projection's user snapshot
@@ -140,6 +153,15 @@ export const createMeasurementIngest = <NodeType extends Node>({
       }
       return undefined;
     });
+  };
+
+  /** The measuring pass's write-back: onNodesChange's when set, else direct. */
+  const applyNodeChanges = (changes: (DimensionChange | PositionChange)[]) => {
+    if (nodeChanges.active()) {
+      nodeChanges.queue(changes);
+      return;
+    }
+    writeNodeChanges(changes);
   };
 
   // Garbage-collect measurements for nodes that no longer exist in the user
@@ -167,5 +189,5 @@ export const createMeasurementIngest = <NodeType extends Node>({
     { name: "measurementsGC" },
   );
 
-  return { applyMeasurementWrites, applyNodeChanges } as const;
+  return { applyMeasurementWrites, applyNodeChanges, writeNodeChanges } as const;
 };

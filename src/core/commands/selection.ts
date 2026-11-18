@@ -6,14 +6,17 @@ import {
   type NodeLookup,
   type NodeOrigin,
   type OnError,
+  type SelectionChange,
+  selectionChange,
   type SnapGrid,
   snapPosition,
   type XYPosition,
 } from "@xyflow/system";
-import { flush, snapshot, type StoreSetter } from "solid-js";
+import { flush, snapshot, type StoreSetter, untrack } from "solid-js";
 
 import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
 
+import type { ChangeQueue, FlowChanges } from "../changes";
 import type { RowIndex } from "../rowIndex";
 import { emitFlowError, isEdgeSelectable } from "../rules";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
@@ -34,6 +37,10 @@ type SelectionAxis<T extends SelectableRow> = {
   readonly index: RowIndex<T>;
   /** The keyed selected-presence record (core/projections/selectedIds.ts). */
   readonly selectedIds: Record<string, unknown>;
+  /** The axis's rows, for describing a write as changes (onNodesChange). */
+  readonly rows: () => readonly T[];
+  /** The axis's onNodesChange / onEdgesChange queue. */
+  readonly changes: ChangeQueue<SelectionChange>;
 };
 
 /** The slice of the internal store the selection commands read. */
@@ -70,6 +77,8 @@ export type SelectionCommandDeps<NodeType extends Node, EdgeType extends Edge> =
   /** O(1) id → draft row resolution (see core/rowIndex.ts). */
   readonly nodeIndex: RowIndex<NodeType>;
   readonly edgeIndex: RowIndex<EdgeType>;
+  /** onNodesChange / onEdgesChange routing (core/changes.ts). */
+  readonly changes: FlowChanges<NodeType, EdgeType>;
 };
 
 /**
@@ -93,18 +102,23 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
   selectedEdgeIds,
   nodeIndex,
   edgeIndex,
+  changes,
 }: SelectionCommandDeps<NodeType, EdgeType>) => {
   const nodesAxis: SelectionAxis<NodeType> = {
     kind: "nodes",
     setStore: setNodesStore,
     index: nodeIndex,
     selectedIds: selectedNodeIds,
+    rows: () => store.nodes,
+    changes: changes.nodes,
   };
   const edgesAxis: SelectionAxis<EdgeType> = {
     kind: "edges",
     setStore: setEdgesStore,
     index: edgeIndex,
     selectedIds: selectedEdgeIds,
+    rows: () => store.edges,
+    changes: changes.edges,
   };
 
   // The flow's view of an element's selection: overlay joined with the row.
@@ -129,7 +143,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
    * index and is written only when its joined state actually differs.
    */
   const setSelection = <T extends SelectableRow>(
-    { kind, setStore, index }: SelectionAxis<T>,
+    { kind, setStore, index, rows: axisRows, changes: queue }: SelectionAxis<T>,
     currentIds: readonly string[],
     target: ReadonlySet<string>,
   ) => {
@@ -140,6 +154,20 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     // absent-key reads on the store cost a signal registration per node
     // (measured: a ~700ms first drag frame @10k, bench round 12).
     const overlay = snapshot(selectionOverlay[kind]);
+    if (queue.active()) {
+      const rows = untrack(axisRows);
+      const list: SelectionChange[] = [];
+      for (const id of candidates) {
+        const row = index.get(rows, id);
+        if (!row) continue;
+        const selected = target.has(id);
+        if (joinSelected(row.selected, overlay[id]) !== selected) {
+          list.push(selectionChange(id, selected));
+        }
+      }
+      queue.queue(list);
+      return;
+    }
     setStore((rows) => {
       for (const id of candidates) {
         const row = index.get(rows, id);
@@ -166,12 +194,19 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
    * whole unmounted flow (bench: retained after unmount 19 -> 276 MB).
    */
   const deselect = <T extends SelectableRow>(
-    { kind, setStore, index, selectedIds }: SelectionAxis<T>,
+    { kind, setStore, index, selectedIds, rows: axisRows, changes: queue }: SelectionAxis<T>,
     requested: readonly { id: string }[] | undefined,
   ) => {
     const requestedIds = requested ? new Set(requested.map(({ id }) => id)) : null;
     const targets = Object.keys(selectedIds).filter((id) => !requestedIds || requestedIds.has(id));
     if (targets.length === 0) return;
+    if (queue.active()) {
+      const rows = untrack(axisRows);
+      queue.queue(
+        targets.filter((id) => index.get(rows, id)).map((id) => selectionChange(id, false)),
+      );
+      return;
+    }
     setStore((rows) => {
       for (const id of targets) {
         const row = index.get(rows, id);
@@ -187,7 +222,9 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     deselect(nodesAxis, nodes);
     deselect(edgesAxis, edges);
     // Gesture boundary: XYDrag reads selection through nodeLookup right after
-    // calling this, so the internalNodes projection must re-derive now.
+    // calling this, so queued onNodesChange writes apply and the
+    // internalNodes projection re-derives now.
+    changes.flush();
     flush();
   };
 
@@ -207,6 +244,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
 
     // Gesture boundary: the drag handler reads the selected state through
     // nodeLookup synchronously after selection (selectNodesOnDrag).
+    changes.flush();
     flush();
   };
 
@@ -345,6 +383,22 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     });
   };
 
+  /** The delta as changes when the axis's callback is set, else the write. */
+  const routeSelectionDelta = <T extends SelectableRow>(
+    axis: SelectionAxis<T>,
+    delta: SelectionDelta | undefined,
+  ) => {
+    if (!delta) return;
+    if (axis.changes.active()) {
+      const list: SelectionChange[] = [];
+      for (const id of delta.select) list.push(selectionChange(id, true));
+      for (const id of delta.deselect) list.push(selectionChange(id, false));
+      axis.changes.queue(list);
+      return;
+    }
+    setSelectionDelta(axis, delta);
+  };
+
   const applySelectionDelta = ({
     nodes,
     edges,
@@ -352,8 +406,8 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     nodes?: SelectionDelta;
     edges?: SelectionDelta;
   }) => {
-    setSelectionDelta(nodesAxis, nodes);
-    setSelectionDelta(edgesAxis, edges);
+    routeSelectionDelta(nodesAxis, nodes);
+    routeSelectionDelta(edgesAxis, edges);
   };
 
   return {
@@ -363,6 +417,9 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     handleNodeSelection,
     handleEdgeSelection,
     moveSelectedNodes,
+    /** The selection write onNodesChange / onEdgesChange apply through. */
+    writeSelectionDelta: (kind: "nodes" | "edges", delta: SelectionDelta) =>
+      kind === "nodes" ? setSelectionDelta(nodesAxis, delta) : setSelectionDelta(edgesAxis, delta),
     applySelectionDelta,
   } as const;
 };

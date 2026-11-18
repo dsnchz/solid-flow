@@ -1,16 +1,23 @@
 import {
+  addChange,
   addEdge as systemAddEdge,
   type Connection,
+  type EdgeChange,
   getElementsToRemove,
+  type NodeChange,
   type NodeDragItem,
   type NodeLookup,
+  removeChange,
+  replaceChange,
+  selectionChange,
   type Viewport,
   type XYPosition,
 } from "@xyflow/system";
-import { snapshot, type StoreSetter } from "solid-js";
+import { snapshot, type StoreSetter, untrack } from "solid-js";
 
 import type { Edge, InternalNode, Node, OnBeforeDelete, OnDelete } from "@/types";
 
+import type { FlowChanges } from "../changes";
 import { type DragOverlay } from "../dragOverlay";
 import type { FlowCommands } from "../flowState";
 import { seedNodeRow } from "../nodeSeed";
@@ -43,6 +50,47 @@ export type ElementCommandDeps<NodeType extends Node, EdgeType extends Edge> = {
   readonly edgeIndex: RowIndex<EdgeType>;
   /** Whether the edges axis is controlled (the user's store owns membership). */
   readonly controlledEdges: () => boolean;
+  /** onNodesChange / onEdgesChange routing (core/changes.ts). */
+  readonly changes: FlowChanges<NodeType, EdgeType>;
+};
+
+/**
+ * The changes an update describes, for onNodesChange / onEdgesChange: the
+ * `position`, `data` and `select` changes plus an `update` with the other
+ * keys that differ from the row (Svelte Flow 2's split; unchanged keys an
+ * updater spreads through are left out). Selection follows updateNode's
+ * routing rule: an updater's pass-through value is not a selection write.
+ * A replacement is the caller's `replace` change.
+ */
+const describeUpdate = <T extends Node | Edge>(
+  row: T,
+  next: Partial<T>,
+  isUpdater: boolean,
+): (NodeChange<Node> | EdgeChange<Edge>)[] => {
+  const id = row.id;
+  const changes: (NodeChange<Node> | EdgeChange<Edge>)[] = [];
+  const { position, data, selected, ...rest } = next as Partial<Node>;
+  const current = row as Partial<Node>;
+  if (position && (position.x !== current.position?.x || position.y !== current.position?.y)) {
+    changes.push({ id, type: "position", position: { x: position.x, y: position.y } });
+  }
+  if (data !== undefined && data !== current.data) {
+    changes.push({ id, type: "data", data, replace: true });
+  }
+  if (selected !== undefined && (!isUpdater || selected !== current.selected)) {
+    changes.push(selectionChange(id, !!selected));
+  }
+  const item: Record<string, unknown> = {};
+  let changed = false;
+  for (const key of Object.keys(rest)) {
+    const value = (rest as Record<string, unknown>)[key];
+    if (value !== (row as Record<string, unknown>)[key]) {
+      item[key] = value;
+      changed = true;
+    }
+  }
+  if (changed) changes.push({ id, type: "update", item });
+  return changes;
 };
 
 /**
@@ -63,6 +111,7 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
   nodeIndex,
   edgeIndex,
   controlledEdges,
+  changes,
 }: ElementCommandDeps<NodeType, EdgeType>) => {
   const addEdge = (edgeParams: EdgeType | Connection) => {
     // Connection-completion writer (Handle's drag and click paths). On a
@@ -72,6 +121,12 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
     // push. Uncontrolled flows own membership, so the connection lands
     // directly.
     if (controlledEdges()) return;
+    if (changes.edges.active()) {
+      const edges = untrack(() => store.edges);
+      const next = systemAddEdge(edgeParams, edges);
+      if (next !== edges) changes.edges.queue([addChange(next[next.length - 1]!)]);
+      return;
+    }
     setEdgesStore((edges) => {
       const next = systemAddEdge(edgeParams, edges);
       // systemAddEdge returns the same array when the edge is invalid/duplicate
@@ -85,6 +140,21 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
   const updateNodePositions = (
     nodeDragItems: Map<string, Pick<NodeDragItem, "position">>,
     dragging = false,
+  ) => {
+    if (changes.nodes.active()) {
+      const list: NodeChange<NodeType>[] = [];
+      for (const [id, { position }] of nodeDragItems) {
+        list.push({ id, type: "position", position: { x: position.x, y: position.y }, dragging });
+      }
+      changes.nodes.queue(list);
+      return;
+    }
+    writeNodePositions(nodeDragItems, dragging);
+  };
+
+  const writeNodePositions = (
+    nodeDragItems: Map<string, Pick<NodeDragItem, "position">>,
+    dragging: boolean,
   ) => {
     // Overlay write (authoritative for rendering) + best-effort row
     // write-through (parity: a plain store is live during the drag).
@@ -141,7 +211,7 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
     });
   };
 
-  const updateNode: FlowCommands<NodeType, EdgeType>["updateNode"] = (
+  const writeNode: FlowCommands<NodeType, EdgeType>["updateNode"] = (
     id,
     nodeUpdate,
     options = { replace: false },
@@ -190,14 +260,105 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
     });
   };
 
+  const updateNode: FlowCommands<NodeType, EdgeType>["updateNode"] = (
+    id,
+    nodeUpdate,
+    options = { replace: false },
+  ) => {
+    if (changes.nodes.active()) {
+      const node = untrack(() => nodeIndex.get(store.nodes, id));
+      if (!node) return;
+      const isUpdater = typeof nodeUpdate === "function";
+      const nextNode = isUpdater ? nodeUpdate(node) : nodeUpdate;
+      changes.nodes.deliver(
+        options?.replace && isNode<NodeType>(nextNode)
+          ? [replaceChange(nextNode)]
+          : (describeUpdate(node, nextNode, isUpdater) as NodeChange<NodeType>[]),
+      );
+      return;
+    }
+    writeNode(id, nodeUpdate, options);
+  };
+
+  const writeEdge: FlowCommands<NodeType, EdgeType>["updateEdge"] = (
+    id,
+    edgeUpdate,
+    options = { replace: false },
+  ) => {
+    setEdgesStore((edges) => {
+      const index = edgeIndex.indexOf(edges, id);
+      if (index === -1) return undefined;
+
+      const edge = edges[index]!;
+      const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
+      // `selected` routing — see updateNode for the original-row-proxy
+      // capture rationale and the pass-through rule.
+      if (
+        nextEdge.selected !== undefined &&
+        (typeof edgeUpdate !== "function" || nextEdge.selected !== edge.selected)
+      ) {
+        edge.selected = !!nextEdge.selected;
+        setSelectionOverlay((draft) => {
+          draft.edges[id] = { value: !!nextEdge.selected, row: edge };
+        });
+      }
+      // Field writes for the merge path — see updateNode.
+      if (options.replace && isEdge<EdgeType>(nextEdge)) edges[index] = nextEdge;
+      else Object.assign(edge, nextEdge);
+      return undefined;
+    });
+  };
+
+  /** Inserts at each change's `index` (applySelf order), else appends. */
+  const insertRows = <T>(rows: readonly T[], added: readonly { item: T; index?: number }[]) => {
+    const next = [...rows];
+    for (const { item, index } of added) {
+      if (index === undefined) next.push(item);
+      else next.splice(index, 0, item);
+    }
+    return next;
+  };
+
+  /** The raw writers onNodesChange / onEdgesChange apply through (core/commands/applyChanges.ts). */
+  const raw = {
+    writeNodePositions,
+    writeNode,
+    writeEdge,
+    insertNodes: (added: readonly { item: NodeType; index?: number }[]) => {
+      // Seeded while still plain (see core/nodeSeed.ts).
+      const seeded = added.map(({ item, index }) => ({ item: seedNodeRow(item), index }));
+      setNodesStore((nodes) => insertRows(nodes, seeded));
+    },
+    insertEdges: (added: readonly { item: EdgeType; index?: number }[]) => {
+      setEdgesStore((edges) => insertRows(edges, added));
+    },
+    removeNodes: (ids: ReadonlySet<string>) => {
+      const remaining = store.nodes.filter((node) => !ids.has(node.id));
+      setNodesStore(() => remaining);
+    },
+    removeEdges: (ids: ReadonlySet<string>) => {
+      const remaining = store.edges.filter((edge) => !ids.has(edge.id));
+      setEdgesStore(() => remaining);
+    },
+  } as const;
+
   const commands = {
     addNodes: (payload) => {
+      const added = Array.isArray(payload) ? payload : [payload];
+      if (changes.nodes.active()) {
+        changes.nodes.deliver(added.map((node) => addChange(node)));
+        return;
+      }
       // Seeded while still plain (see core/nodeSeed.ts).
-      const newNodes = (Array.isArray(payload) ? payload : [payload]).map(seedNodeRow);
+      const newNodes = added.map(seedNodeRow);
       setNodesStore((nodes) => [...nodes, ...newNodes]);
     },
     addEdges: (payload) => {
       const newEdges = Array.isArray(payload) ? payload : [payload];
+      if (changes.edges.active()) {
+        changes.edges.deliver(newEdges.map((edge) => addChange(edge)));
+        return;
+      }
       setEdgesStore((edges) => [...edges, ...newEdges]);
     },
     updateNode,
@@ -206,34 +367,33 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
       if (!node) return;
 
       const nextData = typeof dataUpdate === "function" ? dataUpdate(node) : dataUpdate;
-      updateNode(id, (current) => ({
+      if (changes.nodes.active()) {
+        changes.nodes.deliver([
+          options?.replace
+            ? { id, type: "data", data: nextData as NodeType["data"], replace: true }
+            : { id, type: "data", data: nextData, replace: false },
+        ]);
+        return;
+      }
+      writeNode(id, (current) => ({
         ...current,
         data: options?.replace ? nextData : { ...current.data, ...nextData },
       }));
     },
     updateEdge: (id, edgeUpdate, options = { replace: false }) => {
-      setEdgesStore((edges) => {
-        const index = edgeIndex.indexOf(edges, id);
-        if (index === -1) return undefined;
-
-        const edge = edges[index]!;
-        const nextEdge = typeof edgeUpdate === "function" ? edgeUpdate(edge) : edgeUpdate;
-        // `selected` routing — see updateNode for the original-row-proxy
-        // capture rationale and the pass-through rule.
-        if (
-          nextEdge.selected !== undefined &&
-          (typeof edgeUpdate !== "function" || nextEdge.selected !== edge.selected)
-        ) {
-          edge.selected = !!nextEdge.selected;
-          setSelectionOverlay((draft) => {
-            draft.edges[id] = { value: !!nextEdge.selected, row: edge };
-          });
-        }
-        // Field writes for the merge path — see updateNode.
-        if (options.replace && isEdge<EdgeType>(nextEdge)) edges[index] = nextEdge;
-        else Object.assign(edge, nextEdge);
-        return undefined;
-      });
+      if (changes.edges.active()) {
+        const edge = untrack(() => edgeIndex.get(store.edges, id));
+        if (!edge) return;
+        const isUpdater = typeof edgeUpdate === "function";
+        const nextEdge = isUpdater ? edgeUpdate(edge) : edgeUpdate;
+        changes.edges.deliver(
+          options.replace && isEdge<EdgeType>(nextEdge)
+            ? [replaceChange(nextEdge)]
+            : (describeUpdate(edge, nextEdge, isUpdater) as EdgeChange<EdgeType>[]),
+        );
+        return;
+      }
+      writeEdge(id, edgeUpdate, options);
     },
     deleteElements: async ({ nodes: nodesToRemove = [], edges: edgesToRemove = [] }) => {
       // @xyflow/system 1.0's getElementsToRemove walks the parent tree (any
@@ -253,19 +413,29 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
       // Id sets, not `matching.some(...)` per row: that was O(rows x deleted)
       // proxy reads (10k nodes, delete 1,000: 2.3 s).
       if (matchingEdges) {
-        const deleted = new Set(matchingEdges.map(({ id }) => id));
-        const remainingEdges = store.edges.filter((edge) => !deleted.has(edge.id));
+        if (changes.edges.active()) {
+          store.onEdgesDelete?.(matchingEdges);
+          changes.edges.deliver(matchingEdges.map(({ id }) => removeChange(id)));
+        } else {
+          const deleted = new Set(matchingEdges.map(({ id }) => id));
+          const remainingEdges = store.edges.filter((edge) => !deleted.has(edge.id));
 
-        store.onEdgesDelete?.(matchingEdges);
-        setEdgesStore(() => remainingEdges);
+          store.onEdgesDelete?.(matchingEdges);
+          setEdgesStore(() => remainingEdges);
+        }
       }
 
       if (matchingNodes) {
-        const deleted = new Set(matchingNodes.map(({ id }) => id));
-        const remainingNodes = store.nodes.filter((node) => !deleted.has(node.id));
+        if (changes.nodes.active()) {
+          store.onNodesDelete?.(matchingNodes);
+          changes.nodes.deliver(matchingNodes.map(({ id }) => removeChange(id)));
+        } else {
+          const deleted = new Set(matchingNodes.map(({ id }) => id));
+          const remainingNodes = store.nodes.filter((node) => !deleted.has(node.id));
 
-        store.onNodesDelete?.(matchingNodes);
-        setNodesStore(() => remainingNodes);
+          store.onNodesDelete?.(matchingNodes);
+          setNodesStore(() => remainingNodes);
+        }
       }
 
       // Every delete path (keyboard AND programmatic) notifies here, so
@@ -290,5 +460,5 @@ export const createElementCommands = <NodeType extends Node, EdgeType extends Ed
     },
   } satisfies Partial<FlowCommands<NodeType, EdgeType>>;
 
-  return { ...commands, addEdge, updateNodePositions } as const;
+  return { ...commands, addEdge, updateNodePositions, raw } as const;
 };

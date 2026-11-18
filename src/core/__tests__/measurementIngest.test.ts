@@ -3,8 +3,9 @@ import { infiniteExtent, Position } from "@xyflow/system";
 import { createEffect, createRoot, createStore, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
-import type { Node } from "@/types";
+import type { Edge, Node } from "@/types";
 
+import { createFlowChanges } from "../changes";
 import { createMeasurementIngest } from "../measurementIngest";
 import { createInternalNodes, type NodeMeasurements } from "../projections/internalNodes";
 import { createRowIndex } from "../rowIndex";
@@ -63,6 +64,7 @@ const setup = () => {
     setNodesStore: setNodes,
     nodeIds: ids,
     nodeIndex: createRowIndex<Node>(ids),
+    nodeChanges: createFlowChanges<Node, Edge>({}).nodes,
   });
 
   return { internalNodes, ingest, measurements, runs: () => deriveRuns };
@@ -239,6 +241,7 @@ describe("createMeasurementIngest — applyMeasurementWrites", () => {
         setNodesStore: setNodes,
         nodeIds: ids,
         nodeIndex: createRowIndex<Node>(ids),
+        nodeChanges: createFlowChanges<Node, Edge>({}).nodes,
       }),
     );
     flush();
@@ -275,6 +278,7 @@ describe("createMeasurementIngest — applyMeasurementWrites", () => {
         setNodesStore: setNodes,
         nodeIds: ids,
         nodeIndex: createRowIndex<Node>(ids),
+        nodeChanges: createFlowChanges<Node, Edge>({}).nodes,
       }),
     );
     ingest.applyNodeChanges([

@@ -193,6 +193,28 @@ The stores you pass as `nodes` / `edges` props are **controlled** — a delibera
 
 **Prefer letting the flow own the data?** Pass `defaultNodes` / `defaultEdges` instead of `nodes` / `edges` for an **uncontrolled** flow (React Flow parity): the arrays seed the flow once (rows are copied, so the flow's draft never writes onto your objects; later values are ignored), and membership belongs to the flow — commands like `addNodes` and completed connections persist with no adoption step. Read live state through `useSolidFlow()`'s `flow.nodes` / `flow.edges`. The two axes are independent, so you can control edges while leaving nodes uncontrolled (or vice versa); supplying both props on one axis is a mistake (`nodes` wins, with a dev warning).
 
+### Intercepting the flow's writes (`onNodesChange`)
+
+The flow's own writes can pass through you first, as Svelte Flow 2's `onnodeschange` / `onedgeschange`: with `onNodesChange` / `onEdgesChange` set, each write arrives as a `NodeChangeset` / `EdgeChangeset` (@xyflow/system 1.0, the type React Flow 13 hands its `onNodesChange`). Drop changes or add your own, and the flow applies what is left through its usual per-row writes:
+
+```tsx
+import { type NodeChangeset, SolidFlow } from "@dschz/solid-flow";
+
+const onNodesChange = (changes: NodeChangeset) => {
+  // "locked" never moves
+  for (const change of changes.getForNode("locked")) {
+    if (change.type === "position") changes.remove(change);
+  }
+};
+
+<SolidFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} />;
+```
+
+- **What passes through:** drags and arrow-key moves (`position`), selection (`select`), measured and resized sizes (`dimensions`), deletions (`remove`), new connections on an uncontrolled edges axis and reconnects, and the commands `addNodes` / `addEdges`, `updateNode` / `updateNodeData` / `updateEdge`, `changeParent` and `deleteElements`. `setNodes` / `setEdges` and your own store writes do not; they are already yours.
+- **When:** gesture and measurement writes are batched into one changeset per task, applied right after your callback. Commands deliver at once (so they stay inside an optimistic action), and so does a click's selection, which a drag reads back in the same event.
+- **Unset, nothing changes:** the writes land directly, exactly as without the prop.
+- `onDelete`, `onNodesDelete` and `onEdgesDelete` still report the deletion `onBeforeDelete` allowed; dropping a `remove` change keeps the element after them.
+
 ## Loading your graph from an API
 
 Both stores accept an async seed — pass `async () => data` instead of an array. No memo, no lifecycle juggling: reads are not-ready until the data lands (SolidJS 2.0's async model), so a `<Loading>` boundary holds the flow and swaps in the graph when it arrives. Afterwards the stores behave exactly like their array-seeded counterparts — drafts, adoption, wholesale replacement.
@@ -352,6 +374,7 @@ const edgeId = useEdgeId();
 Some React Flow hooks intentionally have no Solid Flow equivalent, because Solid's fine-grained reactivity makes them unnecessary:
 
 - `useOnViewportChange` — reading `flow.viewport` in a tracked scope IS the subscription; wrap side effects in `createEffect` over that read.
+- `applyNodeChanges` / `applyEdgeChanges` — `onNodesChange` / `onEdgesChange` hand you the changeset before the flow applies it; there is nothing for you to apply (see [Intercepting the flow's writes](#intercepting-the-flows-writes-onnodeschange)).
 - `useNodesState` / `useEdgesState` — use `createNodeStore` / `createEdgeStore` instead.
 - `useStore` — the reactive `flow` struct is the supported read surface; there is no public escape hatch into internals.
 

@@ -41,6 +41,8 @@ import type {
   OnBeforeReconnect,
   OnDelete,
   OnEdgeConnect,
+  OnEdgesChange,
+  OnNodesChange,
   OnSelectionChange,
   OnSelectionDrag,
   PaneEvents,
@@ -631,6 +633,31 @@ export type SolidFlowLifecycleEventProps<
   readonly onDelete?: OnDelete<NodeType, EdgeType>;
   /** This handler gets called before the user deletes nodes or edges and provides a way to abort the deletion by returning false. */
   readonly onBeforeDelete?: OnBeforeDelete<NodeType, EdgeType>;
+  /**
+   * Receives the flow's own node writes as a changeset before they land:
+   * drags and arrow-key moves (`position`), selection (`select`), measured
+   * and resized sizes (`dimensions`), deletions (`remove`), and the node
+   * commands (`addNodes`, `updateNode`, `updateNodeData`, `changeParent`,
+   * `deleteElements`). Drop changes (`changes.remove`, `removeForNode`,
+   * `clear`) or add your own (`changes.add`), and the flow applies what is
+   * left. Gesture and measurement writes arrive batched once per task;
+   * commands and click selection arrive at once. `setNodes` and your own
+   * store writes do not pass through it. Unset, writes land directly.
+   * @example
+   * onNodesChange={(changes) => {
+   *   // lock node "a" in place
+   *   for (const change of changes.getForNode("a")) {
+   *     if (change.type === "position") changes.remove(change);
+   *   }
+   * }}
+   */
+  readonly onNodesChange?: OnNodesChange<NodeType>;
+  /**
+   * The edge twin of `onNodesChange`: selection, deletions, new connections
+   * on an uncontrolled edges axis, reconnects, and the edge commands
+   * (`addEdges`, `updateEdge`, `deleteElements`).
+   */
+  readonly onEdgesChange?: OnEdgesChange<EdgeType>;
 };
 
 /**
@@ -735,6 +762,7 @@ export const FLOW_PROP_KEYS = [
   "onEdgePointerEnter",
   "onEdgePointerLeave",
   "onEdgePointerMove",
+  "onEdgesChange",
   "onEdgesDelete",
   "onFlowError",
   "onInit",
@@ -750,6 +778,7 @@ export const FLOW_PROP_KEYS = [
   "onNodePointerEnter",
   "onNodePointerLeave",
   "onNodePointerMove",
+  "onNodesChange",
   "onNodesDelete",
   "onPaneClick",
   "onPaneContextMenu",

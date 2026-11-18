@@ -61,6 +61,7 @@ export type {
 // system utilities (documented upstream)
 export {
   addEdge,
+  EdgeChangeset,
   getBezierPath,
   getConnectedEdges,
   getIncomers,
@@ -69,6 +70,7 @@ export {
   getSmoothStepPath,
   getStraightPath,
   getViewportForBounds,
+  NodeChangeset,
 } from "@xyflow/system";
 
 // system enums (documented upstream)
@@ -77,19 +79,29 @@ export {
 
 // system types (documented upstream)
 export type {
+  AddChange,
   Connection,
   ControlLinePosition,
   ControlPosition,
   CoordinateExtent,
+  DataChange,
+  DimensionChange,
+  EdgeChange,
   EdgeMarker,
   FitBounds,
+  NodeChange,
   NodeConnection,
   NodeOrigin,
   OnMove,
   PanelPosition,
+  PositionChange,
+  RemoveChange,
+  ReplaceChange,
+  SelectionChange,
   SetCenter,
   SetViewport,
   ShouldResize,
+  UpdateChange,
   Viewport,
   XYPosition,
 } from "@xyflow/system";

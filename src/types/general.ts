@@ -3,9 +3,11 @@ import {
   type Connection,
   ConnectionLineType as SystemConnectionLineType,
   ConnectionMode as SystemConnectionMode,
+  type EdgeChangeset,
   type FitViewOptionsBase,
   type HandleBounds,
   MarkerType as SystemMarkerType,
+  type NodeChangeset,
   type OnBeforeDeleteBase,
   PanOnScrollMode as SystemPanOnScrollMode,
   Position as SystemPosition,
@@ -105,6 +107,21 @@ export type OnDelete<NodeType extends Node = Node, EdgeType extends Edge = Edge>
   nodes: NodeType[];
   edges: EdgeType[];
 }) => void;
+
+/**
+ * Receives the flow's own pending node writes (drags, selection, measured
+ * dimensions, resizes, deletions, and the node commands) before they are
+ * applied: drop or add changes on the changeset, and the flow applies what
+ * is left (Svelte Flow 2's `onnodeschange`).
+ */
+export type OnNodesChange<NodeType extends Node = Node> = (
+  changes: NodeChangeset<NodeType>,
+) => void;
+
+/** The edge twin of {@link OnNodesChange} (Svelte Flow 2's `onedgeschange`). */
+export type OnEdgesChange<EdgeType extends Edge = Edge> = (
+  changes: EdgeChangeset<EdgeType>,
+) => void;
 
 /** A connection together with the id of the edge it produced. */
 export type EdgeConnection = Connection & {

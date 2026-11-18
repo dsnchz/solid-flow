@@ -1,6 +1,8 @@
 import { isServer, type JSX } from "@solidjs/web";
 import {
   type ControlPosition,
+  type NodeChange,
+  positionChange,
   XYResizer,
   type XYResizerChange,
   type XYResizerChildChange,
@@ -100,7 +102,7 @@ export const renderResizeControl = <NodeType extends Node = Node>(
   const autoScale = () => props.autoScale ?? true;
 
   const [resizeControlRef, setResizeControlRef] = createSignal<HTMLDivElement>();
-  const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
+  const { store, nodeLookup, actions, changes: flowChanges } = useInternalSolidFlow<NodeType>();
 
   const ctxNodeId = useNodeId();
   const nodeId = () => props.nodeId ?? ctxNodeId();
@@ -130,6 +132,28 @@ export const renderResizeControl = <NodeType extends Node = Node>(
           paneDomNode: store.domNode,
         }),
         onChange: (change: XYResizerChange, childChanges: XYResizerChildChange[]) => {
+          // onNodesChange set: the resize as Svelte Flow 2 describes it.
+          if (flowChanges.nodes.active()) {
+            const id = nodeId();
+            const list: NodeChange<NodeType>[] = [];
+            if (change.x !== undefined && change.y !== undefined) {
+              list.push(positionChange(id, { x: change.x, y: change.y }));
+            }
+            if (change.width !== undefined && change.height !== undefined) {
+              list.push({
+                id,
+                type: "dimensions",
+                resizing: true,
+                setAttributes: true,
+                dimensions: { width: change.width, height: change.height },
+              });
+            }
+            for (const childChange of childChanges) {
+              list.push(positionChange(childChange.id, childChange.position));
+            }
+            flowChanges.nodes.queue(list);
+            return;
+          }
           const changes = new Map<string, Partial<Node>>();
           const position =
             change.x !== undefined && change.y !== undefined
@@ -158,6 +182,14 @@ export const renderResizeControl = <NodeType extends Node = Node>(
             }
             return undefined;
           });
+        },
+        // The resize end clears `resizing`; only described with onNodesChange
+        // set (the direct path never sets it).
+        onEnd: ({ width, height }) => {
+          if (!flowChanges.nodes.active()) return;
+          flowChanges.nodes.queue([
+            { id: nodeId(), type: "dimensions", resizing: false, dimensions: { width, height } },
+          ]);
         },
       });
 

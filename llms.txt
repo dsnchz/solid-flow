@@ -11,7 +11,7 @@ import "@dschz/solid-flow/style.css"; // required, import once (base.css: minima
 
 ## Unlearn these (React Flow priors that are WRONG here)
 
-- NO `onNodesChange` / `onEdgesChange` / `applyNodeChanges` / `applyEdgeChanges` — state is store-based; mutate your store.
+- NO `applyNodeChanges` / `applyEdgeChanges` and no state ownership in `onNodesChange` — state is store-based; mutate your store. `onNodesChange` / `onEdgesChange` exist as Svelte Flow 2's filters: they receive the flow's own pending writes as a `NodeChangeset` / `EdgeChangeset` (drop or add changes) and the flow applies what is left; leave them unset unless you need to veto or rewrite flow writes.
 - NO `useReactFlow` — it is `useSolidFlow()`, called INSIDE `<SolidFlow>` (or under `<SolidFlowProvider>`).
 - Events are pointer-named: `onNodePointerEnter`, not `onNodeMouseEnter` (same for edges/pane).
 - NO `colorMode` / `colorModeSSR` / `useColorMode` — the flow follows the OS in CSS; `forceColorMode="light" | "dark"` forces one. Theme with `--xy-*` variables (set `--xy-node-background-color`, not the `-default` one); library CSS is in the `xyflow` cascade layer, so plain app rules override it.
