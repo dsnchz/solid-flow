@@ -1,5 +1,5 @@
 import { render } from "@solidjs/testing-library";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { settle } from "@/__tests__/settle";
 import { useInternalSolidFlow } from "@/contexts";
@@ -18,22 +18,34 @@ const makeNode = (id: string, x: number): Node => ({
 type Call = { name: string; target: string | null; nodes: string[] };
 
 /**
- * A d3-drag gesture in jsdom: mousedown on the element, moves and mouseup on
- * its window. d3-drag listens on `event.view`, which fireEvent leaves null.
+ * A d3-drag gesture in jsdom: mousedown at the first point, moves through the
+ * rest, mouseup at the last, then the click the browser dispatches after a
+ * release over the element; all on the element. They bubble to its window,
+ * where d3-drag listens (`event.view`, which fireEvent leaves null). A real
+ * event always targets a node: XYDrag 1.0 asks the element whether it
+ * contains the mouseup's target.
  */
-const dragElement = (el: Element) => {
+const gesture = (el: Element, points: readonly (readonly [number, number])[]) => {
   const view = el.ownerDocument.defaultView!;
-  const mouse = (target: EventTarget, type: string, clientX: number, clientY: number) => {
+  const mouse = (type: string, [clientX, clientY]: readonly [number, number]) => {
     const event = new view.MouseEvent(type, { bubbles: true, cancelable: true, clientX, clientY });
     // jsdom rejects its own window as `view` in the init dictionary.
     Object.defineProperty(event, "view", { value: view });
-    target.dispatchEvent(event);
+    el.dispatchEvent(event);
   };
-  mouse(el, "mousedown", 50, 20);
-  mouse(view, "mousemove", 80, 30);
-  mouse(view, "mousemove", 120, 40);
-  mouse(view, "mouseup", 120, 40);
+  const last = points[points.length - 1]!;
+  mouse("mousedown", points[0]!);
+  for (const point of points.slice(1)) mouse("mousemove", point);
+  mouse("mouseup", last);
+  mouse("click", last);
 };
+
+const dragElement = (el: Element) =>
+  gesture(el, [
+    [50, 20],
+    [80, 30],
+    [120, 40],
+  ]);
 
 // The three node-drag callbacks receive the user node that was grabbed (null
 // for a drag of the multi-selection box) and the dragged nodes; `onNodeDrag`
@@ -90,5 +102,48 @@ describe("node drag callbacks", () => {
 
     expect(calls.map((c) => c.name)).toEqual(["start", "drag", "stop"]);
     for (const call of calls) expect(call).toMatchObject({ target: null, nodes: ["a", "b"] });
+  });
+});
+
+// @xyflow/system 1.0 (nodeClickDistance removed): a node click is swallowed
+// only after a drag that actually moved nodes, whatever the pointer did.
+describe("node click after a pointer gesture", () => {
+  const renderClicks = () => {
+    const onNodeClick = vi.fn();
+    const rendered = render(() => (
+      <SolidFlow
+        defaultNodes={[makeNode("a", 0)]}
+        width={800}
+        height={600}
+        onNodeClick={onNodeClick}
+      />
+    ));
+    return {
+      onNodeClick,
+      node: () => rendered.container.querySelector('.solid-flow__node[data-id="a"]')!,
+    };
+  };
+
+  it("fires after a jitter under the drag threshold", async () => {
+    const { onNodeClick, node } = renderClicks();
+    await settle();
+
+    gesture(node(), [
+      [50, 20],
+      [50.5, 20],
+    ]);
+    await settle();
+
+    expect(onNodeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("is swallowed after a drag that moved the node", async () => {
+    const { onNodeClick, node } = renderClicks();
+    await settle();
+
+    dragElement(node());
+    await settle();
+
+    expect(onNodeClick).not.toHaveBeenCalled();
   });
 });

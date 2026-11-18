@@ -1,4 +1,4 @@
-import type { HandleConnection, HandleType } from "@xyflow/system";
+import type { HandleType, NodeConnection } from "@xyflow/system";
 import { createMemo, createProjection, getOwner, mapArray, runWithOwner, untrack } from "solid-js";
 
 import type { Edge } from "@/types";
@@ -23,8 +23,8 @@ export const pairKey = (
   bHandle: string | null,
 ): string => `${aNode}-${aHandle}--${bNode}-${bHandle}`;
 
-/** The connections index: a handle's `connectionKey` mapped to its live `HandleConnection`s. */
-export type ConnectionsRecord = Record<string, Record<string, HandleConnection>>;
+/** The connections index: a handle's `connectionKey` mapped to its live `NodeConnection`s. */
+export type ConnectionsRecord = Record<string, Record<string, NodeConnection>>;
 
 export type ConnectionsSource<EdgeType extends Edge = Edge> = {
   readonly edges: readonly EdgeType[];
@@ -32,7 +32,7 @@ export type ConnectionsSource<EdgeType extends Edge = Edge> = {
 
 /**
  * Connection index: user edges → nested record projection
- * (lookupKey → pairKey → HandleConnection).
+ * (lookupKey → pairKey → NodeConnection).
  *
  * Derived by construction — this replaces the imperative
  * add/removeConnectionFromLookup pipeline (and with it, the entire
@@ -45,7 +45,7 @@ export type ConnectionsSource<EdgeType extends Edge = Edge> = {
 type Contribution = {
   readonly key: string;
   readonly entry: string;
-  readonly connection: HandleConnection;
+  readonly connection: NodeConnection;
 };
 
 const sameContributions = (a: readonly Contribution[], b: readonly Contribution[]) =>
@@ -66,7 +66,7 @@ const sameContributions = (a: readonly Contribution[], b: readonly Contribution[
 const edgeContributions = (edge: Edge): Contribution[] => {
   const sourceHandle = edge.sourceHandle ?? null;
   const targetHandle = edge.targetHandle ?? null;
-  const connection: HandleConnection = {
+  const connection: NodeConnection = {
     edgeId: edge.id,
     source: edge.source,
     target: edge.target,
@@ -143,7 +143,7 @@ export const createConnections = <EdgeType extends Edge = Edge>(
   // the whole root raw — 20k keys @10k, ~13 ms — so emptied keys were kept
   // and pruned lazily; rc.8's overlay path makes the root delete O(1):
   // solidjs/solid#3352.)
-  const held = new Map<string, Map<string, HandleConnection>>();
+  const held = new Map<string, Map<string, NodeConnection>>();
   const remove = (draft: ConnectionsRecord, list: readonly Contribution[]) => {
     for (const { key, entry, connection } of list) {
       const rec = held.get(key);

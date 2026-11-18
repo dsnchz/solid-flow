@@ -83,7 +83,6 @@ export type {
   CoordinateExtent,
   EdgeMarker,
   FitBounds,
-  HandleConnection,
   NodeConnection,
   NodeOrigin,
   OnMove,

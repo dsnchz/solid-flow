@@ -22,7 +22,8 @@ export type PaneProps<NodeType extends Node = Node> = PaneEvents & {
   readonly deselectOnSelection?: boolean;
   /** Excludes nodes found inside the selection rect (upstream parity, xyflow#6004). */
   readonly isNodeSelectable?: IsNodeSelectable<NodeType>;
-  readonly paneClickDistance?: number;
+  /** Pointer travel (px) before a pane drag starts a selection; less is a click. */
+  readonly paneDragThreshold?: number;
   readonly autoPanOnSelection?: boolean;
   readonly onSelectionStart?: (event: PointerEvent) => void;
   readonly onSelectionEnd?: (event: PointerEvent) => void;
@@ -70,9 +71,9 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
   let autoPanStarted = false;
 
   const autoPanOnSelection = () => props.autoPanOnSelection ?? true;
-  // Default lives in ONE place (SolidFlow's merge, 0); this fallback only
+  // Default lives in ONE place (SolidFlow's merge, 1); this fallback only
   // covers direct Pane mounting in tests.
-  const paneClickDistance = () => props.paneClickDistance ?? 0;
+  const paneDragThreshold = () => props.paneDragThreshold ?? 1;
 
   const _panOnDrag = () => store.panActivationKeyPressed || props.panOnDrag;
 
@@ -235,7 +236,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
     const screenStart = rendererPointToPoint(userStartPosition, store.transform);
 
     if (!selectionInProgress) {
-      const requiredDistance = store.selectionKeyPressed ? 0 : paneClickDistance();
+      const requiredDistance = store.selectionKeyPressed ? 0 : paneDragThreshold();
       const distance = Math.hypot(mousePos.x - screenStart.x, mousePos.y - screenStart.y);
 
       if (distance <= requiredDistance) {

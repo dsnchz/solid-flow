@@ -1,6 +1,6 @@
 import type {
   CoordinateExtent,
-  Handle,
+  HandleBounds,
   NodeHandleBounds,
   NodeOrigin,
   ZIndexMode,
@@ -84,8 +84,8 @@ export type NodeMeasurement = {
    * `undefined` until the node is measured, and again while it is hidden, so
    * unhiding re-measures.
    */
-  handleSource?: Handle[] | null;
-  handleTarget?: Handle[] | null;
+  handleSource?: HandleBounds[] | null;
+  handleTarget?: HandleBounds[] | null;
 };
 
 /**
@@ -164,6 +164,11 @@ export type InternalNodesSource<NodeType extends Node = Node> = {
    * mount anyway, so rows start hot there.
    */
   readonly lazyRows?: boolean;
+  /**
+   * The ids of the nodes that have children (projections/parentIds.ts), for
+   * each row's `internals.isParent`. Without it no row is a parent.
+   */
+  readonly parentIds?: Record<string, true>;
 };
 
 /**
@@ -270,6 +275,24 @@ export const createInternalNodes = <NodeType extends Node = Node>(
     },
     { name: "autoIndex" },
   );
+
+  // Whether any node has children, from the parent record's key set: a row
+  // reads its own presence in the record only then, so a flow without
+  // subflows pays one memo read per row run instead of a projection-leaf
+  // read (upstream's hasSubflows short-circuit). A first parent re-runs
+  // every row once.
+  const anyParent = createMemo(
+    () => {
+      const parentIds = source.parentIds;
+      return parentIds !== undefined && Object.keys(parentIds).length > 0;
+    },
+    { name: "internalNodes.anyParent" },
+  );
+  const isParentRow = (id: string) => {
+    if (!anyParent()) return false;
+    const parentIds = source.parentIds;
+    return parentIds !== undefined && id in parentIds;
+  };
 
   // The flow settings every row reads, as ONE memo (value-equal): one read
   // per row run instead of four through the config getters (~19 ms of any
@@ -448,6 +471,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
                 measurement:
                   user.id in source.measurements ? source.measurements[user.id] : undefined,
                 rootParentIndex: autoIndex().get(user.id),
+                isParent: isParentRow(user.id),
               },
               rowSettings,
               parent,

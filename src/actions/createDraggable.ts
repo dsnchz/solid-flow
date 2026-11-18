@@ -83,7 +83,6 @@ export type CreateDraggableParams<NodeType extends Node = Node> = {
   readonly handleSelector: string;
   readonly nodeId: string;
   readonly isSelectable: boolean;
-  readonly nodeClickDistance: number;
   readonly onDrag: OnDrag<NodeType>;
   readonly onDragStart: OnDrag<NodeType>;
   readonly onDragStop: OnDrag<NodeType>;
@@ -150,7 +149,6 @@ const createDraggable = <NodeType extends Node = Node>(
         noDragClassName: current.noDragClass,
         handleSelector: current.handleSelector,
         isSelectable: current.isSelectable,
-        nodeClickDistance: current.nodeClickDistance,
       });
 
       return () => {

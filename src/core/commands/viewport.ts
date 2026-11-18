@@ -1,5 +1,6 @@
 import {
   type CoordinateExtent,
+  defaultFitViewPadding,
   fitViewport,
   getViewportForBounds,
   type NodeLookup,
@@ -74,15 +75,16 @@ export const createViewportCommands = <NodeType extends Node, EdgeType extends E
   const zoomIn = (options?: ViewportHelperFunctionOptions) => zoomBy(1.2, options);
   const zoomOut = (options?: ViewportHelperFunctionOptions) => zoomBy(1 / 1.2, options);
 
+  // Each resolves the controller's answer (@xyflow/system 1.0): true when the
+  // transition finished, false when an interaction or another viewport change
+  // interrupted it.
   const setCenter = async (x: number, y: number, options?: SetCenterOptions) => {
     const nextZoom = typeof options?.zoom !== "undefined" ? options.zoom : store.maxZoom;
     const currentPanZoom = store.panZoom;
 
-    if (!currentPanZoom) {
-      return Promise.resolve(false);
-    }
+    if (!currentPanZoom) return false;
 
-    await currentPanZoom.setViewport(
+    return currentPanZoom.setViewport(
       {
         x: store.width / 2 - x * nextZoom,
         y: store.height / 2 - y * nextZoom,
@@ -90,8 +92,6 @@ export const createViewportCommands = <NodeType extends Node, EdgeType extends E
       },
       { duration: options?.duration, ease: options?.ease, interpolate: options?.interpolate },
     );
-
-    return Promise.resolve(true);
   };
 
   const panBy = (delta: { x: number; y: number }) => {
@@ -116,16 +116,14 @@ export const createViewportCommands = <NodeType extends Node, EdgeType extends E
         store.height,
         store.minZoom,
         store.maxZoom,
-        options?.padding ?? 0.1,
+        options?.padding ?? defaultFitViewPadding,
       );
 
-      await store.panZoom.setViewport(viewport, {
+      return store.panZoom.setViewport(viewport, {
         duration: options?.duration,
         ease: options?.ease,
         interpolate: options?.interpolate,
       });
-
-      return true;
     },
     zoomIn,
     zoomOut,
@@ -141,7 +139,7 @@ export const createViewportCommands = <NodeType extends Node, EdgeType extends E
 
       if (!store.panZoom) return false;
 
-      await store.panZoom.setViewport(
+      return store.panZoom.setViewport(
         {
           x: nextViewport.x ?? currentViewport.x,
           y: nextViewport.y ?? currentViewport.y,
@@ -149,8 +147,6 @@ export const createViewportCommands = <NodeType extends Node, EdgeType extends E
         },
         options,
       );
-
-      return true;
     },
     panBy,
     screenToFlowPosition: (position, options = {}) => {

@@ -37,6 +37,7 @@ const joins = (node: Node, overrides: Partial<RowJoins> = {}): RowJoins => ({
   position: node.position,
   measurement: undefined,
   rootParentIndex: undefined,
+  isParent: false,
   ...overrides,
 });
 
@@ -73,6 +74,7 @@ describe("computeRowState", () => {
       height: 40,
       handleBounds: undefined,
       rootParentIndex: undefined,
+      isParent: false,
     });
   });
 

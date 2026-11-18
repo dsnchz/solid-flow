@@ -51,7 +51,7 @@ export type FlowState<NodeType extends Node = Node, EdgeType extends Edge = Edge
   /**
    * The connection index. Keys are built with {@link connectionKey}:
    * `nodeId`, `nodeId-type`, and `nodeId-type-handleId`; each value maps a
-   * connection pair key to its {@link HandleConnection}.
+   * connection pair key to its {@link NodeConnection}.
    */
   readonly connections: ConnectionsRecord;
   /** The currently selected nodes and edges. */

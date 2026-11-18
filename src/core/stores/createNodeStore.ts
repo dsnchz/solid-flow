@@ -1,16 +1,19 @@
 import type { Refreshable, Store, StoreSetter } from "solid-js";
 
-import type { BuiltInNodeTypes, Node, NodeProps, NodeTypes, UnknownStruct } from "@/types";
+import type { BuiltInNodeTypes, Node, NodeTypes, UnknownStruct } from "@/types";
 
 import { seedNodeRow } from "../nodeSeed";
 import { createSeededOptimisticStore, createSeededStore, mapSeedInput } from "./factory";
 
 // Extract the data type from a node component's props; components whose
-// signature doesn't match the NodeProps shape (extra props, wrappers, no
-// props at all) degrade gracefully to an unconstrained data record instead
-// of collapsing their map key to `never`.
-type NodeDataOf<T> = T extends (props: NodeProps<infer TData, infer _TType>) => unknown
-  ? TData
+// props carry no `data` (wrappers, no props at all) degrade gracefully to an
+// unconstrained data record instead of collapsing their map key to `never`.
+// Read from the props' `data` field: @xyflow/system 1.0's NodeProps is a
+// distributive conditional type, which TS cannot infer type arguments through.
+type NodeDataOf<T> = T extends (props: infer TProps) => unknown
+  ? TProps extends { data: infer TData extends UnknownStruct }
+    ? TData
+    : UnknownStruct
   : UnknownStruct;
 
 // NOTE: the type machinery below is intentionally PARALLEL with createEdgeStore.ts

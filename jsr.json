@@ -6,7 +6,7 @@
   "imports": {
     "@/": "./src/",
     "@solid-primitives/event-listener": "npm:@solid-primitives/event-listener@3.0.0",
-    "@xyflow/system": "npm:@xyflow/system@0.0.84",
+    "@xyflow/system": "npm:@xyflow/system@1.0.0",
     "solid-js": "npm:solid-js@^2.0.0",
     "@solidjs/web": "npm:@solidjs/web@^2.0.0",
     "@solidjs/web/jsx-runtime": "npm:@solidjs/web@^2.0.0/jsx-runtime"

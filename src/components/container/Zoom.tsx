@@ -27,8 +27,8 @@ export type ZoomProps = {
   readonly panOnScroll: boolean;
   readonly panOnScrollSpeed: number;
   readonly panOnDrag: boolean | number[];
-  readonly paneClickDistance: number;
-  readonly selectionOnDrag?: boolean;
+  /** Pointer travel (px) before a pane drag pans; less is a click (@xyflow/system 1.0). */
+  readonly paneDragThreshold: number;
   /** Reported by the controller for a right click that did not pan (`panOnDrag` includes 2). */
   readonly onPaneContextMenu?: ({ event }: { event: MouseEvent }) => void;
 };
@@ -138,8 +138,7 @@ export const Zoom = (props: ParentProps<ZoomProps>): JSX.Element => {
         panOnScrollMode: props.panOnScrollMode as SystemPanOnScrollMode,
         preventScrolling:
           typeof props.preventScrolling === "boolean" ? props.preventScrolling : true,
-        paneClickDistance: props.paneClickDistance,
-        selectionOnDrag: props.selectionOnDrag,
+        paneDragThreshold: props.paneDragThreshold,
         connectionInProgress: connectionInProgress(),
       },
       // Presence only: the handler below reads the prop when it fires.

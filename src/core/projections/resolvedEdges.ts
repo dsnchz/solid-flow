@@ -1,6 +1,7 @@
 import {
   type ConnectionMode,
   getEdgePosition,
+  type HandleBounds,
   type OnError,
   type ZIndexMode,
 } from "@xyflow/system";
@@ -185,21 +186,35 @@ export const createResolvedEdges = <NodeType extends Node = Node, EdgeType exten
 };
 
 /**
- * An endpoint as @xyflow/system's getEdgePosition needs it. Without measured
- * handle bounds that helper falls back to the node's declared `handles` and
- * WRITES into each handle object (toHandleBounds: `width`/`height` default
- * to 1). A row store ignores those writes, so a handle declared without a
- * size stayed unsized and the edge's coordinates came out NaN. Before
- * measurement the helper gets plain copies of the declared handles to write
- * into; once handle bounds are measured it reads those and the node goes
- * through as is.
+ * An endpoint as @xyflow/system's getEdgePosition needs it. Since 1.0 the
+ * helper reads `internals.handleBounds` only; it no longer falls back to the
+ * node's declared `handles` (upstream's adoption parses them into the
+ * internals instead, parseHandles: `width`/`height` default to 1). Until its
+ * handles are measured, an endpoint with declared handles goes through with
+ * bounds parsed the same way; once measured it goes through as is.
  */
-const withWritableHandles = <NodeType extends Node>(
+const withDeclaredHandleBounds = <NodeType extends Node>(
   node: InternalNode<NodeType>,
 ): InternalNode<NodeType> => {
   const handles = node.handles;
   if (node.internals.handleBounds || !handles?.length) return node;
-  return { ...node, handles: handles.map((handle) => ({ ...handle })) };
+  const source: HandleBounds[] = [];
+  const target: HandleBounds[] = [];
+  for (const handle of handles) {
+    const bounds: HandleBounds = {
+      id: handle.id,
+      nodeId: node.id,
+      x: handle.x,
+      y: handle.y,
+      position: handle.position,
+      type: handle.type,
+      width: handle.width ?? 1,
+      height: handle.height ?? 1,
+    };
+    if (handle.type === "source") source.push(bounds);
+    else if (handle.type === "target") target.push(bounds);
+  }
+  return { ...node, internals: { ...node.internals, handleBounds: { source, target } } };
 };
 
 type EdgeSettings = Pick<
@@ -238,8 +253,8 @@ const buildRow = <NodeType extends Node, EdgeType extends Edge>(
   const edgePosition = untrack(() =>
     getEdgePosition({
       id: fields.id,
-      sourceNode: withWritableHandles(sourceNode),
-      targetNode: withWritableHandles(targetNode),
+      sourceNode: withDeclaredHandleBounds(sourceNode),
+      targetNode: withDeclaredHandleBounds(targetNode),
       sourceHandle: fields.sourceHandle || null,
       targetHandle: fields.targetHandle || null,
       connectionMode: settings.connectionMode as ConnectionMode,

@@ -245,7 +245,15 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   // never read; read when each row is created. A server render reads every
   // row (nothing culls there), so its rows start hot.
   const lazyRows = () => !isServer && !!config().onlyRenderVisibleElements;
+  // Which nodes currently have children (reactive "is parent" answers); the
+  // rows read it for `internals.isParent`.
+  const parentIds = createParentIds<NodeType>({
+    get nodes() {
+      return nodesStore;
+    },
+  });
   const internalNodes = createInternalNodes<NodeType>({
+    parentIds,
     endpointVersions,
     reportSelected: selectedNodes.set,
     reportUnmeasured: unmeasuredNodes.set,
@@ -630,13 +638,6 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
   });
   // Membership-cadence id → index maps for the per-frame writers.
   const nodeIndex = createRowIndex<NodeType>(visibleNodeIds);
-
-  // Which nodes currently have children (reactive "is parent" answers)
-  const parentIds = createParentIds<NodeType>({
-    get nodes() {
-      return store.nodes;
-    },
-  });
 
   // Edge-derived indexes (core projections): fully derived from the edges
   // store — no write side, no GC, no adoption pipeline. edgeLookup is

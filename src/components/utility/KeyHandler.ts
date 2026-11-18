@@ -108,19 +108,21 @@ export const KeyHandler = (props: KeyHandlerProps) => {
    * window-level mouseup/pointerup never arrives, so d3-drag (node drags),
    * d3-zoom (pans), and XYHandle (connections) stay armed and resume chasing
    * the cursor on refocus. Their gesture listeners only exist while a gesture
-   * is in flight, so a synthetic release on the window is a no-op when idle
-   * and ends the gesture at its last position otherwise. d3's handlers read
-   * `event.view`, so it must be set.
+   * is in flight, so a synthetic release is a no-op when idle and ends the
+   * gesture at its last position otherwise. It is dispatched on the document
+   * and bubbles to the window: d3 listens on the window, XYHandle on the
+   * document, and XYDrag 1.0 asks the node element whether it contains the
+   * release's target, which must be a Node. d3's handlers read `event.view`,
+   * so it must be set.
    */
   const cancelPointerGestures = () => {
-    // d3's gesture teardown reads `event.view`, so it must be the window; the
-    // fallback exists because jsdom's WebIDL check rejects test-runner window
-    // proxies (real browsers always take the first path).
+    // The fallback exists because jsdom's WebIDL check rejects test-runner
+    // window proxies as `view` (real browsers always take the first path).
     const release = (Ctor: typeof MouseEvent, type: string) => {
       try {
-        window.dispatchEvent(new Ctor(type, { view: window }));
+        document.dispatchEvent(new Ctor(type, { bubbles: true, view: window }));
       } catch {
-        window.dispatchEvent(new Ctor(type));
+        document.dispatchEvent(new Ctor(type, { bubbles: true }));
       }
     };
     release(MouseEvent, "mouseup");

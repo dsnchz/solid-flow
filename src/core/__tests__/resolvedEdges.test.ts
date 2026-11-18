@@ -18,6 +18,7 @@ const internalNode = (id: string, x: number, y: number): InternalNode => ({
   internals: {
     positionAbsolute: { x, y },
     z: 0,
+    isParent: false,
     userNode: { id, position: { x, y }, data: {} },
     // strict connectionMode requires measured handle bounds on both ends
     handleBounds: {

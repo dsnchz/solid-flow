@@ -1,6 +1,6 @@
 import {
   type ConnectionState,
-  type Handle,
+  type HandleBounds,
   initialConnection,
   pointToRendererPoint,
   type Transform,
@@ -16,7 +16,7 @@ export type ConnectionStateSource = {
   readonly transform: () => Transform;
 };
 
-type HandleIdentity = Pick<Handle, "id" | "nodeId" | "type">;
+type HandleIdentity = Pick<HandleBounds, "id" | "nodeId" | "type">;
 
 const handleIdentityEquals = (a: HandleIdentity | null, b: HandleIdentity | null) =>
   a === b || (!!a && !!b && a.nodeId === b.nodeId && a.type === b.type && a.id === b.id);

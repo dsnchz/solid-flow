@@ -88,7 +88,7 @@ export const AddNodeOnDropExample = () => {
         nodes={nodes}
         edges={edges}
         fitView
-        fitViewOptions={{ padding: 2 }}
+        fitViewOptions={{ padding: "33%" }}
         onConnectStart={(_, { nodeId }) => {
           // Memorize the nodeId you start dragging a connection line from a node
           setConnectingNodeId(nodeId);

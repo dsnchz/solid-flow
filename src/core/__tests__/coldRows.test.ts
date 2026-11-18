@@ -143,7 +143,12 @@ const internalNode = (id: string, x: number, y: number): InternalNode => ({
   data: {},
   measured: { width: 100, height: 40 },
   handles,
-  internals: { positionAbsolute: { x, y }, z: 0, userNode: { id, position: { x, y }, data: {} } },
+  internals: {
+    positionAbsolute: { x, y },
+    z: 0,
+    isParent: false,
+    userNode: { id, position: { x, y }, data: {} },
+  },
 });
 
 describe("cold edge rows (lazyRows)", () => {

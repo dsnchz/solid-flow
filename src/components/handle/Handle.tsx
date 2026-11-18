@@ -6,10 +6,10 @@ import {
   type ConnectionState,
   type FinalConnectionState,
   getHostForElement,
-  type HandleConnection,
   handleConnectionChange,
   type HandleProps as SystemHandleProps,
   type IsValidConnection as SystemIsValidConnection,
+  type NodeConnection,
   type Optional,
   XYHandle,
 } from "@xyflow/system";
@@ -106,7 +106,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
 
   const valid = () => targetState() === "valid";
 
-  let prevConnections: Map<string, HandleConnection> | null = null;
+  let prevConnections: Map<string, NodeConnection> | null = null;
 
   // The compute snapshots this handle's connection sub-record into a Map (the
   // reads — key structure + leaves — are tracked there; leaves are immutable
@@ -120,7 +120,7 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
     createEffect(
       () => {
         const rec = connections[connectionKey(nodeId(), type(), props.id)];
-        const map = new Map<string, HandleConnection>();
+        const map = new Map<string, NodeConnection>();
         for (const key of Object.keys(rec ?? {})) map.set(key, { ...rec![key]! });
         return { connections: map };
       },

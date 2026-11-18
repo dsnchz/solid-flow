@@ -169,10 +169,11 @@ export type SolidFlowViewportProps<NodeType extends Node = Node> = {
   /** If set, initial viewport will show all nodes & edges */
   readonly fitView?: boolean;
   /**
-   * Options to be used in combination with fitView
+   * Options to be used in combination with fitView. A numeric `padding` is
+   * in pixels; percentages are strings (default `"5%"`, @xyflow/system 1.0).
    * @example
    * const fitViewOptions = {
-   *  padding: 0.1,
+   *  padding: "10%",
    *  includeHiddenNodes: false,
    *  minZoom: 0.1,
    *  maxZoom: 1,
@@ -236,14 +237,14 @@ export type SolidFlowInteractionProps<NodeType extends Node = Node> = {
    */
   readonly nodeDragThreshold?: number;
   /**
-   * Distance that the mouse can move between mousedown/up that will trigger a click
-   * @default 0
+   * Distance in pixels the pointer has to move before dragging the pane starts
+   * panning or a selection box. If it moves less, the gesture is a click
+   * (`onPaneClick`, or `onPaneContextMenu` when panning with the right mouse
+   * button) and the viewport does not move. Applies to every mouse button
+   * `panOnDrag` enables and to `selectionOnDrag`.
+   * @default 1
    */
-  readonly paneClickDistance?: number;
-  /** Distance that the mouse can move between mousedown/up that will trigger a click
-   * @default 0
-   */
-  readonly nodeClickDistance?: number;
+  readonly paneDragThreshold?: number;
   /**
    * Controls if nodes should be automatically selected when being dragged
    */
@@ -711,7 +712,6 @@ export const FLOW_PROP_KEYS = [
   "noDragClass",
   "noPanClass",
   "noWheelClass",
-  "nodeClickDistance",
   "nodeDragThreshold",
   "nodeExtent",
   "nodeOrigin",
@@ -775,7 +775,7 @@ export const FLOW_PROP_KEYS = [
   "panOnScroll",
   "panOnScrollMode",
   "panOnScrollSpeed",
-  "paneClickDistance",
+  "paneDragThreshold",
   "preventScrolling",
   "proOptions",
   "selectNodesOnDrag",

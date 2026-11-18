@@ -39,7 +39,6 @@ export type NodeWrapperProps<NodeType extends Node = Node> = {
   /** The row, as NodeRenderer's Show narrows it (one resolution per row). */
   readonly node: Accessor<InternalNode<NodeType>>;
   readonly resizeObserver: ResizeObserver | undefined;
-  readonly nodeClickDistance: number;
 };
 
 /** Internal per-node wrapper: dragging, selection, a11y, measurement, viewport culling, and the dynamic node component. */
@@ -357,7 +356,6 @@ export const NodeWrapper = <NodeType extends Node = Node>(
         disabled: !draggable(),
         handleSelector: node().dragHandle,
         noDragClass: store.noDragClass,
-        nodeClickDistance: props.nodeClickDistance,
         onNodeMouseDown: actions.handleNodeSelection,
         ...toNodeDragHandlers(props.events, true),
       }),

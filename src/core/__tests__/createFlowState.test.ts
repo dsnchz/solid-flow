@@ -1,5 +1,10 @@
 // @vitest-environment node
-import { getElementsToRemove, type PanZoomInstance, Position } from "@xyflow/system";
+import {
+  getElementsToRemove,
+  getViewportForBounds,
+  type PanZoomInstance,
+  Position,
+} from "@xyflow/system";
 import { createRoot, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
@@ -51,6 +56,25 @@ describe("FlowState struct", () => {
       expect(flow.nodes.map((n) => n.id)).toEqual(["a", "b"]);
       expect(flow.internalNodes.b?.internals.positionAbsolute).toEqual({ x: 50, y: 50 });
     });
+  });
+
+  it("marks a row with children as a parent (internals.isParent, @xyflow/system 1.0)", async () => {
+    await withFlow(
+      { nodes: [makeNode({ id: "p" }), makeNode({ id: "q" })], edges: [] },
+      async ({ flow, commands }) => {
+        expect(flow.internalNodes.p?.internals.isParent).toBe(false);
+
+        commands.addNodes(makeNode({ id: "c", parentId: "p" }));
+        flush();
+        expect(flow.internalNodes.p?.internals.isParent).toBe(true);
+        expect(flow.internalNodes.q?.internals.isParent).toBe(false);
+        expect(flow.internalNodes.c?.internals.isParent).toBe(false);
+
+        await commands.deleteElements({ nodes: [{ id: "c" }] });
+        flush();
+        expect(flow.internalNodes.p?.internals.isParent).toBe(false);
+      },
+    );
   });
 
   it("exposes selection as one reactive object with stable identity", async () => {
@@ -411,7 +435,7 @@ describe("FlowCommands", () => {
       expect(await commands.setZoom(2)).toBe(false);
       expect(await commands.fitBounds({ x: 0, y: 0, width: 100, height: 100 })).toBe(false);
 
-      const setViewport = vi.fn(async () => undefined);
+      const setViewport = vi.fn(async () => true);
       const scaleTo = vi.fn(async () => true);
       actions.setPanZoom({
         setViewport,
@@ -428,6 +452,41 @@ describe("FlowCommands", () => {
       expect(scaleTo).toHaveBeenCalledWith(2, { duration: undefined });
       expect(await commands.fitBounds({ x: 0, y: 0, width: 100, height: 100 })).toBe(true);
     });
+  });
+
+  it("viewport commands resolve the controller's answer: false when a transition is interrupted", async () => {
+    // @xyflow/system 1.0: PanZoomInstance.setViewport resolves false when a
+    // user interaction or another viewport change interrupts the animation.
+    await withFlow(
+      { nodes: [], edges: [], width: 400, height: 300 },
+      async ({ commands, actions, store }) => {
+        const setViewport = vi.fn(async () => false);
+        actions.setPanZoom({
+          setViewport,
+          syncViewport: vi.fn(),
+          setScaleExtent: vi.fn(),
+          setTranslateExtent: vi.fn(),
+        } as unknown as PanZoomInstance);
+        flush();
+
+        expect(await commands.setViewport({ x: 1, y: 2, zoom: 3 }, { duration: 200 })).toBe(false);
+        expect(await commands.setCenter(10, 20, { zoom: 1, duration: 200 })).toBe(false);
+        const bounds = { x: 0, y: 0, width: 100, height: 100 };
+        expect(await commands.fitBounds(bounds, { duration: 200 })).toBe(false);
+        // fitBounds pads by upstream's default, 5% of the viewport
+        expect(setViewport).toHaveBeenLastCalledWith(
+          getViewportForBounds(
+            bounds,
+            store.width,
+            store.height,
+            store.minZoom,
+            store.maxZoom,
+            "5%",
+          ),
+          expect.objectContaining({ duration: 200 }),
+        );
+      },
+    );
   });
 
   it("position conversions pass through without a mounted DOM node", async () => {

@@ -17,7 +17,6 @@ export type NodeRendererProps<NodeType extends Node = Node> = NodeEvents<NodeTyp
    * pan-zoom exist before the first row does (mount profile round 30).
    */
   rowsReady?: () => boolean;
-  readonly nodeClickDistance: number;
 };
 
 const NO_ROWS: readonly string[] = [];
@@ -100,14 +99,7 @@ export const NodeRenderer = <NodeType extends Node = Node>(
           };
           return (
             <Show when={visibleRow()}>
-              {(node) => (
-                <NodeWrapper
-                  node={node}
-                  resizeObserver={resizeObserver}
-                  nodeClickDistance={props.nodeClickDistance}
-                  events={props}
-                />
-              )}
+              {(node) => <NodeWrapper node={node} resizeObserver={resizeObserver} events={props} />}
             </Show>
           );
         }}

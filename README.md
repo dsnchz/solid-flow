@@ -526,6 +526,17 @@ useInternalNode(() => "a");
 
 **7. Styling and theming.** Import `@dschz/solid-flow/style.css` (the old `@dschz/solid-flow/styles` path still works), or `base.css` for the minimal skin; see [Styling](#styling). `colorMode` and `colorModeSSR` are replaced by `forceColorMode`: 0.2.x defaulted to light, 1.x follows the OS, so pass `forceColorMode="light"` to keep the old look, and drop `colorModeSSR` (the server no longer has to guess). `useColorMode` is removed. The library CSS now sits in the `xyflow` cascade layer, so overrides that needed `!important` or extra specificity can lose both. `ResizeControl` is now `NodeResizeControl`, and the renderer internals (`NodeWrapper`, `EdgeWrapper`, `Pane`, `Zoom`, the built-in node components, …) are no longer exported.
 
+**8. Gesture engine changes from `@xyflow/system` 1.0 (shared with React Flow 13 and Svelte Flow 2).**
+
+| 0.2.x                                                                        | 1.x                                                                                                                                                                                         |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `paneClickDistance` (default `0`)                                            | `paneDragThreshold` (default `1`): the pane pans or starts a selection box only after the pointer moved further; a shorter movement is a click, with every mouse button `panOnDrag` enables |
+| `nodeClickDistance`                                                          | removed: a node click is swallowed only after a drag that moved nodes; tune drags with `nodeDragThreshold`                                                                                  |
+| `onConnectEnd` / `onReconnectEnd` `to` in screen coordinates                 | `to` in flow coordinates: drop the `screenToFlowPosition` conversion                                                                                                                        |
+| numeric `fitViewOptions.padding` / `fitBounds` padding as a fraction (`0.1`) | a number is pixels; pass a percentage string (`"10%"`). The default is `"5%"`                                                                                                               |
+| `setViewport` / `setCenter` / `fitBounds` resolve `true`                     | they resolve `false` when an interaction or another viewport change interrupts the animation                                                                                                |
+| `HandleConnection` type                                                      | `NodeConnection`                                                                                                                                                                            |
+
 ## Examples
 
 The repository ships a playground with 35+ runnable examples — custom nodes and edges, edge reconnection, drag & drop, subflows, validation, minimap customization, a 10k-node stress test, accessibility, and more:

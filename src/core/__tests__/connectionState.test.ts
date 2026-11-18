@@ -1,7 +1,7 @@
 // @vitest-environment node
 import {
   type ConnectionInProgress,
-  type Handle,
+  type HandleBounds,
   infiniteExtent,
   initialConnection,
   Position,
@@ -32,13 +32,14 @@ const fromNode: InternalNode = buildRow(
       position: node.position,
       measurement: undefined,
       rootParentIndex: undefined,
+      isParent: false,
     },
     { nodeOrigin: [0, 0], nodeExtent: infiniteExtent, elevateNodesOnSelect: true },
     undefined,
   ),
 );
 
-const handle = (nodeId: string, type: "source" | "target", id: string | null): Handle => ({
+const handle = (nodeId: string, type: "source" | "target", id: string | null): HandleBounds => ({
   id,
   nodeId,
   type,

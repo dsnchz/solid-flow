@@ -9,7 +9,7 @@ import {
   type AriaLabelConfig as SystemAriaLabelConfig,
   type BezierPathOptions as SystemBezierPathOptions,
   type Box as SystemBox,
-  type ColorModeClass as SystemColorModeClass,
+  type ColorMode as SystemColorMode,
   type Dimensions as SystemDimensions,
   type EdgeBase,
   type EdgeMarkerType as SystemEdgeMarkerType,
@@ -61,10 +61,10 @@ export type Box = SystemBox;
 
 /**
  * A color scheme the flow can be forced into (`forceColorMode`). There is no
- * "system" mode: unset, the flow follows the OS through CSS. @xyflow/system
- * 1.x defines `ColorMode` the same way.
+ * "system" mode: unset, the flow follows the OS through CSS, as in
+ * @xyflow/system 1.0's `ColorMode`.
  */
-export type ColorMode = SystemColorModeClass;
+export type ColorMode = SystemColorMode;
 
 /** A width/height pair. */
 export type Dimensions = SystemDimensions;

@@ -4,7 +4,7 @@ import {
   ConnectionLineType as SystemConnectionLineType,
   ConnectionMode as SystemConnectionMode,
   type FitViewOptionsBase,
-  type Handle,
+  type HandleBounds,
   MarkerType as SystemMarkerType,
   type OnBeforeDeleteBase,
   PanOnScrollMode as SystemPanOnScrollMode,
@@ -52,7 +52,7 @@ export type ConnectionLineComponentProps<NodeType extends Node = Node> = {
   readonly connectionLineStyle?: JSX.CSSProperties;
   readonly connectionLineType: ConnectionLineType;
   readonly fromNode: InternalNode<NodeType>;
-  readonly fromHandle: Handle;
+  readonly fromHandle: HandleBounds;
   readonly fromX: number;
   readonly fromY: number;
   readonly toX: number;
@@ -61,7 +61,7 @@ export type ConnectionLineComponentProps<NodeType extends Node = Node> = {
   readonly toPosition: Position;
   readonly connectionStatus: "valid" | "invalid" | null;
   readonly toNode: InternalNode<NodeType> | null;
-  readonly toHandle: Handle | null;
+  readonly toHandle: HandleBounds | null;
 };
 export const SelectionMode = SystemSelectionMode;
 export type SelectionMode = `${SystemSelectionMode}`;
@@ -92,8 +92,8 @@ export type KeyDefinition = string | KeyDefinitionObject;
 /** Live state of an in-progress connection gesture. */
 export type ConnectionData = {
   connectionPosition: XYPosition | null;
-  connectionStartHandle: Handle | null;
-  connectionEndHandle: Handle | null;
+  connectionStartHandle: HandleBounds | null;
+  connectionEndHandle: HandleBounds | null;
   connectionStatus: string | null;
 };
 

@@ -1,4 +1,4 @@
-import type { Handle, NodeDimensionChange, NodePositionChange } from "@xyflow/system";
+import type { DimensionChange, HandleBounds, PositionChange } from "@xyflow/system";
 import { createEffect, type StoreSetter } from "solid-js";
 
 import type { Node } from "@/types";
@@ -15,7 +15,10 @@ export type MeasurementIngestDeps<NodeType extends Node> = {
   readonly nodeIndex: RowIndex<NodeType>;
 };
 
-const handleListEqual = (a: readonly Handle[] | null, b: readonly Handle[] | null): boolean => {
+const handleListEqual = (
+  a: readonly HandleBounds[] | null,
+  b: readonly HandleBounds[] | null,
+): boolean => {
   if (a === null || b === null) return a === b;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
@@ -42,7 +45,7 @@ const handleListEqual = (a: readonly Handle[] | null, b: readonly Handle[] | nul
  * store serves it RAW by identity, and a row write of the same list is a
  * no-op.
  */
-const freezeHandles = (list: Handle[] | null): Handle[] | null => {
+const freezeHandles = (list: HandleBounds[] | null): HandleBounds[] | null => {
   if (list === null) return null;
   for (const handle of list) Object.freeze(handle);
   Object.freeze(list);
@@ -50,7 +53,7 @@ const freezeHandles = (list: Handle[] | null): Handle[] | null => {
 };
 
 /** The stored list when it equals the pass's fresh one, else the fresh one frozen. */
-const nextHandles = (stored: Handle[] | null | undefined, next: Handle[] | null) =>
+const nextHandles = (stored: HandleBounds[] | null | undefined, next: HandleBounds[] | null) =>
   stored !== undefined && handleListEqual(stored, next) ? stored : freezeHandles(next);
 
 /**
@@ -99,7 +102,7 @@ export const createMeasurementIngest = <NodeType extends Node>({
   };
 
   /** Applies measured dimension/position changes back to the user graph. */
-  const applyNodeChanges = (changes: (NodeDimensionChange | NodePositionChange)[]) => {
+  const applyNodeChanges = (changes: (DimensionChange | PositionChange)[]) => {
     if (changes.length === 0) return;
 
     setNodesStore((nodes) => {

@@ -4,7 +4,7 @@ import {
   type CoordinateExtent,
   getNodeDimensions,
   getNodePositionWithOrigin,
-  type Handle,
+  type HandleBounds,
   isCoordinateExtent,
   isNumeric,
   type NodeBase,
@@ -66,6 +66,8 @@ export type RowJoins = {
   readonly measurement: NodeMeasurement | undefined;
   /** The node's z block in "auto" mode when it is a root parent. */
   readonly rootParentIndex: number | undefined;
+  /** Whether the node has children (system 1.0's `internals.isParent`). */
+  readonly isParent: boolean;
 };
 
 /** Everything a row derive computes, as plain values: what the row leaves hold. */
@@ -84,9 +86,10 @@ export type RowState = {
   readonly width: number;
   readonly height: number;
   /** The measured handles, each list by identity; `undefined` until measured. */
-  readonly handleSource: Handle[] | null | undefined;
-  readonly handleTarget: Handle[] | null | undefined;
+  readonly handleSource: HandleBounds[] | null | undefined;
+  readonly handleTarget: HandleBounds[] | null | undefined;
   readonly rootParentIndex: number | undefined;
+  readonly isParent: boolean;
 };
 
 /** The user-row fields the geometry helpers read, plus the joined values. */
@@ -118,7 +121,7 @@ export const computeRowState = <NodeType extends Node>(
   parent: InternalNode<NodeType> | undefined,
 ): RowState => {
   const { nodeOrigin, nodeExtent, zIndexMode, elevateNodesOnSelect } = settings;
-  const { selected, dragging, position, measurement, rootParentIndex } = joins;
+  const { selected, dragging, position, measurement, rootParentIndex, isParent } = joins;
   const selectedNodeZ =
     elevateNodesOnSelect && !isManualZIndexMode(zIndexMode) ? SELECTED_NODE_Z : 0;
 
@@ -180,6 +183,7 @@ export const computeRowState = <NodeType extends Node>(
     handleSource: measurement?.handleSource,
     handleTarget: measurement?.handleTarget,
     rootParentIndex,
+    isParent,
   };
 };
 
@@ -279,6 +283,7 @@ export const buildRow = <NodeType extends Node>(
     handleBounds: handleBoundsOf(state),
     z: state.z,
     ...(state.rootParentIndex !== undefined ? { rootParentIndex: state.rootParentIndex } : {}),
+    isParent: state.isParent,
     userNode,
   },
 });
@@ -313,7 +318,8 @@ export const writeChangedLeaves = <NodeType extends Node>(
     moved ||
     next.z !== prev.z ||
     handlesChanged ||
-    next.rootParentIndex !== prev.rootParentIndex
+    next.rootParentIndex !== prev.rootParentIndex ||
+    next.isParent !== prev.isParent
   ) {
     const { internals } = row;
     if (moved) {
@@ -339,6 +345,7 @@ export const writeChangedLeaves = <NodeType extends Node>(
       if (next.rootParentIndex === undefined) delete internals.rootParentIndex;
       else internals.rootParentIndex = next.rootParentIndex;
     }
+    if (next.isParent !== prev.isParent) internals.isParent = next.isParent;
   }
 };
 

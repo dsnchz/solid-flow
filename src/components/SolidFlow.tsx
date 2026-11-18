@@ -44,13 +44,12 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
   // wrappers forwarding optional props must not clobber them.
   const _props = propDefaults(props, {
     ...getDefaultFlowStateProps(),
-    nodeClickDistance: 0,
     panOnScroll: false,
     preventScrolling: true,
     panOnDrag: true,
     panOnScrollSpeed: 0.5,
     panOnScrollMode: "free" as PanOnScrollMode,
-    paneClickDistance: 0,
+    paneDragThreshold: 1,
     selectionOnDrag: false,
     translateExtent: infiniteExtent,
     zoomOnPinch: true,
@@ -209,8 +208,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
           panOnScroll={_props.panOnScroll}
           panOnScrollSpeed={_props.panOnScrollSpeed}
           panOnDrag={_props.panOnDrag}
-          paneClickDistance={_props.paneClickDistance}
-          selectionOnDrag={_props.selectionOnDrag}
+          paneDragThreshold={_props.paneDragThreshold}
           onPaneContextMenu={_props.onPaneContextMenu}
           onMoveStart={_props.onMoveStart}
           onMove={_props.onMove}
@@ -231,7 +229,7 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
             selectionOnDrag={_props.selectionOnDrag}
             deselectOnSelection={_props.deselectOnSelection}
             isNodeSelectable={_props.isNodeSelectable}
-            paneClickDistance={_props.paneClickDistance}
+            paneDragThreshold={_props.paneDragThreshold}
             autoPanOnSelection={_props.autoPanOnSelection}
           >
             <Viewport>
@@ -254,7 +252,6 @@ export const SolidFlow = <NodeType extends Node = Node, EdgeType extends Edge = 
               />
               <NodeRenderer
                 rowsReady={rowsReady}
-                nodeClickDistance={_props.nodeClickDistance}
                 onNodeClick={_props.onNodeClick}
                 onNodeDoubleClick={_props.onNodeDoubleClick}
                 onNodeContextMenu={_props.onNodeContextMenu}

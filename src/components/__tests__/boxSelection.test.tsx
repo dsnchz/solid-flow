@@ -17,7 +17,7 @@ const makeNode = (id: string, x: number): Node => ({
 
 /**
  * Drives a box selection on the pane: pointerdown on the pane itself, two
- * moves (the first exceeds paneClickDistance and starts the selection), and
+ * moves (the first exceeds paneDragThreshold and starts the selection), and
  * pointerup. With a 0/0/1 viewport and jsdom's zero container rect, screen
  * coordinates are flow coordinates.
  */

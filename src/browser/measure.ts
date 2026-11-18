@@ -2,6 +2,7 @@ import {
   clampPosition,
   clampPositionToParent,
   type CoordinateExtent,
+  type DimensionChange,
   getBoundsOfRects,
   getDimensions,
   getHandleBounds,
@@ -10,11 +11,10 @@ import {
   type InternalNodeUpdate,
   isCoordinateExtent,
   type NodeBase,
-  type NodeDimensionChange,
   type NodeOrigin,
-  type NodePositionChange,
   nodeToRect,
   type ParentExpandChild,
+  type PositionChange,
   type Rect,
 } from "@xyflow/system";
 
@@ -40,11 +40,11 @@ export function measureNodeInternals<NodeType extends InternalNodeBase>(
 ): {
   updatedInternals: boolean;
   measurementWrites: NodeMeasurementWrite[];
-  changes: (NodeDimensionChange | NodePositionChange)[];
+  changes: (DimensionChange | PositionChange)[];
   parentExpandChildren: ParentExpandChild[];
 } {
   const measurementWrites: NodeMeasurementWrite[] = [];
-  const changes: (NodeDimensionChange | NodePositionChange)[] = [];
+  const changes: (DimensionChange | PositionChange)[] = [];
   const parentExpandChildren: ParentExpandChild[] = [];
   let updatedInternals = false;
 
@@ -139,8 +139,8 @@ export function handleExpandParent(
   nodeLookup: Map<string, InternalNodeBase>,
   getChildNodes: (parentId: string) => readonly NodeBase[],
   nodeOrigin: NodeOrigin = [0, 0],
-): (NodeDimensionChange | NodePositionChange)[] {
-  const changes: (NodeDimensionChange | NodePositionChange)[] = [];
+): (DimensionChange | PositionChange)[] {
+  const changes: (DimensionChange | PositionChange)[] = [];
   const parentExpansions = new Map<string, { expandedRect: Rect; parent: InternalNodeBase }>();
 
   // determine the expanded rectangle the child nodes would take for each parent
