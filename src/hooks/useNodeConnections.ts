@@ -1,5 +1,10 @@
-import { areConnectionMapsEqual, type HandleType, type NodeConnection } from "@xyflow/system";
-import { type Accessor, createEffect, createSignal, useContext } from "solid-js";
+import {
+  areConnectionMapsEqual,
+  handleConnectionChange,
+  type HandleType,
+  type NodeConnection,
+} from "@xyflow/system";
+import { type Accessor, createEffect, createSignal, untrack, useContext } from "solid-js";
 
 import { useInternalSolidFlow } from "@/contexts";
 import { NodeContext } from "@/contexts/nodeId";
@@ -9,10 +14,10 @@ type UseNodeConnectionsParams = {
   id?: string;
   handleType?: HandleType;
   handleId?: string;
-  // React/Svelte Flow also accept onConnect/onDisconnect callbacks here;
-  // in Solid Flow those live on <Handle> (which owns the connection-diff
-  // machinery). Add them here only if a concrete use case can't reach the
-  // Handle props.
+  /** Called with the connections that appeared (not for those present on mount). */
+  onConnect?: (connections: NodeConnection[]) => void;
+  /** Called with the connections that went away. */
+  onDisconnect?: (connections: NodeConnection[]) => void;
 };
 
 /**
@@ -22,8 +27,8 @@ type UseNodeConnectionsParams = {
  * @param param.id - node id - optional if called inside a custom node
  * @param param.handleType - filter by handle type 'source' or 'target'
  * @param param.handleId - filter by handle id (this is only needed if the node has multiple handles of the same type)
- * @todo @param param.onConnect - gets called when a connection is established
- * @todo @param param.onDisconnect - gets called when a connection is removed
+ * @param param.onConnect - gets called when a connection is established
+ * @param param.onDisconnect - gets called when a connection is removed
  * @returns an array with connections
  */
 export const useNodeConnections = (
@@ -58,10 +63,15 @@ export const useNodeConnections = (
       return { connections: map };
     },
     ({ connections: nextConnections }) => {
-      if (!areConnectionMapsEqual(nextConnections, prevConnections)) {
-        prevConnections = nextConnections;
-        setConnections(Array.from(nextConnections.values()));
+      if (areConnectionMapsEqual(nextConnections, prevConnections)) return;
+      if (prevConnections) {
+        // Read when the change lands, as an event handler reads its props.
+        const { onConnect, onDisconnect } = untrack(params);
+        handleConnectionChange(prevConnections, nextConnections, onDisconnect);
+        handleConnectionChange(nextConnections, prevConnections, onConnect);
       }
+      prevConnections = nextConnections;
+      setConnections(Array.from(nextConnections.values()));
     },
     { name: "useNodeConnections" },
   );

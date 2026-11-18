@@ -296,7 +296,11 @@ const connection = useConnection(); // in-progress connection state
 // Hook parameters that feed reactive reads are accessors, so they can't
 // silently go stale when derived from props:
 const nodeData = useNodesData(() => ["node-1", "node-2"]);
-const connections = useNodeConnections(() => ({ id: "node-1" }));
+const connections = useNodeConnections(() => ({
+  id: "node-1",
+  handleType: "target",
+  onConnect: (added) => console.log("connected", added), // optional, not called on mount
+}));
 const internal = useInternalNode(() => props.nodeId); // measured/internal record
 
 const updateInternals = useUpdateNodeInternals(); // re-measure after handle changes

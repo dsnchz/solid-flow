@@ -254,6 +254,50 @@ describe("hooks", () => {
     expect(connections().map((c) => c.edgeId)).toEqual(["e2"]);
   });
 
+  it("useNodeConnections calls onConnect and onDisconnect as connections change, not on mount", async () => {
+    // React Flow 13 / Svelte Flow 2 parity (@xyflow/system 1.0's UseNodeConnectionsParams).
+    const onConnect = vi.fn();
+    const onDisconnect = vi.fn();
+    const [edges, setEdges] = createEdgeStore([{ id: "e1", source: "a", target: "b" }]);
+
+    render(() => (
+      <SolidFlow
+        nodes={[
+          makeNode({ id: "a" }),
+          makeNode({ id: "b", position: { x: 200, y: 100 } }),
+          makeNode({ id: "c", position: { x: 400, y: 100 } }),
+        ]}
+        edges={edges}
+        width={800}
+        height={600}
+      >
+        {(() => {
+          const Probe = () => {
+            useNodeConnections(() => ({ id: "a", handleType: "source", onConnect, onDisconnect }));
+            return null;
+          };
+          return <Probe />;
+        })()}
+      </SolidFlow>
+    ));
+    await settle();
+    expect(onConnect).not.toHaveBeenCalled();
+
+    setEdges((draft) => {
+      draft.push({ id: "e2", source: "a", target: "c" });
+    });
+    flush();
+    expect(onConnect).toHaveBeenCalledTimes(1);
+    expect(onConnect.mock.lastCall?.[0]).toEqual([expect.objectContaining({ edgeId: "e2" })]);
+    expect(onDisconnect).not.toHaveBeenCalled();
+
+    setEdges(() => [{ id: "e2", source: "a", target: "c" }]);
+    flush();
+    expect(onDisconnect).toHaveBeenCalledTimes(1);
+    expect(onDisconnect.mock.lastCall?.[0]).toEqual([expect.objectContaining({ edgeId: "e1" })]);
+    expect(onConnect).toHaveBeenCalledTimes(1);
+  });
+
   it("throws a descriptive error when used outside <SolidFlow>", () => {
     // 2.0 regression guard: contexts created with an undefined default throw
     // ContextNotFoundError on read, before our guard runs — the null sentinel
