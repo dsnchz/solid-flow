@@ -535,6 +535,35 @@ Two complementary culling tiers, plus gesture-time spatial queries, keep large g
 
 The MiniMap always renders the full graph in either mode — it reads the data graph, not the DOM.
 
+### Solid Flow 0.x vs 1.x
+
+Measured 2026-11-18 on the same stress page: a grid of default nodes, each chained to the next by an edge, controlled state, viewport 1280 × 800 at zoom 1, no fit view or MiniMap. The page was built against 0.2.6 on Solid 1.9.19 and against 1.0.0 ([`d65b7e6`](https://github.com/dsnchz/solid-flow/commit/d65b7e6)) on Solid 2.0.0, each using its documented state-update API (0.2.x: `createNodeStore` / `createEdgeStore` with path setters). Production builds in headless Chromium (Playwright 1.63) on an Apple M4 Pro, AC power, median of three runs with the version order rotated. Gestures are 60 pointer moves and report the browser's script time for the whole gesture; bulk writes report wall time for the write and reactive flush, using the second write for repeated operations. Heap is sampled after forced garbage collection.
+
+At 10,000 nodes and 9,999 edges:
+
+|                                      | 0.2.6    | 1.0.0    | 0.2.6 / 1.0.0 |
+| ------------------------------------ | -------- | -------- | ------------- |
+| Mount (until every node is measured) | 4,567 ms | 2,612 ms | 1.7x          |
+| Heap with the flow mounted           | 588 MB   | 495 MB   | 1.2x          |
+| Node drag                            | 1,140 ms | 26 ms    | 44x           |
+| Selection drag                       | 515 ms   | 110 ms   | 4.7x          |
+| Box selection                        | 1,039 ms | 47 ms    | 22x           |
+| Pane drag                            | 10 ms    | 16 ms    | 0.6x          |
+| Connection drag                      | 4,946 ms | 73 ms    | 68x           |
+| Select all                           | 546 ms   | 253 ms   | 2.2x          |
+| Replace the whole graph              | 951 ms   | 382 ms   | 2.5x          |
+| Move every node                      | 520 ms   | 347 ms   | 1.5x          |
+| Delete half the nodes                | 174 ms   | 120 ms   | 1.5x          |
+
+The gap grows with the graph. A node drag in 0.2.6 costs time in proportion to the number of nodes; in 1.0.0 it stays flat:
+
+| Nodes | 100   | 1,024  | 2,500  | 5,041  | 10,000   |
+| ----- | ----- | ------ | ------ | ------ | -------- |
+| 0.2.6 | 38 ms | 133 ms | 299 ms | 609 ms | 1,140 ms |
+| 1.0.0 | 28 ms | 25 ms  | 25 ms  | 26 ms  | 26 ms    |
+
+The 1.0.0 column runs the library defaults, CSS culling on. 0.2.6 has no culling; with culling turned off (`cullable: false` on every node and edge) every 1.0.0 row above stays within 8% of its default value except two: a connection drag costs 165 ms instead of 73, and select all 210 ms instead of 253.
+
 ## Server-side rendering
 
 `<SolidFlow>` renders with `renderToString` and hydrates cleanly (a test lane server-renders flows and hydrates them over that markup: every node and edge element is claimed, not re-created, and the flow is interactive). For meaningful server-rendered layout, give nodes explicit `width` / `height` (there is no DOM to measure on the server) — the same guidance as React/Svelte Flow. What the server markup contains, and what it does not:
