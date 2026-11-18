@@ -18,7 +18,10 @@ type NodeDataOf<T> = T extends (props: infer TProps) => unknown
 
 // NOTE: the type machinery below is intentionally PARALLEL with createEdgeStore.ts
 // (TS has no higher-kinded types to abstract the Node/Edge constructors);
-// keep the two in sync. Runtime behavior lives once, in ./factory.ts.
+// keep the two in sync. Runtime behavior lives once, in ./factory.ts. One
+// deliberate difference: the node union's "default" member (DefaultNodeInput)
+// makes `type` optional by hand; @xyflow/system's EdgeBase already declares
+// an edge's `type` optional, so the edge union needs no such member.
 // Create a discriminated union of all possible node configurations
 type AllNodeTypes<TUserNodeTypes extends NodeTypes> =
   TUserNodeTypes extends Record<string, never>
@@ -39,11 +42,17 @@ type AllNodeTypes<TUserNodeTypes extends NodeTypes> =
  * ```
  */
 export type SolidFlowNode<TUserNodeTypes extends NodeTypes = Record<string, never>> = {
-  [K in keyof AllNodeTypes<TUserNodeTypes>]: Node<
-    NodeDataOf<AllNodeTypes<TUserNodeTypes>[K]>,
-    K & string
-  >;
+  [K in keyof AllNodeTypes<TUserNodeTypes>]: K extends "default"
+    ? DefaultNodeInput<NodeDataOf<AllNodeTypes<TUserNodeTypes>[K]>>
+    : Node<NodeDataOf<AllNodeTypes<TUserNodeTypes>[K]>, K & string>;
 }[keyof AllNodeTypes<TUserNodeTypes>];
+
+// A node without `type` renders as "default", so that member's `type` is
+// optional. Not `Node<D, "default" | undefined>`: @xyflow/system widens an
+// optional `type` to `string`, which would accept any type name.
+type DefaultNodeInput<NodeData extends UnknownStruct> = Omit<Node<NodeData, "default">, "type"> & {
+  type?: "default";
+};
 
 type NodesInput<TUserNodeTypes extends NodeTypes> = SolidFlowNode<TUserNodeTypes>;
 

@@ -54,6 +54,32 @@ describe("createNodeStore type contract", () => {
     expect(nodes).toHaveLength(1);
   });
 
+  it("an untyped node is a default node: `type` may be omitted, as at runtime", () => {
+    const [plain] = createNodeStore([{ id: "a", position: { x: 0, y: 0 }, data: { label: "a" } }]);
+    const [custom] = createNodeStore<typeof _nodeTypes>([
+      { id: "b", position: { x: 0, y: 0 }, data: { label: "b" } },
+      { id: "c", position: { x: 0, y: 0 }, type: "counter", data: { count: 1 } },
+    ]);
+    expect(plain).toHaveLength(1);
+    expect(custom).toHaveLength(2);
+  });
+
+  it("an untyped node still carries the default node's data", () => {
+    const [nodes] = createNodeStore<typeof _nodeTypes>([
+      // @ts-expect-error - without `type` the node renders as "default", whose data is { label: string }
+      { id: "a", position: { x: 0, y: 0 }, data: { count: 1 } },
+    ]);
+    expect(nodes).toHaveLength(1);
+  });
+
+  it("a misspelled type name is rejected even when the data fits the default node", () => {
+    const [nodes] = createNodeStore<typeof _nodeTypes>([
+      // @ts-expect-error - "defualt" is not a type name, though { label } is default-node data
+      { id: "a", position: { x: 0, y: 0 }, type: "defualt", data: { label: "a" } },
+    ]);
+    expect(nodes).toHaveLength(1);
+  });
+
   it("domAttributes accepts plain attributes but rejects event handlers and injection", () => {
     const [nodes] = createNodeStore([
       {
@@ -94,6 +120,11 @@ describe("createEdgeStore type contract", () => {
     ]);
     expect(edges).toHaveLength(3);
   });
+
+  it("an untyped edge is a default edge", () => {
+    const [edges] = createEdgeStore<typeof _edgeTypes>([{ id: "e1", source: "a", target: "b" }]);
+    expect(edges).toHaveLength(1);
+  });
 });
 
 describe("SolidFlowNode / SolidFlowEdge (exported guided unions)", () => {
@@ -109,6 +140,16 @@ describe("SolidFlowNode / SolidFlowEdge (exported guided unions)", () => {
       { id: "b", position: { x: 0, y: 0 }, type: "counter", data: { content: "no" } },
     ] satisfies MyNodes[];
     void bad;
+
+    const untyped = [
+      { id: "c", position: { x: 0, y: 0 }, data: { label: "c" } },
+    ] satisfies MyNodes[];
+    const untypedBad = [
+      // @ts-expect-error - an untyped node is a default node: data must be { label: string }
+      { id: "d", position: { x: 0, y: 0 }, data: { content: "no" } },
+    ] satisfies MyNodes[];
+    void untyped;
+    void untypedBad;
 
     const [store] = createStore<MyNodes[]>([...good]);
     expect(store).toHaveLength(1);

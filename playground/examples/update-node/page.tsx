@@ -155,8 +155,9 @@ export const UpdateNode = () => {
     setNodes((items) => {
       for (const node of items) {
         if (!(node.id === "2")) continue;
+        // An untyped node renders as "default".
         const currentIndex = nodeTypeCycle.indexOf(
-          node.type as Exclude<typeof node.type, "input" | "group">,
+          (node.type ?? "default") as Exclude<NonNullable<typeof node.type>, "input" | "group">,
         );
         const nextIndex = (currentIndex + 1) % nodeTypeCycle.length;
         const nextType = nodeTypeCycle[nextIndex]!;
