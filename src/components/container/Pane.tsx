@@ -3,6 +3,7 @@ import { isServer, type JSX } from "@solidjs/web";
 import {
   calcAutoPan,
   getEventPosition,
+  isLeftClickPan,
   pointToRendererPoint,
   rendererPointToPoint,
   type XYPosition,
@@ -76,11 +77,13 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
   const paneDragThreshold = () => props.paneDragThreshold ?? 1;
 
   const _panOnDrag = () => store.panActivationKeyPressed || props.panOnDrag;
+  // A left drag either pans or draws a box, never both (Svelte Flow 2): a
+  // `panOnDrag` that includes the left button wins over selectionOnDrag.
+  const selectionOnDragActive = () =>
+    !!props.selectionOnDrag && !isLeftClickPan(_panOnDrag() ?? true);
 
   const isSelecting = () =>
-    store.selectionKeyPressed ||
-    !!store.selectionRect ||
-    (props.selectionOnDrag && _panOnDrag() !== true);
+    store.selectionKeyPressed || !!store.selectionRect || selectionOnDragActive();
 
   const isSelectionEnabled = () =>
     store.elementsSelectable && (isSelecting() || store.selectionRectMode === "user");
@@ -120,7 +123,7 @@ export const Pane = <NodeType extends Node = Node, EdgeType extends Edge = Edge>
       !eventTargetIsContainer && !!(event.target as HTMLElement).closest(".nokey");
 
     const isSelectionActive =
-      (props.selectionOnDrag && eventTargetIsContainer) || store.selectionKeyPressed;
+      (selectionOnDragActive() && eventTargetIsContainer) || store.selectionKeyPressed;
 
     if (
       isNoKeyEvent ||

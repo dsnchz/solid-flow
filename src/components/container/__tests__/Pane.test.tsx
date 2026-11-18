@@ -143,6 +143,32 @@ describe("Pane drag selection", () => {
     flush();
     expect(container.querySelector(".solid-flow__selection")).toBeNull();
   });
+
+  it("selectionOnDrag yields to panning whenever the left button pans", async () => {
+    // Svelte Flow 2 parity (isLeftClickPan): a button list that includes the
+    // left button pans with it, so a left drag must not also draw a box.
+    const { container } = render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "a", position: { x: 20, y: 20 } })]}
+        edges={[]}
+        width={800}
+        height={600}
+        selectionOnDrag
+        panOnDrag={[0, 2]}
+        autoPanOnSelection={false}
+      />
+    ));
+    await settle();
+
+    const pane = container.querySelector<HTMLElement>(".solid-flow__pane")!;
+    const mouse = (x: number, y: number): PointerEventInit =>
+      pointerInit(x, y, { shiftKey: false });
+    pane.dispatchEvent(new PointerEvent("pointerdown", mouse(200, 200)));
+    pane.dispatchEvent(new PointerEvent("pointermove", mouse(320, 300)));
+    flush();
+    expect(container.querySelector(".solid-flow__selection")).toBeNull();
+    pane.dispatchEvent(new PointerEvent("pointerup", mouse(320, 300)));
+  });
 });
 
 describe("Pane context menu", () => {
