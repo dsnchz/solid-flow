@@ -370,16 +370,19 @@ Import one stylesheet, once, anywhere in your app:
 import "@dschz/solid-flow/style.css";
 ```
 
-### The two stylesheets
+### The stylesheets
 
-Both are the React Flow / Svelte Flow files of the same names, and both carry the same structural rules (positioning, layering, cursors, handles, edges, the MiniMap, Background, Controls and NodeResizer layout). They differ only in the skin on top:
+All three are the React Flow / Svelte Flow files of the same names, and all carry the same structural rules (positioning, layering, cursors, handles, edges, the MiniMap, Background, Controls and NodeResizer layout). They differ only in the skin on top:
 
-| Import                        | Skin                                                                                                                                                                      | Use it when                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `@dschz/solid-flow/style.css` | The default theme: built-in nodes with a border, fill, radius, padding and hover / selection shadows; round handles; the selection box; the Controls buttons; edge labels | You want the standard look, restyled with theme variables           |
-| `@dschz/solid-flow/base.css`  | A minimal skin: a neutral node border (`#555` when selected), node text color, a plain square handle, the selection box. No fills, padding or button styling              | You bring your own design and want only what the flow needs to work |
+| Import                           | Skin                                                                                                                                                                                                                                                                                         | Use it when                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `@dschz/solid-flow/style.css`    | The default theme: built-in nodes with a border, fill, radius, padding and hover / selection shadows; round handles; the selection box; the Controls buttons; edge labels                                                                                                                    | You want the standard look, restyled with theme variables           |
+| `@dschz/solid-flow/base.css`     | A minimal skin: a neutral node border (`#555` when selected), node text color, a plain square handle, the selection box. No fills, padding or button styling                                                                                                                                 | You bring your own design and want only what the flow needs to work |
+| `@dschz/solid-flow/xy-theme.css` | The xyflow theme of React Flow 13 / Svelte Flow 2 over `base.css`: every node (custom types included) rounded and centered with a soft shadow, an accent border when selected, outlined handles that highlight as connection targets, a tinted canvas, themed group nodes and resize handles | You want the look of the xyflow examples                            |
 
-`@dschz/solid-flow/styles` (the 0.x path) and `@dschz/solid-flow/dist/style.css` / `dist/base.css` resolve to the same files.
+`@dschz/solid-flow/styles` (the 0.x path) and `@dschz/solid-flow/dist/style.css` / `dist/base.css` / `dist/xy-theme.css` resolve to the same files.
+
+`xy-theme.css` adds `--xy-theme-*` variables of its own, set on `.solid-flow` (override them there, not on an ancestor): `--xy-theme-selected` (`#518ac8`), `--xy-theme-hover`, `--xy-theme-edge-hover`, `--xy-theme-color-focus`, `--xy-theme-focus-border`, `--xy-theme-group-background-color`, `--xy-theme-group-border-color` and `--xy-theme-resize-handle-bg`, plus `--xy-node-boxshadow` for the selected and pressed node shadow. `--xy-theme-primary`, Solid Flow's accent (`#446b9e`; React Flow's is `#ff0073`, Svelte Flow's `#ff4000`), is also set on `:root`, so your own UI can use it.
 
 ### Overriding styles
 
@@ -442,7 +445,21 @@ For rules the variables do not cover, the flow's elements carry stable classes (
 | Selection box  | `.solid-flow__selection` (inside `.solid-flow__selection-wrapper` for a multi-node selection)                                                                                                               |
 | Plugins        | `.solid-flow__controls`, `.solid-flow__controls-button`, `.solid-flow__minimap`, `.solid-flow__background`, `.solid-flow__panel`, `.solid-flow__resize-control`, `.solid-flow__node-toolbar`                |
 
-Custom node types get the structural rules only (positioning, cursor, focus): the default theme's border, fill and padding apply to the built-in types, so a custom node looks exactly as its component renders it.
+Handles carry no `.connectionindicator` class: React Flow and Svelte Flow recompute it on every handle when a connection starts, which Solid Flow avoids by deriving the "can connect here" state from the container's classes. A rule written for `.react-flow__handle.connectionindicator` is, in Solid Flow:
+
+```css
+.solid-flow:not(.connecting) .solid-flow__handle.connectable.connectablestart,
+.solid-flow.connecting.connection-strict.connecting-from-source
+  .solid-flow__handle.connectable.connectableend.target:not(.excluded),
+.solid-flow.connecting.connection-strict.connecting-from-target
+  .solid-flow__handle.connectable.connectableend.source:not(.excluded),
+.solid-flow.connecting:not(.connection-strict)
+  .solid-flow__handle.connectable.connectableend:not(.excluded) {
+  /* … */
+}
+```
+
+With `style.css` and `base.css`, custom node types get the structural rules only (positioning, cursor, focus): the theme's border, fill and padding apply to the built-in types, so a custom node looks exactly as its component renders it. `xy-theme.css` themes every node, custom types included, as React Flow's and Svelte Flow's does.
 
 ## Performance
 
@@ -528,7 +545,7 @@ useInternalNode(() => "a");
 
 **6. Smaller signature changes.** `useNodes()` / `useEdges()` return `readonly` arrays; `useHandleEdgeSelect` is removed (it was internal plumbing — select edges through `commands`). `clickConnect` now defaults to `true` (0.2.x: off unless passed), so a click on a handle arms a connection; pass `clickConnect={false}` to keep the 0.2.x behavior.
 
-**7. Styling and theming.** Import `@dschz/solid-flow/style.css` (the old `@dschz/solid-flow/styles` path still works), or `base.css` for the minimal skin; see [Styling](#styling). `colorMode` and `colorModeSSR` are replaced by `forceColorMode`: 0.2.x defaulted to light, 1.x follows the OS, so pass `forceColorMode="light"` to keep the old look, and drop `colorModeSSR` (the server no longer has to guess). `useColorMode` is removed. The library CSS now sits in the `xyflow` cascade layer, so overrides that needed `!important` or extra specificity can lose both. `ResizeControl` is now `NodeResizeControl`, and the renderer internals (`NodeWrapper`, `EdgeWrapper`, `Pane`, `Zoom`, the built-in node components, …) are no longer exported.
+**7. Styling and theming.** Import `@dschz/solid-flow/style.css` (the old `@dschz/solid-flow/styles` path still works), `base.css` for the minimal skin, or `xy-theme.css` for the xyflow theme; see [Styling](#styling). `colorMode` and `colorModeSSR` are replaced by `forceColorMode`: 0.2.x defaulted to light, 1.x follows the OS, so pass `forceColorMode="light"` to keep the old look, and drop `colorModeSSR` (the server no longer has to guess). `useColorMode` is removed. The library CSS now sits in the `xyflow` cascade layer, so overrides that needed `!important` or extra specificity can lose both. Nodes with children no longer get a lavender fill (`.solid-flow__node.parent`); style `.parent` yourself to keep it. `ResizeControl` is now `NodeResizeControl`, and the renderer internals (`NodeWrapper`, `EdgeWrapper`, `Pane`, `Zoom`, the built-in node components, …) are no longer exported.
 
 **8. Gesture engine changes from `@xyflow/system` 1.0 (shared with React Flow 13 and Svelte Flow 2).**
 

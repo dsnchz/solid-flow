@@ -1,0 +1,258 @@
+/* The xyflow theme, shipped as `xy-theme.css` on top of base.css: the
+   shared theme of React Flow 13 / Svelte Flow 2 (@xyflow/system 1.0's
+   src/styles/xy-theme.css), ported with these changes:
+   - `.xy-flow` is `.solid-flow`, as each library's build renames it;
+   - Sass-style `&-suffix` nesting is spelled out (this file ships as
+     native CSS nesting);
+   - text that inherits the page color uses currentColor (upstream
+     CanvasText), as in theme.css;
+   - a Controls button reads its ControlButton props variable for the
+     background too, as in theme.css (upstream only on hover, so bgColor
+     was ignored);
+   - the handles' `.connectionindicator` rules use the root-class selectors
+     of handle/styles.css: solid-flow derives that affordance from the
+     connection state on `.solid-flow` instead of a class on every handle.
+   Solid Flow's accent and Svelte Flow's HTML edge-label rule close the file,
+   where each library's own xy-theme.css adds them.
+
+   Dark mode rides on `color-scheme` (structure.css), so `light-dark()`
+   covers forced and system-preference schemes alike. */
+
+/* the brand accent lives on :root so theme helper classes outside the flow
+   pick it up too */
+:root {
+  --xy-theme-primary: #ff0073;
+}
+
+.solid-flow {
+  --xy-theme-selected: var(--xy-theme-primary);
+  --xy-theme-hover: light-dark(#c5c5c5, #7a7d86);
+  --xy-theme-edge-hover: light-dark(#222222, #f6f7f5);
+  --xy-theme-color-focus: light-dark(#e8e8e8, #4b4e57);
+  --xy-theme-focus-border: light-dark(#d9d9d9, #5f6470);
+  --xy-theme-panel-bg: light-dark(#ffffff, #141519);
+  --xy-theme-panel-text: light-dark(#111827, #f3f4f6);
+  --xy-theme-muted-bg: light-dark(#f3f4f6, #24262c);
+  --xy-theme-subtle-border: light-dark(#d1d5db, #3f434c);
+  --xy-theme-resize-handle-bg: light-dark(#ffffff, #141519);
+  --xy-theme-group-background-color: light-dark(
+    rgba(207, 182, 255, 0.4),
+    rgba(123, 107, 148, 0.22)
+  );
+  --xy-theme-group-border-color: light-dark(#9e86ed, #7b6b94);
+
+  --xy-background-color-default: light-dark(#f7f9fb, #101012);
+
+  --xy-node-border-default: 1px solid light-dark(#ededed, #303238);
+  --xy-node-border-radius-default: 8px;
+  --xy-node-background-color-default: light-dark(#ffffff, #1a1b1e);
+  /* light-dark() can't wrap the comma-separated shadow list itself, but it
+     can supply each layer's color, which fades the whole shadow out in dark
+     mode */
+  --xy-node-boxshadow-default:
+    0px 3.54px 4.55px 0px light-dark(#00000005, #0000),
+    0px 3.54px 4.55px 0px light-dark(#0000000d, #0000),
+    0px 0.51px 1.01px 0px light-dark(#0000001a, #0000);
+
+  --xy-handle-background-color-default: light-dark(#ffffff, #141519);
+  --xy-handle-border-color-default: light-dark(#aaaaaa, #5a5d66);
+
+  --xy-edge-label-color-default: light-dark(#505050, #e6e7ea);
+  --xy-edge-label-background-color-default: var(
+    --xy-background-color,
+    var(--xy-background-color-default)
+  );
+
+  --xy-resize-background-color-default: #9e86ed;
+
+  --xy-controls-button-background-color-default: light-dark(#fefefe, #2b2b2b);
+  --xy-controls-button-background-color-hover-default: light-dark(#f4f4f4, #3e3e3e);
+  --xy-controls-button-color-default: light-dark(currentColor, #f8f8f8);
+  --xy-controls-button-color-hover-default: light-dark(currentColor, #fff);
+  --xy-controls-button-border-color-default: light-dark(#eee, #5b5b5b);
+  --xy-controls-box-shadow-default: 0 0 2px 1px rgba(0, 0, 0, 0.08);
+}
+
+.solid-flow__node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--xy-node-color, var(--xy-node-color-default));
+  border: var(--xy-node-border, var(--xy-node-border-default));
+  border-radius: var(--xy-node-border-radius, var(--xy-node-border-radius-default));
+  background-color: var(--xy-node-background-color, var(--xy-node-background-color-default));
+
+  &.selectable:focus {
+    border-color: var(--xy-theme-focus-border);
+    box-shadow: 0px 0px 0px 4px var(--xy-theme-color-focus);
+  }
+
+  &.selectable:focus:active {
+    box-shadow: var(--xy-node-boxshadow, var(--xy-node-boxshadow-default));
+  }
+
+  &.selectable:hover,
+  &.draggable:hover {
+    border-color: var(--xy-theme-hover);
+  }
+
+  &.selectable.selected {
+    border-color: var(--xy-theme-selected);
+    box-shadow: var(--xy-node-boxshadow, var(--xy-node-boxshadow-default));
+  }
+}
+
+.solid-flow__node-input,
+.solid-flow__node-default,
+.solid-flow__node-output {
+  width: 150px;
+}
+
+.solid-flow__edge-text {
+  font-size: 10px;
+  fill: var(--xy-edge-label-color, var(--xy-edge-label-color-default));
+}
+
+.solid-flow__edge.updating .solid-flow__edge-path {
+  stroke: #777;
+}
+
+.solid-flow__node.selectable:focus,
+.solid-flow__node.selectable:focus-visible,
+.solid-flow__selection:focus,
+.solid-flow__selection:focus-visible {
+  outline: none;
+}
+
+.solid-flow__node-group {
+  background-color: var(--xy-theme-group-background-color);
+  border-color: var(--xy-theme-group-border-color);
+}
+
+.solid-flow__edge.selectable:hover .solid-flow__edge-path,
+.solid-flow__edge.selectable.selected .solid-flow__edge-path {
+  stroke: var(--xy-theme-edge-hover);
+}
+
+.solid-flow__handle {
+  background-color: var(--xy-handle-background-color, var(--xy-handle-background-color-default));
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--xy-handle-border-color, var(--xy-handle-border-color-default));
+  border-radius: 100%;
+
+  &.connectingfrom,
+  &.connectingto {
+    border-color: var(--xy-theme-edge-hover);
+  }
+}
+
+/* upstream: `.connectionindicator:hover` and `.connectionindicator:focus` */
+:is(
+  .solid-flow:not(.connecting) .solid-flow__handle.connectable.connectablestart,
+  .solid-flow.connecting.connection-strict.connecting-from-source
+    .solid-flow__handle.connectable.connectableend.target:not(.excluded),
+  .solid-flow.connecting.connection-strict.connecting-from-target
+    .solid-flow__handle.connectable.connectableend.source:not(.excluded),
+  .solid-flow.connecting:not(.connection-strict)
+    .solid-flow__handle.connectable.connectableend:not(.excluded)
+):is(:hover, :focus) {
+  border-color: var(--xy-theme-edge-hover);
+}
+
+/* square off nodes that carry resize lines so the lines sit flush with the
+   border */
+.solid-flow__node:has(.solid-flow__resize-control.line) {
+  border-radius: 0;
+}
+
+.solid-flow__resize-control.handle {
+  width: 5px;
+  height: 5px;
+  border-radius: 0;
+  background-color: var(--xy-theme-resize-handle-bg);
+  border-color: var(--xy-resize-background-color, var(--xy-resize-background-color-default));
+}
+
+.solid-flow__controls {
+  box-shadow: var(--xy-controls-box-shadow, var(--xy-controls-box-shadow-default));
+}
+
+.solid-flow__controls-button {
+  border: none;
+  background: var(
+    --xy-controls-button-background-color-props,
+    var(--xy-controls-button-background-color, var(--xy-controls-button-background-color-default))
+  );
+  border-bottom: 1px solid
+    var(
+      --xy-controls-button-border-color-props,
+      var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default))
+    );
+  color: var(
+    --xy-controls-button-color-props,
+    var(--xy-controls-button-color, var(--xy-controls-button-color-default))
+  );
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+
+  &:hover {
+    background: var(
+      --xy-controls-button-background-color-hover-props,
+      var(
+        --xy-controls-button-background-color-hover,
+        var(--xy-controls-button-background-color-hover-default)
+      )
+    );
+    color: var(
+      --xy-controls-button-color-hover-props,
+      var(--xy-controls-button-color-hover, var(--xy-controls-button-color-hover-default))
+    );
+  }
+
+  &:disabled {
+    pointer-events: none;
+
+    svg {
+      fill-opacity: 0.4;
+    }
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.solid-flow__controls.horizontal .solid-flow__controls-button {
+  border-bottom: none;
+  border-right: 1px solid
+    var(
+      --xy-controls-button-border-color-props,
+      var(--xy-controls-button-border-color, var(--xy-controls-button-border-color-default))
+    );
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+/* Solid Flow's accent (React Flow 13: #ff0073 / #f57dbd, Svelte Flow 2:
+   #ff4000) */
+:root,
+.solid-flow {
+  --xy-theme-primary: #446b9e;
+  --xy-theme-selected: #518ac8;
+}
+
+/* edge labels are HTML, as in Svelte Flow */
+.solid-flow__edge-label {
+  padding: 2px;
+  font-size: 10px;
+  color: var(--xy-edge-label-color, var(--xy-edge-label-color-default));
+  background: var(--xy-edge-label-background-color, var(--xy-edge-label-background-color-default));
+}

@@ -95,12 +95,14 @@ export default defineConfig((cli) => {
           return parts.join("\n");
         };
 
-        // style.css (structure + default theme) and base.css (structure +
-        // minimal theme), as React Flow / Svelte Flow ship them.
+        // style.css (structure + default theme), base.css (structure +
+        // minimal theme) and xy-theme.css (base.css + the xyflow theme), as
+        // React Flow / Svelte Flow ship them.
         await mkdir("dist/styles", { recursive: true });
         for (const [entry, out] of [
           ["src/styles/style.css", "dist/styles/style.css"],
           ["src/styles/base.css", "dist/styles/base.css"],
+          ["src/styles/xy-theme.css", "dist/styles/xy-theme.css"],
         ] as const) {
           const bundled = await inlineCss(entry);
           if (bundled.includes("@import")) {

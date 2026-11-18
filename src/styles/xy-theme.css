@@ -1,0 +1,6 @@
+/* The xyflow theme stylesheet: base.css plus the theme React Flow 13 /
+   Svelte Flow 2 ship as xy-theme.css, in the `xyflow` cascade layer (see
+   style.css). Import it instead of style.css. */
+@import "./structure.css" layer(xyflow);
+@import "./theme-base.css" layer(xyflow);
+@import "./theme-xy.css" layer(xyflow);

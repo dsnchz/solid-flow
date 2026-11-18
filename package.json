@@ -65,8 +65,10 @@
     },
     "./style.css": "./dist/styles/style.css",
     "./base.css": "./dist/styles/base.css",
+    "./xy-theme.css": "./dist/styles/xy-theme.css",
     "./dist/style.css": "./dist/styles/style.css",
     "./dist/base.css": "./dist/styles/base.css",
+    "./dist/xy-theme.css": "./dist/styles/xy-theme.css",
     "./styles": "./dist/styles/style.css"
   },
   "publishConfig": {
