@@ -1,7 +1,7 @@
 import type { JSX } from "@solidjs/web";
 import { Portal } from "@solidjs/web";
 import { type Align, getNodeToolbarTransform, Position as SystemPosition } from "@xyflow/system";
-import { getOwner, type ParentComponent, runWithOwner, Show, useContext } from "solid-js";
+import { type ParentComponent, Show, useContext } from "solid-js";
 
 import { cx, extraKeysOf, spreadExtras } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
@@ -57,9 +57,6 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
   const position = () => props.position ?? "top";
   const align = () => props.align ?? "center";
   const extraKeys = extraKeysOf(props, OWN_KEYS);
-  // The ref is created in the Portal under Show's branch: the extras spread
-  // is parented explicitly to this component (a ref owns nothing).
-  const owner = getOwner();
 
   // NodeToolbar can be rendered outside of a node (with `nodeId`), so the
   // context is optional; looked up once, here in the body.
@@ -106,26 +103,40 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
 
   const showPortal = () => Boolean(store.domNode && isActive() && toolbarNodes().length > 0);
 
+  // The element is its own component, created in the Portal under Show's
+  // branch: the extras spread made in its body belongs to that branch and
+  // is disposed when the toolbar hides (spread from a ref, it belonged to
+  // NodeToolbar and kept every hidden element updated until unmount).
+  const Toolbar = () => {
+    let element: HTMLDivElement | undefined;
+    const view = (
+      <div
+        ref={(el) => (element = el)}
+        // The user's class joins the toolbar's (React Flow's cc([...])); a
+        // spread `class` replaced it.
+        class={cx("solid-flow__node-toolbar", props.class)}
+        data-id={toolbarNodes()
+          .reduce((acc, node) => `${acc}${node.id} `, "")
+          .trim()}
+        style={{
+          position: "absolute",
+          transform: transform(),
+          "z-index": zIndex(),
+          ...props.style,
+        }}
+      >
+        {props.children}
+      </div>
+    );
+    // From the body, not the ref (see spreadExtras); the ref has run by now.
+    if (element) spreadExtras(element, props, extraKeys);
+    return view;
+  };
+
   return (
     <Show when={showPortal()}>
       <Portal mount={store.domNode!}>
-        <div
-          ref={(el) => runWithOwner(owner, () => spreadExtras(el, props, extraKeys))}
-          // The user's class joins the toolbar's (React Flow's cc([...])); a
-          // spread `class` replaced it.
-          class={cx("solid-flow__node-toolbar", props.class)}
-          data-id={toolbarNodes()
-            .reduce((acc, node) => `${acc}${node.id} `, "")
-            .trim()}
-          style={{
-            position: "absolute",
-            transform: transform(),
-            "z-index": zIndex(),
-            ...props.style,
-          }}
-        >
-          {props.children}
-        </div>
+        <Toolbar />
       </Portal>
     </Show>
   );

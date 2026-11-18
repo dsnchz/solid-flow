@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { type EdgeToolbarBaseProps, getEdgeToolbarTransform } from "@xyflow/system";
-import { getOwner, type ParentProps, runWithOwner, Show } from "solid-js";
+import { type ParentProps, Show } from "solid-js";
 
 import { EdgeLabel } from "@/components/edge";
 import { cx, extraKeysOf, spreadExtras } from "@/components/internal/dom";
@@ -41,9 +41,6 @@ export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element =
   // One per edge that carries it, hidden until shown: the extra attributes go
   // through spreadExtras (see Handle) instead of an omit record and a spread.
   const extraKeys = extraKeysOf(props, OWN_KEYS);
-  // The ref is created in EdgeLabel under Show's branch: the extras spread
-  // is parented explicitly to this component (a ref owns nothing).
-  const owner = getOwner();
 
   const { store, edgeLookup } = useInternalSolidFlow();
 
@@ -61,21 +58,35 @@ export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element =
       props.alignY ?? "center",
     );
 
+  // The element is its own component, created in EdgeLabel under Show's
+  // branch: the extras spread made in its body belongs to that branch and
+  // is disposed when the toolbar hides (spread from a ref, it belonged to
+  // EdgeToolbar and kept every hidden element updated until unmount).
+  const Toolbar = () => {
+    let element: HTMLDivElement | undefined;
+    const view = (
+      <div
+        ref={(el) => (element = el)}
+        class={cx("solid-flow__edge-toolbar", props.class)}
+        style={{
+          position: "absolute",
+          transform: transform(),
+          "transform-origin": "0 0",
+        }}
+        data-id={edgeId()}
+      >
+        {props.children}
+      </div>
+    );
+    // From the body, not the ref (see spreadExtras); the ref has run by now.
+    if (element) spreadExtras(element, props, extraKeys);
+    return view;
+  };
+
   return (
     <Show when={isActive()}>
       <EdgeLabel selectEdgeOnClick={props.selectEdgeOnClick} transparent>
-        <div
-          ref={(el) => runWithOwner(owner, () => spreadExtras(el, props, extraKeys))}
-          class={cx("solid-flow__edge-toolbar", props.class)}
-          style={{
-            position: "absolute",
-            transform: transform(),
-            "transform-origin": "0 0",
-          }}
-          data-id={edgeId()}
-        >
-          {props.children}
-        </div>
+        <Toolbar />
       </EdgeLabel>
     </Show>
   );

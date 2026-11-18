@@ -143,6 +143,29 @@ describe("NodeToolbar", () => {
     expect(el.style.opacity).toBe("0.5");
     expect(el.getAttribute("data-testid")).toBe("tb");
   });
+
+  it("disposes its extra attributes' wiring when it hides", async () => {
+    const [visible, setVisible] = createSignal(true);
+    const [tag, setTag] = createSignal("one");
+    const { toolbars } = await renderNodes(
+      (props) => <NodeToolbar nodeId={props.id} isVisible={visible()} data-tag={tag()} />,
+      [node("a", 0)],
+    );
+    const first = toolbars()[0]!;
+    expect(first.getAttribute("data-tag")).toBe("one");
+
+    setVisible(false);
+    flush();
+    expect(toolbars()).toEqual([]);
+    // a detached toolbar no longer follows the props
+    setTag("two");
+    flush();
+    expect(first.getAttribute("data-tag")).toBe("one");
+
+    setVisible(true);
+    flush();
+    expect(toolbars()[0]!.getAttribute("data-tag")).toBe("two");
+  });
 });
 
 const renderEdge = async (content: () => ReturnType<typeof EdgeToolbar>, initial: Edge) => {
@@ -219,6 +242,29 @@ describe("EdgeToolbar", () => {
     );
     expect(toolbar()!.getAttribute("class")).toBe("solid-flow__edge-toolbar mine");
     expect(toolbar()!.getAttribute("data-testid")).toBe("etb");
+  });
+
+  it("disposes its extra attributes' wiring when it hides", async () => {
+    const [visible, setVisible] = createSignal(true);
+    const [tag, setTag] = createSignal("one");
+    const { toolbar } = await renderEdge(
+      () => <EdgeToolbar x={0} y={0} isVisible={visible()} data-tag={tag()} />,
+      edge(),
+    );
+    const first = toolbar()!;
+    expect(first.getAttribute("data-tag")).toBe("one");
+
+    setVisible(false);
+    flush();
+    expect(toolbar()).toBeNull();
+    // a detached toolbar no longer follows the props
+    setTag("two");
+    flush();
+    expect(first.getAttribute("data-tag")).toBe("one");
+
+    setVisible(true);
+    flush();
+    expect(toolbar()!.getAttribute("data-tag")).toBe("two");
   });
 
   it("selects its edge on click with selectEdgeOnClick", async () => {
