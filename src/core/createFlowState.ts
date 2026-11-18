@@ -1,5 +1,6 @@
 import { isServer } from "@solidjs/web";
 import {
+  changeParentNode,
   getInternalNodesBounds,
   getViewportForBounds,
   infiniteExtent,
@@ -865,6 +866,16 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     setEdges: setEdgesStore,
     updateNode: elementCommands.updateNode,
     updateNodeData: elementCommands.updateNodeData,
+    // @xyflow/system 1.0's changeParentNode computes the position under the
+    // new parent (origin-corrected) and hands it back for the write.
+    changeParent: (nodeId, parentId) =>
+      changeParentNode(nodeId, nodeLookup, parentId, store.nodeOrigin, (change) =>
+        elementCommands.updateNode(change.nodeId, (node) => ({
+          ...node,
+          parentId: change.parentId ?? undefined,
+          position: { x: change.x, y: change.y },
+        })),
+      ),
     updateEdge: elementCommands.updateEdge,
     deleteElements: elementCommands.deleteElements,
     getIntersectingNodes: geometryCommands.getIntersectingNodes,

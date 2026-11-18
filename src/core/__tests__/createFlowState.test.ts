@@ -526,6 +526,35 @@ describe("FlowCommands", () => {
     );
   });
 
+  it("changeParent re-parents a node in place: its absolute position does not move", async () => {
+    // React Flow 13 / Svelte Flow 2 (@xyflow/system 1.0's changeParentNode).
+    await withFlow(
+      {
+        nodes: [
+          makeNode({ id: "p", position: { x: 40, y: 20 }, width: 300, height: 200 }),
+          makeNode({ id: "c", position: { x: 100, y: 50 } }),
+        ],
+        edges: [],
+      },
+      ({ flow, commands }) => {
+        commands.changeParent("c", "p");
+        flush();
+        expect(flow.nodes.find((n) => n.id === "c")).toMatchObject({
+          parentId: "p",
+          position: { x: 60, y: 30 },
+        });
+        expect(flow.internalNodes.c?.internals.positionAbsolute).toEqual({ x: 100, y: 50 });
+
+        commands.changeParent("c", null);
+        flush();
+        const c = flow.nodes.find((n) => n.id === "c");
+        expect(c?.parentId).toBeUndefined();
+        expect(c?.position).toEqual({ x: 100, y: 50 });
+        expect(flow.internalNodes.c?.internals.positionAbsolute).toEqual({ x: 100, y: 50 });
+      },
+    );
+  });
+
   it("updateNodeInternals names the nodes; the wiring layer resolves their elements", async () => {
     await withFlow({ nodes: [], edges: [] }, ({ commands, actions }) => {
       const requests: string[][] = [];

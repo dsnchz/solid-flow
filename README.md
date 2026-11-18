@@ -282,7 +282,7 @@ export const App = () => (
 );
 ```
 
-Commands include viewport control (`fitView`, `fitBounds`, `zoomIn`/`zoomOut`, `setZoom`, `setCenter`, `setViewport`, `panBy`), element updates (`updateNode`, `updateNodeData`, `updateEdge`, `addNodes`, `addEdges`, `deleteElements`), serialization (`toObject`), coordinate conversion (`screenToFlowPosition`, `flowToScreenPosition`), geometry queries (`isNodeIntersecting`, `getIntersectingNodes`, `getNodesBounds`), and connection queries (`getNodeConnections({ nodeId, type?, handleId? })`).
+Commands include viewport control (`fitView`, `fitBounds`, `zoomIn`/`zoomOut`, `setZoom`, `setCenter`, `setViewport`, `panBy`), element updates (`updateNode`, `updateNodeData`, `updateEdge`, `addNodes`, `addEdges`, `deleteElements`, `changeParent` to move a node under another parent without moving it on screen), serialization (`toObject`), coordinate conversion (`screenToFlowPosition`, `flowToScreenPosition`), geometry queries (`isNodeIntersecting`, `getIntersectingNodes`, `getNodesBounds`), and connection queries (`getNodeConnections({ nodeId, type?, handleId? })`).
 
 ## Hooks
 

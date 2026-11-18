@@ -147,6 +147,12 @@ export type FlowCommands<NodeType extends Node = Node, EdgeType extends Edge = E
     dataUpdate: Partial<NodeType["data"]> | ((node: NodeType) => Partial<NodeType["data"]>),
     options?: { replace: boolean },
   ) => void;
+  /**
+   * Moves a node under another parent (`null`: no parent), keeping where it
+   * is on screen: its position is recomputed relative to the new parent
+   * (React Flow 13 / Svelte Flow 2).
+   */
+  readonly changeParent: (nodeId: string, parentId: string | null) => void;
   /** Merges (or replaces, with `options.replace`) an edge by id. */
   readonly updateEdge: (
     id: string,
