@@ -1,6 +1,8 @@
 import { transformAsync } from "@solidjs/compiler";
 import { defineConfig, type UserConfig } from "tsdown";
 
+import { stylesheetModule } from "./scripts/jsrStylesheetModule.js";
+
 const SOLID_BUILT_INS = [
   "For",
   "Show",
@@ -99,17 +101,27 @@ export default defineConfig((cli) => {
         // minimal theme) and xy-theme.css (base.css + the xyflow theme), as
         // React Flow / Svelte Flow ship them.
         await mkdir("dist/styles", { recursive: true });
-        for (const [entry, out] of [
-          ["src/styles/style.css", "dist/styles/style.css"],
-          ["src/styles/base.css", "dist/styles/base.css"],
-          ["src/styles/xy-theme.css", "dist/styles/xy-theme.css"],
-        ] as const) {
-          const bundled = await inlineCss(entry);
+        await mkdir("dist/jsr", { recursive: true });
+        for (const name of ["style", "base", "xy-theme"]) {
+          const out = `dist/styles/${name}.css`;
+          const bundled = await inlineCss(`src/styles/${name}.css`);
           if (bundled.includes("@import")) {
             throw new Error(`${out} still contains @import after inlining`);
           }
           await writeFile(out, bundled);
+          // JSR exports modules only: its `./<name>.css` is this module
+          // (scripts/jsrStylesheetModule.js), the .css file ships beside it.
+          const jsr = stylesheetModule(name, bundled);
+          await writeFile(`dist/jsr/${name}.css.js`, jsr.js);
+          await writeFile(`dist/jsr/${name}.css.d.ts`, jsr.dts);
         }
+
+        // JSR publishes the compiled client build, typed through
+        // @ts-self-types: it does not compile Solid's JSX, and a published
+        // .tsx reached npm-compat installs with unresolvable `npm:` imports.
+        const js = await readFile("dist/index/index.js", "utf8");
+        await writeFile("dist/jsr/index.js", `// @ts-self-types="./index.d.ts"\n${js}`);
+        await writeFile("dist/jsr/index.d.ts", await readFile("dist/index/index.d.ts", "utf8"));
       },
     },
     // Type-stripped, JSX-preserved build for the `solid` export condition,

@@ -46,7 +46,8 @@
     "url": "git+https://github.com/dsnchz/solid-flow.git"
   },
   "files": [
-    "dist",
+    "dist/index",
+    "dist/styles",
     "llms.txt"
   ],
   "type": "module",
@@ -85,6 +86,7 @@
     "pkg:changeset": "changeset",
     "pkg:version": "changeset version",
     "pkg:publish": "bun run build && changeset publish",
+    "pkg:publish:jsr": "bun run build && bunx jsr publish",
     "serve": "vite preview",
     "start": "vite",
     "test": "vitest run",

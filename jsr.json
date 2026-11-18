@@ -2,17 +2,27 @@
   "name": "@dschz/solid-flow",
   "version": "1.0.0",
   "license": "MIT",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./dist/jsr/index.js",
+    "./style.css": "./dist/jsr/style.css.js",
+    "./base.css": "./dist/jsr/base.css.js",
+    "./xy-theme.css": "./dist/jsr/xy-theme.css.js"
+  },
   "imports": {
-    "@/": "./src/",
     "@solid-primitives/event-listener": "npm:@solid-primitives/event-listener@3.0.0",
     "@xyflow/system": "npm:@xyflow/system@1.0.0",
     "solid-js": "npm:solid-js@^2.0.0",
-    "@solidjs/web": "npm:@solidjs/web@^2.0.0",
-    "@solidjs/web/jsx-runtime": "npm:@solidjs/web@^2.0.0/jsx-runtime"
+    "@solidjs/web": "npm:@solidjs/web@^2.0.0"
   },
   "publish": {
-    "include": ["LICENSE", "README.md", "CHANGELOG.md", "llms.txt", "src/**/*.tsx", "src/**/*.ts"],
-    "exclude": ["**/*.test.tsx", "**/*.test.ts"]
+    "include": [
+      "LICENSE",
+      "README.md",
+      "CHANGELOG.md",
+      "llms.txt",
+      "dist/jsr/**",
+      "dist/styles/*.css"
+    ],
+    "exclude": ["!dist"]
   }
 }

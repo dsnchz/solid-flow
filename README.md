@@ -45,6 +45,35 @@ bun  add     @dschz/solid-flow@next solid-js @solidjs/web
 
 `solid-js` and `@solidjs/web` are **peer dependencies** — install both on matching 2.0 versions. The `@next` tag is the 1.x prerelease line; once solid-flow 1.0.0 ships, a plain install takes over (see [Version pairing](#version-pairing)). Also available on [JSR](https://jsr.io/@dschz/solid-flow).
 
+### From JSR
+
+```sh
+npx jsr add @dschz/solid-flow     # or: pnpm add jsr:@dschz/solid-flow, bunx jsr add, deno add jsr:@dschz/solid-flow
+```
+
+The [JSR package](https://jsr.io/@dschz/solid-flow) is the compiled browser build with the same API and types. JSR has no export conditions, so it lacks the `solid` condition server rendering compiles from: for SSR (SolidStart), install from npm.
+
+JSR cannot export `.css` files, so there `@dschz/solid-flow/style.css`, `base.css` and `xy-theme.css` are modules: importing one installs the stylesheet once, first in `<head>` (so the `xyflow` layer still comes before yours), and exports its text as `css` (for a shadow root or a `<style>` of your own). The same `import "@dschz/solid-flow/style.css"` line works with either registry. Where a Content Security Policy forbids inline styles, use the real files, which ship in the package: alias the import to them in your bundler, or link the copy jsr.io serves.
+
+```ts
+// vite.config.ts
+import { fileURLToPath } from "node:url";
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      "@dschz/solid-flow/style.css": fileURLToPath(
+        new URL("./node_modules/@dschz/solid-flow/dist/styles/style.css", import.meta.url),
+      ),
+    },
+  },
+});
+```
+
+```html
+<link rel="stylesheet" href="https://jsr.io/@dschz/solid-flow/1.0.0/dist/styles/style.css" />
+```
+
 Building with an AI agent? The package ships an [`llms.txt`](./llms.txt) cheatsheet — a compact, agent-oriented map of the API that front-loads the differences from React Flow.
 
 ## Quick Start
@@ -369,6 +398,8 @@ Import one stylesheet, once, anywhere in your app:
 ```ts
 import "@dschz/solid-flow/style.css";
 ```
+
+From JSR the same import installs the stylesheet through a module (see [From JSR](#from-jsr)).
 
 ### The stylesheets
 
