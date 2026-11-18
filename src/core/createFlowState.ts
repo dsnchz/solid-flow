@@ -41,7 +41,7 @@ import { createGeometryFeed } from "./geometryFeed";
 import { createInitialFitView } from "./initialFitView";
 import { createMeasurementIngest } from "./measurementIngest";
 import { createOverlayRelease } from "./overlayRelease";
-import { createLazyConnections } from "./projections/connections";
+import { connectionKey, createLazyConnections } from "./projections/connections";
 import { createEdgeBoxes } from "./projections/edgeBoxes";
 import { createEdgeLookup } from "./projections/edgeLookup";
 import {
@@ -870,6 +870,10 @@ export const createFlowState = <NodeType extends Node = Node, EdgeType extends E
     getIntersectingNodes: geometryCommands.getIntersectingNodes,
     isNodeIntersecting: geometryCommands.isNodeIntersecting,
     getNodesBounds: geometryCommands.getNodesBounds,
+    getNodeConnections: ({ nodeId, type, handleId }) => {
+      const record = connections[connectionKey(nodeId, type, handleId)];
+      return record ? Object.values(record).map((connection) => ({ ...connection })) : [];
+    },
     updateNodeInternals: (id) => requestMeasure(Array.isArray(id) ? id : [id]),
     toObject: elementCommands.toObject,
   };

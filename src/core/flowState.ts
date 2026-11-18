@@ -1,6 +1,8 @@
 import type {
   ConnectionState,
   FitBoundsOptions,
+  HandleType,
+  NodeConnection,
   Rect,
   SetCenterOptions,
   SnapGrid,
@@ -172,6 +174,16 @@ export type FlowCommands<NodeType extends Node = Node, EdgeType extends Edge = E
   ) => boolean;
   /** The bounding rect of the given nodes (or node ids). */
   readonly getNodesBounds: (nodes: (NodeType | InternalNode<NodeType> | string)[]) => Rect;
+  /**
+   * The connections of a node, filtered by handle type and, with a type, by
+   * handle id (React Flow 13 / Svelte Flow 2). Reactive when read in a
+   * tracked scope, like `flow.connections`; the entries are plain copies.
+   */
+  readonly getNodeConnections: (params: {
+    readonly nodeId: string;
+    readonly type?: HandleType;
+    readonly handleId?: string | null;
+  }) => NodeConnection[];
   /** Requests a DOM re-measure of the given node id(s). */
   readonly updateNodeInternals: (id: string | string[]) => void;
 

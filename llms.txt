@@ -90,7 +90,7 @@ Commands: `fitView`, `fitBounds`, `zoomIn`, `zoomOut`, `setZoom`, `setCenter`,
 `setViewport`, `panBy`, `screenToFlowPosition`, `flowToScreenPosition`,
 `addNodes`, `addEdges`, `setNodes`, `setEdges`, `updateNode`, `updateNodeData`,
 `updateEdge`, `deleteElements`, `getIntersectingNodes`, `isNodeIntersecting`,
-`getNodesBounds`, `updateNodeInternals`, `toObject`.
+`getNodesBounds`, `getNodeConnections`, `updateNodeInternals`, `toObject`.
 
 Hooks: `useNode(id)`, `useEdge(id)`, `useNodes()`, `useEdges()`,
 `useSelectedNodes()`, `useSelectedEdges()`, `useNodeConnections()`,

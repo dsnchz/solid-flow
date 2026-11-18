@@ -498,6 +498,34 @@ describe("FlowCommands", () => {
     });
   });
 
+  it("getNodeConnections lists a node's connections, filtered by handle type and id", async () => {
+    // React Flow 13 / Svelte Flow 2 instance API (@xyflow/system 1.0's NodeConnection).
+    await withFlow(
+      {
+        nodes: [makeNode({ id: "a" }), makeNode({ id: "b" }), makeNode({ id: "c" })],
+        edges: [
+          makeEdge({ id: "e1", source: "a", target: "b", sourceHandle: "s1" }),
+          makeEdge({ id: "e2", source: "a", target: "c", sourceHandle: "s2" }),
+          makeEdge({ id: "e3", source: "c", target: "a" }),
+        ],
+      },
+      ({ commands }) => {
+        const ids = (list: { edgeId: string }[]) => list.map((c) => c.edgeId).sort();
+        expect(ids(commands.getNodeConnections({ nodeId: "a" }))).toEqual(["e1", "e2", "e3"]);
+        expect(ids(commands.getNodeConnections({ nodeId: "a", type: "source" }))).toEqual([
+          "e1",
+          "e2",
+        ]);
+        expect(
+          commands.getNodeConnections({ nodeId: "a", type: "source", handleId: "s2" }),
+        ).toEqual([
+          { edgeId: "e2", source: "a", target: "c", sourceHandle: "s2", targetHandle: null },
+        ]);
+        expect(commands.getNodeConnections({ nodeId: "missing" })).toEqual([]);
+      },
+    );
+  });
+
   it("updateNodeInternals names the nodes; the wiring layer resolves their elements", async () => {
     await withFlow({ nodes: [], edges: [] }, ({ commands, actions }) => {
       const requests: string[][] = [];
