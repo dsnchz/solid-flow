@@ -417,7 +417,7 @@ Component props win over the variables: `<Background bgColor patternColor>`, `<M
 The flow follows the OS light / dark preference by default, entirely in CSS (`color-scheme` on the container and `light-dark()` in the theme variables), so server-rendered markup and the first paint already match it: there is no flash and nothing to hydrate. To force a scheme:
 
 - `forceColorMode="light"` or `"dark"` on `<SolidFlow>`, for one flow.
-- `data-theme="light"` or `"dark"` on an ancestor such as `<html>`, for the whole page. `forceColorMode` wins over it.
+- `data-theme="light"` or `"dark"`, or a `light` / `dark` class (Tailwind's class-based dark mode), on an ancestor such as `<html>`, for the whole page. `forceColorMode` wins over both.
 
 Your own theme variables can follow the scheme the same way:
 
@@ -433,14 +433,14 @@ Your own theme variables can follow the scheme the same way:
 
 For rules the variables do not cover, the flow's elements carry stable classes (the React Flow / Svelte Flow names with the `solid-flow` prefix):
 
-| Element        | Classes                                                                                                                                                                                      |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Flow container | `.solid-flow`, plus `.light` / `.dark` when a scheme is forced                                                                                                                               |
-| Node           | `.solid-flow__node`, `.solid-flow__node-<type>`, and state classes `.selected`, `.selectable`, `.draggable`, `.dragging`, `.parent`                                                          |
-| Edge           | `.solid-flow__edge`, `.solid-flow__edge-<type>`, `.selected`, `.animated`; the path is `.solid-flow__edge-path`, a label `.solid-flow__edge-label`                                           |
-| Handle         | `.solid-flow__handle`, `.source` / `.target`, `.solid-flow__handle-<position>`, `.connectingfrom` / `.connectingto` during a connection                                                      |
-| Selection box  | `.solid-flow__selection` (inside `.solid-flow__selection-wrapper` for a multi-node selection)                                                                                                |
-| Plugins        | `.solid-flow__controls`, `.solid-flow__controls-button`, `.solid-flow__minimap`, `.solid-flow__background`, `.solid-flow__panel`, `.solid-flow__resize-control`, `.solid-flow__node-toolbar` |
+| Element        | Classes                                                                                                                                                                                                     |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Flow container | `.solid-flow`, plus `.light` / `.dark` when a scheme is forced; during a connection `.connecting`, `.connecting-from-source` / `.connecting-from-target` and, in strict mode, `.connection-strict`          |
+| Node           | `.solid-flow__node`, `.solid-flow__node-<type>`, and state classes `.selected`, `.selectable`, `.draggable`, `.dragging`, `.parent`                                                                         |
+| Edge           | `.solid-flow__edge`, `.solid-flow__edge-<type>`, `.selected`, `.animated`; the path is `.solid-flow__edge-path`, a label `.solid-flow__edge-label`                                                          |
+| Handle         | `.solid-flow__handle`, `.source` / `.target`, `.solid-flow__handle-<position>`, `.connectable`, `.connectablestart` / `.connectableend`, `.connectingfrom` / `.connectingto` / `.valid` during a connection |
+| Selection box  | `.solid-flow__selection` (inside `.solid-flow__selection-wrapper` for a multi-node selection)                                                                                                               |
+| Plugins        | `.solid-flow__controls`, `.solid-flow__controls-button`, `.solid-flow__minimap`, `.solid-flow__background`, `.solid-flow__panel`, `.solid-flow__resize-control`, `.solid-flow__node-toolbar`                |
 
 Custom node types get the structural rules only (positioning, cursor, focus): the default theme's border, fill and padding apply to the built-in types, so a custom node looks exactly as its component renders it.
 

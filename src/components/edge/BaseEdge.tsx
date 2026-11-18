@@ -85,8 +85,10 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
         />
       </Show>
 
+      {/* Clicking the label selects the edge, as in Svelte Flow (React
+          Flow's SVG label sits inside the edge, where the click bubbles). */}
       <Show when={props.label}>
-        <EdgeLabel x={props.labelX} y={props.labelY} style={props.labelStyle}>
+        <EdgeLabel x={props.labelX} y={props.labelY} style={props.labelStyle} selectEdgeOnClick>
           {props.label}
         </EdgeLabel>
       </Show>

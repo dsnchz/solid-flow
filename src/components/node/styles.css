@@ -1,5 +1,6 @@
 .solid-flow__node {
   position: absolute;
+  -webkit-user-select: none;
   user-select: none;
   pointer-events: all;
   transform-origin: 0 0;
@@ -17,10 +18,5 @@
     &.dragging {
       cursor: grabbing;
     }
-  }
-
-  /* TODO: Verify this class */
-  &.parent {
-    background-color: rgba(220, 220, 255, 0.4);
   }
 }

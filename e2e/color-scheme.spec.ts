@@ -73,6 +73,26 @@ test.describe("color scheme", () => {
     await expect(flow).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   });
 
+  test("a dark / light class on an ancestor forces the scheme; forceColorMode wins over it", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await gotoExample(page, "ColorMode");
+    const flow = page.locator(".solid-flow").first();
+
+    // the class-based dark mode of Tailwind and most theme switchers
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await expect(flow).toHaveCSS("background-color", "rgb(20, 20, 20)");
+
+    await page.getByLabel("Color mode:").selectOption("light");
+    await expect(flow).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.getByLabel("Color mode:").selectOption("");
+    await page.evaluate(() => document.documentElement.classList.replace("dark", "light"));
+    await expect(flow).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  });
+
   test("edge labels take the dark theme", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await gotoExample(page, "Edges");

@@ -9,6 +9,7 @@
 }
 
 .solid-flow__viewport-portal {
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -17,7 +18,17 @@
   /* Touch drags pan and box-select the flow instead of scrolling the page. */
   touch-action: none;
 
-  &.draggable {
+  /* The grab cursor sits on a pseudo-element covering the pane, as in
+     React Flow 13 / Svelte Flow 2: on the pane itself it would be inherited
+     by everything inside the flow (edge labels, custom content). The
+     pseudo-element still targets the pane for pointer events. */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  &.draggable::before {
     cursor: grab;
   }
 
@@ -25,8 +36,11 @@
      the pane re-styles every descendant — one ~70ms style recalc at drag
      start and end @10k (bench round 26). The pan cursor is a leaf cover
      element (`.solid-flow__pan-cursor`, rendered by Zoom while a pan is
-     held); node drags show the node's own cursor. */
-  &.selection {
+     held); node drags show the node's own cursor. A box selection captures
+     the pointer on the pane, so its cursor is on the pane itself, and on
+     the pseudo-element over the grab cursor (upstream's rule). */
+  &.selection,
+  &.selection::before {
     cursor: pointer;
   }
 }

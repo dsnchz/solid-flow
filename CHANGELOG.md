@@ -56,7 +56,7 @@
   Breaking changes:
 
   - `colorMode` and `colorModeSSR` are replaced by `forceColorMode?: "light" | "dark"`. Leave it unset to follow the OS (the old `colorMode="system"`); set it to force a scheme (the old `colorMode="light"` / `"dark"`). `SolidFlow` defaulted to `colorMode="light"` in 0.2.x, so pass `forceColorMode="light"` to keep the old look. `colorModeSSR` has no replacement: the server no longer has to guess.
-  - A `data-theme="light" | "dark"` attribute on an ancestor (for example `<html>`) forces the scheme page-wide; `forceColorMode` wins over it.
+  - A `data-theme="light" | "dark"` attribute or a `light` / `dark` class on an ancestor (for example `<html>`, as in Tailwind's class-based dark mode) forces the scheme page-wide; `forceColorMode` wins over both.
   - `useColorMode` is removed. The flow no longer resolves the scheme in JavaScript; code that needs it can read `matchMedia("(prefers-color-scheme: dark)")` directly.
   - The `ColorMode` type is `"light" | "dark"`, the type of `forceColorMode`, matching `@xyflow/system` 1.x. It no longer includes `"system"`. `ColorModeClass` is removed; use `ColorMode`.
   - The theme colors are CSS `light-dark()` values chosen by the flow container's `color-scheme`, instead of a separate `.solid-flow.dark` override block per stylesheet. The root carries the `light` / `dark` class only when `forceColorMode` sets it, so custom selectors keyed on `.solid-flow.dark` no longer match an OS-driven dark scheme. Overriding a theme variable (`--xy-node-background-color` and friends) works as before.
@@ -102,7 +102,7 @@
 
 - 69dc618: Moving a selected node with an arrow key announces its new position to screen readers, after snapping and extent clamping, instead of the position it had before the move (React Flow 13.0.2 and Svelte Flow 2.0.2, xyflow#6130).
 - 3a88e69: Breaking: the connection state that `onConnectEnd` and `onReconnectEnd` receive carries `to` in flow coordinates instead of screen coordinates (`@xyflow/system` 1.0, as in React Flow 13 and Svelte Flow 2). Code that converted it with `screenToFlowPosition` should use it as is.
-- 953badb: `EdgeLabel` moves its element into the flow's edge-label layer the way Svelte Flow does (1.x and 2.0), instead of rendering through a portal. Clicking a label no longer selects its edge unless `selectEdgeOnClick` is set (before, the click bubbled through the portal to the edge). `EdgeLabelRenderer` keeps its portal (React Flow's contract).
+- 953badb: `EdgeLabel` moves its element into the flow's edge-label layer the way Svelte Flow does (1.x and 2.0), instead of rendering through a portal. Clicking a label selects its edge only with `selectEdgeOnClick`, which also gives it the pointer cursor (before, the click bubbled through the portal to the edge); the built-in edges' labels set it, as in Svelte Flow, so clicking one still selects its edge. `EdgeLabelRenderer` keeps its portal (React Flow's contract).
 - 3a88e69: Breaking: `nodeClickDistance` is removed, as in React Flow 13 and Svelte Flow 2. Whether a click on a node fires now depends only on whether a drag moved nodes: the click after a drag that moved them (or after a release outside the node) is swallowed, and any other click fires, including one after a jitter shorter than `nodeDragThreshold` (before, any pointer movement past `nodeClickDistance`, `0` by default, swallowed it). Use `nodeDragThreshold` (and `snapGrid`) to tune it.
 - 3a88e69: Connection APIs follow `@xyflow/system` 1.0, as in React Flow 13 and Svelte Flow 2:
 
@@ -159,6 +159,9 @@
   - `<Background bgColor>` takes precedence over an app-wide `--xy-background-color`.
   - The flow's layer containers are `user-select: none`, so drags across the pane and label layers no longer select page text.
   - `<EdgeLabel transparent>` drops the label background (the prop had no effect).
+  - Breaking (visual): nodes with children no longer get a lavender fill (`.solid-flow__node.parent`, a rule neither React Flow nor Svelte Flow has). It overrode the group background, `--xy-node-group-background-color` included, and the background of any built-in node with children. The `.parent` class stays; style it yourself to keep the fill.
+  - The pane's grab cursor sits on a pseudo-element covering the pane, as in React Flow 13 and Svelte Flow 2, so content inside the flow (edge labels, custom elements in the label layer) no longer inherits it.
+  - `user-select: none` also declares `-webkit-user-select`, which Safari reads instead, so node text and the flow's layers are not selected during drags there.
 
 - e640d39: Fewer runtime dependencies: `@solid-primitives/map`, `@solid-primitives/media`, `@solid-primitives/resize-observer` and `clsx` are gone (the color scheme is CSS-only now), which also drops `@solid-primitives/rootless` and `@solid-primitives/static-store` from installs. The remaining dependencies, `@solid-primitives/event-listener` 3.0.0 and `@xyflow/system` 1.0.0, are pinned exactly in both the npm and the JSR package; 0.2.x declared caret ranges, so installs could resolve versions the library was not tested with.
 - 2c56a55: Harden input state against focus loss (fixes two long-standing upstream xyflow bugs on our side):

@@ -1,4 +1,4 @@
-import { expect, gotoExample, test } from "./helpers";
+import { expect, gotoExample, nodeById, test } from "./helpers";
 
 // Structural rules React Flow / Svelte Flow ship in every stylesheet
 // (init.css and Svelte Flow's component styles).
@@ -54,5 +54,45 @@ test.describe("structure parity", () => {
     // the class <EdgeLabel transparent> renders
     await label.evaluate((el) => el.classList.add("transparent"));
     await expect(label).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  });
+
+  test("a parent node keeps its theme background (no extra .parent fill)", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await gotoExample(page, "Subflows");
+    await page.addStyleTag({
+      content: ".solid-flow { --xy-node-group-background-color: rgb(1, 2, 3); }",
+    });
+    // "5" is a group with children, "4" a default node with children
+    await expect(nodeById(page, "5")).toHaveClass(/\bparent\b/);
+    await expect(nodeById(page, "5")).toHaveCSS("background-color", "rgb(1, 2, 3)");
+    await expect(nodeById(page, "4")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  });
+
+  test("a built-in edge label selects its edge on click, with a pointer cursor", async ({
+    page,
+  }) => {
+    await gotoExample(page, "Edges");
+    const label = page.locator(".solid-flow__edge-label", { hasText: "bezier edge (default)" });
+    await expect(label).toHaveCSS("cursor", "pointer");
+    await label.click();
+    await expect(page.locator('.solid-flow__edge[data-id="e1-2"]')).toHaveClass(/\bselected\b/);
+  });
+
+  test("the pane's grab cursor stays on the pane: an EdgeLabel without selectEdgeOnClick keeps the default cursor", async ({
+    page,
+  }) => {
+    await gotoExample(page, "Edges");
+    const cursors = await page.evaluate(() => {
+      // what <EdgeLabel> renders without selectEdgeOnClick: no inline cursor
+      const label = document.createElement("div");
+      label.className = "solid-flow__edge-label";
+      document.querySelector(".solid-flow__edge-labels")!.append(label);
+      const pane = document.querySelector(".solid-flow__pane")!;
+      return {
+        label: getComputedStyle(label).cursor,
+        pane: getComputedStyle(pane, "::before").cursor,
+      };
+    });
+    expect(cursors).toEqual({ label: "auto", pane: "grab" });
   });
 });

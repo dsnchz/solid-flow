@@ -29,6 +29,7 @@
   height: 100%;
   top: 0;
   left: 0;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -44,17 +45,20 @@
   background-color: var(--xy-background-color, var(--xy-background-color-default));
 
   /* Theme: the --xy-*-default colors are light-dark(<light>, <dark>), and the
-     container's color-scheme picks the side: the OS preference unless a
-     `light` / `dark` class forces one. */
+     container's color-scheme picks the side: the OS preference unless an
+     ancestor's `data-theme` / `dark` / `light` or the container's own
+     `light` / `dark` class (forceColorMode) forces one. */
   color-scheme: light dark;
 }
 
-[data-theme="light"] .solid-flow {
-  color-scheme: light;
+[data-theme="dark"] .solid-flow,
+.dark .solid-flow {
+  color-scheme: dark;
 }
 
-[data-theme="dark"] .solid-flow {
-  color-scheme: dark;
+[data-theme="light"] .solid-flow,
+.light .solid-flow {
+  color-scheme: light;
 }
 
 /* forceColorMode: after the ancestor rules, so the prop wins over them. */

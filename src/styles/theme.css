@@ -115,6 +115,7 @@
 
 .solid-flow__controls-button {
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   border: none;
 

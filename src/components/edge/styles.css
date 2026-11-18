@@ -4,10 +4,10 @@
   --xy-edge-stroke-selected-default: light-dark(#555, #727272);
 }
 
+/* The pointer cursor is inline, set with `selectEdgeOnClick` (Svelte Flow). */
 .solid-flow__edge-label {
   text-align: center;
   position: absolute;
-  cursor: pointer;
 }
 
 /* <EdgeLabel transparent> */
