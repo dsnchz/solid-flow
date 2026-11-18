@@ -257,7 +257,9 @@ export const MiniMap = <NodeType extends Node>(
         class="solid-flow__minimap-svg"
         role="img"
         aria-labelledby={labelledBy()}
-        onClick={_props.onClick ? onSvgClick : undefined}
+        // Bound once, as every handler is: `onSvgClick` reads the prop when a
+        // click arrives (a read here would not follow it).
+        onClick={onSvgClick}
         style={{
           "--xy-minimap-mask-background-color-props": _props.maskColor,
           "--xy-minimap-mask-stroke-color-props": _props.maskStrokeColor,

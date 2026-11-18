@@ -53,10 +53,12 @@ export const NodeSelection = <NodeType extends Node = Node>(
     ...toNodeDragHandlers(props, false),
   }));
 
+  // The setting is read when a key arrives: a handler is bound once, when the
+  // element is created, so a read in the handler expression would not follow it.
   const onKeyDown = (event: KeyboardEvent) => {
     const diff = ARROW_KEY_DIFFS[event.key];
 
-    if (!diff) return;
+    if (!diff || store.disableKeyboardA11y) return;
 
     event.preventDefault();
     actions.moveSelectedNodes(diff, event.shiftKey ? 4 : 1);
@@ -83,7 +85,7 @@ export const NodeSelection = <NodeType extends Node = Node>(
         onContextMenu={onContextMenu}
         role={store.disableKeyboardA11y ? undefined : "button"}
         tabindex={store.disableKeyboardA11y ? undefined : -1}
-        onKeyDown={store.disableKeyboardA11y ? undefined : onKeyDown}
+        onKeyDown={onKeyDown}
       >
         <Selection width="100%" height="100%" x={0} y={0} />
       </div>

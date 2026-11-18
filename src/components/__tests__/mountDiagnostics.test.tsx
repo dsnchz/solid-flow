@@ -199,6 +199,48 @@ describe("mount diagnostics", () => {
     ).toEqual([]);
   });
 
+  it("showing the node selection box emits no diagnostics", async () => {
+    // The box's handlers are bound once when it mounts: a flow setting read
+    // in a handler expression is STRICT_READ_UNTRACKED (solid-js 2.0).
+    let ctx!: ReturnType<typeof useInternalSolidFlow>;
+    const Probe = () => {
+      ctx = useInternalSolidFlow();
+      return null;
+    };
+    const selected = nodes.map((node) => ({ ...node, selected: true }));
+    render(() => (
+      <SolidFlow defaultNodes={selected} defaultEdges={edges} width={800} height={600}>
+        <Probe />
+      </SolidFlow>
+    ));
+    for (let i = 0; i < 6; i++) await tick();
+    expect(
+      await unexpectedDiagnostics(() => {
+        ctx.actions.setSelectionRectMode("nodes");
+        flush();
+      }),
+    ).toEqual([]);
+    expect(document.querySelector(".solid-flow__selection-wrapper")).not.toBeNull();
+  });
+
+  it("a MiniMap whose click handlers come from signals emits no diagnostics", async () => {
+    // A handler prop the parent passes a reactive expression is a reactive
+    // read wherever it lands in a DOM handler expression (solid-js 2.0).
+    // A function passed to createSignal derives the value: it returns the handler.
+    const handler = () => {};
+    const [onClick] = createSignal(() => handler, { name: "test.onClick" });
+    const [onNodeClick] = createSignal(() => handler, { name: "test.onNodeClick" });
+    expect(
+      await unexpectedDiagnostics(() =>
+        render(() => (
+          <SolidFlow defaultNodes={nodes} defaultEdges={edges} width={800} height={600}>
+            <MiniMap onClick={onClick()} onNodeClick={onNodeClick()} />
+          </SolidFlow>
+        )),
+      ),
+    ).toEqual([]);
+  });
+
   it("the id lists subscribe to the arrays' structure, not to every row", async () => {
     // Reading each slot and its id was two sources per row: any flow past ~15
     // nodes reported WIDE_SCOPE_DEPS on visibleNodeIds and visibleEdgeIds.
