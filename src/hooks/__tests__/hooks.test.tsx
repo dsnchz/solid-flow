@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
+import { createEdgeStore } from "@/core";
 import { useNodeId } from "@/hooks";
 import type { Node } from "@/types";
 
@@ -222,6 +223,35 @@ describe("hooks", () => {
     await flow.deleteElements({ edges: [{ id: "e1" }] });
     flush();
     expect(connections()).toHaveLength(0);
+  });
+
+  it("useNodeConnections reports the new id of an edge replaced between the same endpoints", async () => {
+    // @xyflow/system 1.0 compares connection maps by entry, not by key set.
+    let connections!: ReturnType<typeof useNodeConnections>;
+    const [edges, setEdges] = createEdgeStore([{ id: "e1", source: "a", target: "b" }]);
+
+    render(() => (
+      <SolidFlow
+        nodes={[makeNode({ id: "a" }), makeNode({ id: "b", position: { x: 200, y: 100 } })]}
+        edges={edges}
+        width={800}
+        height={600}
+      >
+        {(() => {
+          const Probe = () => {
+            connections = useNodeConnections(() => ({ id: "a" }));
+            return null;
+          };
+          return <Probe />;
+        })()}
+      </SolidFlow>
+    ));
+    await settle();
+    expect(connections().map((c) => c.edgeId)).toEqual(["e1"]);
+
+    setEdges(() => [{ id: "e2", source: "a", target: "b" }]);
+    flush();
+    expect(connections().map((c) => c.edgeId)).toEqual(["e2"]);
   });
 
   it("throws a descriptive error when used outside <SolidFlow>", () => {

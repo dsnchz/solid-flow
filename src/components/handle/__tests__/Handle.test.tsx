@@ -236,6 +236,67 @@ describe("<Handle /> connection gesture", () => {
       expect.objectContaining({ source: "a", target: "b" }),
     ]);
   });
+
+  it("reports an edge replaced by a new id between the same handles, and edges swapping handles", async () => {
+    // @xyflow/system 1.0 compares connections by edge id and endpoints
+    // (0.0.84 compared the pair keys only: neither change fired anything).
+    const onConnect = vi.fn();
+    const onDisconnect = vi.fn();
+    const [edges, setEdges] = createEdgeStore([
+      { id: "e1", source: "a", target: "b", sourceHandle: "s1" },
+      { id: "e2", source: "a", target: "c", sourceHandle: "s2" },
+    ]);
+
+    const nodeTypes: NodeTypes = {
+      custom: () => (
+        <div style={{ width: "100px", height: "40px" }}>
+          <Handle
+            id="s1"
+            type="source"
+            position="bottom"
+            onConnect={onConnect}
+            onDisconnect={onDisconnect}
+          />
+          <Handle id="s2" type="source" position="right" />
+        </div>
+      ),
+    };
+
+    render(() => (
+      <SolidFlow
+        nodes={[
+          makeNode({ id: "a", type: "custom" }),
+          makeNode({ id: "b", position: { x: 200, y: 100 } }),
+          makeNode({ id: "c", position: { x: 400, y: 200 } }),
+        ]}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        width={800}
+        height={600}
+      />
+    ));
+    await settle();
+    expect(onConnect).not.toHaveBeenCalled();
+
+    setEdges(() => [
+      { id: "e3", source: "a", target: "b", sourceHandle: "s1" },
+      { id: "e2", source: "a", target: "c", sourceHandle: "s2" },
+    ]);
+    flush();
+    expect(onDisconnect.mock.lastCall?.[0]).toEqual([expect.objectContaining({ edgeId: "e1" })]);
+    expect(onConnect.mock.lastCall?.[0]).toEqual([expect.objectContaining({ edgeId: "e3" })]);
+
+    // e3 and e2 exchange their source handles: s1 now carries e2's pair
+    setEdges(() => [
+      { id: "e3", source: "a", target: "b", sourceHandle: "s2" },
+      { id: "e2", source: "a", target: "c", sourceHandle: "s1" },
+    ]);
+    flush();
+    expect(onDisconnect.mock.lastCall?.[0]).toEqual([expect.objectContaining({ edgeId: "e3" })]);
+    expect(onConnect.mock.lastCall?.[0]).toEqual([
+      expect.objectContaining({ edgeId: "e2", target: "c" }),
+    ]);
+  });
 });
 
 describe("<Handle /> click-to-connect", () => {
