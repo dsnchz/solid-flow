@@ -1,7 +1,7 @@
 import type { JSX } from "@solidjs/web";
 import { Portal } from "@solidjs/web";
 import { type Align, getNodeToolbarTransform, Position as SystemPosition } from "@xyflow/system";
-import { getOwner, type ParentComponent, Show, useContext } from "solid-js";
+import { getOwner, type ParentComponent, runWithOwner, Show, useContext } from "solid-js";
 
 import { cx, extraKeysOf, spreadExtras } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
@@ -57,6 +57,8 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
   const position = () => props.position ?? "top";
   const align = () => props.align ?? "center";
   const extraKeys = extraKeysOf(props, OWN_KEYS);
+  // The ref is created in the Portal under Show's branch: the extras spread
+  // is parented explicitly to this component (a ref owns nothing).
   const owner = getOwner();
 
   // NodeToolbar can be rendered outside of a node (with `nodeId`), so the
@@ -108,7 +110,7 @@ export const NodeToolbar: ParentComponent<Partial<NodeToolbarProps>> = (props) =
     <Show when={showPortal()}>
       <Portal mount={store.domNode!}>
         <div
-          ref={(el) => spreadExtras(el, props, extraKeys, owner)}
+          ref={(el) => runWithOwner(owner, () => spreadExtras(el, props, extraKeys))}
           // The user's class joins the toolbar's (React Flow's cc([...])); a
           // spread `class` replaced it.
           class={cx("solid-flow__node-toolbar", props.class)}

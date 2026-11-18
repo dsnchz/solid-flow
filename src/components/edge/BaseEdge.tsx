@@ -1,5 +1,5 @@
 import { isServer, type JSX } from "@solidjs/web";
-import { getOwner, type ParentProps, Show } from "solid-js";
+import { type ParentProps, Show } from "solid-js";
 
 import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/components/internal/dom";
 import type { BaseEdgeProps } from "@/types";
@@ -38,39 +38,42 @@ export const BaseEdge = (props: ParentProps<BaseEdgeProps>): JSX.Element => {
   const interactionWidth = () => props.interactionWidth ?? DEFAULT_INTERACTION_WIDTH;
 
   const extraKeys = extraKeysOf(props, OWN_KEYS);
-  const owner = getOwner();
-  const mountPath = (el: SVGPathElement) => spreadExtras(el, props, extraKeys, owner);
 
   const pathClass = () => cx("solid-flow__edge-path", props.class);
 
+  // The server's copy of the path: a ref never runs in a server render, so
+  // the extras are spread here (extrasOf). Same attributes as the client path
+  // below, which the hydration lane checks.
+  let element: SVGPathElement | undefined;
+  const path = isServer ? (
+    <path
+      {...extrasOf(props, extraKeys)}
+      id={props.id}
+      d={props.path}
+      class={pathClass()}
+      marker-start={props.markerStart}
+      marker-end={props.markerEnd}
+      fill="none"
+      style={props.style}
+    />
+  ) : (
+    <path
+      ref={(el) => (element = el)}
+      id={props.id}
+      d={props.path}
+      class={pathClass()}
+      marker-start={props.markerStart}
+      marker-end={props.markerEnd}
+      fill="none"
+      style={props.style}
+    />
+  );
+  // From the body, not the ref (see spreadExtras); the ref has run by now.
+  if (element) spreadExtras(element, props, extraKeys);
+
   return (
     <>
-      {isServer ? (
-        // The server's copy of the path: a ref never runs in a server
-        // render, so the extras are spread here (extrasOf). Same attributes
-        // as the client path below, which the hydration lane checks.
-        <path
-          {...extrasOf(props, extraKeys)}
-          id={props.id}
-          d={props.path}
-          class={pathClass()}
-          marker-start={props.markerStart}
-          marker-end={props.markerEnd}
-          fill="none"
-          style={props.style}
-        />
-      ) : (
-        <path
-          ref={mountPath}
-          id={props.id}
-          d={props.path}
-          class={pathClass()}
-          marker-start={props.markerStart}
-          marker-end={props.markerEnd}
-          fill="none"
-          style={props.style}
-        />
-      )}
+      {path}
 
       <Show when={interactionWidth() > 0}>
         <path

@@ -2,7 +2,7 @@ import { createEventListener } from "@solid-primitives/event-listener";
 import type { JSX } from "@solidjs/web";
 import { dynamic } from "@solidjs/web";
 import { elementSelectionKeys, getMarkerId } from "@xyflow/system";
-import { type Accessor, createMemo, getOwner, runWithOwner, untrack } from "solid-js";
+import { type Accessor, createMemo, untrack } from "solid-js";
 
 import { ARIA_EDGE_DESC_KEY } from "@/components/accessibility";
 import { clientOnlySetup, cx, spreadOnDemand } from "@/components/internal/dom";
@@ -31,9 +31,6 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
   >();
   // Each node row carries its part of its edges' drawn z (edgeZOf).
   const endpointZ = edgeZReaderOf(internalNodes);
-  // The ref callback runs outside the component owner; the domAttributes
-  // spread effects must be owned (disposal + no NO_OWNER diagnostics).
-  const owner = getOwner();
 
   // ONE row resolution per row (see NodeWrapper): EdgeRenderer's Show
   // narrows getResolvedEdge (which probes `in` first, so the row survives
@@ -79,10 +76,10 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
     props.events.onEdgePointerMove?.({ edge: edge(), event });
   // The native compiler's delegated `dblclick` never fires and `on:`
   // namespaces are not planned for it — direct attachment is the permanent
-  // form here, not a workaround. Attached from the ref callback (see
-  // mountElement below): an effect over a ref SIGNAL is dirty for the whole
-  // synchronous mount and sits in the pure heap, and every later row's memo
-  // pull re-marks that heap (bench round 17/18 — the O(N^2) mount).
+  // form here, not a workaround. Attached with the element in hand (see
+  // mountElement below), not by an effect over a ref SIGNAL: that is dirty for
+  // the whole synchronous mount and sits in the pure heap, and every later
+  // row's memo pull re-marks that heap (bench round 17/18 — the O(N^2) mount).
   const onDblClick = (event: MouseEvent) =>
     props.events.onEdgeDoubleClick?.({ edge: edge(), event });
   // The runtime does not delegate pointerenter/pointerleave, and dblclick is
@@ -132,62 +129,67 @@ export const EdgeWrapper = <NodeType extends Node = Node, EdgeType extends Edge 
     const row = edge();
     return (row.zIndex ?? 0) + Math.max(endpointZ(row.source), endpointZ(row.target));
   };
-  const EdgeBody = () => (
-    <g
-      ref={(el) => {
-        edgeRef = el;
-        // Ref callbacks run outside the component owner: keep the wiring
-        // owned (and outside the hydration id sequence: see clientOnlySetup).
-        runWithOwner(owner, () => clientOnlySetup(() => mountElement(el)));
-      }}
-      data-id={edge().id}
-      tabindex={focusable() ? 0 : undefined}
-      role={edge().ariaRole ?? (focusable() ? "group" : "img")}
-      aria-label={ariaLabel()}
-      aria-roledescription="edge"
-      aria-describedby={focusable() ? `${ARIA_EDGE_DESC_KEY}-${store.id}` : undefined}
-      class={cx(
-        "solid-flow__edge",
-        `solid-flow__edge-${edgeType()}`,
-        {
-          animated: !!edge().animated,
-          selected: !!edge().selected,
-          selectable: !!selectable(),
-        },
-        edge().class,
-      )}
-      onClick={onClick}
-      onKeyDown={(e) => focusable() && onKeyDown(e)}
-      onContextMenu={onContextMenu}
-    >
-      <EdgeComponent
-        id={edge().id}
-        source={edge().source}
-        target={edge().target}
-        sourceX={edge().sourceX}
-        sourceY={edge().sourceY}
-        targetX={edge().targetX}
-        targetY={edge().targetY}
-        sourcePosition={edge().sourcePosition}
-        targetPosition={edge().targetPosition}
-        animated={edge().animated}
-        selected={edge().selected}
-        label={edge().label}
-        labelStyle={edge().labelStyle}
-        data={edge().data}
-        style={edge().style}
-        interactionWidth={edge().interactionWidth}
-        pathOptions={edge().pathOptions}
-        selectable={selectable()}
-        deletable={edge().deletable ?? true}
-        type={edgeType()}
-        sourceHandleId={edge().sourceHandle}
-        targetHandleId={edge().targetHandle}
-        markerStart={markerStartUrl()}
-        markerEnd={markerEndUrl()}
-      />
-    </g>
-  );
+  const EdgeBody = () => {
+    let element: SVGGElement | undefined;
+    const view = (
+      <g
+        ref={(el) => {
+          element = el;
+          edgeRef = el;
+        }}
+        data-id={edge().id}
+        tabindex={focusable() ? 0 : undefined}
+        role={edge().ariaRole ?? (focusable() ? "group" : "img")}
+        aria-label={ariaLabel()}
+        aria-roledescription="edge"
+        aria-describedby={focusable() ? `${ARIA_EDGE_DESC_KEY}-${store.id}` : undefined}
+        class={cx(
+          "solid-flow__edge",
+          `solid-flow__edge-${edgeType()}`,
+          {
+            animated: !!edge().animated,
+            selected: !!edge().selected,
+            selectable: !!selectable(),
+          },
+          edge().class,
+        )}
+        onClick={onClick}
+        onKeyDown={(e) => focusable() && onKeyDown(e)}
+        onContextMenu={onContextMenu}
+      >
+        <EdgeComponent
+          id={edge().id}
+          source={edge().source}
+          target={edge().target}
+          sourceX={edge().sourceX}
+          sourceY={edge().sourceY}
+          targetX={edge().targetX}
+          targetY={edge().targetY}
+          sourcePosition={edge().sourcePosition}
+          targetPosition={edge().targetPosition}
+          animated={edge().animated}
+          selected={edge().selected}
+          label={edge().label}
+          labelStyle={edge().labelStyle}
+          data={edge().data}
+          style={edge().style}
+          interactionWidth={edge().interactionWidth}
+          pathOptions={edge().pathOptions}
+          selectable={selectable()}
+          deletable={edge().deletable ?? true}
+          type={edgeType()}
+          sourceHandleId={edge().sourceHandle}
+          targetHandleId={edge().targetHandle}
+          markerStart={markerStartUrl()}
+          markerEnd={markerEndUrl()}
+        />
+      </g>
+    );
+    // The wiring is created in the body, not in the ref (see NodeWrapper).
+    const mounted = element;
+    if (mounted) clientOnlySetup(() => mountElement(mounted));
+    return view;
+  };
 
   return (
     <EdgeIdContext value={edgeId}>

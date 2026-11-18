@@ -14,9 +14,7 @@ import {
   createMemo,
   createRenderEffect,
   createSignal,
-  getOwner,
   onCleanup,
-  runWithOwner,
   untrack,
 } from "solid-js";
 
@@ -49,8 +47,6 @@ export const NodeWrapper = <NodeType extends Node = Node>(
   props: NodeWrapperProps<NodeType>,
 ): JSX.Element => {
   const { store, parentIds, actions, onScreenNodeIds } = useInternalSolidFlow<NodeType>();
-  // Captured for `mountElement` (ref callbacks run outside the component owner).
-  const owner = getOwner();
 
   const [nodeRef, setNodeRef] = createSignal<HTMLDivElement>();
 
@@ -370,14 +366,12 @@ export const NodeWrapper = <NodeType extends Node = Node>(
 
   // `hidden` is decided by NodeRenderer's membership Show (one Show per row,
   // not two): this wrapper only ever runs for a present, non-hidden row.
-  return (
+  let element: HTMLDivElement | undefined;
+  const view = (
     <div
       ref={(el) => {
+        element = el;
         setNodeRef(el);
-        // Ref callbacks run outside the component owner: keep the wiring
-        // owned (disposal, no NO_OWNER diagnostics).
-        // (and outside the hydration id sequence: see clientOnlySetup)
-        runWithOwner(owner, () => clientOnlySetup(() => mountElement(el)));
       }}
       data-id={node().id}
       class={isServer ? nodeClass() : undefined}
@@ -417,4 +411,11 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       </NodeContext>
     </div>
   );
+  // The element's wiring is created here in the body, owned by this
+  // component, not in the ref (a ref owns nothing: solid-js 2.0 refuses a
+  // computation created in one), and outside the hydration id sequence (see
+  // clientOnlySetup). The ref has run by now; no ref runs on the server.
+  const mounted = element;
+  if (mounted) clientOnlySetup(() => mountElement(mounted));
+  return view;
 };

@@ -1,6 +1,6 @@
 import type { JSX } from "@solidjs/web";
 import { type EdgeToolbarBaseProps, getEdgeToolbarTransform } from "@xyflow/system";
-import { getOwner, type ParentProps, Show } from "solid-js";
+import { getOwner, type ParentProps, runWithOwner, Show } from "solid-js";
 
 import { EdgeLabel } from "@/components/edge";
 import { cx, extraKeysOf, spreadExtras } from "@/components/internal/dom";
@@ -41,6 +41,8 @@ export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element =
   // One per edge that carries it, hidden until shown: the extra attributes go
   // through spreadExtras (see Handle) instead of an omit record and a spread.
   const extraKeys = extraKeysOf(props, OWN_KEYS);
+  // The ref is created in EdgeLabel under Show's branch: the extras spread
+  // is parented explicitly to this component (a ref owns nothing).
   const owner = getOwner();
 
   const { store, edgeLookup } = useInternalSolidFlow();
@@ -63,7 +65,7 @@ export const EdgeToolbar = (props: ParentProps<EdgeToolbarProps>): JSX.Element =
     <Show when={isActive()}>
       <EdgeLabel selectEdgeOnClick={props.selectEdgeOnClick} transparent>
         <div
-          ref={(el) => spreadExtras(el, props, extraKeys, owner)}
+          ref={(el) => runWithOwner(owner, () => spreadExtras(el, props, extraKeys))}
           class={cx("solid-flow__edge-toolbar", props.class)}
           style={{
             position: "absolute",

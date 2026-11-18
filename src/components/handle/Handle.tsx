@@ -13,7 +13,7 @@ import {
   type Optional,
   XYHandle,
 } from "@xyflow/system";
-import { createEffect, getOwner, type ParentProps, snapshot, untrack } from "solid-js";
+import { createEffect, type ParentProps, snapshot, untrack } from "solid-js";
 
 import {
   armConnectionGestureLookup,
@@ -77,8 +77,6 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   const isConnectableStart = () => props.isConnectableStart ?? true;
   const isConnectableEnd = () => props.isConnectableEnd ?? true;
   const extraKeys = extraKeysOf(props, OWN_KEYS);
-  const owner = getOwner();
-  const mountElement = (el: HTMLDivElement) => spreadExtras(el, props, extraKeys, owner);
 
   const { store, nodeLookup, connections, actions, nodeGeometry } = useInternalSolidFlow<
     NodeType,
@@ -259,41 +257,41 @@ export const Handle = <NodeType extends Node = Node, EdgeType extends Edge = Edg
   // The server's copy of the element: a ref never runs in a server render,
   // so the extras are spread here (extrasOf). Same attributes as the client
   // element below, which the hydration lane checks.
-  return (
-    <>
-      {isServer ? (
-        <div
-          {...extrasOf(props, extraKeys)}
-          role="button"
-          aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
-          tabindex={-1}
-          data-handleid={handleId()}
-          data-nodeid={nodeId()}
-          data-handlepos={position()}
-          data-id={dataId()}
-          style={props.style}
-          class={handleClass()}
-        >
-          {props.children}
-        </div>
-      ) : (
-        <div
-          ref={mountElement}
-          role="button"
-          aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
-          tabindex={-1}
-          data-handleid={handleId()}
-          data-nodeid={nodeId()}
-          data-handlepos={position()}
-          data-id={dataId()}
-          onClick={onClick}
-          onPointerDown={onPointerDown}
-          style={props.style}
-          class={handleClass()}
-        >
-          {props.children}
-        </div>
-      )}
-    </>
+  let element: HTMLDivElement | undefined;
+  const view = isServer ? (
+    <div
+      {...extrasOf(props, extraKeys)}
+      role="button"
+      aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
+      tabindex={-1}
+      data-handleid={handleId()}
+      data-nodeid={nodeId()}
+      data-handlepos={position()}
+      data-id={dataId()}
+      style={props.style}
+      class={handleClass()}
+    >
+      {props.children}
+    </div>
+  ) : (
+    <div
+      ref={(el) => (element = el)}
+      role="button"
+      aria-label={store.ariaLabelConfig[`handle.ariaLabel`]}
+      tabindex={-1}
+      data-handleid={handleId()}
+      data-nodeid={nodeId()}
+      data-handlepos={position()}
+      data-id={dataId()}
+      onClick={onClick}
+      onPointerDown={onPointerDown}
+      style={props.style}
+      class={handleClass()}
+    >
+      {props.children}
+    </div>
   );
+  // From the body, not the ref (see spreadExtras); the ref has run by now.
+  if (element) spreadExtras(element, props, extraKeys);
+  return view;
 };

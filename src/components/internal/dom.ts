@@ -1,13 +1,6 @@
 import { type JSX, spread } from "@solidjs/web";
 import type { XYPosition } from "@xyflow/system";
-import {
-  createEffect,
-  createRoot,
-  getOwner,
-  isHydrating,
-  type Owner,
-  runWithOwner,
-} from "solid-js";
+import { createEffect, createRoot, getOwner, isHydrating, runWithOwner } from "solid-js";
 
 export const toPxString = (value: number | undefined): string | undefined =>
   value === undefined ? undefined : `${value}px`;
@@ -62,7 +55,7 @@ let clientOnlyRoots = 0;
 
 /**
  * Runs client-only reactive setup — window listeners, a row's element wiring
- * from its ref — without consuming hydration ids. Owned computations take the
+ * — without consuming hydration ids. Owned computations take the
  * next id from their owner's sequence, and hydration matches server markup to
  * the client tree by those ids: a computation the server never creates shifts
  * the id of everything created after it, and the client then looks for keys
@@ -83,15 +76,12 @@ export const clientOnlySetup = <T>(fn: () => T): T =>
 
 /**
  * Installs the spread of `keys` from `props` onto `el` (nothing when there
- * are none). Call from the element's ref with the component's owner: ref
- * callbacks run outside it.
+ * are none), owned by the current owner. Call from the component body once
+ * the JSX has created `el`, never from its ref: a ref owns nothing, and
+ * solid-js 2.0 refuses (in dev) a computation created in one under the
+ * owner of the pass that created the element.
  */
-export const spreadExtras = (
-  el: Element,
-  props: object,
-  keys: readonly string[],
-  owner: Owner | null,
-): void => {
+export const spreadExtras = (el: Element, props: object, keys: readonly string[]): void => {
   if (keys.length === 0) return;
   const extras: Record<string, unknown> = {};
   for (const key of keys) {
@@ -100,7 +90,7 @@ export const spreadExtras = (
       enumerable: true,
     });
   }
-  runWithOwner(owner, () => clientOnlySetup(() => spread(el, extras, true)));
+  clientOnlySetup(() => spread(el, extras, true));
 };
 
 /**

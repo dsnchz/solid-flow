@@ -5,7 +5,7 @@ import {
   type XYResizerChange,
   type XYResizerChildChange,
 } from "@xyflow/system";
-import { createEffect, createSignal, getOwner, type ParentProps, untrack } from "solid-js";
+import { createEffect, createSignal, type ParentProps, untrack } from "solid-js";
 
 import { cx, extraKeysOf, extrasOf, spreadExtras } from "@/components/internal/dom";
 import { useInternalSolidFlow, useNodeId } from "@/contexts";
@@ -98,7 +98,6 @@ export const renderResizeControl = <NodeType extends Node = Node>(
   const maxWidth = () => props.maxWidth ?? Number.MAX_VALUE;
   const maxHeight = () => props.maxHeight ?? Number.MAX_VALUE;
   const autoScale = () => props.autoScale ?? true;
-  const owner = getOwner();
 
   const [resizeControlRef, setResizeControlRef] = createSignal<HTMLDivElement>();
   const { store, nodeLookup, actions } = useInternalSolidFlow<NodeType>();
@@ -212,26 +211,26 @@ export const renderResizeControl = <NodeType extends Node = Node>(
   // The server's copy of the element: a ref never runs in a server render,
   // so the extras are spread here (extrasOf). Same attributes as the client
   // element below, which the hydration lane checks.
-  return (
-    <>
-      {isServer ? (
-        <div {...extrasOf(props, extraKeys)} class={controlClass()} style={controlStyle()}>
-          {parts.children()}
-        </div>
-      ) : (
-        <div
-          ref={(el) => {
-            setResizeControlRef(el);
-            spreadExtras(el, props, extraKeys, owner);
-          }}
-          class={controlClass()}
-          style={controlStyle()}
-        >
-          {parts.children()}
-        </div>
-      )}
-    </>
+  let element: HTMLDivElement | undefined;
+  const view = isServer ? (
+    <div {...extrasOf(props, extraKeys)} class={controlClass()} style={controlStyle()}>
+      {parts.children()}
+    </div>
+  ) : (
+    <div
+      ref={(el) => {
+        element = el;
+        setResizeControlRef(el);
+      }}
+      class={controlClass()}
+      style={controlStyle()}
+    >
+      {parts.children()}
+    </div>
   );
+  // From the body, not the ref (see spreadExtras); the ref has run by now.
+  if (element) spreadExtras(element, props, extraKeys);
+  return view;
 };
 
 /** A single resize handle or line — the building block of `NodeResizer`. */

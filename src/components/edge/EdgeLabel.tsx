@@ -84,14 +84,13 @@ export const renderEdgeLabel = (
     return edge && (edge.zIndex ?? 0) + Math.max(endpointZ(edge.source), endpointZ(edge.target));
   };
 
+  // Runs in the label's root (below): the extras spread is created there,
+  // once the ref has run, and is disposed with the label.
   const createLabel = (): HTMLDivElement | undefined => {
     let label: HTMLDivElement | undefined;
     void (
       <div
-        ref={(el) => {
-          label = el;
-          spreadExtras(el, props, extraKeys, owner);
-        }}
+        ref={(el) => (label = el)}
         role="button"
         tabindex={-1}
         class={parts.class()}
@@ -112,6 +111,7 @@ export const renderEdgeLabel = (
         {parts.children()}
       </div>
     );
+    if (label) spreadExtras(label, props, extraKeys);
     return label;
   };
 
