@@ -55,8 +55,8 @@ export const createConnectionState = <NodeType extends Node = Node>(
   // per gesture.
   const fromHandle = createMemo(() => connection().fromHandle ?? null, {
     equals: handleIdentityEquals,
-    // Every handle subscribes (rc.7 HUGE_FAN_OUT) BY DESIGN: it changes once
-    // per gesture and each subscriber does O(1) work — see docs/ARCHITECTURE.md.
+    // Read by the flow root's connection classes only: handles read the
+    // keyed origin / target records below (perf P2).
     name: "connectionFromHandle",
   });
 

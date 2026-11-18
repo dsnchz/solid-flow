@@ -15,12 +15,12 @@ A SolidJS port of [React Flow](https://reactflow.dev/) and [Svelte Flow](https:/
 
 ## Version pairing
 
-| Solid Flow | SolidJS         | Status                          |
-| ---------- | --------------- | ------------------------------- |
-| `1.x`      | `solid-js` 2.x  | Active development (`next` tag) |
-| `0.2.x`    | `solid-js` 1.9+ | Maintenance (fixes)             |
+| Solid Flow | SolidJS         | Status                                       |
+| ---------- | --------------- | -------------------------------------------- |
+| `1.x`      | `solid-js` 2.x  | Current (`latest`)                           |
+| `0.2.x`    | `solid-js` 1.8+ | Maintenance (fixes): `@dschz/solid-flow@0.2` |
 
-The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive graph, and requires `solid-js` and `@solidjs/web` 2.0.0 or newer. Until solid-flow 1.0.0 is published, install it with the `next` tag. Keep `solid-js` and `@solidjs/web` on matching 2.0 versions — mixing them breaks at import time. Upgrading from 0.2.x? See [Migrating from 0.2.x](#migrating-from-02x).
+The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive graph, and requires `solid-js` and `@solidjs/web` 2.0.0 or newer. Keep `solid-js` and `@solidjs/web` on matching 2.0 versions — mixing them breaks at import time. Upgrading from 0.2.x? See [Migrating from 0.2.x](#migrating-from-02x).
 
 ## Key Features
 
@@ -30,20 +30,20 @@ The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive gr
 - **Scales to large graphs:** Off-screen elements are viewport-culled by default, and an opt-in `onlyRenderVisibleElements` mode only mounts what's visible — stress-tested at 10,000 nodes
 - **Type-guided data:** Your custom components are the schema — node/edge stores narrow each element's `data` by its `type` field, with autocomplete for type names
 - **Server data, first-class:** Load the graph from an API, stream it live from a server push, batch-save drafts, or sync per-mutation with optimistic stores — all through SolidJS 2.0's async model, no cache library required
-- **Rich plugins:** Background patterns, interactive MiniMap (custom minimap nodes, click handlers), zoom Controls, Node Toolbar, and Node Resizer
+- **Rich plugins:** Background patterns, interactive MiniMap (custom minimap nodes, click handlers), zoom Controls, Node and Edge Toolbars, and Node Resizer
 - **Accessible:** Keyboard navigation, screen reader support, ARIA labels, and focus management
 - **SSR-ready:** Renders on the server (a dedicated SSR test lane keeps it that way)
 
 ## Installation
 
 ```sh
-npm  install @dschz/solid-flow@next solid-js @solidjs/web
-pnpm add     @dschz/solid-flow@next solid-js @solidjs/web
-yarn add     @dschz/solid-flow@next solid-js @solidjs/web
-bun  add     @dschz/solid-flow@next solid-js @solidjs/web
+npm  install @dschz/solid-flow solid-js @solidjs/web
+pnpm add     @dschz/solid-flow solid-js @solidjs/web
+yarn add     @dschz/solid-flow solid-js @solidjs/web
+bun  add     @dschz/solid-flow solid-js @solidjs/web
 ```
 
-`solid-js` and `@solidjs/web` are **peer dependencies** — install both on matching 2.0 versions. The `@next` tag is the 1.x prerelease line; once solid-flow 1.0.0 ships, a plain install takes over (see [Version pairing](#version-pairing)). Also available on [JSR](https://jsr.io/@dschz/solid-flow).
+`solid-js` and `@solidjs/web` are **peer dependencies** — install both on matching 2.0 versions.
 
 ### From JSR
 
@@ -317,13 +317,16 @@ Commands include viewport control (`fitView`, `fitBounds`, `zoomIn`/`zoomOut`, `
 
 ```tsx
 const solidFlow = useSolidFlow(); // { flow, commands } — the main API
-const nodes = useNodes(); // reactive readonly node array
-const edges = useEdges(); // reactive readonly edge array
+const nodes = useNodes(); // reactive readonly node array accessor
+const edges = useEdges(); // reactive readonly edge array accessor
 const viewport = useViewport(); // reactive viewport accessor
 const connection = useConnection(); // in-progress connection state
+const selectedNodes = useSelectedNodes(); // also useSelectedEdges()
+const nodesReady = useNodesInitialized(); // true once every non-hidden node is measured
 
 // Hook parameters that feed reactive reads are accessors, so they can't
 // silently go stale when derived from props:
+const node = useNode(() => props.nodeId); // one node by id (also useEdge)
 const nodeData = useNodesData(() => ["node-1", "node-2"]);
 const connections = useNodeConnections(() => ({
   id: "node-1",
@@ -331,8 +334,12 @@ const connections = useNodeConnections(() => ({
   onConnect: (added) => console.log("connected", added), // optional, not called on mount
 }));
 const internal = useInternalNode(() => props.nodeId); // measured/internal record
+const shiftHeld = useKeyPress(() => "Shift"); // usable anywhere, no provider needed
 
 const updateInternals = useUpdateNodeInternals(); // re-measure after handle changes
+
+// Selection listener from any component inside the flow (called on mount, then on change):
+useOnSelectionChange(({ nodes, edges }) => console.log(nodes.length, edges.length));
 
 // Which node/edge a nested component is rendered inside — for composable
 // custom nodes and edge labels without prop drilling:
@@ -344,7 +351,7 @@ const edgeId = useEdgeId();
 
 Some React Flow hooks intentionally have no Solid Flow equivalent, because Solid's fine-grained reactivity makes them unnecessary:
 
-- `useOnSelectionChange` / `useOnViewportChange` — reading `flow.selection` or `flow.viewport` in a tracked scope IS the subscription; wrap side effects in `createEffect` over those reads.
+- `useOnViewportChange` — reading `flow.viewport` in a tracked scope IS the subscription; wrap side effects in `createEffect` over that read.
 - `useNodesState` / `useEdgesState` — use `createNodeStore` / `createEdgeStore` instead.
 - `useStore` — the reactive `flow` struct is the supported read surface; there is no public escape hatch into internals.
 
@@ -367,7 +374,7 @@ const ReconnectableEdge = (props: EdgeProps) => {
   return (
     <>
       <BaseEdge path={path()} markerEnd={props.markerEnd} />
-      {/* drag either end of a selected edge onto another handle */}
+      {/* drag either end of the edge onto another handle */}
       <EdgeReconnectAnchor type="source" position={{ x: props.sourceX, y: props.sourceY }} />
       <EdgeReconnectAnchor type="target" position={{ x: props.targetX, y: props.targetY }} />
     </>
@@ -389,6 +396,7 @@ Reconnection lifecycle callbacks (`onReconnectStart`, `onReconnect`, `onReconnec
 - **Controls** — zoom in/out, fit view, lock interactions
 - **MiniMap** — interactive overview with viewport indicator, custom node rendering via `nodeComponent`, and `onClick` / `onNodeClick` handlers
 - **NodeToolbar** — context-sensitive toolbars for nodes
+- **EdgeToolbar** — toolbars for edges, rendered inside a custom edge component
 - **NodeResizer** — interactive node resizing with handles
 
 ## Styling
@@ -444,7 +452,7 @@ The theme is a set of CSS custom properties. Set `--xy-<name>` on `.solid-flow`,
 | Background             | `--xy-background-color`, `--xy-background-pattern-color` (all variants), or per variant `--xy-background-pattern-dots-color` / `-lines-color` / `-cross-color`                                                                                      |
 | Other                  | `--xy-attribution-background-color`, `--xy-resize-background-color` (NodeResizer)                                                                                                                                                                   |
 
-Component props win over the variables: `<Background bgColor patternColor>`, `<MiniMap bgColor maskColor maskStrokeColor maskStrokeWidth>` and `<ControlButton bgColor bgColorHover color colorHover borderColor>` set the same values for that one component. MiniMap's `nodeColor`, `nodeStrokeColor` and `nodeStrokeWidth` apply to each node shape directly and also take a function of the node. Edge arrowhead markers take the edge stroke (`--xy-edge-stroke`) unless the marker has its own `color`; `defaultMarkerColor` on `<SolidFlow>` sets that color for every marker, and `defaultMarkerColor={null}` hands all of them to the edge stroke.
+Component props win over the variables: `<Background bgColor patternColor>`, `<MiniMap bgColor maskColor maskStrokeColor maskStrokeWidth>` and `<ControlButton bgColor bgColorHover color colorHover borderColor>` set the same values for that one component. MiniMap's `nodeColor`, `nodeStrokeColor` and `nodeStrokeWidth` apply to each node shape directly, and the two colors also take a function of the node. Edge arrowhead markers take the edge stroke (`--xy-edge-stroke`) unless the marker has its own `color`; `defaultMarkerColor` on `<SolidFlow>` sets that color for every marker, and `defaultMarkerColor={null}` hands all of them to the edge stroke.
 
 ### Color scheme
 
@@ -494,9 +502,9 @@ With `style.css` and `base.css`, custom node types get the structural rules only
 
 ## Performance
 
-The design in one line: Solid Flow spends time and memory up front to remember causality, so writes do not have to rediscover their consequences. Every implementation of the xyflow engine indexes the graph eagerly; Solid Flow additionally keeps everything derived from it maintained incrementally through Solid's dependency graph, so an interactive edit costs only the rows it touches. The price is paid at mount and in memory; the return is on every gesture. Measured at 10,000 nodes on the same stress page as React Flow 12.12 and Svelte Flow 1.7, a node drag costs 31 ms of script over 60 moves against 10,634 and 495, and a whole-graph replacement rewrites 10,000 text nodes in place while the other two tear down and rebuild every edge element. The trade turns the other way for writes that replace most objects at once, which cost the recomputation the others pay plus the maintenance on top; `docs/ARCHITECTURE.md` has the full account.
+The design in one line: Solid Flow spends time and memory up front to remember causality, so writes do not have to rediscover their consequences. Every implementation of the xyflow engine indexes the graph eagerly; Solid Flow additionally keeps everything derived from it maintained incrementally through Solid's dependency graph, so an interactive edit costs only the rows it touches. The price is paid at mount and in memory; the return is on every gesture. Measured at 10,000 nodes on the same stress page as React Flow 13.0.2 and Svelte Flow 2.0.2, a node drag costs 28 ms of script over 60 moves against 4,384 and 493, and a whole-graph replacement rewrites 10,000 text nodes in place where React Flow 12.12 and Svelte Flow 1.7 tear down and rebuild every edge element. The trade turns the other way for writes that replace most objects at once, which cost the recomputation the others pay plus the maintenance on top; `docs/ARCHITECTURE.md` has the full account.
 
-Two complementary culling tiers keep large graphs fast:
+Two complementary culling tiers, plus gesture-time spatial queries, keep large graphs fast:
 
 - **CSS culling (always on):** Elements outside the (overscanned) viewport are hidden with `visibility: hidden` + `pointer-events: none`. Everything stays mounted, so component state, measurement, and accessibility semantics are untouched — this tier has no userland contract at all.
 - **Gesture-time spatial queries:** Dragging a connection runs upstream's closest-handle search on every pointer move — a full node scan in stock React/Svelte Flow. Solid Flow snapshots node geometry into a spatial grid at gesture start (geometry is frozen mid-gesture) and answers from the pointer's neighborhood: at 10,000 nodes a connection drag went from ~422ms per move (unusable) to ~5ms median. Box selection and `getIntersectingNodes` use the same machinery.
@@ -509,7 +517,7 @@ The MiniMap always renders the full graph in either mode — it reads the data g
 `<SolidFlow>` renders with `renderToString` and hydrates cleanly (a test lane server-renders flows and hydrates them over that markup: every node and edge element is claimed, not re-created, and the flow is interactive). For meaningful server-rendered layout, give nodes explicit `width` / `height` (there is no DOM to measure on the server) — the same guidance as React/Svelte Flow. What the server markup contains, and what it does not:
 
 - **Nodes** render at their positions when they declare `width` / `height`; custom node components render like any other.
-- **Edges** render only when both endpoint nodes also declare their `handles` (position, `x`, `y`, `width`, `height` — React Flow 12's SSR contract); with no DOM to measure handles there is nothing else to lay an edge out from. Custom edge components render through the same path.
+- **Edges** render only when both endpoint nodes also declare their `handles` (`type`, `position`, `x`, `y`, and optionally `width` / `height`, which default to 1 — React Flow's SSR contract); with no DOM to measure handles there is nothing else to lay an edge out from. Custom edge components render through the same path.
 - **Background, Controls, MiniMap and NodeResizer** render on the server; the MiniMap shows one shape per node from the declared dimensions.
 - **NodeToolbar** does not render on the server: it portals into the mounted flow, and appears on hydration.
 - **Culling** is off on the server (there is no viewport to be off-screen of), so every element is in the markup — `onlyRenderVisibleElements` included. The client takes over once the container is measured: hydration claims every element, then the off-screen ones unmount.
@@ -532,7 +540,7 @@ The 1.x line targets SolidJS 2.0, which changes how you write to stores, and rew
 
 **1. Upgrade the peer dependencies.** `solid-js` and `@solidjs/web` move to matching 2.0 versions.
 
-**2. Store writes: path setters are gone (SolidJS 2.0).** Every `setNodes` / `setEdges` call site using 1.x path syntax becomes a draft callback — the callback's argument is a mutable draft, so mutation is the API. Returning a value instead replaces wholesale.
+**2. Store writes: path setters are gone (SolidJS 2.0).** Every `setNodes` / `setEdges` call site using SolidJS 1.x path syntax becomes a draft callback — the callback's argument is a mutable draft, so mutation is the API. Returning a value instead replaces wholesale.
 
 ```tsx
 // 0.2.x (SolidJS 1.x) — path syntax
@@ -552,7 +560,7 @@ setEdges((edges) => {
 setNodes(() => nextNodes);
 ```
 
-**3. `useSolidFlow` reads moved to the reactive `flow` struct.** The flat getters (`getNodes()`, `getEdges()`, `getNode(id)`, `getEdge(id)`, `getInternalNode(id)`, `getViewport()`, `getZoom()`) are removed:
+**3. `useSolidFlow` reads moved to the reactive `flow` struct.** The flat getters (`getNodes()`, `getEdges()`, `getNode(id)`, `getEdge(id)`, `getInternalNode(id)`, `getViewport()`, `getZoom()`) and `getHandleConnections(params)` are removed:
 
 ```tsx
 // 0.2.x                          // 1.x
@@ -566,6 +574,8 @@ solidFlow.getNode("a");
 flow.nodes.find((n) => n.id === "a");
 solidFlow.getInternalNode("a");
 useInternalNode(() => "a");
+solidFlow.getHandleConnections({ nodeId: "a", type: "source" });
+commands.getNodeConnections({ nodeId: "a", type: "source" });
 ```
 
 `flow.*` reads are reactive — using them in JSX or a tracked scope subscribes. Commands (`fitView`, `setViewport`, `updateNode`, `deleteElements`, ...) are unchanged and now also available namespaced under `commands`.
@@ -604,7 +614,7 @@ Some pre-requisites before install dependencies:
 
 - Install Node Version Manager (NVM)
   ```bash
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh | bash
   ```
 - Install Bun
   ```bash
@@ -627,9 +637,10 @@ bun start
 ### Testing
 
 ```bash
-bun run test      # unit + component tests (vitest, jsdom)
-bun run test:ssr  # SSR lane (node environment, server builds)
-bun run test:e2e  # browser gesture harness (Playwright)
+bun run test            # unit + component tests (vitest, jsdom)
+bun run test:ssr        # SSR lane (node environment, server builds)
+bun run test:hydration  # hydration lane (server-renders, then hydrates in jsdom)
+bun run test:e2e        # browser gesture harness (Playwright)
 ```
 
 ### Linting & Formatting

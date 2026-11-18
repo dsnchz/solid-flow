@@ -1,7 +1,7 @@
 # @dschz/solid-flow — agent cheatsheet
 
 SolidJS port of React Flow / Svelte Flow (node-based UIs), built for SolidJS 2.0
-(solid-js@^2.0.0; install with the `next` tag). Same gesture engine as
+(solid-js@^2.0.0 and @solidjs/web on matching versions). Same gesture engine as
 upstream (@xyflow/system), different state model.
 
 ```tsx
