@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import { getStraightPath } from "@xyflow/system";
 
 import type { StraightEdgeProps } from "@/types";
@@ -16,7 +17,8 @@ const straightPath = (edge: StraightPathProps) =>
   });
 
 /** Built-in straight edge component. */
-export const StraightEdge = createPathEdge<StraightEdgeProps>(straightPath, true);
+export const StraightEdge: (props: StraightEdgeProps) => JSX.Element =
+  createPathEdge<StraightEdgeProps>(straightPath, true);
 
 /** Renderer-internal straight edge variant. */
 export const StraightEdgeInternal = createPathEdge(straightPath, false);

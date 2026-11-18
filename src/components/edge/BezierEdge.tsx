@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import { getBezierPath } from "@xyflow/system";
 
 import type { BezierEdgeProps } from "@/types";
@@ -16,7 +17,7 @@ const bezierPath = (edge: BezierEdgeProps) =>
   });
 
 /** Built-in bezier edge component. */
-export const BezierEdge = createPathEdge(bezierPath, true);
+export const BezierEdge: (props: BezierEdgeProps) => JSX.Element = createPathEdge(bezierPath, true);
 
 /** Renderer-internal bezier edge variant. */
 export const BezierEdgeInternal = createPathEdge(bezierPath, false);

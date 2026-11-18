@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import { getSmoothStepPath } from "@xyflow/system";
 
 import type { StepEdgeProps } from "@/types";
@@ -18,7 +19,7 @@ const stepPath = (edge: StepEdgeProps) =>
   });
 
 /** Built-in step edge component. */
-export const StepEdge = createPathEdge(stepPath, true);
+export const StepEdge: (props: StepEdgeProps) => JSX.Element = createPathEdge(stepPath, true);
 
 /** Renderer-internal step edge variant. */
 export const StepEdgeInternal = createPathEdge(stepPath, false);
