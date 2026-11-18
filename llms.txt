@@ -17,7 +17,7 @@ import "@dschz/solid-flow/style.css"; // required, import once (base.css: minima
 - Events are pointer events: `onNodePointerEnter` / `onNodePointerMove` / `onNodePointerLeave`, and the same for edges and the pane.
 - The color scheme follows the OS through CSS; `forceColorMode="light" | "dark"` pins one. Theme with `--xy-*` variables (set `--xy-node-background-color`, the name without `-default`). Library CSS sits in the `xyflow` cascade layer, so plain app rules override it.
 - Components run once (Solid): read reactive values in JSX or in computations; statements in a component body run a single time.
-- `createOptimisticStore` works as `nodes` / `edges`: optimistic adds render mid-action, and flow state survives reverts and reconciles. Draft-then-commit is the simpler default; see "Saving to a server".
+- Optimistic stores work as `nodes` / `edges`: `createOptimisticNodeStore` / `createOptimisticEdgeStore` (typed like the plain factories; a raw `createOptimisticStore` works too). Optimistic adds render mid-action, and flow state survives reverts and reconciles. Draft-then-commit is the simpler default; see "Saving to a server".
 
 Names that are not part of this API: `applyNodeChanges`, `applyEdgeChanges`, `useReactFlow`, `onNodeMouseEnter` and the other `Mouse` event names, `colorMode`, `colorModeSSR`, `useColorMode`.
 
@@ -46,6 +46,13 @@ const [nodes] = createNodeStore(async () => (await fetch("/api/nodes")).json());
 const [liveNodes] = createNodeStore(async function* () {
   for await (const state of graphStream()) yield state.nodes;
 });
+```
+
+Optimistic twins, same inputs (array, async function, async generator) and the same `[store, setter]` pair; writes belong inside an `action`, and the async forms can be passed to `refresh()`:
+
+```tsx
+const [nodes, setNodes] = createOptimisticNodeStore(() => api.listNodes());
+const [edges, setEdges] = createOptimisticEdgeStore(() => api.listEdges());
 ```
 
 ## Custom node types (type-safe data)
