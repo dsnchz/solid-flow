@@ -43,8 +43,11 @@ export const useNodeConnections = (
 
   const [connections, setConnections] = createSignal<NodeConnection[]>([]);
 
-  // The compute snapshots the sub-record into a Map (key structure + leaves
-  // tracked there); the diff gate below keeps the signal writes minimal.
+  // The compute snapshots the sub-record into a Map of fresh copies (key
+  // structure + leaves tracked there), so it re-runs only when this handle's
+  // connections change. @xyflow/system 1.0's areConnectionMapsEqual compares
+  // entries by reference: the copies always differ, and the gate below only
+  // skips an empty set followed by another (a replaced edge id is reported).
   let prevConnections: Map<string, NodeConnection> | undefined;
 
   createEffect(
