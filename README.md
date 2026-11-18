@@ -476,7 +476,7 @@ One contract note for headless **server-side** usage (from SolidJS 2.0's server 
 - Full keyboard navigation (arrow-key node movement, focus traversal, Escape to deselect)
 - Screen reader support with ARIA labels and live announcements
 - Focus management, including under viewport culling
-- Color mode support (`light` / `dark` / `system`)
+- Color scheme support: follows the OS preference by default; `forceColorMode="light" | "dark"` forces a scheme
 
 ## Migrating from 0.2.x
 
@@ -526,7 +526,7 @@ useInternalNode(() => "a");
 
 **5. `onlyRenderVisibleElements` now does what it says.** In 0.2.x the prop was accepted but inert. In 1.x it opts into unmount culling (off-screen elements are not mounted at all — see [Performance](#performance)), while the CSS culling tier is always on and needs no prop.
 
-**6. Smaller signature changes.** `useNodes()` / `useEdges()` return `readonly` arrays; `useHandleEdgeSelect` is removed (it was internal plumbing — select edges through `commands`).
+**6. Smaller signature changes.** `useNodes()` / `useEdges()` return `readonly` arrays; `useHandleEdgeSelect` is removed (it was internal plumbing — select edges through `commands`). `clickConnect` now defaults to `true` (0.2.x: off unless passed), so a click on a handle arms a connection; pass `clickConnect={false}` to keep the 0.2.x behavior.
 
 **7. Styling and theming.** Import `@dschz/solid-flow/style.css` (the old `@dschz/solid-flow/styles` path still works), or `base.css` for the minimal skin; see [Styling](#styling). `colorMode` and `colorModeSSR` are replaced by `forceColorMode`: 0.2.x defaulted to light, 1.x follows the OS, so pass `forceColorMode="light"` to keep the old look, and drop `colorModeSSR` (the server no longer has to guess). `useColorMode` is removed. The library CSS now sits in the `xyflow` cascade layer, so overrides that needed `!important` or extra specificity can lose both. `ResizeControl` is now `NodeResizeControl`, and the renderer internals (`NodeWrapper`, `EdgeWrapper`, `Pane`, `Zoom`, the built-in node components, …) are no longer exported.
 
