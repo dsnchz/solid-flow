@@ -588,7 +588,7 @@ One contract note for headless **server-side** usage (from SolidJS 2.0's server 
 
 ## Migrating from 0.2.x
 
-The 1.x line targets SolidJS 2.0, which changes how you write to stores, and reworks the read API. The gestures, components, plugins, and commands are otherwise the same.
+The 1.x line targets SolidJS 2.0, which changes how you write to stores, and reworks the read API. The gestures, components, plugins, and commands are otherwise the same. It is also much faster on large graphs: at 10,000 nodes a node drag costs 26 ms of script instead of 1,140 ms (see [Solid Flow 0.x vs 1.x](#solid-flow-0x-vs-1x)).
 
 **1. Upgrade the peer dependencies.** `solid-js` and `@solidjs/web` move to matching 2.0 versions.
 
