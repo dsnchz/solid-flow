@@ -1,5 +1,0 @@
----
-"@dschz/solid-flow": minor
----
-
-Declare `autoPanSpeed`, `panOnScrollSpeed`, and `ariaLiveMessage` as proper `SolidFlowProps`. The flow already consumed all three, but they were never on the public type, so passing them was a type error.
