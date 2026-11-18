@@ -260,8 +260,14 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     }
   };
 
+  /**
+   * Moves the selected draggable nodes by one keyboard step and returns
+   * their new absolute positions by id (snapped and clamped): the write is
+   * deferred to the next flush, so the caller announces from these.
+   */
   const moveSelectedNodes = (direction: XYPosition, factor: number) => {
     const nodeUpdates = new Map<string, Pick<NodeDragItem, "position">>();
+    const moved = new Map<string, XYPosition>();
     /*
      * by default a node moves 5px on each key press
      * if snap grid is enabled, we use that for the velocity
@@ -290,7 +296,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
         nextPosition = snapPosition(nextPosition, store.snapGrid);
       }
 
-      const { position } = calculateNodePosition({
+      const { position, positionAbsolute } = calculateNodePosition({
         nodeId: node.id,
         nextPosition,
         nodeLookup,
@@ -302,9 +308,11 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
       // The user-graph write is the whole move: absolute positions re-derive
       // in the internalNodes projection.
       nodeUpdates.set(node.id, { position });
+      moved.set(node.id, positionAbsolute);
     }
 
     updateNodePositions(nodeUpdates);
+    return moved;
   };
 
   /**

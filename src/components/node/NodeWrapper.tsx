@@ -185,15 +185,17 @@ export const NodeWrapper = <NodeType extends Node = Node>(
     if (draggable() && node().selected && arrowKeyDiff) {
       // prevent default scrolling behavior on arrow key press when node is moved
       event.preventDefault();
+      const moved = actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
+      // Announced after the move, snapping and extent clamping included
+      // (xyflow#6130); the write lands on the next flush, the step returns it.
+      const position = moved.get(node().id) ?? node().internals.positionAbsolute;
       actions.setAriaLiveMessage(
         store.ariaLabelConfig["node.a11yDescription.ariaLiveMessage"]({
           direction: event.key.replace("Arrow", "").toLowerCase(),
-          x: ~~node().internals.positionAbsolute.x,
-          y: ~~node().internals.positionAbsolute.y,
+          x: ~~position.x,
+          y: ~~position.y,
         }),
       );
-
-      actions.moveSelectedNodes(arrowKeyDiff, event.shiftKey ? 4 : 1);
     }
   };
 
