@@ -57,5 +57,15 @@ export default defineConfig({
       reuseExistingServer: true,
       stdout: "ignore",
     },
+    {
+      // The published-package fixture (e2e/package.spec.ts): an app that
+      // compiles the shipped JSX build itself, as a Vite + @solidjs/vite-plugin
+      // consumer does. Builds the library first: CI's E2E job has no dist/.
+      command:
+        "bun run build && bunx vite build --config e2e/package/vite.config.ts && bunx vite preview --config e2e/package/vite.config.ts",
+      url: "http://localhost:3014",
+      reuseExistingServer: true,
+      stdout: "ignore",
+    },
   ],
 });

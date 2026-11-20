@@ -30,7 +30,10 @@
     /* Types */
     "types": ["vite/client", "bun-types", "@testing-library/jest-dom"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      // The package fixture (e2e/package/) imports the package by name; its
+      // Vite config resolves the built files, the types are the same API.
+      "@dschz/solid-flow": ["./src/index.ts"]
     }
   },
   "exclude": ["node_modules", "coverage", "dist", "tmp", ".agent/bench/apps"]

@@ -45,6 +45,15 @@ const solidNativeCompiler = () => ({
 export default defineConfig((cli) => {
   const watching = !!cli.watch;
 
+  const minify = (compress: { joinVars?: false; sequences?: false } = {}) =>
+    watching
+      ? false
+      : {
+          compress: { dropConsole: true, dropDebugger: true, ...compress },
+          mangle: false,
+          codegen: false,
+        };
+
   const shared = {
     outDir: "dist",
     platform: "neutral",
@@ -52,13 +61,7 @@ export default defineConfig((cli) => {
     alias: { "@": "./src" },
     // Strip `console.*` and `debugger` in prod builds only. mangle/codegen
     // stay off so the output remains readable.
-    minify: watching
-      ? false
-      : {
-          compress: { dropConsole: true, dropDebugger: true },
-          mangle: false,
-          codegen: false,
-        },
+    minify: minify(),
   } satisfies UserConfig;
 
   return [
@@ -135,6 +138,13 @@ export default defineConfig((cli) => {
       // this build MUST stay JSX-preserved regardless of tsconfig changes,
       // and nothing in the test suite compiles through tsdown to catch drift.
       inputOptions: { transform: { jsx: "preserve" } },
+      // The consumer's Solid compiler emits an element's setup before the
+      // statement holding its JSX, so a statement must never put JSX after
+      // code that JSX reads. The default compress merged NodeWrapper's
+      // consts into one `let` ending in the node element, whose click
+      // handler was then read before its declaration (crash on load).
+      // joinVars merges declarations, sequences merges expression statements.
+      minify: minify({ joinVars: false, sequences: false }),
       outExtensions: () => ({ js: ".jsx" }),
     },
   ];
