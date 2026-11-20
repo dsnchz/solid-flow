@@ -74,7 +74,7 @@ export default defineConfig({
 <link rel="stylesheet" href="https://jsr.io/@dschz/solid-flow/1.0.0/dist/styles/style.css" />
 ```
 
-Building with an AI agent? The package ships an [`llms.txt`](./llms.txt) cheatsheet — a compact, agent-oriented map of the API that front-loads the differences from React Flow.
+Building with an AI agent? The package ships an [`llms.txt`](./llms.txt) cheatsheet: a compact, agent-oriented map of the API with its core conventions, typed store factories, events, and the patterns for saving to a server.
 
 ## Quick Start
 
