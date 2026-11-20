@@ -20,7 +20,6 @@ import type { InternalNode, Node } from "@/types";
 
 import { nodePinned } from "../culling";
 import { dragEntry, type DragOverlay, joinDragging, joinPosition } from "../dragOverlay";
-import { emitFlowError } from "../rules";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 import {
   buildRow,
@@ -382,8 +381,7 @@ export const createInternalNodes = <NodeType extends Node = Node>(
       presenceOf(ancestorId)();
       entry = entryById.get(ancestorId);
     }
-    emitFlowError(
-      source.onError,
+    source.onError?.(
       "parent-missing",
       `Parent node with id "${parentId}" is missing for child node with id "${id}"`,
     );

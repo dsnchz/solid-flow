@@ -56,4 +56,23 @@ describe("unknown element types", () => {
     expect(edge!.querySelector(".solid-flow__edge-path")).not.toBeNull();
     expect(onFlowError).not.toHaveBeenCalledWith("011", expect.anything());
   });
+
+  it("without onFlowError, warns in dev with the code and the README help link", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      render(() => <SolidFlow defaultNodes={nodes} width={800} height={600} />);
+      await settle();
+
+      // Exactly this one warning: the report itself must not trip Solid's
+      // dev checks (it read onFlowError untracked inside an effect callback).
+      expect(warn.mock.calls).toEqual([
+        [
+          '[solid-flow] 003: Node type "nope" not found. Using fallback type "default". ' +
+            "Help: https://github.com/dsnchz/solid-flow#flow-errors",
+        ],
+      ]);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });

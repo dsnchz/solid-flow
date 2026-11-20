@@ -1,9 +1,17 @@
-import { type Connection, type EdgeBase, isEdgeBase, isNodeBase } from "@xyflow/system";
+import {
+  type Connection,
+  type EdgeBase,
+  isEdgeBase,
+  isNodeBase,
+  type OnError,
+} from "@xyflow/system";
+import { DEV } from "solid-js";
 
 import type { Edge, Node } from "@/types";
 
 // The flow's small shared rules: element guards, edge ids, selectability,
-// and the error channel. Headless: used by core and by the render layer.
+// and the default flow-error warning. Headless: used by core and by the
+// render layer.
 
 /**
  * Test whether an object is usable as a Node
@@ -46,16 +54,14 @@ export const isEdgeSelectable = (
 ): boolean => edge.selectable ?? store.defaultEdgeOptions.selectable ?? store.elementsSelectable;
 
 /**
- * The single runtime error channel: user-supplied `onFlowError` when
- * present, an identifiable console warning otherwise. (Setup-time config
- * warnings in seeding stay on console by design — they fire during
- * construction, before a flow error handler is meaningfully attachable.)
+ * The default `onFlowError`: a console warning, in development builds of
+ * solid-js only (React Flow / Svelte Flow warn in development only too).
+ * The help link is the README's table of the codes the flow reports.
  */
-export const emitFlowError = (
-  onError: ((id: string, message: string) => void) | undefined,
-  id: string,
-  message: string,
-): void => {
-  if (onError) onError(id, message);
-  else console.warn(`[solid-flow] ${id}: ${message}`);
+export const warnFlowError: OnError = (id, message) => {
+  if (DEV) {
+    console.warn(
+      `[solid-flow] ${id}: ${message} Help: https://github.com/dsnchz/solid-flow#flow-errors`,
+    );
+  }
 };

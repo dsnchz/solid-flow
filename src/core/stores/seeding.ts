@@ -1,4 +1,4 @@
-import { createEffect, createStore, isPending, untrack } from "solid-js";
+import { createEffect, createStore, DEV, isPending, untrack } from "solid-js";
 
 import type { Edge, Node } from "@/types";
 
@@ -53,12 +53,12 @@ export const createSeededGraphStores = <NodeType extends Node = Node, EdgeType e
   const seedNodes = untrack(() => props.nodes);
   const seedEdges = untrack(() => props.edges);
 
-  if (seedNodes !== undefined && props.defaultNodes !== undefined) {
+  if (DEV && seedNodes !== undefined && props.defaultNodes !== undefined) {
     console.warn(
       "[solid-flow] Both `nodes` and `defaultNodes` were supplied; `nodes` wins and the flow is controlled. Pass one or the other.",
     );
   }
-  if (seedEdges !== undefined && props.defaultEdges !== undefined) {
+  if (DEV && seedEdges !== undefined && props.defaultEdges !== undefined) {
     console.warn(
       "[solid-flow] Both `edges` and `defaultEdges` were supplied; `edges` wins and the flow is controlled. Pass one or the other.",
     );

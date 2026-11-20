@@ -46,21 +46,16 @@ export default defineConfig((cli) => {
   const watching = !!cli.watch;
 
   const minify = (compress: { joinVars?: false; sequences?: false } = {}) =>
-    watching
-      ? false
-      : {
-          compress: { dropConsole: true, dropDebugger: true, ...compress },
-          mangle: false,
-          codegen: false,
-        };
+    watching ? false : { compress, mangle: false, codegen: false };
 
   const shared = {
     outDir: "dist",
     platform: "neutral",
     format: "esm",
     alias: { "@": "./src" },
-    // Strip `console.*` and `debugger` in prod builds only. mangle/codegen
-    // stay off so the output remains readable.
+    // Compress in prod builds only; mangle/codegen stay off so the output
+    // remains readable. `console.*` stays: the library's warnings run only
+    // under solid-js's development build (`DEV`), as upstream's do.
     minify: minify(),
   } satisfies UserConfig;
 

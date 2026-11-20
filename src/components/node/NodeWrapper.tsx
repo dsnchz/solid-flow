@@ -26,7 +26,6 @@ import { ARROW_KEY_DIFFS, toPxString } from "@/components/internal/dom";
 import { useInternalSolidFlow } from "@/contexts";
 import { NodeContext } from "@/contexts/nodeId";
 import { nodeCulled } from "@/core";
-import { emitFlowError } from "@/core/rules";
 import type { InternalNode, Node, NodeEvents } from "@/types";
 
 export type NodeWrapperProps<NodeType extends Node = Node> = {
@@ -320,7 +319,7 @@ export const NodeWrapper = <NodeType extends Node = Node>(
       }),
       (current, prev) => {
         if (!current.nodeTypeValid && (!prev || prev.nodeType !== current.nodeType)) {
-          emitFlowError(store.onError, "003", errorMessages["error003"](current.nodeType));
+          untrack(() => store.onError)?.("003", errorMessages["error003"](current.nodeType));
         }
         if (
           !prev ||

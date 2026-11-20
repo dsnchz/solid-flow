@@ -1,10 +1,8 @@
 import type { JSX } from "@solidjs/web";
 import {
-  createDevWarn,
   infiniteExtent,
   type IsValidConnection,
   type NodeOrigin,
-  type OnError,
   type ZIndexMode,
 } from "@xyflow/system";
 
@@ -14,6 +12,8 @@ import type {
   DefaultEdgeOptions,
   SelectionMode,
 } from "@/types";
+
+import { warnFlowError } from "./rules";
 
 export const getDefaultFlowStateProps = () =>
   ({
@@ -57,5 +57,5 @@ export const getDefaultFlowStateProps = () =>
     ariaLiveMessage: "" as string,
     style: {} as JSX.CSSProperties,
     isValidConnection: (() => true) as IsValidConnection,
-    onFlowError: createDevWarn("Solid Flow", "https://solidflow.dev/") as OnError,
+    onFlowError: warnFlowError,
   }) as const;

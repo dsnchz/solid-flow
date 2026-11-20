@@ -378,6 +378,28 @@ Some React Flow hooks intentionally have no Solid Flow equivalent, because Solid
 - `useNodesState` / `useEdgesState` — use `createNodeStore` / `createEdgeStore` instead.
 - `useStore` — the reactive `flow` struct is the supported read surface; there is no public escape hatch into internals.
 
+## Flow errors
+
+When something goes wrong that the flow can recover from, it calls `onFlowError(code, message)` instead of throwing. Without an `onFlowError`, it warns in the console, in development builds of solid-js only (as React Flow and Svelte Flow do). The numbered codes are React Flow's and Svelte Flow's.
+
+| Code             | When                                                                   | What the flow does               |
+| ---------------- | ---------------------------------------------------------------------- | -------------------------------- |
+| `003`            | A node's `type` is not in `nodeTypes`                                  | Renders it with the default node |
+| `005`            | A node with `extent: "parent"` is dragged but has no parent            | Moves it without that extent     |
+| `008`            | An edge names a `sourceHandle` / `targetHandle` its node does not have | Does not draw the edge           |
+| `012`            | A node is clicked or selected after it was removed                     | Ignores the selection            |
+| `015`            | A node is dragged before it was measured                               | Still moves it                   |
+| `016`            | An edge is clicked after it was removed                                | Ignores the selection            |
+| `parent-missing` | A node's `parentId` names no node, or the chain of parents loops       | Positions it as a top-level node |
+
+```tsx
+<SolidFlow
+  nodes={nodes}
+  edges={edges}
+  onFlowError={(code, message) => reportToMonitoring(code, message)}
+/>
+```
+
 ## Custom edges and reconnection
 
 ```tsx

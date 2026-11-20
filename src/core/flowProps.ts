@@ -618,9 +618,10 @@ export type SolidFlowLifecycleEventProps<
   /** This handler gets called when the flow is finished initializing */
   readonly onInit?: () => void;
   /**
-   * Ocassionally something may happen that causes Solid Flow to throw an error.
-   * Instead of exploding your application, we log a message to the console and then call this event handler.
-   * You might use it for additional logging or to show a message to the user.
+   * Called with a code and a message when something goes wrong that the flow
+   * recovers from (an unknown node type, a missing parent, …) instead of
+   * throwing. Without it, Solid Flow warns in the console in development
+   * builds of solid-js. The codes are listed in the README ("Flow errors").
    */
   readonly onFlowError?: OnError;
   /** This handler gets called when the user deletes nodes or edges.

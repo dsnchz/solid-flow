@@ -141,6 +141,24 @@ describe("selection writers (delta over the presence record)", () => {
     });
   });
 
+  it("selecting a missing node reports 012, a missing edge 016", () => {
+    const errors: [string, string][] = [];
+    createRoot((dispose) => {
+      const { actions } = createFlowState<Node, Edge>({
+        nodes: [],
+        edges: [],
+        onFlowError: (id, message) => errors.push([id, message]),
+      });
+      actions.handleNodeSelection("gone");
+      actions.handleEdgeSelection("gone");
+      dispose();
+    });
+    expect(errors).toEqual([
+      ["012", expect.stringContaining('Node with id "gone"')],
+      ["016", expect.stringContaining('Edge with id "gone"')],
+    ]);
+  });
+
   it("unselectNodesAndEdges with a subset clears only that subset", async () => {
     await withControlledFlow(["a", "b", "c"], ({ flow, selectedIds }) => {
       flow.actions.applySelectionDelta({ nodes: { select: ["a", "b", "c"], deselect: [] } });

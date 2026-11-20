@@ -18,7 +18,7 @@ import type { Edge, InternalNode, Node, NodeGraph } from "@/types";
 
 import type { ChangeQueue, FlowChanges } from "../changes";
 import type { RowIndex } from "../rowIndex";
-import { emitFlowError, isEdgeSelectable } from "../rules";
+import { isEdgeSelectable } from "../rules";
 import { joinSelected, overlayEntry, type SelectionOverlay } from "../selectionOverlay";
 
 /** Ids to select and to deselect, for {@link applySelectionDelta}. */
@@ -260,7 +260,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     const node = nodeLookup.get(id)?.internals.userNode;
 
     if (!node) {
-      emitFlowError(store.onError, "012", errorMessages["error012"](id));
+      store.onError?.("012", errorMessages["error012"](id));
       return false;
     }
 
@@ -282,7 +282,7 @@ export const createSelectionCommands = <NodeType extends Node, EdgeType extends 
     const edge = edgeLookup[id];
 
     if (!edge) {
-      emitFlowError(store.onError, "012", errorMessages["error012"](id));
+      store.onError?.("016", errorMessages["error016"](id));
       return;
     }
 
