@@ -89,6 +89,7 @@ export type {
   EdgeChange,
   EdgeMarker,
   FitBounds,
+  HandleBounds,
   NodeChange,
   NodeConnection,
   NodeOrigin,
