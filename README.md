@@ -27,7 +27,7 @@ The 1.x line is built for SolidJS 2.0 and its deferred, fine-grained reactive gr
 - **Easy to use:** Zooming and panning, single- and multi-selection of graph elements, and keyboard shortcuts out of the box
 - **Customizable:** Built-in node types (Input, Output, Default, Group) and edge types (Bezier, Straight, Step, SmoothStep) with full support for custom nodes and edges — including edge reconnection via `EdgeReconnectAnchor`
 - **Fine-grained by construction:** A node drag is a handful of DOM attribute writes — no virtual DOM, no component re-renders, no memoization ceremony
-- **Scales to large graphs:** Off-screen elements are viewport-culled by default, and an opt-in `onlyRenderVisibleElements` mode only mounts what's visible — stress-tested at 10,000 nodes
+- **Scales to large graphs:** Off-screen elements are viewport-culled by default, and an opt-in `onlyRenderVisibleElements` mode only mounts what's visible — stress-tested at 10,000 nodes, where a node drag costs the same 25–28 ms of script as at 100 ([benchmark](#solid-flow-0x-vs-1x))
 - **Type-guided data:** Your custom components are the schema — node/edge stores narrow each element's `data` by its `type` field, with autocomplete for type names
 - **Server data, first-class:** Load the graph from an API, stream it live from a server push, batch-save drafts, or sync per-mutation with optimistic stores — all through SolidJS 2.0's async model, no cache library required
 - **Rich plugins:** Background patterns, interactive MiniMap (custom minimap nodes, click handlers), zoom Controls, Node and Edge Toolbars, and Node Resizer
