@@ -398,6 +398,35 @@ describe("FlowCommands", () => {
     });
   });
 
+  it("full containment counts either way round, and a sizeless node or rect never intersects", async () => {
+    // As React Flow / Svelte Flow: with `partially` false a node counts when
+    // the overlap covers the node or the rect. A rect without an area (a
+    // hidden or unmeasured node) is covered by any overlap of 0, so it must
+    // not count (xyflow#6164).
+    const nodes = [
+      makeNode({ id: "inside", position: { x: 110, y: 110 }, width: 50, height: 20 }),
+      makeNode({ id: "straddling", position: { x: 370, y: 110 }, width: 100, height: 40 }),
+      makeNode({ id: "big", position: { x: 1000, y: 1000 }, width: 400, height: 400 }),
+      makeNode({ id: "sizeless", position: { x: 200, y: 150 }, width: 0, height: 0 }),
+    ];
+    await withFlow({ nodes, edges: [] }, ({ commands }) => {
+      const rect = { x: 100, y: 100, width: 300, height: 200 };
+      const ids = (rows: { id: string }[]) => rows.map((n) => n.id).sort();
+
+      expect(ids(commands.getIntersectingNodes(rect, false))).toEqual(["inside"]);
+      expect(ids(commands.getIntersectingNodes(rect))).toEqual(["inside", "straddling"]);
+      // The explicit-subset path skips the candidate search.
+      expect(ids(commands.getIntersectingNodes(rect, false, nodes))).toEqual(["inside"]);
+      expect(commands.getIntersectingNodes({ id: "sizeless" }, false, nodes)).toEqual([]);
+
+      const insideBig = { x: 1100, y: 1100, width: 50, height: 50 };
+      expect(commands.isNodeIntersecting({ id: "big" }, insideBig, false)).toBe(true);
+      expect(commands.isNodeIntersecting({ id: "inside" }, rect, false)).toBe(true);
+      expect(commands.isNodeIntersecting({ id: "sizeless" }, rect, false)).toBe(false);
+      expect(commands.isNodeIntersecting(rect, { x: 0, y: 0, width: 0, height: 0 })).toBe(false);
+    });
+  });
+
   it("computes node bounds and intersections from declared dimensions", async () => {
     await withFlow(
       {

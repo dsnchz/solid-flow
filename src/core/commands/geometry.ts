@@ -33,6 +33,17 @@ export type GeometryCommandDeps<NodeType extends Node> = {
 };
 
 /**
+ * Whether an overlap covers all of `rect`, as React Flow and Svelte Flow
+ * count full containment. A rect without an area (a hidden or not yet
+ * measured node) is never covered: an overlap of 0 would cover it anywhere
+ * (xyflow#6164).
+ */
+const isFullyOverlapped = (overlappingArea: number, rect: Rect): boolean => {
+  const area = rect.width * rect.height;
+  return area > 0 && overlappingArea >= area;
+};
+
+/**
  * Geometry query group: rect-based intersection questions over the graph.
  * Pure pull API — no graph writes, no subscriptions (see the grid note).
  */
@@ -142,7 +153,11 @@ export const createGeometryCommands = <NodeType extends Node, EdgeType extends E
         const overlappingArea = getOverlappingArea(currNodeRect, nodeRect);
         const partiallyVisible = partially && overlappingArea > 0;
 
-        return partiallyVisible || overlappingArea >= nodeRect.width * nodeRect.height;
+        return (
+          partiallyVisible ||
+          isFullyOverlapped(overlappingArea, currNodeRect) ||
+          isFullyOverlapped(overlappingArea, nodeRect)
+        );
       });
     },
     isNodeIntersecting: (nodeOrRect, area, partially = true) => {
@@ -154,7 +169,11 @@ export const createGeometryCommands = <NodeType extends Node, EdgeType extends E
       const overlappingArea = getOverlappingArea(nodeRect, area);
       const partiallyVisible = partially && overlappingArea > 0;
 
-      return partiallyVisible || overlappingArea >= nodeRect.width * nodeRect.height;
+      return (
+        partiallyVisible ||
+        isFullyOverlapped(overlappingArea, area) ||
+        isFullyOverlapped(overlappingArea, nodeRect)
+      );
     },
     getNodesBounds: (nodesToMeasure) => {
       return systemGetNodesBounds(nodesToMeasure, { nodeLookup, nodeOrigin: store.nodeOrigin });
