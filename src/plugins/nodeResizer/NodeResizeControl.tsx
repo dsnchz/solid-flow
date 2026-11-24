@@ -2,7 +2,11 @@ import { isServer, type JSX } from "@solidjs/web";
 import {
   type ControlPosition,
   type NodeChange,
+  type OnResize,
+  type OnResizeEnd,
+  type OnResizeStart,
   positionChange,
+  type ShouldResize,
   XYResizer,
   type XYResizerChange,
   type XYResizerChildChange,
@@ -201,6 +205,22 @@ export const renderResizeControl = <NodeType extends Node = Node>(
     { name: "nodeResizeControl.resizer" },
   );
 
+  // Stable handlers that call the latest props when XYResizer calls them: a
+  // new handler then needs no update(), which rebinds the d3 drag listeners
+  // and ends a touch resize in progress (xyflow#6127).
+  const callbacks: {
+    onResizeStart: OnResizeStart;
+    onResize: OnResize;
+    onResizeEnd: OnResizeEnd;
+    shouldResize: ShouldResize;
+  } = {
+    onResizeStart: (event, params) => props.onResizeStart?.(event, params),
+    onResize: (event, params) => props.onResize?.(event, params),
+    onResizeEnd: (event, params) => props.onResizeEnd?.(event, params),
+    // `=== false` is the only answer XYResizer acts on: unset means resize.
+    shouldResize: (event, params) => props.shouldResize?.(event, params) ?? true,
+  };
+
   createEffect(
     () => ({
       instance: resizer(),
@@ -213,14 +233,10 @@ export const renderResizeControl = <NodeType extends Node = Node>(
           maxHeight: maxHeight(),
         },
         keepAspectRatio: !!props.keepAspectRatio,
-        onResizeStart: props.onResizeStart,
-        onResize: props.onResize,
-        onResizeEnd: props.onResizeEnd,
-        shouldResize: props.shouldResize,
       },
     }),
     ({ instance, options }) => {
-      instance?.update(options);
+      instance?.update({ ...options, ...callbacks });
     },
     { name: "nodeResizeControl.options" },
   );

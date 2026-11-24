@@ -19,6 +19,7 @@ type XYResizerUpdateParams = Parameters<ReturnType<typeof XYResizer>["update"]>[
 
 const resizer = vi.hoisted(() => ({
   options: new Map<Element, XYResizerUpdateParams>(),
+  updates: new Map<Element, number>(),
   destroyed: 0,
 }));
 
@@ -27,7 +28,10 @@ vi.mock("@xyflow/system", async (importOriginal) => {
   return {
     ...actual,
     XYResizer: (params: Parameters<typeof actual.XYResizer>[0]) => ({
-      update: (options: XYResizerUpdateParams) => resizer.options.set(params.domNode, options),
+      update: (options: XYResizerUpdateParams) => {
+        resizer.options.set(params.domNode, options);
+        resizer.updates.set(params.domNode, (resizer.updates.get(params.domNode) ?? 0) + 1);
+      },
       destroy: () => {
         resizer.destroyed++;
       },
@@ -192,7 +196,9 @@ describe("NodeResizer", () => {
       maxHeight: Number.MAX_VALUE,
     });
     expect(options.keepAspectRatio).toBe(false);
-    expect(options.onResize).toBe(onResize);
+    const params = { x: 0, y: 0, width: 50, height: 50 };
+    options.onResize?.({} as never, { ...params, direction: [1, 1] });
+    expect(onResize).toHaveBeenCalledWith({}, { ...params, direction: [1, 1] });
     expect(resizer.options.get(control("left"))!.controlPosition).toBe("left");
   });
 
@@ -209,6 +215,30 @@ describe("NodeResizer", () => {
     const options = resizer.options.get(control("top-left"))!;
     expect(options.boundaries.minWidth).toBe(80);
     expect(options.keepAspectRatio).toBe(true);
+  });
+
+  it("calls a changed handler without re-arming the gesture (xyflow#6127)", async () => {
+    // XYResizer's update() rebinds its d3 drag listeners, which ends a touch
+    // resize in progress: a new handler alone must not call it.
+    resizer.options.clear();
+    resizer.updates.clear();
+    const first = vi.fn();
+    const second = vi.fn();
+    const [handlers, setHandlers] = createSignal({ onResizeEnd: first });
+    const { control } = await renderResizer(() => (
+      <NodeResizer onResizeEnd={handlers().onResizeEnd} />
+    ));
+    const el = control("bottom-right");
+    const updates = resizer.updates.get(el);
+
+    setHandlers({ onResizeEnd: second });
+    flush();
+    expect(resizer.updates.get(el)).toBe(updates);
+
+    const params = { x: 0, y: 0, width: 50, height: 50 };
+    resizer.options.get(el)!.onResizeEnd?.({} as never, params);
+    expect(second).toHaveBeenCalledWith({}, params);
+    expect(first).not.toHaveBeenCalled();
   });
 
   it("destroys every control's XYResizer on unmount", async () => {
