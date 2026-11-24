@@ -53,23 +53,28 @@ export const useNodeConnections = (
   // connections change. @xyflow/system 1.0's areConnectionMapsEqual compares
   // entries by reference: the copies always differ, and the gate below only
   // skips an empty set followed by another (a replaced edge id is reported).
+  // A change of the observed node or handle (the lookup key) is a new
+  // baseline, like the mount: no edge changed, so no callback (xyflow#6163).
   let prevConnections: Map<string, NodeConnection> | undefined;
+  let prevKey: string | undefined;
 
   createEffect(
     () => {
-      const rec = flow.connections[connectionKey(nodeId(), type(), id())];
+      const key = connectionKey(nodeId(), type(), id());
+      const rec = flow.connections[key];
       const map = new Map<string, NodeConnection>();
-      for (const key of Object.keys(rec ?? {})) map.set(key, { ...rec![key]! });
-      return { connections: map };
+      for (const k of Object.keys(rec ?? {})) map.set(k, { ...rec![k]! });
+      return { key, connections: map };
     },
-    ({ connections: nextConnections }) => {
-      if (areConnectionMapsEqual(nextConnections, prevConnections)) return;
-      if (prevConnections) {
+    ({ key, connections: nextConnections }) => {
+      if (key === prevKey && areConnectionMapsEqual(nextConnections, prevConnections)) return;
+      if (prevConnections && key === prevKey) {
         // Read when the change lands, as an event handler reads its props.
         const { onConnect, onDisconnect } = untrack(params);
         handleConnectionChange(prevConnections, nextConnections, onDisconnect);
         handleConnectionChange(nextConnections, prevConnections, onConnect);
       }
+      prevKey = key;
       prevConnections = nextConnections;
       setConnections(Array.from(nextConnections.values()));
     },

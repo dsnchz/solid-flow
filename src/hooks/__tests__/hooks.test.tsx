@@ -1,6 +1,6 @@
 import { render } from "@solidjs/testing-library";
 import type { JSX } from "@solidjs/web";
-import { createRoot, flush } from "solid-js";
+import { createRoot, createSignal, flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 
 import { settle } from "@/__tests__/settle";
@@ -296,6 +296,55 @@ describe("hooks", () => {
     expect(onDisconnect).toHaveBeenCalledTimes(1);
     expect(onDisconnect.mock.lastCall?.[0]).toEqual([expect.objectContaining({ edgeId: "e1" })]);
     expect(onConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("useNodeConnections reports nothing when it switches to another node, then follows the new one", async () => {
+    // A panel showing the selected node's connections: switching nodes changes
+    // no edge, so neither callback may fire (xyflow#6163).
+    const onConnect = vi.fn();
+    const onDisconnect = vi.fn();
+    const [observed, setObserved] = createSignal("a");
+    const [edges, setEdges] = createEdgeStore([
+      { id: "ab", source: "a", target: "b" },
+      { id: "bc", source: "b", target: "c" },
+    ]);
+    let connections!: () => { edgeId: string }[];
+
+    render(() => (
+      <SolidFlow
+        nodes={[
+          makeNode({ id: "a" }),
+          makeNode({ id: "b", position: { x: 200, y: 100 } }),
+          makeNode({ id: "c", position: { x: 400, y: 100 } }),
+        ]}
+        edges={edges}
+        width={800}
+        height={600}
+      >
+        {(() => {
+          const Probe = () => {
+            connections = useNodeConnections(() => ({ id: observed(), onConnect, onDisconnect }));
+            return null;
+          };
+          return <Probe />;
+        })()}
+      </SolidFlow>
+    ));
+    await settle();
+
+    setObserved("c");
+    flush();
+    expect(connections().map((c) => c.edgeId)).toEqual(["bc"]);
+    expect(onConnect).not.toHaveBeenCalled();
+    expect(onDisconnect).not.toHaveBeenCalled();
+
+    setEdges((draft) => {
+      draft.push({ id: "ac", source: "a", target: "c" });
+    });
+    flush();
+    expect(onConnect).toHaveBeenCalledTimes(1);
+    expect(onConnect.mock.lastCall?.[0]).toEqual([expect.objectContaining({ edgeId: "ac" })]);
+    expect(onDisconnect).not.toHaveBeenCalled();
   });
 
   it("throws a descriptive error when used outside <SolidFlow>", () => {
