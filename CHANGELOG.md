@@ -1,5 +1,15 @@
 # @dschz/solid-flow
 
+## 1.0.1
+
+### Patch Changes
+
+- 5bca06f: `getIntersectingNodes` and `isNodeIntersecting` count full containment either way round, as React Flow and Svelte Flow do: with `partially` set to `false`, a node lying wholly inside the rect counts (before, only a node covering the whole rect did, so the call usually returned nothing). A node or rect without a size (a hidden or not yet measured node) never counts as intersecting; before, it matched everything it was compared with (xyflow#6164).
+- 64337a4: `useNodeConnections` no longer calls `onConnect` / `onDisconnect` when the node or handle it observes changes (`id`, `handleType` or `handleId`): switching from one node to another changes no edge, so it is a new starting point, like the mount. Before, every connection of the old node was reported as disconnected and every connection of the new one as connected (xyflow#6163).
+- 34a1f71: Types: `useNodesData` called with a list of ids takes `Accessor<string[]>` and always returns an array (empty when no id names a node). It also accepted an accessor that could return `undefined` or `null`, typed the result as an array, and returned `undefined` in that case, so `.map()` on it could throw. For a list that may be missing, pass `() => ids() ?? []`. The single-id form is unchanged: it accepts a missing id and returns `undefined` until the id names a node.
+- c40ee69: Keyboard shortcuts work in a flow rendered into another window (a same-origin popout from `window.open`, rendered with a portal): the delete key, the selection, multi-selection, pan and zoom activation keys, and `useKeyPress` inside the flow listen to the window the flow is in. They listened to the opener's window, so keys pressed in the popout did nothing and keys pressed in the opener acted on the popout's flow (xyflow#6124).
+- 093cc72: `NodeResizer` / `NodeResizeControl`: changing `onResizeStart`, `onResize`, `onResizeEnd` or `shouldResize` no longer re-arms the resize gesture. The new handler is called from the next event on, and a touch resize in progress is not cut short (before, a new handler rebound the drag listeners, which ended a touch resize without `onResizeEnd`, and a mouse resize in progress kept calling the old handler) (xyflow#6127).
+
 ## 1.0.0
 
 **Solid Flow 1.0 is here: node-based UIs for SolidJS 2.0, on the same engine as React Flow 13 and Svelte Flow 2.** It is rebuilt from the ground up on Solid 2.0's reactive model, and it is fast where graphs get big: dragging a node costs 25–28 ms of script whether the graph has 100 nodes or 10,000.
