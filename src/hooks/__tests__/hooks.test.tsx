@@ -170,6 +170,23 @@ describe("hooks", () => {
     expect(source()?.id).toBe("a");
   });
 
+  it("useNodesData with a list always reads a list, empty when no id names a node", async () => {
+    const [ids, setIds] = createSignal<string[] | undefined>(undefined);
+    let read!: () => { id: string }[];
+    renderWithFlow(() => {
+      read = useNodesData(() => ids() ?? []);
+      // @ts-expect-error - a list that may be missing is not a list: pass `ids() ?? []`
+      useNodesData(ids);
+      return null;
+    });
+    await settle();
+    expect(read()).toEqual([]);
+
+    setIds(["missing", "a"]);
+    flush();
+    expect(read().map((n) => n.id)).toEqual(["a"]);
+  });
+
   it("useNodeId resolves the surrounding node inside a custom node component", async () => {
     let seenId: string | undefined;
 

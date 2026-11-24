@@ -7,17 +7,19 @@ import type { Node } from "@/types";
 type NodeData<NodeType extends Node> = Pick<NodeType, "id" | "data" | "type">;
 
 /**
- * Hook for receiving data of one or multiple nodes
- *
- * @param nodeId - The id (or ids) of the node to get the data from
- * @returns A memo with an array of data objects
+ * Reactive `id`, `type` and `data` of one node by id: `undefined` while the
+ * id is missing (nothing connected yet) or names no node.
  */
 export function useNodesData<NodeType extends Node = Node>(
   nodeId: Accessor<string | undefined | null>,
 ): Accessor<NodeData<NodeType> | undefined>;
-/** Reactive accessor for the `data` of one or many nodes by id. */
+/**
+ * Reactive `id`, `type` and `data` of several nodes by id, in the order
+ * given; ids that name no node are skipped. Always an array: pass
+ * `() => ids() ?? []` for a list that may be missing.
+ */
 export function useNodesData<NodeType extends Node = Node>(
-  nodeIds: Accessor<string[] | undefined | null>,
+  nodeIds: Accessor<string[]>,
 ): Accessor<NodeData<NodeType>[]>;
 export function useNodesData<NodeType extends Node = Node>(
   nodeIds: Accessor<string | string[] | undefined | null>,
