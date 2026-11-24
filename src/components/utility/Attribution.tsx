@@ -15,10 +15,10 @@ export const Attribution: Component<Partial<AttributionProps>> = (props) => {
       <Panel
         position={props.position ?? "bottom-right"}
         class="solid-flow__attribution"
-        data-message="Feel free to remove the attribution or check out how you could support us: https://solidflow.dev/support-us"
+        data-message="Feel free to remove the attribution or check out how you could support us: https://github.com/dsnchz/solid-flow"
       >
         <a
-          href="https://solidflow.dev"
+          href="https://github.com/dsnchz/solid-flow"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Solid Flow attribution"
