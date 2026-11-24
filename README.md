@@ -15,12 +15,12 @@
 
 ## Version pairing
 
-This branch (`main`) is the **0.2.x** line for SolidJS 1.x. Solid Flow **1.x**, built for SolidJS 2.0, lives on the [`next` branch](https://github.com/dsnchz/solid-flow/tree/next) and ships under the `next` tag.
+This branch (`0.x`) is the **0.2.x** line for SolidJS 1.x. Solid Flow **1.x**, built for SolidJS 2.0, lives on the [`main` branch](https://github.com/dsnchz/solid-flow) and is the `latest` release on npm and JSR.
 
-| Solid Flow | SolidJS         | Branch | Status                          |
-| ---------- | --------------- | ------ | ------------------------------- |
-| `1.x`      | `solid-js` 2.x  | `next` | Active development (`next` tag) |
-| `0.2.x`    | `solid-js` 1.8+ | `main` | Maintenance (fixes only)        |
+| Solid Flow | SolidJS         | Branch | Status                                       |
+| ---------- | --------------- | ------ | -------------------------------------------- |
+| `1.x`      | `solid-js` 2.x  | `main` | Current (`latest`)                           |
+| `0.2.x`    | `solid-js` 1.8+ | `0.x`  | Maintenance (fixes): `@dschz/solid-flow@0.2` |
 
 New features land on 1.x only. The following are not part of 0.2.x and are available in 1.x:
 
@@ -29,7 +29,7 @@ New features land on 1.x only. The following are not part of 0.2.x and are avail
 - Edge reconnection (`EdgeReconnectAnchor`)
 - Async-seeded and live-streamed stores, optimistic updates (SolidJS 2.0's async model)
 
-The [`next` README](https://github.com/dsnchz/solid-flow/blob/next/README.md) documents the 1.x API and includes a migration guide from 0.2.x.
+The [`main` README](https://github.com/dsnchz/solid-flow/blob/main/README.md) documents the 1.x API and includes a migration guide from 0.2.x.
 
 ## Key Features
 
@@ -46,18 +46,18 @@ The [`next` README](https://github.com/dsnchz/solid-flow/blob/next/README.md) do
 ## Installation
 
 ```sh
-npm install @dschz/solid-flow
-pnpm install @dschz/solid-flow
-yarn install @dschz/solid-flow
-bun install @dschz/solid-flow
+npm install @dschz/solid-flow@0.2
+pnpm install @dschz/solid-flow@0.2
+yarn add @dschz/solid-flow@0.2
+bun install @dschz/solid-flow@0.2
 ```
 
-`solid-js` (1.8 or newer) is a **peer dependency**. Also available on [JSR](https://jsr.io/@dschz/solid-flow).
+`solid-js` (1.8 or newer) is a **peer dependency**. Pin the `0.2` range: an unversioned install resolves to 1.x, which requires SolidJS 2.0. Also available on [JSR](https://jsr.io/@dschz/solid-flow) (`npx jsr add @dschz/solid-flow@0.2`).
 
 Using SolidJS 2.0? Install the 1.x line instead — 0.2.x does not run on SolidJS 2.0:
 
 ```sh
-npm install @dschz/solid-flow@next solid-js@next @solidjs/web@next
+npm install @dschz/solid-flow solid-js @solidjs/web
 ```
 
 ## Quick Start
