@@ -13,6 +13,7 @@ import { useEdges, useNodes, useViewport } from "../useGraph";
 import { useNodesInitialized, useViewportInitialized } from "../useInitialized";
 import { useInternalNode } from "../useInternalNode";
 import { useNodeConnections } from "../useNodeConnections";
+import { useNodesData } from "../useNodesData";
 import { useSolidFlow } from "../useSolidFlow";
 
 const makeNode = (overrides: Partial<Node> & { id: string }): Node => ({
@@ -145,6 +146,28 @@ describe("hooks", () => {
 
     expect(read()?.id).toBe("a");
     expect(read()?.internals.positionAbsolute).toEqual({ x: 0, y: 0 });
+  });
+
+  it("useNodesData reads nothing without an id, so an unconnected input reads as falsy", async () => {
+    // `useNodesData(connections[0]?.source)` before anything is connected:
+    // React Flow 13 returns a truthy [] there and breaks `source ? … : …`
+    // (xyflow#6169).
+    const [id, setId] = createSignal<string | undefined>(undefined);
+    let source!: () => { id: string } | undefined;
+    renderWithFlow(() => {
+      source = useNodesData(id);
+      return null;
+    });
+    await settle();
+    expect(source()).toBeUndefined();
+
+    setId("missing");
+    flush();
+    expect(source()).toBeUndefined();
+
+    setId("a");
+    flush();
+    expect(source()?.id).toBe("a");
   });
 
   it("useNodeId resolves the surrounding node inside a custom node component", async () => {
