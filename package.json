@@ -98,7 +98,7 @@
   },
   "dependencies": {
     "@solid-primitives/event-listener": "3.0.0",
-    "@xyflow/system": "1.0.0"
+    "@xyflow/system": "1.0.1"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",

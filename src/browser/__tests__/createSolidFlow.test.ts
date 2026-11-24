@@ -399,4 +399,28 @@ describe("createSolidFlow", () => {
       expect(syncViewport).toHaveBeenCalledWith({ x: 42, y: 0, zoom: 1 });
     });
   });
+
+  it("fitView keeps the viewport when no node qualifies to fit", () => {
+    // Nodes exist but none can be fitted (hidden, or not among the requested
+    // ones): @xyflow/system 1.0.0 fitted empty bounds and zoomed to maxZoom.
+    withFlow(
+      { nodes: [makeNode({ id: "a", hidden: true, width: 100, height: 40 })], edges: [] },
+      ({ actions, commands }) => {
+        const setViewport = vi.fn(async () => true);
+        actions.setPanZoom({
+          syncViewport: vi.fn(),
+          setScaleExtent: vi.fn(),
+          setTranslateExtent: vi.fn(),
+          setViewport,
+        } as unknown as PanZoomInstance);
+        flush();
+
+        // fitViewport moves the viewport synchronously, before its first await.
+        void commands.fitView();
+        void commands.fitView({ nodes: [{ id: "ghost" }], includeHiddenNodes: true });
+
+        expect(setViewport).not.toHaveBeenCalled();
+      },
+    );
+  });
 });
