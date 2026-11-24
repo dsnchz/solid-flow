@@ -68,6 +68,11 @@ const storeItemsPrototype = ({ store, actions }: InternalFlow): object => {
       get nodeDragThreshold() {
         return store.nodeDragThreshold;
       },
+      // Drag-time errors (005 parent extent without a parent, 015 node not
+      // measured) reach `onFlowError` through this.
+      get onError() {
+        return store.onError;
+      },
       unselectNodesAndEdges: actions.unselectNodesAndEdges,
       updateNodePositions: actions.updateNodePositions,
       panBy: actions.panBy,

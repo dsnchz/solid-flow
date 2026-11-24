@@ -105,6 +105,27 @@ describe("node drag callbacks", () => {
   });
 });
 
+// XYDrag reports drag-time errors through its store items' `onError`.
+describe("node drag errors", () => {
+  it("dragging a node with a parent extent but no parent reports 005", async () => {
+    const onFlowError = vi.fn();
+    const { container } = render(() => (
+      <SolidFlow
+        defaultNodes={[{ ...makeNode("a", 0), extent: "parent" }]}
+        width={800}
+        height={600}
+        onFlowError={onFlowError}
+      />
+    ));
+    await settle();
+
+    dragElement(container.querySelector('.solid-flow__node[data-id="a"]')!);
+    await settle();
+
+    expect(onFlowError).toHaveBeenCalledWith("005", expect.stringContaining("parent extent"));
+  });
+});
+
 // @xyflow/system 1.0 (nodeClickDistance removed): a node click is swallowed
 // only after a drag that actually moved nodes, whatever the pointer did.
 describe("node click after a pointer gesture", () => {
