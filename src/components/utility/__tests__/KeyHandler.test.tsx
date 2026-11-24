@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { settle } from "@/__tests__/settle";
 import { SolidFlow } from "@/components/SolidFlow";
 import { useInternalSolidFlow } from "@/contexts";
+import { useKeyPress } from "@/hooks";
 
 const renderFlow = () => {
   let internal!: ReturnType<typeof useInternalSolidFlow>;
@@ -239,5 +240,59 @@ describe("KeyHandler key state", () => {
     flush();
     expect(store().selectionKeyPressed).toBe(false);
     expect(store().panActivationKeyPressed).toBe(false);
+  });
+});
+
+describe("KeyHandler in a popout window", () => {
+  it("listens on the window the flow renders in, not the opener's, as does useKeyPress (xyflow#6124)", async () => {
+    // A same-origin popout: the flow is rendered into another window's
+    // document (window.open + a portal; an iframe in jsdom).
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    const popout = frame.contentWindow as Window & typeof globalThis;
+    const host = popout.document.createElement("div");
+    popout.document.body.append(host);
+
+    let internal!: ReturnType<typeof useInternalSolidFlow>;
+    let aPressed!: () => boolean;
+    const Probe = () => {
+      internal = useInternalSolidFlow();
+      aPressed = useKeyPress(() => "a");
+      return null;
+    };
+    try {
+      render(
+        () => (
+          <SolidFlow
+            defaultNodes={[{ id: "a", position: { x: 0, y: 0 }, data: {}, selected: true }]}
+            edges={[]}
+            width={800}
+            height={600}
+          >
+            <Probe />
+          </SolidFlow>
+        ),
+        { container: host },
+      );
+      await settle();
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift", shiftKey: true }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace" }));
+      await settle();
+      expect(internal.store.selectionKeyPressed).toBe(false);
+      expect(aPressed()).toBe(false);
+      expect(internal.store.nodes).toHaveLength(1);
+
+      popout.dispatchEvent(new popout.KeyboardEvent("keydown", { key: "Shift", shiftKey: true }));
+      expect(internal.store.selectionKeyPressed).toBe(true);
+      popout.dispatchEvent(new popout.KeyboardEvent("keydown", { key: "a" }));
+      expect(aPressed()).toBe(true);
+      popout.dispatchEvent(new popout.KeyboardEvent("keydown", { key: "Backspace" }));
+      await settle();
+      expect(internal.store.nodes).toHaveLength(0);
+    } finally {
+      frame.remove();
+    }
   });
 });

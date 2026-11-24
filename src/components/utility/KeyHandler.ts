@@ -115,25 +115,33 @@ export const KeyHandler = (props: KeyHandlerProps) => {
    * release's target, which must be a Node. d3's handlers read `event.view`,
    * so it must be set.
    */
-  const cancelPointerGestures = () => {
+  const cancelPointerGestures = (win: Window & typeof globalThis) => {
     // The fallback exists because jsdom's WebIDL check rejects test-runner
     // window proxies as `view` (real browsers always take the first path).
     const release = (Ctor: typeof MouseEvent, type: string) => {
       try {
-        document.dispatchEvent(new Ctor(type, { bubbles: true, view: window }));
+        win.document.dispatchEvent(new Ctor(type, { bubbles: true, view: win }));
       } catch {
-        document.dispatchEvent(new Ctor(type, { bubbles: true }));
+        win.document.dispatchEvent(new Ctor(type, { bubbles: true }));
       }
     };
-    release(MouseEvent, "mouseup");
-    if (typeof PointerEvent !== "undefined") {
-      release(PointerEvent, "pointerup");
+    release(win.MouseEvent, "mouseup");
+    if (typeof win.PointerEvent !== "undefined") {
+      release(win.PointerEvent, "pointerup");
     }
   };
 
+  /**
+   * The window the flow is rendered in: a same-origin popout's (window.open
+   * plus a portal) receives the popout's keys, the opener's do not reach
+   * it (xyflow#6124). Nothing is listened to until the container mounts.
+   */
+  const flowWindow = () => store.domNode?.ownerDocument.defaultView ?? undefined;
+
   const handleWindowBlur = () => {
     resetKeysAndSelection();
-    cancelPointerGestures();
+    const win = flowWindow();
+    if (win) cancelPointerGestures(win);
   };
 
   const handleDelete = async () => {
@@ -176,7 +184,7 @@ export const KeyHandler = (props: KeyHandlerProps) => {
   // Client-only listeners: outside the hydration id sequence (see clientOnlySetup).
   if (!isServer) {
     clientOnlySetup(() => {
-      createEventListenerMap(window, {
+      createEventListenerMap(() => flowWindow() ?? [], {
         keydown: handleKeyDown,
         keyup: handleKeyUp,
         blur: handleWindowBlur,
@@ -186,7 +194,7 @@ export const KeyHandler = (props: KeyHandlerProps) => {
       // Capture-phase so stuck state heals BEFORE the pane/zoom handlers (and
       // d3's own element-level listeners) read it in the same event.
       createEventListenerMap(
-        window,
+        () => flowWindow() ?? [],
         {
           pointerdown: reconcileModifiers,
           wheel: reconcileModifiers,

@@ -1,8 +1,9 @@
 import { createEventListenerMap } from "@solid-primitives/event-listener";
 import { isServer } from "@solidjs/web";
-import { type Accessor, createEffect, createSignal, flush } from "solid-js";
+import { type Accessor, createEffect, createSignal, flush, useContext } from "solid-js";
 
 import { clientOnlySetup } from "@/components/internal/dom";
+import { SolidFlowContext } from "@/contexts/flow";
 import { allContradicted, matchesKeyArray, type ModifierFlags } from "@/core/keys";
 import type { KeyDefinition } from "@/types";
 
@@ -21,11 +22,17 @@ import type { KeyDefinition } from "@/types";
  * - Stuck modifiers self-heal from the flags later keyboard/pointer/wheel
  *   events carry (OS overlays swallow keyups without blurring — the macOS
  *   screenshot HUD; xyflow#5679), and window blur resets.
+ * - Inside a flow rendered in another window (a popout), it listens to
+ *   that window.
  */
 export function useKeyPress(
   keys: Accessor<KeyDefinition | KeyDefinition[] | null>,
 ): Accessor<boolean> {
   const [pressed, setPressed] = createSignal(false);
+  // Inside a flow, the window the flow is rendered in (a same-origin popout
+  // gets its own keys, xyflow#6124); elsewhere, this window.
+  const flow = useContext(SolidFlowContext);
+  const target = () => flow?.store.domNode?.ownerDocument.defaultView ?? window;
 
   // Swapping definitions mid-flight must not leave a stale "held".
   createEffect(
@@ -46,7 +53,7 @@ export function useKeyPress(
         }
       };
 
-      createEventListenerMap(window, {
+      createEventListenerMap(target, {
         keydown: (event: KeyboardEvent) => {
           reconcile(event);
           if (matchesKeyArray(event, keys())) {
@@ -71,7 +78,7 @@ export function useKeyPress(
       });
 
       createEventListenerMap(
-        window,
+        target,
         {
           pointerdown: reconcile,
           wheel: reconcile,
