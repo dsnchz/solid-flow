@@ -2,6 +2,64 @@
 
 ## 1.0.0
 
+**Solid Flow 1.0 is here: node-based UIs for SolidJS 2.0, on the same engine as React Flow 13 and Svelte Flow 2.** It is rebuilt from the ground up on Solid 2.0's reactive model, and it is fast where graphs get big: dragging a node costs 25–28 ms of script whether the graph has 100 nodes or 10,000.
+
+### Highlights
+
+**Fine-grained, all the way down.** A node drag is a handful of DOM attribute writes. No virtual DOM, no component re-renders, no memoization ceremony: Solid Flow keeps everything it derives from your graph up to date through Solid's dependency graph, so an edit costs only the rows it touches.
+
+**Fast at scale.** Script time for 60 pointer moves at 10,000 nodes and 9,999 edges, on the same stress page in all three libraries:
+
+| Gesture at 10,000 nodes | Solid Flow 1.0 | React Flow 13 | Svelte Flow 2 |
+| ----------------------- | -------------- | ------------- | ------------- |
+| Node drag               | 28 ms          | 4,384 ms      | 493 ms        |
+| Selection drag          | 111 ms         | 4,409 ms      | 556 ms        |
+| Box selection           | 47 ms          | 1,182 ms      | 194 ms        |
+| Connection drag         | 167 ms         | 469 ms        | 3,096 ms      |
+| Node drag with MiniMap  | 34 ms          | 4,555 ms      | 1,797 ms      |
+| Node resize             | 27 ms          | 4,418 ms      | 504 ms        |
+
+Measured 2026-11-17 on a 1.0 pre-release build against React Flow 13.0.2 and Svelte Flow 2.0.2: production builds in headless Chromium on an Apple M4 Pro, median of two runs, with Solid Flow's culling off so every node is mounted, as in the other two.
+
+And against 0.2.6, same page, library defaults:
+
+| At 10,000 nodes | 0.2.6    | 1.0.0    | Faster |
+| --------------- | -------- | -------- | ------ |
+| Node drag       | 1,140 ms | 26 ms    | 44x    |
+| Connection drag | 4,946 ms | 73 ms    | 68x    |
+| Box selection   | 1,039 ms | 47 ms    | 22x    |
+| Selection drag  | 515 ms   | 110 ms   | 4.7x   |
+| Mount           | 4,567 ms | 2,612 ms | 1.7x   |
+
+Off-screen elements are culled by default, and `onlyRenderVisibleElements` unmounts them for the biggest graphs. Method and every measured row: "Performance" in the README.
+
+**What it costs.** The speed is bought up front. Solid Flow builds and keeps a dependency graph of everything it derives from your nodes and edges, so a gesture recomputes only what it touches; building that graph makes mounting slower and takes more memory, and a write that replaces most of the graph at once pays the recomputation the others pay plus the upkeep of that graph. Same page, same runs:
+
+| At 10,000 nodes            | Solid Flow 1.0 | React Flow 13 | Svelte Flow 2 |
+| -------------------------- | -------------- | ------------- | ------------- |
+| Mount                      | 2,671 ms       | 1,666 ms      | 1,398 ms      |
+| Heap with the flow mounted | 491 MB         | 240 MB        | 452 MB        |
+| Replace the whole graph    | 418 ms         | 199 ms        | 248 ms        |
+| Move every node at once    | 347 ms         | 219 ms        | 272 ms        |
+| Select all                 | 209 ms         | 145 ms        | 251 ms        |
+| Pane drag (script time)    | 16 ms          | 14 ms         | 12 ms         |
+
+Other bulk writes go the other way (updating every node's data: 68 ms against 163 and 223; deleting half the nodes: 126 against 155 and 158). If your app mostly loads big graphs and replaces them wholesale, React Flow and Svelte Flow do that work faster; if people edit them, Solid Flow keeps every gesture fast as the graph grows.
+
+**Your store is the graph.** Hand the flow a store and it renders it: controlled `createNodeStore` / `createEdgeStore`, uncontrolled `defaultNodes` / `defaultEdges`, an async function that suspends to the nearest `<Loading>`, an async generator for a live, server-pushed graph, or an optimistic store that applies edits instantly and reverts cleanly when a save fails. `onNodesChange` / `onEdgesChange` let you inspect, drop or extend every write the flow makes before it lands.
+
+**Your components are the schema.** `nodeTypes` and `edgeTypes` type your data: each node's `data` narrows by its `type`, type names autocomplete, and a misspelled type is a compile error.
+
+**Parity with React Flow 13 and Svelte Flow 2, and then some.** Built on `@xyflow/system` 1.0, with the APIs you know from both: `changeParent`, `getNodeConnections`, element hooks, `useKeyPress`, MiniMap custom nodes, reconnect anchors, toolbars and resizers. It also goes past upstream: no more stuck modifier keys after macOS overlays, no more drags that keep following the cursor after Alt+Tab (both still open in xyflow), and a per-element culling opt-out, `cullable: false`.
+
+**Styling that gets out of your way.** `style.css`, `base.css` and the new `xy-theme.css`, all in the `xyflow` cascade layer, so your own CSS wins without `!important`. Dark mode is CSS-only: the flow follows the OS through `light-dark()`, and server-rendered markup paints in the right scheme from the first frame.
+
+**Ready for servers and agents.** Server rendering and hydration are covered by their own test lanes, the package ships on npm and JSR, and an `llms.txt` gives coding agents a compact map of the API.
+
+### Upgrading from 0.2.x
+
+1.0 needs SolidJS 2.0 (`solid-js` and `@solidjs/web` `^2.0.0`); 0.2.x remains the SolidJS 1.x line. "Migrating from 0.2.x" in the README walks through the upgrade, and the entries below call out each breaking change as "Breaking". The full list of changes since 0.2.x follows.
+
 ### Major Changes
 
 - a376b55: Solid Flow 1.0, built for SolidJS 2.0.
@@ -13,13 +71,6 @@
   - The peer dependencies are `solid-js` `^2.0.0` and `@solidjs/web` `^2.0.0` (0.2.x required `solid-js` `>=1.8.0`). SolidJS 1.x is not supported on this line; the 0.2.x line remains the SolidJS 1.x maintenance line.
   - `jsxImportSource` for consumers compiling against the `solid` export condition is `@solidjs/web`.
   - Store writes follow SolidJS 2.0: path-syntax setters (`setNodes(0, "position", "x", (x) => x + 20)`) are gone. Write through a draft callback (`setNodes((nodes) => { nodes[0]!.position.x += 20; })`), or return an array to replace the graph wholesale (rows keyed by id are reused).
-
-  Highlights:
-
-  - Controlled node and edge stores with a clear ownership contract (your store owns membership, the flow writes runtime fields onto the shared row objects), uncontrolled flows through `defaultNodes` / `defaultEdges`, and async, live and optimistic store sources.
-  - Two-tier viewport culling: an always-on CSS tier, plus opt-in `onlyRenderVisibleElements` unmount culling with a per-element `cullable: false` opt-out.
-  - Typed component schemas: `NodeProps` / `EdgeProps` with the `SolidFlowNode` / `SolidFlowEdge` guided unions, `satisfies`-friendly everywhere.
-  - React Flow and Svelte Flow parity gaps closed (MiniMap custom nodes and click handlers, reconnect anchors, element hooks, `useKeyPress`, server rendering), plus fixes for issues still open upstream in xyflow (stuck modifier keys after OS overlays, gestures surviving a window blur).
 
 ### Minor Changes
 
